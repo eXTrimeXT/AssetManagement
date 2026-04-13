@@ -28,6 +28,10 @@ class AssetCreate(BaseModel):
     parent_id: Optional[int] = Field(None, description="ID родительского актива (комплектация)")
     software_id: Optional[int] = Field(None, description="ID программного обеспечения")
 
+    # Новые поля
+    seller: Optional[str] = Field(None, max_length=100, description="Продавец/Поставщик")
+    price: Optional[int] = Field(None, ge=0, description="Стоимость приобретения")
+
     # Служебные
     source: Optional[str] = Field(None, max_length=100)
     prepared_by: Optional[str] = Field(None, max_length=100)
@@ -37,23 +41,25 @@ class AssetCreate(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
         "example": {
-            "name": "Ноутбук Dell Latitude",
-            "inventory_id": "INV-2026-001",
-            "serial_number": "SN123456789",
+            "name": "имя",
+            "inventory_id": "инвентарный номер",
+            "serial_number": "серийный номер",
             "type_id": 10,
             "asset_status": "Приемка",
-            "type_domain": "CORP",
+            "seller": "Продавец",
+            "price": 0,
+            "type_domain": "тип домена",
             "affixed_inventory_id": True,
-            "info_storage_location": "Серверная, шкаф 3",
-            "location": "Кабинет 301",
+            "info_storage_location": "Место хранения информации об активе",
+            "location": "местоположение актива",
             "passwork": "admin123",
             "date_issue": "2026-04-01",
             "date_purchasing": "2026-03-15",
-            "comment": "Рабочая станция бухгалтера",
+            "comment": "Комментарий",
             "parent_id": None,
-            "source": "Закупка",
-            "prepared_by": "Иванов И.И.",
-            "checked_by": "Петров П.П.",
+            "source": "Источник поступления",
+            "prepared_by": "Ответственный за документы",
+            "checked_by": "Контроль документов",
             "software_id": None
         }
     })

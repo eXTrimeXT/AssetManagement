@@ -32,14 +32,20 @@ class Asset(Base):
     # equipment = parent_id (может быть NULL или ссылаться на другой актив)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=True, index=True)
 
+    # Добавить поля:
+    # продавца, стоимости
+    seller = Column(String(100), nullable=True) # Продавец
+    price = Column(Integer, nullable=True, index=True) # Цена
+
     # === Служебные поля ===
-    source = Column(String(100), nullable=True)  # Источник
-    prepared_by = Column(String(100), nullable=True)  # Подготовил
-    checked_by = Column(String(100), nullable=True)  # Проверил
+    source = Column(String(100), nullable=True)  # Источник поступления
+    prepared_by = Column(String(100), nullable=True)  # Подготовил (ответственный за документы)
+    checked_by = Column(String(100), nullable=True)  # Проверил (контроль документов)
     deleted_at = Column(DateTime, nullable=True, index=True)  # Soft delete
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
+    # === Связи ===
     # Самореференция: комплектация (дочерние активы)
     parent = relationship(
         "Asset",
@@ -56,7 +62,6 @@ class Asset(Base):
     asset_type = relationship("AssetType", back_populates="assets", lazy="joined")
 
     # Связь с software
-    # software_list = relationship("Software", back_populates="asset", lazy="select", cascade="all, delete-orphan")
     software_id = Column(
         Integer,
         ForeignKey("software.software_id", ondelete="SET NULL"),

@@ -23,14 +23,16 @@ class AssetUpdate(BaseModel):
     prepared_by: Optional[str] = Field(None, max_length=100)
     checked_by: Optional[str] = Field(None, max_length=100)
     deleted_at: Optional[date] = None
-    # software_id: Optional[int] = Field(None, max_length=100)
     software_id: Optional[int] = None
+    seller: Optional[str] = Field(None, max_length=100, description="Продавец/Поставщик")
+    price: Optional[int] = Field(None, ge=0, description="Стоимость приобретения")
 
     model_config = ConfigDict(
         json_schema_extra={
         "example": {
             "name": "Ноутбук Dell Latitude (обновлено)",
             "location": "Кабинет 405",
-            "asset_status": "Выдан"
+            "asset_status": "Выдан",
+            "price": 12345
         }
     })

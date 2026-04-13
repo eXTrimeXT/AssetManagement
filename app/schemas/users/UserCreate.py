@@ -7,6 +7,7 @@ class UserCreate(BaseModel):
     user_tab_id: Optional[str] = None  # Табельный номер (не обязателен)
     owner: str  # ФИО на русском (обязательно)
     user_en_name: Optional[str] = None  # ФИО на английском
+    role: Optional[str] = None # Роль пользователя
     user_position: Optional[str] = None  # Должность
     department: Optional[str] = None  # Отдел
     email: EmailStr  # Email (валидация формата)
@@ -22,6 +23,7 @@ class UserCreate(BaseModel):
             "department": "IT-отдел",
             "email": "ivanov@company.com",
             "phone": "+7 (999) 123-45-67",
-            "is_active": True
+            "is_active": True,
+            "role": "user"
         }
     })

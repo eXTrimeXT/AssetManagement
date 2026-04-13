@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     user_tab_id: Optional[str] = None
     owner: str
     user_en_name: Optional[str] = None
+    role: Optional[str] = None
     user_position: Optional[str] = None
     department: Optional[str] = None
     email: EmailStr

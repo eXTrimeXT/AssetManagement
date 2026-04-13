@@ -53,14 +53,24 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     return db_user
 
 async def get_users_list(
-        db: AsyncSession, skip: int = 0, limit: int = 50,
-        department: Optional[str] = None, is_active: bool = True
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 50,
+        department: Optional[str] = None,
+        is_active: bool = True,
+        role: Optional[str] = None
 ) -> Sequence[Any]:
-    """ Получает список пользователей с фильтрацией и пагинацией """
+    """
+    Получает список пользователей с фильтрацией и пагинацией.
+    Добавлен фильтр по роли.
+    """
     query = select(User).where(User.is_active == is_active)
 
     if department:
         query = query.where(User.department == department)
+
+    if role:
+        query = query.where(User.role == role)
 
     query = query.offset(skip).limit(limit)
 

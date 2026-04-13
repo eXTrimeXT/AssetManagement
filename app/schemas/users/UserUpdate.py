@@ -7,6 +7,7 @@ class UserUpdate(BaseModel):
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_en_name: Optional[str] = None
+    role: Optional[str] = None
     user_position: Optional[str] = None
     department: Optional[str] = None
     email: Optional[EmailStr] = None

@@ -16,7 +16,6 @@ class UserAsset(Base):
 
     assigned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     returned_at = Column(DateTime, nullable=True, index=True)  # NULL = актив сейчас у пользователя
-    role = Column(String(50), nullable=True, default="Пользователь")
 
     # Отношения
     user = relationship("User", back_populates="assignments", lazy="joined")

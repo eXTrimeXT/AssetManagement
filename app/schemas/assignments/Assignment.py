@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 
 # Вложенные схемы для детального вывода
+# Верхние схемы зависят от нижних
 class AssetTypeRef(BaseModel):
     asset_type_id: int
     name: str
@@ -44,7 +45,6 @@ class AssignmentDetailResponse(BaseModel):
     asset_id: int
     assigned_at: datetime
     returned_at: Optional[datetime] = None
-    role: Optional[str] = None
     asset: Optional[AssetFullRef] = None  # Полная инфо об активе
     model_config = ConfigDict(from_attributes=True)
 

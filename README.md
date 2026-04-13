@@ -115,6 +115,7 @@ docker compose up -d
 *   **API**: `http://127.0.0.1:8000/api`
 *   **Swagger UI**: `http://127.0.0.1:8000/docs`
 *   **ReDoc**: `http://127.0.0.1:8000/redoc`
+*   **Adminer**: `http://127.0.0.1:8080/` - Просмотр таблиц в веб-интерфейсе
 
 ***
 

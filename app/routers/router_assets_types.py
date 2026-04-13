@@ -43,7 +43,6 @@ async def create(data: AssetTypeCreate, db: AsyncSession = Depends(get_db)):
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
-
 @router_assets_types.get("/{type_id}", response_model=AssetTypeResponse)
 async def get(type_id: int, db: AsyncSession = Depends(get_db)):
     log = logger.bind(action="get_asset_type", type_id=type_id)
@@ -63,7 +62,6 @@ async def get(type_id: int, db: AsyncSession = Depends(get_db)):
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
-
 @router_assets_types.get("/", response_model=list[AssetTypeResponse])
 async def list_all(db: AsyncSession = Depends(get_db)):
     log = logger.bind(action="list_asset_types")
@@ -76,7 +74,6 @@ async def list_all(db: AsyncSession = Depends(get_db)):
     except SQLAlchemyError as e:
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
-
 
 @router_assets_types.patch("/{type_id}", response_model=AssetTypeResponse)
 async def patch(type_id: int, data: AssetTypeUpdate, db: AsyncSession = Depends(get_db)):
@@ -102,7 +99,6 @@ async def patch(type_id: int, data: AssetTypeUpdate, db: AsyncSession = Depends(
     except SQLAlchemyError as e:
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
-
 
 @router_assets_types.delete("/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete(type_id: int, db: AsyncSession = Depends(get_db)):

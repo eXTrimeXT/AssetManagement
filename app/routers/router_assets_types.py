@@ -11,9 +11,7 @@ from app.database.asset_types.crud_asset_types import (
     update_asset_type,
     delete_asset_type
 )
-from app.schemas.asset_types.AssetTypeCreate import AssetTypeCreate
-from app.schemas.asset_types.AssetTypeResponse import AssetTypeResponse
-from app.schemas.asset_types.AssetTypeUpdate import AssetTypeUpdate
+from app.schemas.AssetTypes import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 
 # Инициализируем логгер
 logger = structlog.get_logger()

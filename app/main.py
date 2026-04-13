@@ -22,6 +22,7 @@ from app.routers.router_xl import router_xl
 from app.routers.router_users import router_users
 from app.routers.router_software import router_software
 from app.routers.router_user_asset import router_user_assets
+from app.routers.router_locations import router_locations
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -76,3 +77,4 @@ app.include_router(router_xl, prefix="/api")
 app.include_router(router_users, prefix="/api")
 app.include_router(router_software, prefix="/api")
 app.include_router(router_user_assets, prefix="/api")
+app.include_router(router_locations, prefix="/api")

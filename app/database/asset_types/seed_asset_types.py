@@ -18,6 +18,7 @@ from app.models.Asset import Asset
 from app.models.User import User
 from app.models.UserAsset import UserAsset
 from app.models.Software import Software
+from app.models.Location import Location
 
 # После импорта всех моделей — явно конфигурируем мапперы
 from sqlalchemy.orm import configure_mappers

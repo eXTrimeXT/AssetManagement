@@ -17,7 +17,7 @@ services:
     image: adminer
     restart: always
     ports:
-      - "8880:8880"
+      - "7080:8080"
 
   # Сервис приложения FastAPI
   app:

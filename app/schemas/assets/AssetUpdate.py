@@ -13,7 +13,7 @@ class AssetUpdate(BaseModel):
     type_domain: Optional[str] = Field(None, max_length=100)
     affixed_inventory_id: Optional[bool] = None
     info_storage_location: Optional[str] = Field(None, max_length=200)
-    location: Optional[str] = Field(None, max_length=150)
+    location_id: Optional[int] = Field(None, description="ID локации из справочника Locations")
     passwork: Optional[str] = Field(None, max_length=200)
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None

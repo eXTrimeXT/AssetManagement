@@ -12,18 +12,18 @@ class User(Base):
 
     # Идентификаторы
     user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_tab_id = Column(String(50), unique=True, index=True, nullable=True)  # Табельный номер
+    user_tab_id = Column(String(50), unique=True, index=True, nullable=True)    # Табельный номер
 
     # Имена
-    owner = Column(String(150), nullable=False, index=True)  # ФИО на русском
-    user_en_name = Column(String(150), nullable=True)  # ФИО на английском
+    owner = Column(String(150), nullable=False, index=True)                     # ФИО на русском
+    user_en_name = Column(String(150), nullable=True)                           # ФИО на английском
 
     # Роль пользователя, пользователь может не иметь роли -> ничего не может делать
     role = Column(String(40), nullable=True)
 
     # Должность и отдел
-    user_position = Column(String(100), nullable=True)  # Должность
-    department = Column(String(100), nullable=True, index=True)  # Отдел
+    user_position = Column(String(100), nullable=True)                          # Должность
+    department = Column(String(100), nullable=True, index=True)                 # Отдел
 
     # Контакты
     email = Column(String(100), unique=True, index=True, nullable=False)

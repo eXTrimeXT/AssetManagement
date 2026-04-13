@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 
 from app.database.connection import get_db
-from app.schemas.assignments.Assignment import AssignmentDetailResponse, UserFullInfoResponse
+from app.schemas.Assignment import AssignmentDetailResponse, UserFullInfoResponse
 
 # Импорт CRUD функций
 from app.database.user_assets.crud_user_assets import (

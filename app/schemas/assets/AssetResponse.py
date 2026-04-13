@@ -12,7 +12,7 @@ class AssetBase(BaseModel):
     type_domain: Optional[str] = None
     affixed_inventory_id: Optional[bool] = None
     info_storage_location: Optional[str] = None
-    location: Optional[str] = None
+    location_id: Optional[int] = None
     passwork: Optional[str] = None
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
@@ -40,7 +40,7 @@ class AssetShortResponse(BaseModel):
     serial_number: str
     asset_status: str
     type_id: int
-    location: Optional[str] = None
+    location_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
 

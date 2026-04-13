@@ -228,7 +228,6 @@ async def hard_delete_asset(db: AsyncSession, asset_id: int) -> bool:
     await db.commit()
     return True
 
-
 async def get_all_asset_children_recursive(
         db: AsyncSession,
         asset_id: int,
@@ -236,21 +235,23 @@ async def get_all_asset_children_recursive(
 ) -> List[dict]:
     """
     Получает всех дочерних активов рекурсивно с использованием CTE PostgreSQL.
-    Возвращает список словарей.
+    Возвращает список словарей с актуальными полями (location_id вместо location, + seller, price).
     """
-    # 1. Проверяем существование родителя (и что он не удален, согласно логике роутера)
+    # 1. Проверяем существование родителя
     parent = await db.get(Asset, asset_id)
     if not parent or parent.deleted_at:
-        return [] # Или raise exception, но роутер делает это сам
+        return []
 
-    # 2. Формирование RAW SQL запроса
-    # Важно: используем text() для безопасной вставки параметров, но структура запроса динамическая
+        # 2. Формирование RAW SQL запроса
+    # ИЗМЕНЕНИЯ:
+    # - location заменен на location_id
+    # - добавлены seller и price
     base_query = """
                  WITH RECURSIVE asset_tree AS (
                      -- Базовый случай: прямые дети указанного актива
                      SELECT
                          asset_id, name, inventory_id, serial_number, asset_status, type_id,
-                         location, parent_id, deleted_at, software_id, 1 AS depth
+                         location_id, parent_id, deleted_at, software_id, seller, price, 1 AS depth
                      FROM assets
                      WHERE parent_id = :root_id AND deleted_at IS NULL
 
@@ -259,7 +260,7 @@ async def get_all_asset_children_recursive(
                      -- Рекурсивный случай: дети детей
                      SELECT
                          a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.type_id,
-                         a.location, a.parent_id, a.deleted_at, a.software_id, at.depth + 1
+                         a.location_id, a.parent_id, a.deleted_at, a.software_id, a.seller, a.price, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
                      WHERE a.deleted_at IS NULL \
@@ -293,9 +294,11 @@ async def get_all_asset_children_recursive(
             "serial_number": row.serial_number,
             "asset_status": row.asset_status,
             "type_id": row.type_id,
-            "location": row.location,
+            "location_id": row.location_id,  # Обновлено: было location
             "parent_id": row.parent_id,
             "software_id": row.software_id,
+            "seller": row.seller,           # Добавлено
+            "price": row.price              # Добавлено
         })
 
     return children

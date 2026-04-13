@@ -1,0 +1,37 @@
+services:
+  # Сервис PostgreSQL
+  postgres:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: it_assets_db
+    ports:
+      - "5432:5432" # Проброс порта для подключения извне (например, через DBeaver)
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Сохранение данных БД
+
+  # Для просмотра таблиц через веб-интерфейс (для разработки)
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+  # Сервис приложения FastAPI
+  app:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      # при локальном запуске используем @localhost
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/it_assets_db
+    volumes:
+      - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
+
+volumes:
+  pgdata:

@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>IT Assets Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background-color: #f8f9fa; }
+        .card { margin-bottom: 20px; }
+        .deleted-row { background-color: #e9ecef !important; color: #6c757d; }
+        .deleted-badge { background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+        .modal-body { max-height: 80vh; overflow-y: auto; }
+        .form-label-small { font-size: 0.85rem; color: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="mb-4 text-center">🖥️ IT Assets Manager</h1>
+
+    <!-- ================= NAV TAB ================= -->
+    <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#assets-pane">Активы (Assets)</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#types-pane">Типы (Types)</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- ================= ASSETS TAB ================= -->
+        <div class="tab-pane fade show active" id="assets-pane">
+
+            <!-- ФОРМА СОЗДАНИЯ (ОБНОВЛЕНА: добавлен Статус) -->
+            <div class="card">
+                <div class="card-header bg-success text-white">Добавить актив</div>
+                <div class="card-body">
+                    <form id="assetForm" class="row g-3">
+                        <!-- Row 1: Основные данные -->
+                        <div class="col-md-3"><input type="text" class="form-control" name="caption" placeholder="Название *" required></div>
+                        <div class="col-md-2"><input type="text" class="form-control" name="inv_id" placeholder="Инв. № *" required></div>
+                        <div class="col-md-2"><input type="text" class="form-control" name="serial_id" placeholder="Серийник *" required></div>
+                        <div class="col-md-2">
+                            <select class="form-select" name="type_id" id="assetTypeSelect" required><option value="">Тип *</option></select>
+                        </div>
+                        <div class="col-md-3"><input type="number" class="form-control" name="price" placeholder="Цена *" required></div>
+
+                        <!-- Row 2: Статус, Описание, Дата -->
+                        <div class="col-md-3">
+                            <label class="form-label-small">Статус</label>
+                            <select class="form-select" name="status" id="create_status">
+                                <option value="Приемка">Приемка</option>
+                                <option value="На складе">На складе</option>
+                                <option value="Выдан">Выдан</option>
+                                <option value="Обслуживание">Обслуживание</option>
+                                <option value="Ремонт">Ремонт</option>
+                                <option value="Списание">Списание</option>
+                                <option value="Утилизация">Утилизация</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-small">Описание</label>
+                            <textarea class="form-control" name="description" rows="2" placeholder="Дополнительная информация..."></textarea>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-small">Дата поставки</label>
+                            <input type="date" class="form-control" name="delivery_date" id="create_delivery_date">
+                        </div>
+
+                        <!-- Row 3: Детали и Новые поля -->
+                        <div class="col-md-3"><input type="text" class="form-control" name="seller" placeholder="Продавец"></div>
+                        <div class="col-md-3"><input type="text" class="form-control" name="staff" placeholder="Ответственный"></div>
+                        <div class="col-md-3"><input type="text" class="form-control" name="department" placeholder="Отдел"></div>
+                        <div class="col-md-3"><input type="number" class="form-control" name="parent_id" placeholder="ID Родителя (optional)"></div>
+
+                        <div class="col-md-3"><input type="text" class="form-control" name="fact_location" placeholder="Место"></div>
+                        <div class="col-md-3"><input type="text" class="form-control" name="source" placeholder="Источник"></div>
+                        <div class="col-md-3"><input type="text" class="form-control" name="prepared_by" placeholder="Подготовил"></div>
+                        <div class="col-md-3"><input type="text" class="form-control" name="checked_by" placeholder="Проверил"></div>
+
+                        <!-- Row 4: JSON User Info -->
+                        <div class="col-md-12">
+                            <label class="form-label-small">Доп. информация (JSON)</label>
+                            <textarea class="form-control" name="user_info" rows="2" placeholder='{"key": "value"} например: {"warranty": "2 years"}'></textarea>
+                            <div class="form-text">Введите корректный JSON строку. Если пусто, будет сохранен пустой объект.</div>
+                        </div>
+
+                        <div class="col-12"><button type="submit" class="btn btn-primary w-100">Создать Актив</button></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Список активов -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Список активов</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showDeletedCheck" onchange="loadAssets()">
+                            <label class="form-check-label" for="showDeletedCheck">Показать удаленные</label>
+                        </div>
+                        <button onclick="downloadTemplate()" class="btn btn-sm btn-outline-secondary" title="Скачать шаблон Excel">📥 Шаблон</button>
+                        <button onclick="exportToExcel()" class="btn btn-sm btn-outline-success" title="Экспорт в Excel">📊 Экспорт</button>
+                        <button onclick="document.getElementById('importFile').click()" class="btn btn-sm btn-outline-primary" title="Импорт из Excel">📤 Импорт</button>
+                        <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="handleImport(this)">
+                        <button onclick="loadAssets()" class="btn btn-sm btn-light">🔄</button>
+                    </div>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Inv ID</th>
+                            <th>Type</th>
+                            <th>Parent ID</th>
+                            <th>Status</th>
+                            <th>Deleted At</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="assetsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TYPES TAB ================= -->
+        <div class="tab-pane fade" id="types-pane">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Добавить тип актива</div>
+                <div class="card-body">
+                    <form id="typeForm" class="row g-3">
+                        <div class="col-md-5"><input type="text" class="form-control" name="name" placeholder="Название" required></div>
+                        <div class="col-md-3"><input type="number" class="form-control" name="type_id" placeholder="Код (10, 20...)" required></div>
+                        <div class="col-md-4"><button type="submit" class="btn btn-success w-100">Создать</button></div>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">Список типов</div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead><tr><th>Code</th><th>Name</th><th>Actions</th></tr></thead>
+                        <tbody id="typesTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно РЕДАКТИРОВАНИЯ -->
+<div class="modal fade" id="editAssetModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">Редактировать актив (Все поля)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAssetForm">
+                    <input type="hidden" id="edit_id">
+
+                    <h6 class="border-bottom pb-2 mb-3">Основная информация</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Название (Caption) *</label>
+                            <input type="text" class="form-control" id="edit_caption" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Инвентарный номер (Inv ID) *</label>
+                            <input type="text" class="form-control" id="edit_inv_id" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Серийный номер (Serial ID) *</label>
+                            <input type="text" class="form-control" id="edit_serial_id" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Описание (Description)</label>
+                            <textarea class="form-control" id="edit_description" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Статус</label>
+                            <select class="form-select" id="edit_status">
+                                <option value="Приемка">Приемка</option>
+                                <option value="На складе">На складе</option>
+                                <option value="Выдан">Выдан</option>
+                                <option value="Обслуживание">Обслуживание</option>
+                                <option value="Ремонт">Ремонт</option>
+                                <option value="Списание">Списание</option>
+                                <option value="Утилизация">Утилизация</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Цена</label>
+                            <input type="number" class="form-control" id="edit_price">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Дата поставки</label>
+                            <input type="date" class="form-control" id="edit_delivery_date">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Родительский актив (Parent ID)</label>
+                            <input type="number" class="form-control" id="edit_parent_id" placeholder="Null если нет">
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3">Детали и Локация</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Продавец (Seller)</label>
+                            <input type="text" class="form-control" id="edit_seller">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ответственный (Staff)</label>
+                            <input type="text" class="form-control" id="edit_staff">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Отдел (Department)</label>
+                            <input type="text" class="form-control" id="edit_department">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Фактическое место (Fact Location)</label>
+                            <input type="text" class="form-control" id="edit_fact_location">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Источник (Source)</label>
+                            <input type="text" class="form-control" id="edit_source">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Тип актива (Type ID Code)</label>
+                            <input type="number" class="form-control" id="edit_type_id">
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2 mb-3">Документооборот и Доп. данные</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Подготовил (Prepared By)</label>
+                            <input type="text" class="form-control" id="edit_prepared_by">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Проверил (Checked By)</label>
+                            <input type="text" class="form-control" id="edit_checked_by">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Доп. информация (User Info - JSON)</label>
+                            <textarea class="form-control" id="edit_user_info" rows="3" placeholder='{"key": "value"}'></textarea>
+                            <div class="form-text">Введите корректный JSON строку.</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="saveAssetEdit()">Сохранить изменения</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API = '/api';
+    let editModalObj = null;
+
+    // Установка сегодняшней даты при загрузке
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('create_delivery_date');
+        if(dateInput && !dateInput.value) {
+            dateInput.value = today;
+        }
+    });
+
+    const fetchApi = async (url, method = 'GET', body = null) => {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body) opts.body = JSON.stringify(body);
+        try {
+            const res = await fetch(`${API}${url}`, opts);
+            if (!res.ok) throw new Error(await res.text());
+            return res.status === 204 ? null : await res.json();
+        } catch (e) { alert('Error: ' + e.message); console.error(e); return null; }
+    };
+
+    // --- Types Logic ---
+    async function loadTypes() {
+        const types = await fetchApi('/assets-types/');
+        const tbody = document.getElementById('typesTable');
+        const select = document.getElementById('assetTypeSelect');
+        tbody.innerHTML = '';
+        select.innerHTML = '<option value="">Выберите тип</option>';
+        if(types) {
+            types.forEach(t => {
+                tbody.innerHTML += `<tr><td>${t.type_id}</td><td>${t.name}</td><td><button class="btn btn-sm btn-danger" onclick="delType(${t.type_id})">Del</button></td></tr>`;
+                select.innerHTML += `<option value="${t.type_id}">${t.name} (${t.type_id})</option>`;
+            });
+        }
+    }
+
+    document.getElementById('typeForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        await fetchApi('/assets-types/', 'POST', { name: fd.get('name'), type_id: parseInt(fd.get('type_id')) });
+        e.target.reset(); loadTypes();
+    };
+
+    async function delType(id) {
+        if(confirm('Delete?')) { await fetchApi(`/assets-types/${id}`, 'DELETE'); loadTypes(); }
+    }
+
+    // --- Assets Logic ---
+    async function loadAssets() {
+        const showDeleted = document.getElementById('showDeletedCheck').checked;
+        const tbody = document.getElementById('assetsTable');
+        tbody.innerHTML = '';
+
+        let url = '/assets/';
+        if (showDeleted) url += '?include_deleted=true';
+
+        const assets = await fetchApi(url);
+
+        if(assets) {
+            assets.forEach(a => {
+                const isDeleted = a.deleted_at !== null && a.deleted_at !== undefined;
+                const rowClass = isDeleted ? 'deleted-row' : '';
+
+                let deletedInfo = '<span class="text-muted">-</span>';
+                if (isDeleted) {
+                    const d = new Date(a.deleted_at);
+                    deletedInfo = `<span class="deleted-badge">Удален ${d.toLocaleDateString()}</span>`;
+                }
+
+                let actionsHtml = '';
+                if (isDeleted) {
+                    actionsHtml = `<button class="btn btn-sm btn-success" onclick="restoreAsset(${a.id})">↺ Восстановить</button>`;
+                } else {
+                    const safeJson = JSON.stringify(a).replace(/'/g, "&apos;");
+                    actionsHtml = `
+                        <button class="btn btn-sm btn-primary" onclick='openEditModal(${safeJson})'>✏️ Edit All</button>
+                        <button class="btn btn-sm btn-danger" onclick="delAsset(${a.id})">🗑️</button>
+                    `;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td>${a.id}</td>
+                        <td>${a.caption}</td>
+                        <td>${a.inv_id}</td>
+                        <td>${a.type_id}</td>
+                        <td>${a.parent_id || '-'}</td>
+                        <td><span class="badge bg-info">${a.status}</span></td>
+                        <td>${deletedInfo}</td>
+                        <td>${actionsHtml}</td>
+                    </tr>`;
+            });
+        }
+    }
+
+    document.getElementById('assetForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const data = Object.fromEntries(fd.entries());
+
+        data.price = parseInt(data.price) || 0;
+        data.type_id = parseInt(data.type_id);
+        data.parent_id = data.parent_id ? parseInt(data.parent_id) : null;
+
+        if (!data.delivery_date) {
+            data.delivery_date = new Date().toISOString().split('T')[0];
+        }
+
+        // Обработка user_info (JSON)
+        try {
+            if (data.user_info && data.user_info.trim() !== "") {
+                data.user_info = JSON.parse(data.user_info);
+            } else {
+                data.user_info = {};
+            }
+        } catch (err) {
+            alert("Ошибка: Поле 'Доп. информация' должно содержать корректный JSON.");
+            return;
+        }
+
+        ['seller','staff','department','fact_location','source','prepared_by','checked_by'].forEach(k => {
+            if(!data[k]) data[k] = "";
+        });
+        if(!data.description) data.description = "";
+
+        await fetchApi('/assets/', 'POST', data);
+        e.target.reset();
+        document.getElementById('create_delivery_date').value = new Date().toISOString().split('T')[0];
+        await loadAssets();
+    };
+
+    // --- Edit Logic (ALL FIELDS) ---
+    function openEditModal(asset) {
+        document.getElementById('edit_id').value = asset.id;
+
+        document.getElementById('edit_caption').value = asset.caption || '';
+        document.getElementById('edit_inv_id').value = asset.inv_id || '';
+        document.getElementById('edit_serial_id').value = asset.serial_id || '';
+        document.getElementById('edit_description').value = asset.description || '';
+        document.getElementById('edit_status').value = asset.status || 'Приемка';
+        document.getElementById('edit_price').value = asset.price || 0;
+
+        if(asset.delivery_date) {
+            const d = new Date(asset.delivery_date);
+            const localDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            document.getElementById('edit_delivery_date').value = localDate;
+        }
+
+        document.getElementById('edit_parent_id').value = asset.parent_id || '';
+        document.getElementById('edit_seller').value = asset.seller || '';
+        document.getElementById('edit_staff').value = asset.staff || '';
+        document.getElementById('edit_department').value = asset.department || '';
+        document.getElementById('edit_fact_location').value = asset.fact_location || '';
+        document.getElementById('edit_source').value = asset.source || '';
+        document.getElementById('edit_type_id').value = asset.type_id || '';
+        document.getElementById('edit_prepared_by').value = asset.prepared_by || '';
+        document.getElementById('edit_checked_by').value = asset.checked_by || '';
+
+        if (asset.user_info) {
+            document.getElementById('edit_user_info').value = JSON.stringify(asset.user_info, null, 2);
+        } else {
+            document.getElementById('edit_user_info').value = '{}';
+        }
+
+        editModalObj = new bootstrap.Modal(document.getElementById('editAssetModal'));
+        editModalObj.show();
+    }
+
+    async function saveAssetEdit() {
+        const id = document.getElementById('edit_id').value;
+
+        let userInfoObj = {};
+        const userInfoStr = document.getElementById('edit_user_info').value;
+        try {
+            if (userInfoStr && userInfoStr.trim() !== "") {
+                userInfoObj = JSON.parse(userInfoStr);
+            }
+        } catch (err) {
+            alert("Ошибка: Поле 'Доп. информация' должно содержать корректный JSON.");
+            return;
+        }
+
+        const data = {
+            caption: document.getElementById('edit_caption').value,
+            inv_id: document.getElementById('edit_inv_id').value,
+            serial_id: document.getElementById('edit_serial_id').value,
+            description: document.getElementById('edit_description').value,
+            status: document.getElementById('edit_status').value,
+            price: parseInt(document.getElementById('edit_price').value),
+            delivery_date: document.getElementById('edit_delivery_date').value || null,
+            parent_id: document.getElementById('edit_parent_id').value ? parseInt(document.getElementById('edit_parent_id').value) : null,
+            seller: document.getElementById('edit_seller').value,
+            staff: document.getElementById('edit_staff').value,
+            department: document.getElementById('edit_department').value,
+            fact_location: document.getElementById('edit_fact_location').value,
+            source: document.getElementById('edit_source').value,
+            type_id: document.getElementById('edit_type_id').value ? parseInt(document.getElementById('edit_type_id').value) : null,
+            prepared_by: document.getElementById('edit_prepared_by').value,
+            checked_by: document.getElementById('edit_checked_by').value,
+            user_info: userInfoObj
+        };
+
+        const res = await fetchApi(`/assets/${id}`, 'PATCH', data);
+        if(res) {
+            editModalObj.hide();
+            await loadAssets();
+        }
+    }
+
+    async function restoreAsset(id) {
+        if(confirm('Восстановить этот актив?')) {
+            await fetchApi(`/assets/${id}`, 'PATCH', { deleted_at: null });
+            await loadAssets();
+        }
+    }
+
+    async function delAsset(id) {
+        if(confirm('Мягко удалить этот актив?')) {
+            await fetchApi(`/assets/${id}`, 'DELETE');
+            await loadAssets();
+        }
+    }
+
+    window.onload = () => { loadTypes(); loadAssets(); };
+
+
+    // === Excel Import/Export Functions ===
+    async function downloadTemplate() {
+        try {
+            const res = await fetch(`${API}/xl/template`);
+            if (!res.ok) throw new Error(await res.text());
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'assets_template.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('Ошибка скачивания шаблона: ' + e.message);
+        }
+    }
+
+    async function handleImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        if (!confirm(`Импортировать данные из "${file.name}"?\n\n⚠️ Все активы будут созданы со статусом "Приемка".`)) {
+            input.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(`${API}/xl/import`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            const result = await res.json();
+
+            // Показываем результат
+            let msg = `Импортировано: ${result.imported_count} из ${result.total_processed}\n`;
+            if (result.parse_errors?.length) {
+                msg += `\nОшибки парсинга:\n- ${result.parse_errors.join('\n- ')}`;
+            }
+            if (result.import_errors?.length) {
+                msg += `\nОшибки импорта в БД:\n- ${result.import_errors.slice(0, 5).join('\n- ')}`;
+                if (result.import_errors.length > 5) msg += `\n... и ещё ${result.import_errors.length - 5}`;
+            }
+            alert(msg);
+
+            if (result.imported_count > 0) {
+                await loadAssets();
+            }
+        } catch (e) {
+            alert('Ошибка импорта: ' + e.message);
+        } finally {
+            input.value = ''; // Сбросить выбор файла
+        }
+    }
+
+    // === Excel Export Function ===
+    async function exportToExcel() {
+        const showDeleted = document.getElementById('showDeletedCheck').checked;
+
+        try {
+            const url = `${API}/xl/export?include_deleted=${showDeleted}`;
+            const res = await fetch(url);
+
+            if (!res.ok) throw new Error(await res.text());
+
+            const blob = await res.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+
+            // Генерируем имя файла с датой
+            const dateStr = new Date().toISOString().slice(0,19).replace(/[:-]/g, '').replace('T', '_');
+            a.download = `assets_export_${dateStr}.xlsx`;
+
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+        } catch (e) {
+            alert('Ошибка экспорта: ' + e.message);
+        }
+    }
+</script>
+
+</body>
+</html>

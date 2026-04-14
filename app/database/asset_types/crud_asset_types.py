@@ -13,11 +13,6 @@ async def create_asset_type(db: AsyncSession, data: AssetTypeCreate) -> AssetTyp
     await db.refresh(db_obj)
     return db_obj
 
-async def get_asset_type_by_type_id(db: AsyncSession, type_id: int) -> AssetType | None:
-    """Получение по бизнес-коду (type_id)"""
-    result = await db.execute(select(AssetType).where(AssetType.type_id == type_id))
-    return result.scalar_one_or_none()
-
 async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> type[AssetType] | None:
     """Получение по первичному ключу (asset_type_id)"""
     return await db.get(AssetType, asset_type_id)

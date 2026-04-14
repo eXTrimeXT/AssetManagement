@@ -7,7 +7,7 @@ class AssetBase(BaseModel):
     name: str
     inventory_id: str
     serial_number: str
-    type_id: int
+    asset_type_id: int
     asset_status: str
     type_domain: Optional[str] = None
     affixed_inventory_id: Optional[bool] = None
@@ -39,7 +39,7 @@ class AssetShortResponse(BaseModel):
     inventory_id: str
     serial_number: str
     asset_status: str
-    type_id: int
+    asset_type_id: int
     location_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None

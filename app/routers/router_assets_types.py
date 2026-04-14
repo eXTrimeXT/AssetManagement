@@ -1,4 +1,5 @@
 import structlog
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -6,10 +7,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.database.connection import get_db
 from app.database.asset_types.crud_asset_types import (
     create_asset_type,
-    get_asset_type_by_type_id,
     list_asset_types,
     update_asset_type,
-    delete_asset_type
+    delete_asset_type,
+    get_asset_type_by_id
 )
 from app.schemas.AssetTypes import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 
@@ -20,33 +21,37 @@ router_assets_types = APIRouter(prefix="/assets-types", tags=["assets-types"])
 
 @router_assets_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)
 async def create(data: AssetTypeCreate, db: AsyncSession = Depends(get_db)):
-    log = logger.bind(action="create_asset_type", type_id=data.type_id)
+    """
+    Создать новый тип актива.
+    ID (asset_type_id) генерируется автоматически базой данных.
+    """
+    # Логирование действия (type_id может быть None, если он автогенерируемый или передан в data, но поиск идет по нему для проверки дублей)
+    log = logger.bind(action="create_asset_type", requested_name=data.name)
 
     try:
-        existing = await get_asset_type_by_type_id(db, data.type_id)
-        if existing:
-            log.warning("duplicate_type_id", detail="Type ID already exists")
-            raise HTTPException(status_code=400, detail="Type ID already exists")
-
         new_obj = await create_asset_type(db, data)
-        log.info("success", name=data.name, asset_type_id=new_obj.asset_type_id)
+        log.info("success", name=new_obj.name, asset_type_id=new_obj.asset_type_id)
         return new_obj
 
     except HTTPException:
         raise
     except IntegrityError as e:
         log.error("db_integrity_error", error=str(e.orig), exc_info=True)
-        raise HTTPException(status_code=400, detail="Database constraint violation")
+        raise HTTPException(status_code=400, detail="Database constraint violation (Name must be unique)")
     except SQLAlchemyError as e:
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
-@router_assets_types.get("/{type_id}", response_model=AssetTypeResponse)
-async def get(type_id: int, db: AsyncSession = Depends(get_db)):
-    log = logger.bind(action="get_asset_type", type_id=type_id)
+
+@router_assets_types.get("/{asset_type_id}", response_model=AssetTypeResponse)
+async def get(asset_type_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Получить тип актива по внутреннему ID (asset_type_id).
+    """
+    log = logger.bind(action="get_asset_type", asset_type_id=asset_type_id)
 
     try:
-        obj = await get_asset_type_by_type_id(db, type_id)
+        obj = await get_asset_type_by_id(db, asset_type_id)
         if not obj:
             log.warning("not_found")
             raise HTTPException(status_code=404, detail="Asset Type not found")
@@ -60,8 +65,12 @@ async def get(type_id: int, db: AsyncSession = Depends(get_db)):
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
-@router_assets_types.get("/", response_model=list[AssetTypeResponse])
+
+@router_assets_types.get("/", response_model=List[AssetTypeResponse])
 async def list_all(db: AsyncSession = Depends(get_db)):
+    """
+    Получить список всех типов активов.
+    """
     log = logger.bind(action="list_asset_types")
 
     try:
@@ -73,12 +82,17 @@ async def list_all(db: AsyncSession = Depends(get_db)):
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
-@router_assets_types.patch("/{type_id}", response_model=AssetTypeResponse)
-async def patch(type_id: int, data: AssetTypeUpdate, db: AsyncSession = Depends(get_db)):
-    log = logger.bind(action="update_asset_type", type_id=type_id)
+
+@router_assets_types.patch("/{asset_type_id}", response_model=AssetTypeResponse)
+async def patch(asset_type_id: int, data: AssetTypeUpdate, db: AsyncSession = Depends(get_db)):
+    """
+    Обновить тип актива по внутреннему ID (asset_type_id).
+    """
+    log = logger.bind(action="update_asset_type", asset_type_id=asset_type_id)
 
     try:
-        obj = await get_asset_type_by_type_id(db, type_id)
+        # 1. Находим объект по PK
+        obj = await get_asset_type_by_id(db, asset_type_id)
         if not obj:
             log.warning("not_found")
             raise HTTPException(status_code=404, detail="Asset Type not found")
@@ -98,12 +112,16 @@ async def patch(type_id: int, data: AssetTypeUpdate, db: AsyncSession = Depends(
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
-@router_assets_types.delete("/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete(type_id: int, db: AsyncSession = Depends(get_db)):
-    log = logger.bind(action="delete_asset_type", type_id=type_id)
+
+@router_assets_types.delete("/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete(asset_type_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Удалить тип актива по внутреннему ID (asset_type_id).
+    """
+    log = logger.bind(action="delete_asset_type", asset_type_id=asset_type_id)
 
     try:
-        obj = await get_asset_type_by_type_id(db, type_id)
+        obj = await get_asset_type_by_id(db, asset_type_id)
         if not obj:
             log.warning("not_found")
             raise HTTPException(status_code=404, detail="Asset Type not found")
@@ -114,9 +132,10 @@ async def delete(type_id: int, db: AsyncSession = Depends(get_db)):
     except HTTPException:
         raise
     except IntegrityError as e:
-        # Например, если на тип ссылаются активы и FK не позволяет удалить
+        # Ошибка возникнет, если есть внешние ключи (например, в AssetClass или Asset),
+        # которые ссылаются на этот тип и не настроены на каскадное удаление.
         log.error("db_integrity_error", error=str(e.orig), exc_info=True)
-        raise HTTPException(status_code=400, detail="Cannot delete: referenced by existing assets")
+        raise HTTPException(status_code=400, detail="Cannot delete: referenced by existing assets or classes")
     except SQLAlchemyError as e:
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")

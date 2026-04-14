@@ -5,22 +5,17 @@ from app.models.Base import Base
 class AssetType(Base):
     """
     Модель справочника типов активов.
-    Справочник типов оборудования (Компьютеры, Серверы, Сетевое оборудование и т.д.).
+    type_id удален. Теперь используется только asset_type_id (autoincrement).
     """
     __tablename__ = "asset_types"
 
-    # Уникальный идентификатор записи (Primary Key)
+    # Первичный ключ (автоинкремент)
     asset_type_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    # Человекочитаемое название типа (например, "Ноутбук")
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Название типа (теперь должно быть уникальным, чтобы заменять логику type_id)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
 
-    # Бизнес-код типа (например, 10, 20, 30)
-    # unique=True обязателен, так как на это поле ссылается внешний ключ в таблице Asset
-    type_id: Mapped[int] = mapped_column(Integer, index=True, unique=True, nullable=False)
-
-    # Связь "Один ко многим": один тип может иметь много активов
-    # Используем строковую ссылку "Asset" вместо прямого импорта
+    # Связь с активами
     assets: Mapped[list["Asset"]] = relationship(
         back_populates="asset_type",
         lazy="selectin"

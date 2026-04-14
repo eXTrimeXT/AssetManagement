@@ -14,11 +14,11 @@ class Location(Base):
 
     location_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
-    country = Column(String(100), nullable=False, index=True, default="Страна")
-    city = Column(String(100), nullable=False, index=True, default="Город")
-    address = Column(String(255), nullable=False, default="Улица и номер дома")
-    room = Column(String(50), nullable=True, default="Номер помещения/кабинета")
-    floor = Column(String(10), nullable=True, default="Этаж")
+    country = Column(String(100), index=True, default="Страна")
+    city = Column(String(100), index=True, default="Город")
+    address = Column(String(255), default="Улица и номер дома")
+    room = Column(String(50), default="Номер помещения/кабинета")
+    floor = Column(String(10),  default="Этаж")
 
     # Связь с активами (один ко многим: одна локация может иметь много активов)
     # Примечание: В модели Asset нужно будет добавить поле location_id и relationship,

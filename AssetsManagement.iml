@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/app" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/static" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.14 (AssetsManagement)" jdkType="Python SDK" />

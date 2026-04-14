@@ -17,41 +17,41 @@ class Asset(Base):
     asset_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # === Основные поля (из ТЗ) ===
-    asset_status = Column(String(100), nullable=False, index=True, default="Приемка")           # Статус актива
-    type_domain = Column(String(100), nullable=True)                                            # Тип домена
-    type_id = Column(Integer, ForeignKey("asset_types.type_id"), nullable=False, index=True)    # Тип актива (ссылка на справочник)
-    inventory_id = Column(String(50), unique=True, index=True, nullable=False)                  # Инвентарный номер
-    affixed_inventory_id = Column(Boolean, default=False, nullable=True)                        # Инвентарный номер наклеен?
-    info_storage_location = Column(String(200), nullable=True)                                  # Место хранения информации об активе
+    asset_status = Column(String(100), index=True, default="Приемка")           # Статус актива
+    type_domain = Column(String(100))                                            # Тип домена
+    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)    # Тип актива (ссылка на справочник)
+    inventory_id = Column(String(50), unique=True, index=True)                  # Инвентарный номер
+    affixed_inventory_id = Column(Boolean, default=False)                        # Инвентарный номер наклеен?
+    info_storage_location = Column(String(200))                                  # Место хранения информации об активе
 
     # location = Column(String(150), nullable=True)                                             # Местоположение актива
     # В app/models/Asset.py
-    location_id = Column(Integer, ForeignKey("locations.location_id"), nullable=True, index=True)
+    location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
     location_obj: Mapped[Optional["Location"]] = relationship(
         "Location",
         back_populates="assets",
         lazy="joined" # Подгружаем локацию сразу при запросе актива
     )
 
-    serial_number = Column(String(100), unique=True, index=True, nullable=False)                # Серийный номер
+    serial_number = Column(String(100), unique=True, index=True)                # Серийный номер
     name = Column(String(150), nullable=False, index=True)                                      # Имя актива
-    passwork = Column(String(200), nullable=True)                                               # Строковое значение (пароль/ключ)
-    date_issue = Column(Date, nullable=True)                                                    # Дата выдачи
-    date_purchasing = Column(Date, nullable=True)                                               # Дата покупки
-    comment = Column(Text, nullable=True)                                                       # Комментарий
-    seller = Column(String(100), nullable=True)                                                 # Продавец
-    price = Column(Integer, nullable=True, index=True)                                          # Цена
+    passwork = Column(String(200))                                               # Строковое значение (пароль/ключ)
+    date_issue = Column(Date)                                                    # Дата выдачи
+    date_purchasing = Column(Date)                                               # Дата покупки
+    comment = Column(Text)                                                       # Комментарий
+    seller = Column(String(100))                                                 # Продавец
+    price = Column(Integer, index=True)                                          # Цена
 
     # === Комплектация (иерархия через parent_id) ===
-    parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=True, index=True)
+    parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
 
     # === Служебные поля ===
-    source = Column(String(100), nullable=True)                                                 # Источник поступления
-    prepared_by = Column(String(100), nullable=True)                                            # Подготовил (ответственный за документы)
-    checked_by = Column(String(100), nullable=True)                                             # Проверил (контроль документов)
-    deleted_at = Column(DateTime, nullable=True, index=True)                                    # Soft delete
+    source = Column(String(100))                                                 # Источник поступления
+    prepared_by = Column(String(100))                                            # Подготовил (ответственный за документы)
+    checked_by = Column(String(100))                                             # Проверил (контроль документов)
+    deleted_at = Column(DateTime, index=True)                                    # Soft delete
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # === Связи ===
     # Самореференция: комплектация (дочерние активы)
@@ -67,7 +67,7 @@ class Asset(Base):
     )
 
     # Связь с software
-    software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), nullable=True, index=True)
+    software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), index=True)
     software = relationship("Software", back_populates="assets", lazy="joined")
 
     # Тип актива

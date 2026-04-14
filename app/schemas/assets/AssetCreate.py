@@ -9,7 +9,7 @@ class AssetCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=150, description="Имя актива")
     inventory_id: str = Field(..., min_length=1, max_length=50, description="Инвентарный номер")
     serial_number: str = Field(..., min_length=1, max_length=100, description="Серийный номер")
-    type_id: int = Field(..., description="Тип актива (ссылка на справочник)")
+    asset_type_id: int = Field(..., description="Тип актива (ссылка на справочник)")
 
     # Статус
     asset_status: str = Field(default="Приемка", max_length=50, description="Статус актива")
@@ -44,7 +44,7 @@ class AssetCreate(BaseModel):
             "name": "имя",
             "inventory_id": "инвентарный номер",
             "serial_number": "серийный номер",
-            "type_id": 10,
+            "asset_type_id": 10,
             "asset_status": "Приемка",
             "seller": "Продавец",
             "price": 0,

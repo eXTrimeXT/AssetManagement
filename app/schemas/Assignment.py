@@ -7,7 +7,6 @@ from typing import Optional, List
 class AssetTypeRef(BaseModel):
     asset_type_id: int
     name: str
-    type_id: int
     model_config = ConfigDict(from_attributes=True)
 
 class SoftwareShortRef(BaseModel):

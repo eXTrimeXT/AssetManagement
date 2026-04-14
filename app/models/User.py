@@ -12,27 +12,27 @@ class User(Base):
 
     # Идентификаторы
     user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_tab_id = Column(String(50), unique=True, index=True, nullable=True)    # Табельный номер
+    user_tab_id = Column(String(50), unique=True, index=True)    # Табельный номер
 
     # Имена
     owner = Column(String(150), nullable=False, index=True)                     # ФИО на русском
     user_en_name = Column(String(150), nullable=True)                           # ФИО на английском
 
-    # Роль пользователя, пользователь может не иметь роли -> ничего не может делать
-    role = Column(String(40), nullable=True)
+    # Роль пользователя
+    role = Column(String(40))
 
     # Должность и отдел
-    user_position = Column(String(100), nullable=True)                          # Должность
-    department = Column(String(100), nullable=True, index=True)                 # Отдел
+    user_position = Column(String(100))                          # Должность
+    department = Column(String(100), index=True)                 # Отдел
 
     # Контакты
     email = Column(String(100), unique=True, index=True, nullable=False)
-    phone = Column(String(50), nullable=True)
+    phone = Column(String(50))
 
     # Системные поля
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Связи
     assignments = relationship("UserAsset", back_populates="user", cascade="all, delete-orphan", lazy="select")

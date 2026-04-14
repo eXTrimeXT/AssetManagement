@@ -18,11 +18,12 @@ from app.middleware.LoggingMiddleware import LoggingMiddleware
 from app.routers.router_root import router_root
 from app.routers.router_assets import router_assets
 from app.routers.router_assets_types import router_assets_types
-from app.routers.router_xl import router_xl
 from app.routers.router_users import router_users
 from app.routers.router_software import router_software
 from app.routers.router_user_asset import router_user_assets
 from app.routers.router_locations import router_locations
+from app.routers.router_catalog import router_catalog
+from app.routers.router_warehouses import router_warehouses
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -73,8 +74,9 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(router_root, prefix="/api")
 app.include_router(router_assets, prefix="/api")
 app.include_router(router_assets_types, prefix="/api")
-app.include_router(router_xl, prefix="/api")
 app.include_router(router_users, prefix="/api")
 app.include_router(router_software, prefix="/api")
 app.include_router(router_user_assets, prefix="/api")
 app.include_router(router_locations, prefix="/api")
+app.include_router(router_catalog, prefix="/api")
+app.include_router(router_warehouses, prefix="/api")

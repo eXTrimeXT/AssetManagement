@@ -92,7 +92,7 @@ async def get_assets_list(
         skip: int = 0,
         limit: int = 50,
         asset_status: Optional[str] = None,
-        type_id: Optional[int] = None,
+        asset_type_id: Optional[int] = None,
         location: Optional[str] = None,
         deleted: bool = False
 ) -> Sequence[Any]:
@@ -108,8 +108,8 @@ async def get_assets_list(
     # Фильтры
     if asset_status:
         query = query.where(Asset.asset_status == asset_status)
-    if type_id:
-        query = query.where(Asset.type_id == type_id)
+    if asset_type_id:
+        query = query.where(Asset.asset_type_id == asset_type_id)
     if location:
         query = query.where(Asset.location.ilike(f"%{location}%"))
 
@@ -250,7 +250,7 @@ async def get_all_asset_children_recursive(
                  WITH RECURSIVE asset_tree AS (
                      -- Базовый случай: прямые дети указанного актива
                      SELECT
-                         asset_id, name, inventory_id, serial_number, asset_status, type_id,
+                         asset_id, name, inventory_id, serial_number, asset_status, asset_type_id,
                          location_id, parent_id, deleted_at, software_id, seller, price, 1 AS depth
                      FROM assets
                      WHERE parent_id = :root_id AND deleted_at IS NULL
@@ -259,7 +259,7 @@ async def get_all_asset_children_recursive(
 
                      -- Рекурсивный случай: дети детей
                      SELECT
-                         a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.type_id,
+                         a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.asset_type_id,
                          a.location_id, a.parent_id, a.deleted_at, a.software_id, a.seller, a.price, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
@@ -293,7 +293,7 @@ async def get_all_asset_children_recursive(
             "inventory_id": row.inventory_id,
             "serial_number": row.serial_number,
             "asset_status": row.asset_status,
-            "type_id": row.type_id,
+            "asset_type_id": row.asset_type_id,
             "location_id": row.location_id,  # Обновлено: было location
             "parent_id": row.parent_id,
             "software_id": row.software_id,

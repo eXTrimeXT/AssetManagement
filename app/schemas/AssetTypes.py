@@ -9,11 +9,6 @@ class AssetTypeBase(BaseModel):
     # Человекочитаемое название типа (например, "Ноутбук", "Сервер")
     name: str
 
-    # Уникальный бизнес-код типа (например, 10, 20, 30).
-    # Используется как ключ для связи с таблицей assets вместо внутреннего ID базы данных.
-    type_id: int
-
-
 class AssetTypeCreate(AssetTypeBase):
     """
     Схема для создания нового типа актива (POST запрос).
@@ -41,7 +36,6 @@ class AssetTypeUpdate(BaseModel):
     # Все поля опциональны (None по умолчанию).
     # Обновятся только те поля, которые явно переданы в запросе.
     name: str | None = None
-    type_id: int | None = None
 
     # extra='ignore' игнорирует лишние поля в JSON-запросе, которые не описаны в схеме, предотвращая ошибки валидации.
     model_config = ConfigDict(extra='ignore')

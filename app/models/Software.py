@@ -14,27 +14,27 @@ class Software(Base):
     software_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # === Офисное ПО ===
-    office_type = Column(String(100), nullable=True)                            # Тип офиса (MS Office, LibreOffice...)
-    office_key = Column(String(100), nullable=True)                             # Ключ лицензии офиса
+    office_type = Column(String(100))                           # Тип офиса (MS Office, LibreOffice...)
+    office_key = Column(String(100))                             # Ключ лицензии офиса
 
     # === Операционная система ===
-    os_type = Column(String(100), nullable=True)                                # Тип ОС (Windows 10, Ubuntu...)
-    os_key = Column(String(100), nullable=True)                                 # Ключ лицензии ОС
+    os_type = Column(String(100))                                # Тип ОС (Windows 10, Ubuntu...)
+    os_key = Column(String(100))                            # Ключ лицензии ОС
 
     # === Удалённое управление ===
-    remote_control = Column(String(150), nullable=True)                         # ПО удалённого управления
+    remote_control = Column(String(150))                         # ПО удалённого управления
 
     # === Права доступа ===
-    admin_permission = Column(Boolean, default=False, nullable=False)           # Админ права
+    admin_permission = Column(Boolean, default=False)           # Админ права
 
     # === Установка ===
-    who_installed = Column(String(150), nullable=True)                          # Кто установил (ФИО)
+    who_installed = Column(String(150))                          # Кто установил (ФИО)
 
     # === Служебные поля ===
-    installed_at = Column(DateTime, default=datetime.utcnow, nullable=True)     # Дата установки
-    comment = Column(Text, nullable=True)                                       # Комментарий
+    installed_at = Column(DateTime, default=datetime.utcnow)     # Дата установки
+    comment = Column(Text)                                       # Комментарий
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # === Связь с активом (опционально) ===
     assets = relationship("Asset", back_populates="software", lazy="select")

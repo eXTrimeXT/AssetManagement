@@ -20,7 +20,7 @@ class SoftwareCreate(BaseModel):
     admin_permission: bool = Field(default=False, description="Админ права")
 
     # Установка
-    who_installed: Optional[str] = Field(None, max_length=150, description="Кто установил (ФИО)")
+    who_installed: Optional[int] = Field(None)
     installed_at: Optional[datetime] = Field(None, description="Дата установки")
 
     # Комментарий
@@ -36,7 +36,7 @@ class SoftwareCreate(BaseModel):
                 "os_key": "YYYYY-YYYYY-YYYYY-YYYYY-YYYYY",
                 "remote_control": "TeamViewer 15",
                 "admin_permission": False,
-                "who_installed": "Иванов И.И.",
+                "who_installed": None,
                 "installed_at": "2026-04-01T10:00:00",
                 "comment": "Стандартный пакет ПО"
             }

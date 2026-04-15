@@ -28,7 +28,7 @@ class Software(Base):
     admin_permission = Column(Boolean, default=False)           # Админ права
 
     # === Установка ===
-    who_installed = Column(String(150))                          # Кто установил (ФИО)
+    who_installed = Column(Integer, ForeignKey("users.user_id"))                          # Кто установил (ФИО)
 
     # === Служебные поля ===
     installed_at = Column(DateTime, default=datetime.utcnow)     # Дата установки
@@ -38,6 +38,7 @@ class Software(Base):
 
     # === Связь с активом (опционально) ===
     assets = relationship("Asset", back_populates="software", lazy="select")
+    installer = relationship("User", foreign_keys=[who_installed])
 
     def __repr__(self):
         return f"<Software(id={self.software_id}, os_type={self.os_type}, office_type={self.office_type})>"

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database.connection import get_db
-from app.database.asset_types.crud_asset_types import (
+from app.database.crud_asset_types import (
     create_asset_type,
     list_asset_types,
     update_asset_type,

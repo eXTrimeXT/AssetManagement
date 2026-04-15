@@ -8,7 +8,7 @@ from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.schemas.assets.AssetResponse import AssetResponse, AssetShortResponse
 
 # Импорт CRUD операций
-from app.database.assets.crud_assets import (
+from app.database.crud_assets import (
     create_asset,
     get_assets_list,
     get_asset_by_id,
@@ -57,7 +57,6 @@ async def get_assets_endpoint(
         limit: int = Query(50, ge=1, le=100),
         asset_status: Optional[str] = None,
         type_id: Optional[int] = None,
-        location: Optional[str] = None,
         deleted: bool = False,
         db: AsyncSession = Depends(get_db)
 ):
@@ -69,10 +68,9 @@ async def get_assets_endpoint(
     - limit: количество записей (макс 100)
     - asset_status: фильтр по статусу
     - type_id: фильтр по типу актива
-    - location: поиск по местоположению (частичное совпадение)
     - deleted: если True, показывает и удаленные активы
     """
-    return await get_assets_list(db, skip, limit, asset_status, type_id, location, deleted)
+    return await get_assets_list(db, skip, limit, asset_status, type_id, deleted)
 
 
 @router_assets.get("/{asset_id}", response_model=AssetResponse)
@@ -178,7 +176,7 @@ async def hard_delete_asset_endpoint(
     Удаляет актив и всех его дочерних элементов рекурсивно.
     """
     # Проверяем, существует ли актив и удален ли он
-    from app.database.assets.crud_assets import get_asset_with_deleted
+    from database.crud_assets import get_asset_with_deleted
     asset = await get_asset_with_deleted(db, asset_id)
 
     if not asset:
@@ -214,7 +212,7 @@ async def get_all_asset_children_endpoint(
     # Или через get_asset_with_deleted, если хотим видеть детей даже удаленного родителя?
     # По логике ТЗ: родитель должен существовать.
 
-    from app.database.assets.crud_assets import get_asset_with_deleted
+    from database.crud_assets import get_asset_with_deleted
     parent = await get_asset_with_deleted(db, asset_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Родительский актив не найден")

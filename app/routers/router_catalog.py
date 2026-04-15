@@ -8,9 +8,9 @@ import pandas as pd
 from app.database.connection import get_db
 from app.schemas.catalog.ClassSchemas import AssetClassCreate, AssetClassUpdate, AssetClassResponse
 from app.schemas.catalog.ModelSchemas import AssetModelCreate, AssetModelUpdate, AssetModelResponse
-from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogUpdate, AssetCatalogResponse
+from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogResponse
 
-from app.database.catalog.crud_catalog import (
+from app.database.crud_catalog import (
     create_asset_class, get_asset_classes, update_asset_class, delete_asset_class,
     create_asset_model, get_asset_models, update_asset_model,
     add_to_catalog, get_catalog_list, get_catalog_stats_by_model

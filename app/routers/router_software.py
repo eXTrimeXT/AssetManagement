@@ -9,7 +9,7 @@ from app.schemas.software.SoftwareResponse import SoftwareResponse, SoftwareShor
 from app.schemas.assets.AssetResponse import AssetShortResponse
 
 # Импорт CRUD функций
-from app.database.software.crud_software import (
+from app.database.crud_software import (
     create_software,
     get_software_list,
     get_software_by_id,

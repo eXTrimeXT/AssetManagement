@@ -11,7 +11,7 @@ class SoftwareUpdate(BaseModel):
     os_key: Optional[str] = Field(None, max_length=100)
     remote_control: Optional[str] = Field(None, max_length=150)
     admin_permission: Optional[bool] = None
-    who_installed: Optional[str] = Field(None, max_length=150)
+    who_installed: Optional[int] = Field(None)
     installed_at: Optional[datetime] = None
     comment: Optional[str] = None
 

@@ -7,7 +7,7 @@ from app.schemas.warehouses.WarehouseCreate import WarehouseCreate
 from app.schemas.warehouses.WarehouseUpdate import WarehouseUpdate
 from app.schemas.warehouses.WarehouseResponse import WarehouseResponse, WarehouseShortResponse
 
-from app.database.warehouses.crud_warehouses import (
+from app.database.crud_warehouses import (
     create_warehouse,
     get_warehouses_list,
     get_warehouse_by_id,

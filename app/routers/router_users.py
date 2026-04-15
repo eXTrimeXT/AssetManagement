@@ -9,7 +9,7 @@ from app.schemas.users.UserUpdate import UserUpdate
 from app.schemas.users.UserResponse import UserResponse, UserShortResponse
 
 # Импорт CRUD функций
-from app.database.users.crud_users import (
+from app.database.crud_users import (
     create_user,
     get_users_list,
     get_user_by_id,

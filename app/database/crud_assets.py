@@ -9,7 +9,6 @@ from app.models.Asset import Asset
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 
-
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ПОИСКА
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
     """
@@ -93,7 +92,6 @@ async def get_assets_list(
         limit: int = 50,
         asset_status: Optional[str] = None,
         asset_type_id: Optional[int] = None,
-        location: Optional[str] = None,
         deleted: bool = False
 ) -> Sequence[Any]:
     """
@@ -110,8 +108,7 @@ async def get_assets_list(
         query = query.where(Asset.asset_status == asset_status)
     if asset_type_id:
         query = query.where(Asset.asset_type_id == asset_type_id)
-    if location:
-        query = query.where(Asset.location.ilike(f"%{location}%"))
+
 
     # Пагинация
     query = query.offset(skip).limit(limit)

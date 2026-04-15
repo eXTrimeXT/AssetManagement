@@ -34,8 +34,8 @@ class AssetCreate(BaseModel):
 
     # Служебные
     source: Optional[str] = Field(None, max_length=100)
-    prepared_by: Optional[str] = Field(None, max_length=100)
-    checked_by: Optional[str] = Field(None, max_length=100)
+    prepared_by: Optional[int] = Field(None)
+    checked_by: Optional[int] = Field(None)
 
 
     model_config = ConfigDict(
@@ -44,7 +44,7 @@ class AssetCreate(BaseModel):
             "name": "имя",
             "inventory_id": "инвентарный номер",
             "serial_number": "серийный номер",
-            "asset_type_id": 10,
+            "asset_type_id": 1,
             "asset_status": "Приемка",
             "seller": "Продавец",
             "price": 0,
@@ -58,8 +58,8 @@ class AssetCreate(BaseModel):
             "comment": "Комментарий",
             "parent_id": None,
             "source": "Источник поступления",
-            "prepared_by": "Ответственный за документы",
-            "checked_by": "Контроль документов",
+            "prepared_by": 1,
+            "checked_by": 1,
             "software_id": None
         }
     })

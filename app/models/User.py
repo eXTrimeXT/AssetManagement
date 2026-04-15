@@ -34,8 +34,5 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Связи
-    assignments = relationship("UserAsset", back_populates="user", cascade="all, delete-orphan", lazy="select")
-
     def __repr__(self):
         return f"<User(id={self.user_id}, tab_id={self.user_tab_id}, owner={self.owner})>"

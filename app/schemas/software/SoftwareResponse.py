@@ -10,7 +10,7 @@ class SoftwareBase(BaseModel):
     os_key: Optional[str] = None
     remote_control: Optional[str] = None
     admin_permission: bool = False
-    who_installed: Optional[str] = None
+    who_installed: Optional[int] = None
     installed_at: Optional[datetime] = None
     comment: Optional[str] = None
 

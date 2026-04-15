@@ -20,8 +20,8 @@ class AssetUpdate(BaseModel):
     comment: Optional[str] = None
     parent_id: Optional[int] = None
     source: Optional[str] = Field(None, max_length=100)
-    prepared_by: Optional[str] = Field(None, max_length=100)
-    checked_by: Optional[str] = Field(None, max_length=100)
+    prepared_by: Optional[int] = Field(None)
+    checked_by: Optional[int] = Field(None)
     deleted_at: Optional[date] = None
     software_id: Optional[int] = None
     seller: Optional[str] = Field(None, max_length=100, description="Продавец/Поставщик")

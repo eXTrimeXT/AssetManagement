@@ -33,8 +33,8 @@ class Asset(Base):
         lazy="joined" # Подгружаем локацию сразу при запросе актива
     )
 
-    serial_number = Column(String(100), unique=True, index=True)                # Серийный номер
-    name = Column(String(150), nullable=False, index=True)                                      # Имя актива
+    serial_number = Column(String(100), unique=True, index=True)                 # Серийный номер
+    name = Column(String(150), nullable=False, index=True)                       # Имя актива
     passwork = Column(String(200))                                               # Строковое значение (пароль/ключ)
     date_issue = Column(Date)                                                    # Дата выдачи
     date_purchasing = Column(Date)                                               # Дата покупки
@@ -46,9 +46,10 @@ class Asset(Base):
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
 
     # === Служебные поля ===
-    source = Column(String(100))                                                 # Источник поступления
-    prepared_by = Column(String(100))                                            # Подготовил (ответственный за документы)
-    checked_by = Column(String(100))                                             # Проверил (контроль документов)
+    source = Column(String(100))                                                 # Источник поступления (поставщик)
+    prepared_by = Column(Integer, ForeignKey("users.user_id"))                   # Подготовил (ответственный за документы)
+    checked_by = Column(Integer, ForeignKey("users.user_id"))                    # Проверил (контроль документов)
+
     deleted_at = Column(DateTime, index=True)                                    # Soft delete
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -66,15 +67,16 @@ class Asset(Base):
         lazy="selectin"
     )
 
+    # Связь с пользователями
+    preparer = relationship("User", foreign_keys=[prepared_by])
+    checker = relationship("User", foreign_keys=[checked_by])
+
     # Связь с software
     software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), index=True)
     software = relationship("Software", back_populates="assets", lazy="joined")
 
     # Тип актива
     asset_type = relationship("AssetType", back_populates="assets", lazy="joined")
-
-    # Связь с UserAsset
-    user_assignments = relationship("UserAsset", back_populates="asset", lazy="select", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name}, inventory_id={self.inventory_id})>"

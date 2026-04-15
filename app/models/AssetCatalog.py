@@ -19,8 +19,8 @@ class AssetCatalog(Base):
     # Владелец (дублируем или синхронизируем с текущим статусом актива, но здесь исторический владелец записи в каталоге)
     owner_id = Column(Integer, ForeignKey("users.user_id"), index=True)
 
-    # Склад (простой integer ID, можно потом сделать справочником)
-    warehouse_id = Column(Integer, index=True)
+    # Склад
+    warehouse_id = Column(Integer, ForeignKey("warehouses.warehouse_id"))
 
     # Гарантия
     warranty_end_date = Column(Date)
@@ -34,6 +34,7 @@ class AssetCatalog(Base):
     asset = relationship("Asset", backref="catalog_entry", uselist=False) # Обратная связь один к одному
     owner = relationship("User", foreign_keys=[owner_id])
     creator = relationship("User", foreign_keys=[created_by])
+    warehouse = relationship("Warehouse", foreign_keys=[warehouse_id])
 
     def __repr__(self):
         return f"<AssetCatalog(catalog_id={self.catalog_id}, asset_id={self.asset_id})>"

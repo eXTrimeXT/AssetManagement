@@ -19,8 +19,8 @@ class AssetBase(BaseModel):
     comment: Optional[str] = None
     parent_id: Optional[int] = None
     source: Optional[str] = None
-    prepared_by: Optional[str] = None
-    checked_by: Optional[str] = None
+    prepared_by: Optional[int] = None
+    checked_by: Optional[int] = None
     software_id: Optional[int] = None
 
 class AssetResponse(AssetBase):

@@ -3,8 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from app.database.connection import get_db
-from app.schemas.locations.LocationCreate import LocationCreate
-from app.schemas.locations.LocationUpdate import LocationUpdate
 from app.schemas.locations.LocationResponse import LocationResponse, LocationShortResponse
 
 # Импорт CRUD функций
@@ -16,7 +14,7 @@ from app.schemas.locations.LocationResponse import LocationResponse, LocationSho
 #     delete_location
 # )
 
-from app.database.locations.crud_locations import *
+from app.database.crud_locations import *
 
 router_locations = APIRouter(prefix="/locations", tags=["Locations"])
 

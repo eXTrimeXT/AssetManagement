@@ -24,6 +24,9 @@ from app.routers.router_locations import router_locations
 from app.routers.router_catalog import router_catalog
 from app.routers.router_warehouses import router_warehouses
 
+# Роутер EXCEL
+from app.excel.router_xl_export import router_catalog_export
+
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -78,3 +81,6 @@ app.include_router(router_software, prefix="/api")
 app.include_router(router_locations, prefix="/api")
 app.include_router(router_catalog, prefix="/api")
 app.include_router(router_warehouses, prefix="/api")
+
+# Excel
+app.include_router(router_catalog_export, prefix="/api")

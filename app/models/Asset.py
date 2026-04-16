@@ -1,3 +1,4 @@
+from operator import index
 from typing import Optional
 
 from app.models.Base import Base
@@ -24,8 +25,7 @@ class Asset(Base):
     affixed_inventory_id = Column(Boolean, default=False)                        # Инвентарный номер наклеен?
     info_storage_location = Column(String(200))                                  # Место хранения информации об активе
 
-    # location = Column(String(150), nullable=True)                                             # Местоположение актива
-    # В app/models/Asset.py
+    # Местоположение актива
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
     location_obj: Mapped[Optional["Location"]] = relationship(
         "Location",
@@ -39,18 +39,26 @@ class Asset(Base):
     date_issue = Column(Date)                                                    # Дата выдачи
     date_purchasing = Column(Date)                                               # Дата покупки
     comment = Column(Text)                                                       # Комментарий
-    seller = Column(String(100))                                                 # Продавец
     price = Column(Integer, index=True)                                          # Цена
 
     # === Комплектация (иерархия через parent_id) ===
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
 
+    # === Производитель и поставщик ===
+    # Производитель (ссылка на vendors.vendor_id)
+    manufacturer_id = Column(Integer, ForeignKey("vendors.vendor_id"), index=True)
+    manufacturer = relationship("Vendor", foreign_keys=[manufacturer_id], lazy="joined")
+
+    # Поставщик (ссылка на vendors.vendor_id)
+    vendor_id = Column(Integer, ForeignKey("vendors.vendor_id"), index=True)
+    vendor = relationship("Vendor", foreign_keys=[vendor_id], lazy="joined")
+
+
     # === Служебные поля ===
-    source = Column(String(100))                                                 # Источник поступления (поставщик)
     prepared_by = Column(Integer, ForeignKey("users.user_id"))                   # Подготовил (ответственный за документы)
     checked_by = Column(Integer, ForeignKey("users.user_id"))                    # Проверил (контроль документов)
 
-    deleted_at = Column(DateTime, index=True)                                    # Soft delete
+    deleted_at = Column(DateTime, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

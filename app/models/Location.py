@@ -30,5 +30,12 @@ class Location(Base):
         lazy="select"
     )
 
+    # Связь с компаниями (одна локация может быть у нескольких компаний)
+    companies: Mapped[List["Company"]] = relationship(
+        "Company",
+        back_populates="location_obj",
+        lazy="select"
+    )
+
     def __repr__(self):
         return f"<Location(id={self.location_id}, city={self.city}, address={self.address})>"

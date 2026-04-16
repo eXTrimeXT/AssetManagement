@@ -19,7 +19,19 @@ from app.database.crud_assets import (
     get_all_asset_children_recursive,
     check_duplicate_inventory_id,
     check_duplicate_serial_number,
-    check_parent_exists
+    check_parent_exists,
+)
+
+from app.database.crud_users import (
+    get_user_by_id
+)
+
+from app.database.crud_asset_types import (
+    get_asset_type_by_id
+)
+
+from app.database.crud_vendors import (
+    get_vendor_by_id
 )
 
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])
@@ -47,7 +59,33 @@ async def create_asset_endpoint(
         if not await check_parent_exists(db, asset_in.parent_id):
             raise HTTPException(status_code=400, detail="Родительский актив не найден")
 
-    # 4. Создание через CRUD
+    # 4. Проверка на производителя
+    if asset_in.manufacturer_id:
+        if not await get_vendor_by_id(db, asset_in.manufacturer_id):
+            raise HTTPException(status_code=400, detail="Производитель с таким ID не найден")
+
+    # 5. Проверка на поставщика
+    if asset_in.vendor_id:
+        if not await get_vendor_by_id(db, asset_in.vendor_id):
+            raise HTTPException(status_code=400, detail="Поставщик с таким ID не найден")
+
+    # 6. Проверка типа актива
+    if asset_in.asset_type_id:
+        # if not await get_asset_type(db, asset_in.asset_type_id):
+        if not await get_asset_type_by_id(db, asset_in.asset_type_id):
+            raise HTTPException(status_code=400, detail="Тип актива не найден")
+
+
+
+    if asset_in.prepared_by:
+        if not await get_user_by_id(db, asset_in.prepared_by):
+            raise HTTPException(status_code=400, detail="Ответственный пользователь с таким ID не найден")
+
+    if asset_in.checked_by:
+        if not await get_user_by_id(db, asset_in.checked_by):
+            raise HTTPException(status_code=400, detail="Проверяющий пользователь с таким ID не найден")
+
+    # 7. Создание через CRUD
     return await create_asset(db, asset_in)
 
 

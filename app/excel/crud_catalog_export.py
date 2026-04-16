@@ -77,8 +77,8 @@ async def get_full_catalog_for_export(db: AsyncSession) -> List[CatalogExportRow
             asset_date_issue=asset.date_issue if asset else None,
             asset_date_purchasing=asset.date_purchasing if asset else None,
             asset_comment=asset.comment if asset else None,
-            asset_source=asset.source if asset else None,
-            asset_seller=asset.seller if asset else None,
+            asset_source=asset.manufacturer_id if asset else None,
+            asset_seller=asset.vendor_id if asset else None,
             asset_price=asset.price if asset else None,
 
             # Владелец

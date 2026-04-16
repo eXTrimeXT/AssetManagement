@@ -2,6 +2,9 @@ from pydantic import BaseModel, ConfigDict
 from datetime import date, datetime
 from typing import Optional, List
 
+from app.schemas.locations.LocationResponse import LocationResponse
+
+
 class AssetBase(BaseModel):
     """Базовая схема актива"""
     name: str
@@ -18,10 +21,12 @@ class AssetBase(BaseModel):
     date_purchasing: Optional[date] = None
     comment: Optional[str] = None
     parent_id: Optional[int] = None
-    source: Optional[str] = None
     prepared_by: Optional[int] = None
     checked_by: Optional[int] = None
     software_id: Optional[int] = None
+
+    manufacturer_id: Optional[int] = None
+    vendor_id: Optional[int] = None
 
 class AssetResponse(AssetBase):
     """Полная схема ответа"""
@@ -29,6 +34,7 @@ class AssetResponse(AssetBase):
     deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    location_obj: Optional[LocationResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -43,5 +49,7 @@ class AssetShortResponse(BaseModel):
     location_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
+    manufacturer_id: Optional[int] = None
+    vendor_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

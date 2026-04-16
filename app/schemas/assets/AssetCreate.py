@@ -28,12 +28,13 @@ class AssetCreate(BaseModel):
     parent_id: Optional[int] = Field(None, description="ID родительского актива (комплектация)")
     software_id: Optional[int] = Field(None, description="ID программного обеспечения")
 
-    # Новые поля
-    seller: Optional[str] = Field(None, max_length=100, description="Продавец/Поставщик")
+    # Производители / Поставщики
+    manufacturer_id: Optional[int] = Field(None, description="ID производителя (из таблицы vendors)")
+    vendor_id: Optional[int] = Field(None, description="ID поставщика (из таблицы vendors)")
+
     price: Optional[int] = Field(None, ge=0, description="Стоимость приобретения")
 
     # Служебные
-    source: Optional[str] = Field(None, max_length=100)
     prepared_by: Optional[int] = Field(None)
     checked_by: Optional[int] = Field(None)
 
@@ -46,18 +47,12 @@ class AssetCreate(BaseModel):
             "serial_number": "серийный номер",
             "asset_type_id": 1,
             "asset_status": "Приемка",
-            "seller": "Продавец",
             "price": 0,
-            "type_domain": "тип домена",
-            "affixed_inventory_id": True,
-            "info_storage_location": "Место хранения информации об активе",
-            "location": "местоположение актива",
-            "passwork": "admin123",
             "date_issue": "2026-04-01",
             "date_purchasing": "2026-03-15",
-            "comment": "Комментарий",
             "parent_id": None,
-            "source": "Источник поступления",
+            "manufacturer_id": 1,
+            "vendor_id": 1,
             "prepared_by": 1,
             "checked_by": 1,
             "software_id": None

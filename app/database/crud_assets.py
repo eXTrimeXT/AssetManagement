@@ -1,13 +1,17 @@
 from datetime import datetime
 from typing import List, Optional, Any, Sequence
+from unittest import result
 
 from sqlalchemy import select, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.Asset import Asset
+from app.models.Vendor import Vendor
+from app.models.AssetType import AssetType
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
+
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ПОИСКА
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -72,6 +76,22 @@ async def check_parent_exists(db: AsyncSession, parent_id: int) -> bool:
     """
     result = await db.execute(select(Asset).where(Asset.asset_id == parent_id))
     return result.scalar_one_or_none() is not None
+
+
+async def get_vendor_by_id(db: AsyncSession, vendor_id: int) -> bool:
+    """
+    Проверяет существование вендора.
+    """
+    result = await db.execute(select(Vendor).where(Vendor.vendor_id == vendor_id))
+    return result.scalar_one_or_none() is not None
+
+
+async def get_asset_type(db: AsyncSession, asset_type: int) -> bool:
+    """
+    Проверяет существование типа актива
+    """
+    result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type))
+    return result.scalar_one_or_none()
 
 
 # CRUD ОПЕРАЦИИ
@@ -248,7 +268,7 @@ async def get_all_asset_children_recursive(
                      -- Базовый случай: прямые дети указанного актива
                      SELECT
                          asset_id, name, inventory_id, serial_number, asset_status, asset_type_id,
-                         location_id, parent_id, deleted_at, software_id, seller, price, 1 AS depth
+                         location_id, parent_id, deleted_at, software_id, price, 1 AS depth
                      FROM assets
                      WHERE parent_id = :root_id AND deleted_at IS NULL
 
@@ -257,7 +277,7 @@ async def get_all_asset_children_recursive(
                      -- Рекурсивный случай: дети детей
                      SELECT
                          a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.asset_type_id,
-                         a.location_id, a.parent_id, a.deleted_at, a.software_id, a.seller, a.price, at.depth + 1
+                         a.location_id, a.parent_id, a.deleted_at, a.software_id, a.price, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
                      WHERE a.deleted_at IS NULL \

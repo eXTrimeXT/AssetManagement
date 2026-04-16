@@ -43,8 +43,8 @@ async def lifespan(app: FastAPI):
     """
 
     # Для разработки раскомментировать
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
 
     yield
 

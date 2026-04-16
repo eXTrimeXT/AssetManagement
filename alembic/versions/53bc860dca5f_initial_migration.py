@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 9e535ff6e554
+Revision ID: 53bc860dca5f
 Revises: 
-Create Date: 2026-04-16 12:02:20.651420
+Create Date: 2026-04-16 12:39:31.712865
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '9e535ff6e554'
+revision: str = '53bc860dca5f'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -178,14 +178,14 @@ def upgrade() -> None:
     op.create_index(op.f('ix_assets_price'), 'assets', ['price'], unique=False)
     op.create_index(op.f('ix_assets_vendor_id'), 'assets', ['vendor_id'], unique=False)
     op.drop_constraint(op.f('assets_type_id_fkey'), 'assets', type_='foreignkey')
-    op.create_foreign_key(None, 'assets', 'users', ['prepared_by'], ['user_id'])
-    op.create_foreign_key(None, 'assets', 'vendors', ['vendor_id'], ['vendor_id'])
-    op.create_foreign_key(None, 'assets', 'locations', ['location_id'], ['location_id'])
     op.create_foreign_key(None, 'assets', 'vendors', ['manufacturer_id'], ['vendor_id'])
+    op.create_foreign_key(None, 'assets', 'users', ['prepared_by'], ['user_id'])
     op.create_foreign_key(None, 'assets', 'asset_types', ['asset_type_id'], ['asset_type_id'])
+    op.create_foreign_key(None, 'assets', 'locations', ['location_id'], ['location_id'])
+    op.create_foreign_key(None, 'assets', 'vendors', ['vendor_id'], ['vendor_id'])
     op.create_foreign_key(None, 'assets', 'users', ['checked_by'], ['user_id'])
-    op.drop_column('assets', 'type_id')
     op.drop_column('assets', 'source')
+    op.drop_column('assets', 'type_id')
     op.drop_column('assets', 'location')
     op.alter_column('software', 'admin_permission',
                existing_type=sa.BOOLEAN(),
@@ -212,8 +212,8 @@ def downgrade() -> None:
                existing_type=sa.BOOLEAN(),
                nullable=False)
     op.add_column('assets', sa.Column('location', sa.VARCHAR(length=150), autoincrement=False, nullable=True))
-    op.add_column('assets', sa.Column('source', sa.VARCHAR(length=100), autoincrement=False, nullable=True))
     op.add_column('assets', sa.Column('type_id', sa.INTEGER(), autoincrement=False, nullable=False))
+    op.add_column('assets', sa.Column('source', sa.VARCHAR(length=100), autoincrement=False, nullable=True))
     op.drop_constraint(None, 'assets', type_='foreignkey')
     op.drop_constraint(None, 'assets', type_='foreignkey')
     op.drop_constraint(None, 'assets', type_='foreignkey')

@@ -12,12 +12,12 @@ from app.database.crud_asset_types import (
     delete_asset_type,
     get_asset_type_by_id
 )
-from app.schemas.AssetTypes import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
+from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 
 # Инициализируем логгер
 logger = structlog.get_logger()
 
-router_assets_types = APIRouter(prefix="/assets-types", tags=["assets-types"])
+router_assets_types = APIRouter(prefix="/assets-types", tags=["Assets Types"])
 
 @router_assets_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)
 async def create(data: AssetTypeCreate, db: AsyncSession = Depends(get_db)):

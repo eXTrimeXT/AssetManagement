@@ -15,7 +15,6 @@ from app.middleware.LoggingMiddleware import LoggingMiddleware
 
 
 # Импорт роутеров
-from app.routers.router_root import router_root
 from app.routers.router_assets import router_assets
 from app.routers.router_assets_types import router_assets_types
 from app.routers.router_users import router_users
@@ -41,13 +40,6 @@ async def lifespan(app: FastAPI):
     1. engine.begin() открывает транзакцию с БД.
     2. conn.run_sync(Base.metadata.create_all) синхронно создает все таблицы,
        описанные в моделях (классы, наследующие Base), если они еще не существуют в БД.
-       Это удобно для разработки, но в продакшене лучше использовать Alembic.
-
-    YIELD:
-    Приложение работает и обрабатывает запросы.
-
-    SHUTDOWN:
-    После yield код выполнится при остановке сервера (закрытие соединений и т.д.).
     """
 
     # Для разработки раскомментировать
@@ -58,25 +50,16 @@ async def lifespan(app: FastAPI):
 
 # --- Создание экземпляра приложения ---
 app = FastAPI(
-    lifespan=lifespan,                                      # Привязываем функцию жизненного цикла
-    title="IT Assets API",                                  # Название API (в Swagger UI)
-    description="API для управления IT-активами компании",  # Описание
-    version="1.0.0"                                         # Версия API
+    lifespan=lifespan,
+    title="IT Assets API",
+    description="API для управления IT-активами компании",
+    version="1.0.0"
 )
-
-# --- Статика и Фронтенд ---
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-async def frontend():
-    return FileResponse("static/index.html")
 
 # --- Подключение MiddleWare ---
 app.add_middleware(LoggingMiddleware)
 
 # --- Подключение API Маршрутов ---
-app.include_router(router_root, prefix="/api")
 app.include_router(router_assets, prefix="/api")
 app.include_router(router_assets_types, prefix="/api")
 app.include_router(router_users, prefix="/api")

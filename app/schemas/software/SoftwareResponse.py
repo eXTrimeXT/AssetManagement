@@ -1,6 +1,9 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
+
+from app.schemas.users.UserResponse import UserResponse
+
 
 class SoftwareBase(BaseModel):
     """Базовая схема ПО"""
@@ -20,6 +23,8 @@ class SoftwareResponse(SoftwareBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+    installer: Optional[UserResponse] = Field(default=None)
+
     model_config = ConfigDict(from_attributes=True)
 
 class SoftwareShortResponse(BaseModel):
@@ -28,5 +33,6 @@ class SoftwareShortResponse(BaseModel):
     office_type: Optional[str] = None
     os_type: Optional[str] = None
     admin_permission: bool
+    who_installed: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

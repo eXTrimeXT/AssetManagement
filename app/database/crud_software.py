@@ -2,6 +2,7 @@ from typing import List, Optional, Any, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.Software import Software
 from app.models.Asset import Asset
@@ -10,13 +11,23 @@ from app.schemas.software.SoftwareUpdate import SoftwareUpdate
 
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# async def get_software_by_id(db: AsyncSession, software_id: int) -> Optional[Software]:
+#     """
+#     Получает запись о ПО по ID.
+#     Возвращает None, если не найдено.
+#     """
+#     result = await db.execute(
+#         select(Software).where(Software.software_id == software_id)
+#     )
+#     return result.scalar_one_or_none()
 async def get_software_by_id(db: AsyncSession, software_id: int) -> Optional[Software]:
     """
-    Получает запись о ПО по ID.
-    Возвращает None, если не найдено.
+    Получает запись о ПО по ID с подгрузкой пользователя.
     """
     result = await db.execute(
-        select(Software).where(Software.software_id == software_id)
+        select(Software)
+        .where(Software.software_id == software_id)
+        .options(selectinload(Software.installer)) # Явно подгружаем пользователя
     )
     return result.scalar_one_or_none()
 
@@ -39,6 +50,7 @@ async def create_software(db: AsyncSession, software_in: SoftwareCreate) -> Soft
     db.add(db_software)
     await db.commit()
     await db.refresh(db_software)
+    await db.refresh(db_software, )
     return db_software
 
 async def get_software_list(
@@ -79,6 +91,8 @@ async def update_software(db: AsyncSession, software_id: int, software_data: Sof
 
     await db.commit()
     await db.refresh(software)
+    # После обновления связи могут сброситься, поэтому снова подгружаем
+    await db.refresh(software, attribute_names=["installer"])
     return software
 
 async def delete_software(db: AsyncSession, software_id: int) -> bool:

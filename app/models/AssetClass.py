@@ -23,9 +23,15 @@ class AssetClass(Base):
     updated_by = Column(Integer, ForeignKey("users.user_id"))
 
     # Связи
+    # Связь с типом актива
+    asset_type = relationship("AssetType", foreign_keys=[class_type_id], lazy="joined")
+
+    # Связь с моделями оборудования
     models = relationship("AssetModel", back_populates="asset_class", cascade="all, delete-orphan")
-    creator = relationship("User", foreign_keys=[created_by])
-    updater = relationship("User", foreign_keys=[updated_by])
+
+    # Связь с пользователями (Создатель и обновляющий)
+    creator = relationship("User", foreign_keys=[created_by], lazy="joined")
+    updater = relationship("User", foreign_keys=[updated_by], lazy="joined")
 
     def __repr__(self):
         return f"<AssetClass(id={self.class_id}, name={self.class_name})>"

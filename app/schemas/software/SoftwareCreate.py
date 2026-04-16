@@ -14,14 +14,14 @@ class SoftwareCreate(BaseModel):
     os_key: Optional[str] = Field(None, max_length=100, description="Ключ лицензии ОС")
 
     # Удалённое управление
-    remote_control: Optional[str] = Field(None, max_length=150, description="ПО удалённого управления")
+    remote_control: Optional[str] = Field(default=None, max_length=150, description="ПО удалённого управления")
 
     # Права доступа
     admin_permission: bool = Field(default=False, description="Админ права")
 
     # Установка
-    who_installed: Optional[int] = Field(None)
-    installed_at: Optional[datetime] = Field(None, description="Дата установки")
+    who_installed: Optional[int] = Field(default=None)
+    installed_at: Optional[datetime] = Field(default=None, description="Дата установки")
 
     # Комментарий
     comment: Optional[str] = Field(None, description="Комментарий")

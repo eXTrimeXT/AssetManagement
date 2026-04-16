@@ -32,7 +32,6 @@ async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
     )
     return result.scalar_one_or_none()
 
-
 async def get_asset_with_deleted(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     """
     Получает актив по ID, включая мягко удаленные.
@@ -42,7 +41,6 @@ async def get_asset_with_deleted(db: AsyncSession, asset_id: int) -> Optional[As
         .where(Asset.asset_id == asset_id)
     )
     return result.scalar_one_or_none()
-
 
 async def check_duplicate_inventory_id(db: AsyncSession, inventory_id: str, exclude_id: Optional[int] = None) -> bool:
     """
@@ -56,7 +54,6 @@ async def check_duplicate_inventory_id(db: AsyncSession, inventory_id: str, excl
     result = await db.execute(query)
     return result.scalar_one_or_none() is not None
 
-
 async def check_duplicate_serial_number(db: AsyncSession, serial_number: str, exclude_id: Optional[int] = None) -> bool:
     """
     Проверяет, существует ли актив с таким серийным номером.
@@ -69,7 +66,6 @@ async def check_duplicate_serial_number(db: AsyncSession, serial_number: str, ex
     result = await db.execute(query)
     return result.scalar_one_or_none() is not None
 
-
 async def check_parent_exists(db: AsyncSession, parent_id: int) -> bool:
     """
     Проверяет существование родительского актива.
@@ -77,14 +73,12 @@ async def check_parent_exists(db: AsyncSession, parent_id: int) -> bool:
     result = await db.execute(select(Asset).where(Asset.asset_id == parent_id))
     return result.scalar_one_or_none() is not None
 
-
 async def get_vendor_by_id(db: AsyncSession, vendor_id: int) -> bool:
     """
     Проверяет существование вендора.
     """
     result = await db.execute(select(Vendor).where(Vendor.vendor_id == vendor_id))
     return result.scalar_one_or_none() is not None
-
 
 async def get_asset_type(db: AsyncSession, asset_type: int) -> bool:
     """
@@ -104,7 +98,6 @@ async def create_asset(db: AsyncSession, asset_in: AssetCreate) -> Asset:
     await db.commit()
     await db.refresh(db_asset)
     return db_asset
-
 
 async def get_assets_list(
         db: AsyncSession,
@@ -136,17 +129,43 @@ async def get_assets_list(
     result = await db.execute(query)
     return result.scalars().all()
 
+# async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
+#     """
+#     Получает полный объект актива с подгрузкой связанных типов (asset_type).
+#     Только активные (не удаленные) активы.
+#     """
+#     result = await db.execute(
+#         select(Asset)
+#         .where(Asset.asset_id == asset_id)
+#         .where(Asset.deleted_at.is_(None))
+#         .options(selectinload(Asset.asset_type))
+#     )
+#     return result.scalar_one_or_none()
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     """
-    Получает полный объект актива с подгрузкой связанных типов (asset_type).
-    Только активные (не удаленные) активы.
+    Получает полный объект актива со ВСЕМИ связями для детального ответа.
     """
     result = await db.execute(
         select(Asset)
         .where(Asset.asset_id == asset_id)
         .where(Asset.deleted_at.is_(None))
-        .options(selectinload(Asset.asset_type))
+        .options(
+            selectinload(Asset.asset_type),       # Загрузка типа
+            selectinload(Asset.location_obj),     # Загрузка локации
+            selectinload(Asset.preparer),         # Загрузка подготовившего (User)
+            selectinload(Asset.checker),          # Загрузка проверившего (User)
+            selectinload(Asset.software),         # Загрузка ПО
+            selectinload(Asset.manufacturer),     # Загрузка производителя (Vendor)
+            selectinload(Asset.vendor),           # Загрузка поставщика (Vendor)
+
+            # Для Vendor нужно также загрузить его внутренние связи, если они не lazy='joined' в модели
+            # Если в модели Vendor указано lazy='joined' для company и vendor_class, то этого достаточно.
+            # Если нет, то нужно добавлять:
+            selectinload(Asset.manufacturer).selectinload(Vendor.company),
+            selectinload(Asset.manufacturer).selectinload(Vendor.vendor_class),
+            selectinload(Asset.manufacturer).selectinload(Vendor.creator),
+        )
     )
     return result.scalar_one_or_none()
 

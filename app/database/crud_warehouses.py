@@ -23,7 +23,7 @@ async def get_warehouse_by_id(db: AsyncSession, warehouse_id: int) -> Optional[W
     result = await db.execute(
         select(Warehouse)
         .where(Warehouse.warehouse_id == warehouse_id)
-        .options(selectinload(Warehouse.location), selectinload(Warehouse.manager))
+        .options(selectinload(Warehouse.location), selectinload(Warehouse.preparer))
     )
     return result.scalar_one_or_none()
 
@@ -35,7 +35,7 @@ async def create_warehouse(db: AsyncSession, warehouse_in: WarehouseCreate) -> W
     await db.commit()
     await db.refresh(db_warehouse)
     # Подгружаем связи сразу после создания для возврата полного объекта
-    await db.refresh(db_warehouse, attribute_names=["location", "manager"])
+    await db.refresh(db_warehouse, attribute_names=["location", "preparer"])
     return db_warehouse
 
 
@@ -43,7 +43,7 @@ async def get_warehouses_list(db: AsyncSession, skip: int = 0, limit: int = 50) 
     """Получает список складов"""
     query = select(Warehouse).options(
         selectinload(Warehouse.location),
-        selectinload(Warehouse.manager)
+        selectinload(Warehouse.preparer)
     )
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
@@ -62,7 +62,7 @@ async def update_warehouse(db: AsyncSession, warehouse_id: int, warehouse_data: 
 
     await db.commit()
     await db.refresh(warehouse)
-    await db.refresh(warehouse, attribute_names=["location", "manager"])
+    await db.refresh(warehouse, attribute_names=["location", "preparer"])
     return warehouse
 
 

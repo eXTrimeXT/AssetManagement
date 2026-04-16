@@ -20,7 +20,8 @@ class Warehouse(Base):
 
     # Обратные связи (для удобства навигации, опционально)
     location = relationship("Location", backref="warehouses", lazy="joined")
-    manager = relationship("User", foreign_keys=[prepared_by], lazy="joined")
+    preparer = relationship("User", foreign_keys=[prepared_by], lazy="joined")
+
 
     def __repr__(self):
         return f"<Warehouse(id={self.warehouse_id}, name={self.name})>"

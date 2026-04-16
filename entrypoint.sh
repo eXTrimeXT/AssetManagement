@@ -11,8 +11,8 @@ done
 echo "База данных подключена!"
 
 # 2. Применение миграций Alembic
-echo "Применение миграций Alembic..."
-alembic upgrade head
+#echo "Применение миграций Alembic..."
+#alembic upgrade head
 
 # 3. Запуск основного сервера FastAPI
 echo "Запуск FastAPI сервера..."

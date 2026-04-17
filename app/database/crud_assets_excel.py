@@ -13,6 +13,81 @@ from app.models.Software import Software
 from app.models.User import User
 
 
+async def get_full_assets_for_export(db: AsyncSession, skip: int = 0, limit: int = 1000) -> List[Dict[str, Any]]:
+    """
+    Получает полные данные активов для экспорта.
+    Загружает все связи, чтобы превратить ID в названия (как в AssetExcelRow).
+    """
+    query = (
+        select(Asset)
+        .options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.location_obj),
+            selectinload(Asset.preparer),
+            selectinload(Asset.checker),
+            selectinload(Asset.software),
+            selectinload(Asset.manufacturer),
+            selectinload(Asset.vendor),
+            selectinload(Asset.parent) # Для получения инвентарного номера родителя
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+
+    result = await db.execute(query)
+    assets = result.scalars().all()
+
+    export_data = []
+    for asset in assets:
+        loc = asset.location_obj
+        prep = asset.preparer
+        check = asset.checker
+        soft = asset.software
+        manuf = asset.manufacturer
+        vend = asset.vendor
+        parent = asset.parent
+
+        row = {
+            # Основная информация
+            "inventory_id": asset.inventory_id,
+            "serial_number": asset.serial_number,
+            "name": asset.name,
+            "asset_type_name": asset.asset_type.name if asset.asset_type else "",
+            "asset_status": asset.asset_status,
+
+            # Локация
+            "location_country": loc.country if loc else "",
+            "location_city": loc.city if loc else "",
+            "location_address": loc.address if loc else "",
+            "location_room": loc.room if loc else "",
+            "location_floor": loc.floor if loc else "",
+
+            # Детали
+            "type_domain": asset.type_domain or "",
+            "passwork": asset.passwork or "",
+            "date_issue": asset.date_issue,
+            "date_purchasing": asset.date_purchasing,
+            "price": asset.price,
+            "comment": asset.comment or "",
+            "affixed_inventory_id": asset.affixed_inventory_id,
+
+            # Вендоры
+            "manufacturer_name": manuf.name if manuf else "",
+            "vendor_name": vend.name if vend else "",
+
+            # Пользователи
+            "prepared_by_name": prep.owner if prep else "",
+            "checked_by_name": check.owner if check else "",
+
+            # ПО и Комплектация
+            "software_os_type": soft.os_type if soft else "",
+            "parent_inventory_id": parent.inventory_id if parent else "",
+        }
+        export_data.append(row)
+
+    return export_data
+
+
 def _parse_date(val: Any) -> date | None:
     """
     Безопасный парсер даты из Excel/Pandas.

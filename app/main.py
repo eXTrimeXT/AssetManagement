@@ -25,10 +25,9 @@ from app.routers.router_warehouses import router_warehouses
 from app.routers.router_companies import router_companies
 from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_vendors import router_vendors
-from app.routers.router_assets_excel import router_assets_excel
-
 
 # Импорт роутеров Excel
+from app.routers.router_assets_excel import router_assets_excel
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -77,5 +76,5 @@ app.include_router(router_vendor_classes, prefix="/api")
 app.include_router(router_companies, prefix="/api")
 
 # Excel
-# app.include_router(router_catalog_excel, prefix="/api")
 app.include_router(router_assets_excel, prefix="/api")
+# app.include_router(router_catalog_excel, prefix="/api")

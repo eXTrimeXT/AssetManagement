@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import Optional
 
-class AssetImportRow(BaseModel):
+class AssetExcelRow(BaseModel):
     """
     Схема одной строки для ИМПОРТА актива из Excel.
     Поля сгруппированы по логическим категориям для удобства отображения в Excel.

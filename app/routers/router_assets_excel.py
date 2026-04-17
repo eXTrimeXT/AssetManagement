@@ -11,10 +11,34 @@ from app.service.excel.asset_import_service import (
     parse_asset_import_excel
 )
 from app.database.crud_assets_excel import (
-    import_assets_from_rows
+    import_assets_from_rows, get_full_assets_for_export
 )
+from app.service.excel.asset_export_service import create_asset_export_excel
 
 router_assets_excel = APIRouter(prefix="/assets/excel", tags=["Assets Excel"])
+
+@router_assets_excel.get("/export")
+async def export_assets_to_excel(
+        skip: int = 0,
+        limit: int = 1000,
+        db: AsyncSession = Depends(get_db)
+):
+    """Экспорт всех активов в Excel"""
+    try:
+        data = await get_full_assets_for_export(db, skip, limit)
+        if not data:
+            raise HTTPException(status_code=404, detail="Нет данных для экспорта")
+
+        content = create_asset_export_excel(data)
+        filename = f"assets_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router_assets_excel.get("/template")
 async def download_template():

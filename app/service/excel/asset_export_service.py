@@ -1,4 +1,4 @@
-# app/service/excel/asset_import_service.py
+# app/service/excel/asset_excel_service.py
 import io
 from typing import List, Dict, Any
 from datetime import date, datetime
@@ -40,35 +40,61 @@ def _get_excel_columns() -> List[tuple]:
 
     return columns
 
-def create_asset_import_template() -> bytes:
-    """Генерирует шаблон Excel файла с цветными заголовками"""
+def create_asset_export_excel(assets_data: List[Dict[str, Any]]) -> bytes:
+    """
+    Создает Excel файл для экспорта активов.
+    assets_ Список словарей, где ключи соответствуют полям AssetExcelRow.
+    """
     wb = Workbook()
     ws = wb.active
-    ws.title = "Template"
+    ws.title = "Assets Export"
 
+    # Стили
     header_font = Font(name='Calibri', size=10, bold=True, color='FFFFFF')
     header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    cell_alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
 
     columns = _get_excel_columns()
 
+    # Заголовки
     for col_idx, (_, header, color) in enumerate(columns, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
         cell.alignment = header_alignment
         cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-        ws.column_dimensions[get_column_letter(col_idx)].width = 20
+        cell.border = thin_border
 
-    # Пример данных
-    example = [
-        "INV-001", "SN-123", "Ноутбук Lenovo", "Ноутбук", "Приемка",
-        "Россия", "Москва", "Ленина 1", "101", "1",
-        "CORP", "admin", "2026-01-01", "2025-12-01", 50000, "Comment", "Да",
-        "Lenovo", "DNS",
-        "Иванов И.И.", "Петров П.П.",
-        "Windows 11", ""
-    ]
-    for i, val in enumerate(example, 1):
-        ws.cell(row=2, column=i, value=val)
+    # Данные
+    for row_idx, item in enumerate(assets_data, start=2):
+        for col_idx, (field_name, _, _) in enumerate(columns, start=1):
+            value = item.get(field_name, "")
+
+            # Форматирование
+            if isinstance(value, (date, datetime)):
+                value = value.strftime("%Y-%m-%d")
+            elif isinstance(value, bool):
+                value = "Да" if value else "Нет"
+            elif value is None:
+                value = ""
+
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.alignment = cell_alignment
+            cell.border = thin_border
+
+    # Автоширина
+    for col_idx, (_, header, _) in enumerate(columns, start=1):
+        max_length = len(header)
+        for row in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx):
+            for cell in row:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[get_column_letter(col_idx)].width = min(max_length + 2, 50)
+
+    ws.freeze_panes = "A2"
 
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -77,7 +103,10 @@ def create_asset_import_template() -> bytes:
 
 
 async def parse_asset_import_excel(file_content: bytes) -> List[Dict[str, Any]]:
-    """Парсит Excel файл в список словарей"""
+    """
+    Парсит Excel файл импорта в список словарей.
+    Ключи словаря будут соответствовать полям AssetExcelRow (snake_case).
+    """
     df = pd.read_excel(io.BytesIO(file_content))
 
     rows = []

@@ -1,4 +1,3 @@
-# app/schemas/assets/AssetExcel.py
 from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import Optional

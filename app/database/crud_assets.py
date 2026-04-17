@@ -9,9 +9,9 @@ from sqlalchemy.orm import selectinload
 from app.models.Asset import Asset
 from app.models.Vendor import Vendor
 from app.models.AssetType import AssetType
+from app.models.Software import Software
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
-from models.Software import Software
 
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ПОИСКА

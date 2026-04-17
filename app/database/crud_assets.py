@@ -11,6 +11,7 @@ from app.models.Vendor import Vendor
 from app.models.AssetType import AssetType
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
+from models.Software import Software
 
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ПОИСКА
@@ -155,7 +156,8 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.location_obj),     # Загрузка локации
             selectinload(Asset.preparer),         # Загрузка подготовившего (User)
             selectinload(Asset.checker),          # Загрузка проверившего (User)
-            selectinload(Asset.software),         # Загрузка ПО
+            selectinload(Asset.software).options(selectinload(Software.installer)),         # Загрузка ПО
+
             selectinload(Asset.manufacturer),     # Загрузка производителя (Vendor)
             selectinload(Asset.vendor),           # Загрузка поставщика (Vendor)
 

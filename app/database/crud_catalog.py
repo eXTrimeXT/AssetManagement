@@ -160,16 +160,52 @@ async def update_asset_model(db: AsyncSession, model_id: int, data: AssetModelUp
 
 # === CATALOG & STATISTICS CRUD ===
 async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate) -> AssetCatalog:
-    # Проверка: существует ли актив
+    # 1. Проверка: существует ли актив (можно оставить как есть, но лучше тоже с load если нужно)
     asset = await db.get(Asset, data.asset_id)
     if not asset:
         raise ValueError("Asset not found")
 
+    # 2. Создаем объект
     db_obj = AssetCatalog(**data.model_dump())
     db.add(db_obj)
     await db.commit()
-    await db.refresh(db_obj)
-    return db_obj
+
+    # 3. ВАЖНО: После commit() нужно заново получить объект с подгруженными связями,
+    # так как db.refresh() по умолчанию не грузит relationships, если они не настроены на joined.
+    # Самый надежный способ — сделать отдельный запрос с options(selectinload(...))
+
+    result = await db.execute(
+        select(AssetCatalog)
+        .where(AssetCatalog.catalog_id == db_obj.catalog_id)
+        .options(
+            selectinload(AssetCatalog.asset).options(
+                selectinload(Asset.asset_type),
+                selectinload(Asset.location_obj),
+                selectinload(Asset.preparer),
+                selectinload(Asset.checker),
+                selectinload(Asset.software),
+                selectinload(Asset.manufacturer),
+                selectinload(Asset.vendor)
+            ),
+            selectinload(AssetCatalog.model).options(
+                selectinload(AssetModel.asset_class),
+                selectinload(AssetModel.creator),
+                selectinload(AssetModel.updater)
+            ),
+            selectinload(AssetCatalog.owner),
+            selectinload(AssetCatalog.warehouse).options(
+                selectinload(Warehouse.location),
+                selectinload(Warehouse.preparer)
+            ),
+            selectinload(AssetCatalog.creator)
+        )
+    )
+
+    full_obj = result.scalar_one_or_none()
+    if not full_obj:
+        raise ValueError("Failed to retrieve created catalog item with relations")
+
+    return full_obj
 
 async def get_catalog_stats_by_model(db: AsyncSession, model_id: int) -> dict:
     """

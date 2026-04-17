@@ -1,0 +1,164 @@
+asset_id
+{
+  "name": "имя",
+  "inventory_id": "инвентарный 11 номер",
+  "serial_number": "серийный номер 1111111",
+  "asset_status": "Приемка",
+  "type_domain": "тип домена 11",
+  "affixed_inventory_id": true,
+  "info_storage_location": "11111111",
+  "passwork": "admin1231111111111",
+  "date_issue": "2026-04-01",
+  "date_purchasing": "2026-03-15",
+  "comment": "comment 11",
+  "asset_type_id": 2,
+  "location_id": 1,
+  "parent_id": 10,
+  "software_id": 1,
+  "prepared_by": 2,
+  "checked_by": 2,
+  "manufacturer_id": 1,
+  "vendor_id": 1,
+  "asset_id": 11,
+  "deleted_at": null,
+  "created_at": "2026-04-16T08:21:12.503324",
+  "updated_at": "2026-04-16T08:21:12.503328",
+  "asset_type": {
+    "name": "string",
+    "asset_type_id": 2
+  },
+  "location_obj": {
+    "location_id": 1,
+    "country": "Россия",
+    "city": "Москва",
+    "address": "ул. Новая, д231",
+    "room": "офис 957",
+    "floor": "этаж 4"
+  },
+  "preparer": {
+    "user_tab_id": "12345",
+    "owner": "Иванов Иван Иванович",
+    "user_en_name": "Ivanov Ivan",
+    "role": "AdmINN",
+    "user_position": "Инженер",
+    "department": "IT-отдел",
+    "email": "ivanov@company.com",
+    "phone": "+7 (999) 123-45-67",
+    "user_id": 2,
+    "is_active": true,
+    "created_at": "2026-04-15T12:29:02.849648",
+    "updated_at": "2026-04-15T12:29:02.849652"
+  },
+  "checker": {
+    "user_tab_id": "12345",
+    "owner": "Иванов Иван Иванович",
+    "user_en_name": "Ivanov Ivan",
+    "role": "AdmINN",
+    "user_position": "Инженер",
+    "department": "IT-отдел",
+    "email": "ivanov@company.com",
+    "phone": "+7 (999) 123-45-67",
+    "user_id": 2,
+    "is_active": true,
+    "created_at": "2026-04-15T12:29:02.849648",
+    "updated_at": "2026-04-15T12:29:02.849652"
+  },
+  "software": {
+    "office_type": "Microsoft Office 365",
+    "office_key": "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX",
+    "os_type": "Windows 11 Pro",
+    "os_key": "YYYYY-YYYYY-YYYYY-YYYYY-YYYYY",
+    "remote_control": "TeamViewer 15",
+    "admin_permission": false,
+    "who_installed": 2,
+    "installed_at": "2026-04-01T10:00:00",
+    "comment": "Стандартный пакет ПО",
+    "software_id": 1,
+    "created_at": "2026-04-16T12:48:51.537966",
+    "updated_at": "2026-04-16T12:49:42.234969",
+    "installer": {
+      "user_tab_id": "12345",
+      "owner": "Иванов Иван Иванович",
+      "user_en_name": "Ivanov Ivan",
+      "role": "AdmINN",
+      "user_position": "Инженер",
+      "department": "IT-отдел",
+      "email": "ivanov@company.com",
+      "phone": "+7 (999) 123-45-67",
+      "user_id": 2,
+      "is_active": true,
+      "created_at": "2026-04-15T12:29:02.849648",
+      "updated_at": "2026-04-15T12:29:02.849652"
+    }
+  },
+  "manufacturer": {
+    "name": "111",
+    "vendor_class_id": 1,
+    "company_id": 1,
+    "vendor_id": 1,
+    "created_at": "2026-04-16T06:40:37.671447",
+    "created_by": 2,
+    "vendor_class": {
+      "vendor_class_id": 1,
+      "name": "Производитель"
+    },
+    "company": {
+      "company_name": "1string",
+      "gen_director": "1string",
+      "phone_number": "1string",
+      "location_id": 2,
+      "company_id": 1,
+      "location_obj": {
+        "location_id": 2,
+        "country": "country",
+        "city": "city",
+        "address": "address",
+        "room": "room",
+        "floor": "floor"
+      }
+    },
+    "creator": {
+      "user_id": 2,
+      "user_tab_id": "12345",
+      "owner": "Иванов Иван Иванович",
+      "user_position": "Инженер",
+      "department": "IT-отдел",
+      "email": "ivanov@company.com"
+    }
+  },
+  "vendor": {
+    "name": "111",
+    "vendor_class_id": 1,
+    "company_id": 1,
+    "vendor_id": 1,
+    "created_at": "2026-04-16T06:40:37.671447",
+    "created_by": 2,
+    "vendor_class": {
+      "vendor_class_id": 1,
+      "name": "Производитель"
+    },
+    "company": {
+      "company_name": "1string",
+      "gen_director": "1string",
+      "phone_number": "1string",
+      "location_id": 2,
+      "company_id": 1,
+      "location_obj": {
+        "location_id": 2,
+        "country": "country",
+        "city": "city",
+        "address": "address",
+        "room": "room",
+        "floor": "floor"
+      }
+    },
+    "creator": {
+      "user_id": 2,
+      "user_tab_id": "12345",
+      "owner": "Иванов Иван Иванович",
+      "user_position": "Инженер",
+      "department": "IT-отдел",
+      "email": "ivanov@company.com"
+    }
+  }
+}

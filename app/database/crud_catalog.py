@@ -264,8 +264,8 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
     result = await db.execute(query)
     return result.scalars().all()
 
-# Если нужна функция получения по ID:
 async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[AssetCatalog]:
+    """ Получает элемент по ID со всеми встроенными значениями"""
     result = await db.execute(
         select(AssetCatalog)
         .where(AssetCatalog.catalog_id == catalog_id)

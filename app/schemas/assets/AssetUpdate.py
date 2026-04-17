@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import date
 from typing import Optional
 
@@ -34,3 +34,18 @@ class AssetUpdate(BaseModel):
             "price": 12345
         }
     })
+
+    @field_validator('date_issue', 'date_purchasing', 'deleted_at', mode='before')
+    @classmethod
+    def parse_dates(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            try:
+                # Пробуем распарсить строку YYYY-MM-DD
+                return date.fromisoformat(v)
+            except ValueError:
+                raise ValueError(f"Неверный формат даты: {v}. Ожидается ГГГГ-ММ-ДД")
+        raise ValueError("Неподдерживаемый тип даты")

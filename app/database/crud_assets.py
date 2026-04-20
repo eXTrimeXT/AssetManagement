@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List, Optional, Any, Sequence
-from unittest import result
 
 from sqlalchemy import select, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +11,10 @@ from app.models.AssetType import AssetType
 from app.models.Software import Software
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
+from app.database.crud_operations import create_operation_log
 
 
-# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ПОИСКА
+""" ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
     """
     Получает актив по ID.
@@ -34,13 +34,8 @@ async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
     return result.scalar_one_or_none()
 
 async def get_asset_with_deleted(db: AsyncSession, asset_id: int) -> Optional[Asset]:
-    """
-    Получает актив по ID, включая мягко удаленные.
-    """
-    result = await db.execute(
-        select(Asset)
-        .where(Asset.asset_id == asset_id)
-    )
+    """ Получает актив по ID, включая мягко удаленные """
+    result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
     return result.scalar_one_or_none()
 
 async def check_duplicate_inventory_id(db: AsyncSession, inventory_id: str, exclude_id: Optional[int] = None) -> bool:
@@ -68,29 +63,23 @@ async def check_duplicate_serial_number(db: AsyncSession, serial_number: str, ex
     return result.scalar_one_or_none() is not None
 
 async def check_parent_exists(db: AsyncSession, parent_id: int) -> bool:
-    """
-    Проверяет существование родительского актива.
-    """
+    """ Проверяет существование родительского актива """
     result = await db.execute(select(Asset).where(Asset.asset_id == parent_id))
     return result.scalar_one_or_none() is not None
 
 async def get_vendor_by_id(db: AsyncSession, vendor_id: int) -> bool:
-    """
-    Проверяет существование вендора.
-    """
+    """ Проверяет существование вендора """
     result = await db.execute(select(Vendor).where(Vendor.vendor_id == vendor_id))
     return result.scalar_one_or_none() is not None
 
 async def get_asset_type(db: AsyncSession, asset_type: int) -> bool:
-    """
-    Проверяет существование типа актива
-    """
+    """ Проверяет существование типа актива """
     result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type))
     return result.scalar_one_or_none()
 
 
-# CRUD ОПЕРАЦИИ
-async def create_asset(db: AsyncSession, asset_in: AssetCreate) -> Asset:
+""" CRUD ОПЕРАЦИИ """
+async def create_asset(db: AsyncSession, asset_in: AssetCreate, current_user_id: Optional[int] = None) -> Asset:
     """
     Создает новый актив в базе данных.
     """
@@ -98,6 +87,17 @@ async def create_asset(db: AsyncSession, asset_in: AssetCreate) -> Asset:
     db.add(db_asset)
     await db.commit()
     await db.refresh(db_asset)
+    # Логирование создания
+    await create_operation_log(
+        db=db,
+        asset_id=db_asset.asset_id,
+        operation_type="CREATE",
+        performed_by=current_user_id,
+        new_values=asset_in.model_dump(),
+        comment="Актив создан",
+        inventory_id_snapshot=db_asset.inventory_id,
+        name_snapshot=db_asset.name
+    )
     return db_asset
 
 async def get_assets_list(
@@ -130,19 +130,6 @@ async def get_assets_list(
     result = await db.execute(query)
     return result.scalars().all()
 
-# async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
-#     """
-#     Получает полный объект актива с подгрузкой связанных типов (asset_type).
-#     Только активные (не удаленные) активы.
-#     """
-#     result = await db.execute(
-#         select(Asset)
-#         .where(Asset.asset_id == asset_id)
-#         .where(Asset.deleted_at.is_(None))
-#         .options(selectinload(Asset.asset_type))
-#     )
-#     return result.scalar_one_or_none()
-
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     """
     Получает полный объект актива со ВСЕМИ связями для детального ответа.
@@ -171,28 +158,62 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     )
     return result.scalar_one_or_none()
 
-
-async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate) -> Optional[Asset]:
+async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate, current_user_id: Optional[int] = None) -> Optional[Asset]:
     """
-    Обновляет поля актива.
+    Обновляет поля актива и записывает историю изменений.
     """
+    # Получаем актив
     asset = await get_active_asset(db, asset_id)
     if not asset:
         return None
 
+    # Фиксируем старые значения ДО обновления
+    old_values = {}
+
+    # Собираем только те поля, которые пришли в запросе на обновление (exclude_unset=True)
     update_data = asset_data.model_dump(exclude_unset=True)
+
+    for key in update_data.keys():
+        if hasattr(asset, key):
+            # Сохраняем старое значение
+            old_val = getattr(asset, key)
+            old_values[key] = old_val
+
+    # Применяем обновления
     for key, value in update_data.items():
         setattr(asset, key, value)
 
+    # Обновляем timestamp вручную, если он не обновляется автоматически onupdate
+    asset.updated_at = datetime.utcnow()
+
     await db.commit()
-    await db.refresh(asset)
-    return asset
 
+    # Логируем операцию UPDATE
+    if old_values: # Пишем лог только если что-то реально изменилось
+        try:
+            await create_operation_log(
+                db=db,
+                asset_id=asset_id,
+                operation_type="UPDATE",
+                performed_by=current_user_id,
+                old_values=old_values,
+                new_values=update_data,
+                comment="Обновление данных актива",
+                inventory_id_snapshot=asset.inventory_id,
+                name_snapshot=asset.name
+            )
+        except Exception as e:
+            # Если логирование упало, мы не должны ломать основное обновление,
+            # но в продакшене лучше залогировать ошибку в stderr/logger
+            print(f"Error logging operation: {e}")
 
-async def deactivate_asset(db: AsyncSession, asset_id: int) -> Optional[Asset]:
-    """
-    Мягкое удаление актива (установка deleted_at).
-    """
+    # Возвращаем обновленный актив с полными связями
+    # Важно перегрузить его через get_asset_by_id, чтобы избежать MissingGreenlet при сериализации связей
+    updated_asset_full = await get_asset_by_id(db, asset_id)
+
+    return updated_asset_full
+
+async def deactivate_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> Optional[Asset]:
     asset = await get_active_asset(db, asset_id)
     if not asset:
         return None
@@ -201,11 +222,27 @@ async def deactivate_asset(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     asset.updated_at = datetime.now()
 
     await db.commit()
+
+    # Логирование деактивации
+    try:
+        await create_operation_log(
+            db=db,
+            asset_id=asset_id,
+            operation_type="DEACTIVATE",
+            performed_by=current_user_id,
+            old_values={"deleted_at": None},
+            new_values={"deleted_at": asset.deleted_at.isoformat()},
+            comment="Актив деактивирован",
+            inventory_id_snapshot=asset.inventory_id,
+            name_snapshot=asset.name
+        )
+    except Exception as e:
+        print(f"Error logging deactivation: {e}")
+
     await db.refresh(asset)
     return asset
 
-
-async def activate_asset(db: AsyncSession, asset_id: int) -> Optional[Asset]:
+async def activate_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> Optional[Asset]:
     """
     Восстановление актива (сброс deleted_at).
     """
@@ -218,72 +255,120 @@ async def activate_asset(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     if asset.deleted_at is None:
         return asset
 
+    # сохраняем верную дату перед изменением
+    old_date_deleted_at = asset.deleted_at
     asset.deleted_at = None
     asset.updated_at = datetime.now()
 
     await db.commit()
+
+    # Логирование активации
+    try:
+        await create_operation_log(
+            db=db,
+            asset_id=asset_id,
+            operation_type="ACTIVATE",
+            performed_by=current_user_id,
+            old_values={"deleted_at": old_date_deleted_at.isoformat()},
+            new_values={"deleted_at": None, "updated_at": asset.updated_at},
+            comment="Актив активирован",
+            inventory_id_snapshot=asset.inventory_id,
+            name_snapshot=asset.name
+        )
+    except Exception as e:
+        print(f"Error logging activation: {e}")
     await db.refresh(asset)
     return asset
 
-
-async def hard_delete_asset(db: AsyncSession, asset_id: int) -> bool:
+async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> bool:
     """
-    Жесткое удаление актива и всех его детей рекурсивно.
-    Возвращает True, если удаление прошло успешно.
+    Жесткое удаление актива и всех его детей рекурсивно с полным логированием.
     """
-    asset = await get_asset_with_deleted(db, asset_id)
-    if not asset:
+    # Получаем родителя
+    parent_asset = await get_asset_with_deleted(db, asset_id)
+    if not parent_asset:
         return False
 
-    # Сбор всех ID активов (родитель + дети рекурсивно)
-    async def collect_child_ids(parent_id: int) -> list[int]:
+    # Собираем IDs всех детей
+    async def collect_all_ids(parent_id: int) -> list[int]:
         result = await db.execute(select(Asset.asset_id).where(Asset.parent_id == parent_id))
         child_ids = [row[0] for row in result.fetchall()]
-        all_ids = child_ids.copy()
-        for child_id in child_ids:
-            all_ids.extend(await collect_child_ids(child_id))
+        all_ids = []
+        for cid in child_ids:
+            all_ids.extend(await collect_all_ids(cid))
+        all_ids.extend(child_ids)
         return all_ids
 
-    child_ids = await collect_child_ids(asset_id)
-    all_ids = [asset_id] + child_ids
+    child_ids = await collect_all_ids(asset_id)
+    all_ids_to_delete = child_ids + [asset_id]
 
-    # Удаляем дочерние активы (каскадно через SQL delete, так как ORM cascade может не сработать корректно при ручном обходе)
-    # В модели указан ondelete="CASCADE" для parent_id, но для безопасности явно удаляем детей
+    if not all_ids_to_delete:
+        return False
+
+    # Собираем информацию для логов ПЕРЕД удалением
+    # Пример расширения запроса для сбора всех важных полей перед удалением
+    assets_info_result = await db.execute(
+        select(
+            Asset.asset_id,
+            Asset.parent_id,
+            Asset.inventory_id,
+            Asset.name,
+            Asset.serial_number,
+            Asset.asset_status,
+            Asset.price,
+            Asset.location_id,
+            Asset.manufacturer_id,
+            Asset.vendor_id
+        )
+        .where(Asset.asset_id.in_(all_ids_to_delete))
+    )
+
+    # Преобразование в удобный словарь
+    assets_data_map = {}
+    for row in assets_info_result.fetchall():
+        # row._mapping позволяет обращаться к колонкам по имени
+        d = dict(row._mapping)
+        assets_data_map[d['asset_id']] = d
+
+    # 4. Логируем удаление КАЖДОГО актива (и родителя, и детей)
+    for aid in all_ids_to_delete:
+        info = assets_data_map.get(aid, {})
+        try:
+            await create_operation_log(
+                db=db,
+                asset_id=aid, # ID может стать невалидным после удаления, но мы сохранили snapshot
+                operation_type="DELETE",
+                performed_by=current_user_id,
+                old_values=info,
+                new_values=None,
+                comment="Hard Delete",
+                # === СОХРАНЯЕМ СНАПШОТ В ИСТОРИЮ ===
+                inventory_id_snapshot=info.get("inv"),
+                name_snapshot=info.get("name")
+            )
+        except Exception as e:
+            print(f"Error logging deletion for asset {aid}: {e}")
+
+    # 5. Физическое удаление
     if child_ids:
-        # Удаляем от листьев к корню, чтобы избежать конфликтов FK, если CASCADE не настроен на уровне БД строго
-        # Однако, так как у нас SQLAlchemy ORM, лучше использовать ORM delete для триггеров,
-        # но массовое удаление быстрее через execute(delete...)
-
-        # Примечание: В исходном коде было reverse().
-        # Если в БД настроен ON DELETE CASCADE на FK parent_id, то удаление родителя удалит детей.
-        # Но в коде автора явное удаление детей. Оставим логику автора.
-
-        child_ids.reverse()
         await db.execute(delete(Asset).where(Asset.asset_id.in_(child_ids)))
 
-    # Удаляем основной актив
-    await db.delete(asset)
+    await db.delete(parent_asset)
     await db.commit()
+
     return True
 
-async def get_all_asset_children_recursive(
-        db: AsyncSession,
-        asset_id: int,
-        max_depth: Optional[int] = None
-) -> List[dict]:
+async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_depth: Optional[int] = None) -> List[dict]:
     """
     Получает всех дочерних активов рекурсивно с использованием CTE PostgreSQL.
     Возвращает список словарей с актуальными полями (location_id вместо location, + seller, price).
     """
-    # 1. Проверяем существование родителя
+    # Проверяем существование родителя
     parent = await db.get(Asset, asset_id)
     if not parent or parent.deleted_at:
         return []
 
-        # 2. Формирование RAW SQL запроса
-    # ИЗМЕНЕНИЯ:
-    # - location заменен на location_id
-    # - добавлены seller и price
+    # Формирование RAW SQL запроса
     base_query = """
                  WITH RECURSIVE asset_tree AS (
                      -- Базовый случай: прямые дети указанного актива
@@ -332,11 +417,11 @@ async def get_all_asset_children_recursive(
             "serial_number": row.serial_number,
             "asset_status": row.asset_status,
             "asset_type_id": row.asset_type_id,
-            "location_id": row.location_id,  # Обновлено: было location
+            "location_id": row.location_id,
             "parent_id": row.parent_id,
             "software_id": row.software_id,
-            "seller": row.seller,           # Добавлено
-            "price": row.price              # Добавлено
+            "seller": row.seller,
+            "price": row.price
         })
 
     return children

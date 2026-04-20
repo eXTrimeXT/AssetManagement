@@ -1,9 +1,4 @@
-import os
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
-# подключение бд и модели
 from app.database.connection import engine
 from app.models.Base import Base
 
@@ -12,7 +7,6 @@ from contextlib import asynccontextmanager
 
 # Импорт класса логирования в middleware
 from app.middleware.LoggingMiddleware import LoggingMiddleware
-
 
 # Импорт роутеров
 from app.routers.router_assets import router_assets
@@ -25,8 +19,7 @@ from app.routers.router_warehouses import router_warehouses
 from app.routers.router_companies import router_companies
 from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_vendors import router_vendors
-
-# Импорт роутеров Excel
+from app.routers.router_assets_history import router_assets_history
 from app.routers.router_assets_excel import router_assets_excel
 
 
@@ -60,6 +53,9 @@ app = FastAPI(
 app.add_middleware(LoggingMiddleware)
 
 # --- Подключение API Маршрутов ---
+# History
+app.include_router(router_assets_history, prefix="/api")
+
 app.include_router(router_assets, prefix="/api")
 app.include_router(router_assets_types, prefix="/api")
 app.include_router(router_users, prefix="/api")
@@ -75,6 +71,6 @@ app.include_router(router_vendor_classes, prefix="/api")
 # Companies
 app.include_router(router_companies, prefix="/api")
 
+
 # Excel
 app.include_router(router_assets_excel, prefix="/api")
-# app.include_router(router_catalog_excel, prefix="/api")

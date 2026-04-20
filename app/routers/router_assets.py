@@ -21,18 +21,10 @@ from app.database.crud_assets import (
     check_duplicate_serial_number,
     check_parent_exists,
 )
-
-from app.database.crud_users import (
-    get_user_by_id
-)
-
-from app.database.crud_asset_types import (
-    get_asset_type_by_id
-)
-
-from app.database.crud_vendors import (
-    get_vendor_by_id
-)
+from app.database.crud_assets import get_asset_with_deleted
+from app.database.crud_users import get_user_by_id
+from app.database.crud_asset_types import get_asset_type_by_id
+from app.database.crud_vendors import get_vendor_by_id
 
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])
 
@@ -40,6 +32,7 @@ router_assets = APIRouter(prefix="/assets", tags=["Assets"])
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset_endpoint(
         asset_in: AssetCreate,
+        current_user_id: int = 1, # ЗАГЛУШКА: В реальности брать из токена
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -86,7 +79,7 @@ async def create_asset_endpoint(
             raise HTTPException(status_code=400, detail="Проверяющий пользователь с таким ID не найден")
 
     # 7. Создание через CRUD
-    return await create_asset(db, asset_in)
+    return await create_asset(db, asset_in, current_user_id=current_user_id)
 
 
 @router_assets.get("/", response_model=List[AssetShortResponse])
@@ -131,6 +124,7 @@ async def get_asset_endpoint(
 async def update_asset_endpoint(
         asset_id: int,
         asset_data: AssetUpdate,
+        current_user_id: int = 1,
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -162,7 +156,7 @@ async def update_asset_endpoint(
         if asset_data.parent_id == asset_id:
             raise HTTPException(status_code=400, detail="Актив не может быть родителем самого себя")
 
-    updated_asset = await update_asset(db, asset_id, asset_data)
+    updated_asset = await update_asset(db, asset_id, asset_data, current_user_id)
     if not updated_asset:
         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
 
@@ -172,13 +166,14 @@ async def update_asset_endpoint(
 @router_assets.post("/{asset_id}/deactivate", response_model=AssetResponse)
 async def deactivate_asset_endpoint(
         asset_id: int,
+        current_user_id: int = 1,
         db: AsyncSession = Depends(get_db)
 ):
     """
     Деактивация актива (мягкое удаление).
     Устанавливает дату удаления, актив скрывается из обычных списков.
     """
-    deactivated = await deactivate_asset(db, asset_id)
+    deactivated = await deactivate_asset(db, asset_id, current_user_id)
     if not deactivated:
         raise HTTPException(status_code=404, detail="Актив не найден или уже удален")
     return deactivated
@@ -187,12 +182,13 @@ async def deactivate_asset_endpoint(
 @router_assets.post("/{asset_id}/activate", response_model=AssetResponse)
 async def activate_asset_endpoint(
         asset_id: int,
+        current_user_id: int = 1,
         db: AsyncSession = Depends(get_db)
 ):
     """
     Активация актива (восстановление после мягкого удаления).
     """
-    activated = await activate_asset(db, asset_id)
+    activated = await activate_asset(db, asset_id, current_user_id)
     if not activated:
         raise HTTPException(status_code=404, detail="Актив не найден")
 
@@ -206,6 +202,7 @@ async def activate_asset_endpoint(
 @router_assets.delete("/{asset_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
 async def hard_delete_asset_endpoint(
         asset_id: int,
+        current_user_id: int = 1,
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -214,7 +211,6 @@ async def hard_delete_asset_endpoint(
     Удаляет актив и всех его дочерних элементов рекурсивно.
     """
     # Проверяем, существует ли актив и удален ли он
-    from database.crud_assets import get_asset_with_deleted
     asset = await get_asset_with_deleted(db, asset_id)
 
     if not asset:
@@ -226,7 +222,7 @@ async def hard_delete_asset_endpoint(
             detail="Нельзя жестко удалить актив, который не был деактивирован. Сначала вызовите /deactivate."
         )
 
-    success = await hard_delete_asset(db, asset_id)
+    success = await hard_delete_asset(db, asset_id, current_user_id)
     if not success:
         raise HTTPException(status_code=500, detail="Ошибка при удалении актива")
 
@@ -250,7 +246,6 @@ async def get_all_asset_children_endpoint(
     # Или через get_asset_with_deleted, если хотим видеть детей даже удаленного родителя?
     # По логике ТЗ: родитель должен существовать.
 
-    from database.crud_assets import get_asset_with_deleted
     parent = await get_asset_with_deleted(db, asset_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Родительский актив не найден")

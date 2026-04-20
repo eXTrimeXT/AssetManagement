@@ -23,10 +23,19 @@ def _get_excel_columns() -> List[tuple]:
     columns = []
 
     # Маппинг полей на категории (упрощенно по префиксу или явный список)
+    # categories = {
+    #     "inventory_id": "main", "serial_number": "main", "name": "main", "asset_type_name": "main", "asset_status": "main",
+    #     "location_country": "location", "location_city": "location", "location_address": "location", "location_room": "location", "location_floor": "location",
+    #     "type_domain": "details", "passwork": "details", "date_issue": "details", "date_purchasing": "details", "price": "details", "comment": "details", "affixed_inventory_id": "details",
+    #     "manufacturer_name": "vendors", "vendor_name": "vendors",
+    #     "prepared_by_name": "users", "checked_by_name": "users",
+    #     "software_os_type": "other", "parent_inventory_id": "other"
+    # }
+
     categories = {
         "inventory_id": "main", "serial_number": "main", "name": "main", "asset_type_name": "main", "asset_status": "main",
         "location_country": "location", "location_city": "location", "location_address": "location", "location_room": "location", "location_floor": "location",
-        "type_domain": "details", "passwork": "details", "date_issue": "details", "date_purchasing": "details", "price": "details", "comment": "details", "affixed_inventory_id": "details",
+        "type_domain": "details", "date_issue": "details", "date_purchasing": "details", "price": "details", "comment": "details", "affixed_inventory_id": "details",
         "manufacturer_name": "vendors", "vendor_name": "vendors",
         "prepared_by_name": "users", "checked_by_name": "users",
         "software_os_type": "other", "parent_inventory_id": "other"

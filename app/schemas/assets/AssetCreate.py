@@ -19,7 +19,7 @@ class AssetCreate(BaseModel):
     affixed_inventory_id: Optional[bool] = Field(None, description="Инвентарный номер наклеен?")
     info_storage_location: Optional[str] = Field(None, max_length=200, description="Место хранения информации")
     location_id: Optional[int] = Field(None, description="ID локации из справочника Locations")
-    passwork: Optional[str] = Field(None, max_length=200, description="Пароль/ключ")
+    # passwork: Optional[str] = Field(None, max_length=200, description="Пароль/ключ")
     date_issue: Optional[date] = Field(None, description="Дата выдачи")
     date_purchasing: Optional[date] = Field(None, description="Дата покупки")
     comment: Optional[str] = Field(None, description="Комментарий")

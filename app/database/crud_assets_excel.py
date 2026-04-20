@@ -63,7 +63,7 @@ async def get_full_assets_for_export(db: AsyncSession, skip: int = 0, limit: int
 
             # Детали
             "type_domain": asset.type_domain or "",
-            "passwork": asset.passwork or "",
+            # "passwork": asset.passwork or "",
             "date_issue": asset.date_issue,
             "date_purchasing": asset.date_purchasing,
             "price": asset.price,
@@ -234,7 +234,7 @@ async def import_assets_from_rows(
                 if loc_obj: asset_obj.location_id = loc_obj.location_id
 
                 asset_obj.type_domain = row_data.get('type_domain')
-                asset_obj.passwork = row_data.get('passwork')
+                # asset_obj.passwork = row_data.get('passwork')
 
                 # Присваиваем распарсенные даты
                 asset_obj.date_issue = date_issue_val
@@ -267,7 +267,7 @@ async def import_assets_from_rows(
                     asset_status=row_data.get('asset_status', 'Приемка'),
                     location_id=loc_obj.location_id if loc_obj else None,
                     type_domain=row_data.get('type_domain'),
-                    passwork=row_data.get('passwork'),
+                    # passwork=row_data.get('passwork'),
 
                     # Используем распарсенные даты
                     date_issue=date_issue_val,

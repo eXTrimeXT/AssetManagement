@@ -24,7 +24,7 @@ class AssetExcelRow(BaseModel):
 
     # === Категория 3: Детали актива ===
     type_domain: Optional[str] = Field(None, description="Домен")
-    passwork: Optional[str] = Field(None, description="Пароль/ключ")
+    # passwork: Optional[str] = Field(None, description="Пароль/ключ")
     date_issue: Optional[date] = Field(None, description="Дата выдачи (ГГГГ-ММ-ДД)")
     date_purchasing: Optional[date] = Field(None, description="Дата покупки (ГГГГ-ММ-ДД)")
     price: Optional[int] = Field(None, description="Стоимость")

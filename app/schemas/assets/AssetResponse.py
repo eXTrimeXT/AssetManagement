@@ -18,7 +18,7 @@ class AssetBase(BaseModel):
     type_domain: Optional[str] = None
     affixed_inventory_id: Optional[bool] = None
     info_storage_location: Optional[str] = None
-    passwork: Optional[str] = None
+    # passwork: Optional[str] = None
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     comment: Optional[str] = None

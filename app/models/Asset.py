@@ -35,7 +35,7 @@ class Asset(Base):
 
     serial_number = Column(String(100), unique=True, index=True)                 # Серийный номер
     name = Column(String(150), nullable=False, index=True)                       # Имя актива
-    passwork = Column(String(200))                                               # Строковое значение (пароль/ключ)
+    # passwork = Column(String(200))                                               # Строковое значение (пароль/ключ)
     date_issue = Column(Date)                                                    # Дата выдачи
     date_purchasing = Column(Date)                                               # Дата покупки
     comment = Column(Text)                                                       # Комментарий

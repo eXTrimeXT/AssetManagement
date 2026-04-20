@@ -68,8 +68,6 @@ async def create_asset_endpoint(
         if not await get_asset_type_by_id(db, asset_in.asset_type_id):
             raise HTTPException(status_code=400, detail="Тип актива не найден")
 
-
-
     if asset_in.prepared_by:
         if not await get_user_by_id(db, asset_in.prepared_by):
             raise HTTPException(status_code=400, detail="Ответственный пользователь с таким ID не найден")

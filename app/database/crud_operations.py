@@ -28,9 +28,7 @@ async def create_operation_log(
         inventory_id_snapshot: Optional[str] = None,
         name_snapshot: Optional[str] = None
 ) -> AssetOperation:
-    """
-    Создает запись в журнале операций.
-    """
+    """ Создает запись в журнале операций. """
     safe_old = _serialize_for_json(old_values) if old_values else None
     safe_new = _serialize_for_json(new_values) if new_values else None
 

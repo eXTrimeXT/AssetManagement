@@ -343,7 +343,7 @@ async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Op
                 new_values=None,
                 comment="Hard Delete",
                 # === СОХРАНЯЕМ СНАПШОТ В ИСТОРИЮ ===
-                inventory_id_snapshot=info.get("inv"),
+                inventory_id_snapshot=info.get("inventory_id"),
                 name_snapshot=info.get("name")
             )
         except Exception as e:

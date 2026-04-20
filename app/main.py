@@ -11,15 +11,23 @@ from app.middleware.LoggingMiddleware import LoggingMiddleware
 # Импорт роутеров
 from app.routers.router_assets import router_assets
 from app.routers.router_assets_types import router_assets_types
+from app.routers.router_assets_history import router_assets_history
+
 from app.routers.router_users import router_users
 from app.routers.router_software import router_software
-from app.routers.router_locations import router_locations
-from app.routers.router_catalog import router_catalog
-from app.routers.router_warehouses import router_warehouses
+
+# Catalog импорт по зависимости, от независимого к зависимому
+from app.routers.router_catalog_history import router_catalog_history   # не зависим (чисто история)
+from app.routers.router_catalog_classes import router_catalog_classes   # не зависим
+from app.routers.router_catalog_models import router_catalog_models     # зависим от класса
+from app.routers.router_catalog_items import router_catalog_items       # зависим от модели
+
 from app.routers.router_companies import router_companies
 from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_vendors import router_vendors
-from app.routers.router_assets_history import router_assets_history
+from app.routers.router_warehouses import router_warehouses
+from app.routers.router_locations import router_locations
+
 from app.routers.router_assets_excel import router_assets_excel
 
 
@@ -53,24 +61,18 @@ app = FastAPI(
 app.add_middleware(LoggingMiddleware)
 
 # --- Подключение API Маршрутов ---
-# History
-app.include_router(router_assets_history, prefix="/api")
-
-app.include_router(router_assets, prefix="/api")
-app.include_router(router_assets_types, prefix="/api")
-app.include_router(router_users, prefix="/api")
-app.include_router(router_software, prefix="/api")
-app.include_router(router_locations, prefix="/api")
-app.include_router(router_catalog, prefix="/api")
-app.include_router(router_warehouses, prefix="/api")
-
-# Vendors
-app.include_router(router_vendors, prefix="/api")
-app.include_router(router_vendor_classes, prefix="/api")
-
-# Companies
-app.include_router(router_companies, prefix="/api")
-
-
-# Excel
-app.include_router(router_assets_excel, prefix="/api")
+app.include_router(router_catalog_history, prefix="/api")   # Catalog History
+app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes
+app.include_router(router_catalog_models, prefix="/api")    # Catalog Models
+app.include_router(router_catalog_items, prefix="/api")     # Catalog Items
+app.include_router(router_assets_history, prefix="/api")    # Assets History
+app.include_router(router_assets, prefix="/api")            # Assets
+app.include_router(router_assets_types, prefix="/api")      # Asset Types
+app.include_router(router_users, prefix="/api")             # Users
+app.include_router(router_software, prefix="/api")          # Software
+app.include_router(router_companies, prefix="/api")         # Companies
+app.include_router(router_warehouses, prefix="/api")        # Warehouse
+app.include_router(router_vendors, prefix="/api")           # Vendors
+app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
+app.include_router(router_locations, prefix="/api")         # Location
+app.include_router(router_assets_excel, prefix="/api")      # Excel

@@ -14,7 +14,8 @@ class AssetCatalog(Base):
 
     # Связь с конкретным активом (Instance)
     # Один запись в каталоге = один физический актив (или группа, если не сериализовано, но у вас serial_id теперь nullable)
-    asset_id = Column(Integer, ForeignKey("assets.asset_id"), unique=True, nullable=False, index=True)
+    # asset_id = Column(Integer, ForeignKey("assets.asset_id"), unique=True, nullable=False, index=True)
+    asset_id = Column(Integer, ForeignKey("assets.asset_id"), unique=False, nullable=False, index=True)
 
     # Владелец (дублируем или синхронизируем с текущим статусом актива, но здесь исторический владелец записи в каталоге)
     owner_id = Column(Integer, ForeignKey("users.user_id"), index=True)

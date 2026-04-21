@@ -23,8 +23,8 @@ from app.routers.router_catalog_models import router_catalog_models     # зав
 from app.routers.router_catalog_items import router_catalog_items       # зависим от модели
 
 from app.routers.router_companies import router_companies
-from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_vendors import router_vendors
+from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_warehouses import router_warehouses
 from app.routers.router_locations import router_locations
 

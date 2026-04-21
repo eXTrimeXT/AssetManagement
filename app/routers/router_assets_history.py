@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.database.connection import get_db
 from app.database.crud_operations import get_history_by_inventory_id, get_history_by_asset_id
-from app.schemas.operations.OperationSchemas import AssetOperationResponse
+from app.schemas.operations.AssetOperationSchemas import AssetOperationResponse
 
 router_assets_history = APIRouter(prefix="/assets", tags=["Assets History"])
 

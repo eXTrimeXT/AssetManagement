@@ -29,6 +29,7 @@ from app.routers.router_warehouses import router_warehouses
 from app.routers.router_locations import router_locations
 
 from app.routers.router_assets_excel import router_assets_excel
+from app.seed_api import router_seed_api
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -61,6 +62,8 @@ app = FastAPI(
 app.add_middleware(LoggingMiddleware)
 
 # --- Подключение API Маршрутов ---
+app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
+
 app.include_router(router_catalog_history, prefix="/api")   # Catalog History
 app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes
 app.include_router(router_catalog_models, prefix="/api")    # Catalog Models
@@ -76,3 +79,4 @@ app.include_router(router_vendors, prefix="/api")           # Vendors
 app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
 app.include_router(router_locations, prefix="/api")         # Location
 app.include_router(router_assets_excel, prefix="/api")      # Excel
+

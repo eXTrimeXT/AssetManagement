@@ -9,7 +9,7 @@ from app.models.UserJWTData import UserJWTData
 from app.schemas.auth.AuthSchemas import UserInfoResponse, TokenRequest
 from app.service.auth.auth_service import get_user_from_token, TokenValidationError
 
-router_auth = APIRouter(prefix="/api", tags=["auth"])
+router_auth = APIRouter(tags=["auth"])
 
 
 @router_auth.post("/validate-token", response_model=UserInfoResponse)

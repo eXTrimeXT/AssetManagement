@@ -10,6 +10,7 @@ class UserInfoResponse(BaseModel):
     email: Optional[str]
     fullname: Optional[str]
     department: Optional[str]
+    distinguished_name: Optional[str]
     groups: List[str]
     last_ip: Optional[str]
     last_time: Optional[str]

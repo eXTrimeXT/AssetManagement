@@ -1,5 +1,5 @@
-#FROM python:3.14.3-slim
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.14.3-slim
+FROM python:3.14.3-slim
+#FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.14.3-slim
 WORKDIR /app
 
 # Устанавливаем системные зависимости (для psycopg2 или других библиотек, если понадобятся)

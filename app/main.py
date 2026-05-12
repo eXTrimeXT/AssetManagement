@@ -27,6 +27,7 @@ from app.routers.router_vendors import router_vendors
 from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_warehouses import router_warehouses
 from app.routers.router_locations import router_locations
+from app.routers.router_auth import router_auth
 
 from app.routers.router_assets_excel import router_assets_excel
 from app.seed_api import router_seed_api
@@ -64,6 +65,7 @@ app.add_middleware(LoggingMiddleware)
 # --- Подключение API Маршрутов ---
 app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
 
+app.include_router(router_auth, prefix="/api")   # Auth
 app.include_router(router_catalog_history, prefix="/api")   # Catalog History
 app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes
 app.include_router(router_catalog_models, prefix="/api")    # Catalog Models

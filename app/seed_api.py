@@ -2,8 +2,8 @@ import requests
 
 from fastapi import APIRouter, status, Response
 
-API_URL = "http://10.168.143.7:8800/api"
-# API_URL = "http://localhost:8800/api"
+# API_URL = "http://10.168.143.7:8800/api"
+API_URL = "http://localhost:8800/api"
 headers = {
     "accept": "application/json",
     "Content-Type": "application/json"

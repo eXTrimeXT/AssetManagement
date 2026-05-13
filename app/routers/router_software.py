@@ -18,8 +18,9 @@ from app.database.crud_software import (
     check_software_has_assets,
     get_assets_by_software_id
 )
+from app.service.auth.auth_service import require_authorized_user
 
-router_software = APIRouter(prefix="/software", tags=["Software"])
+router_software = APIRouter(prefix="/software", tags=["Software"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_software.post("/", response_model=SoftwareResponse, status_code=status.HTTP_201_CREATED)

@@ -25,7 +25,7 @@ from app.database.crud_users import (
 )
 from app.service.auth.auth_service import require_authorized_user
 
-router_users = APIRouter(prefix="/users", tags=["Users"])
+router_users = APIRouter(prefix="/users", tags=["Users"], dependencies=[Depends(require_authorized_user)])
 
 @router_users.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(user_in: UserCreate, db: AsyncSession = Depends(get_db)):

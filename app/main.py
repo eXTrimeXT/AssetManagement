@@ -56,7 +56,7 @@ app = FastAPI(
     title="IT Assets API",
     description="API для управления IT-активами компании",
     version="1.0.0",
-    dependencies=[Depends(require_authorized_user)] # <-- Глобальная защита
+    # dependencies=[Depends(require_authorized_user)] # <-- Глобальная защита
 )
 
 # --- Подключение MiddleWare ---

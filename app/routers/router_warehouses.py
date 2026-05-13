@@ -15,8 +15,9 @@ from app.database.crud_warehouses import (
     delete_warehouse,
     check_name_exists
 )
+from app.service.auth.auth_service import require_authorized_user
 
-router_warehouses = APIRouter(prefix="/warehouses", tags=["Warehouses"])
+router_warehouses = APIRouter(prefix="/warehouses", tags=["Warehouses"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_warehouses.post("/", response_model=WarehouseResponse, status_code=status.HTTP_201_CREATED)

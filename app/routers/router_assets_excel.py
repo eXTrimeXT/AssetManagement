@@ -13,8 +13,9 @@ from app.database.crud_assets_excel import (
     import_assets_from_rows, get_full_assets_for_export
 )
 from app.service.excel.asset_export_service import create_asset_export_excel
+from app.service.auth.auth_service import require_authorized_user
 
-router_assets_excel = APIRouter(prefix="/assets/excel", tags=["Assets Excel"])
+router_assets_excel = APIRouter(prefix="/assets/excel", tags=["Assets Excel"], dependencies=[Depends(require_authorized_user)])
 
 @router_assets_excel.get("/export")
 async def export_assets_to_excel(

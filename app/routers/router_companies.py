@@ -16,8 +16,9 @@ from app.database.crud_companies import (
     delete_company,
     check_company_name_exists
 )
+from app.service.auth.auth_service import require_authorized_user
 
-router_companies = APIRouter(prefix="/companies", tags=["Companies"])
+router_companies = APIRouter(prefix="/companies", tags=["Companies"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_companies.post("/", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)

@@ -13,11 +13,12 @@ from app.database.crud_asset_types import (
     get_asset_type_by_id
 )
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
+from app.service.auth.auth_service import require_authorized_user
 
 # Инициализируем логгер
 logger = structlog.get_logger()
 
-router_assets_types = APIRouter(prefix="/assets-types", tags=["Assets Types"])
+router_assets_types = APIRouter(prefix="/assets-types", tags=["Assets Types"], dependencies=[Depends(require_authorized_user)])
 
 @router_assets_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)
 async def create(data: AssetTypeCreate, db: AsyncSession = Depends(get_db)):

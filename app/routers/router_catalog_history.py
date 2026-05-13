@@ -4,8 +4,9 @@ from typing import List
 from app.database.connection import get_db
 from app.database.crud_catalog_operations import get_catalog_history
 from app.schemas.operations.CatalogOperationSchemas import CatalogOperationResponse
+from app.service.auth.auth_service import require_authorized_user
 
-router_catalog_history = APIRouter(prefix="/catalog", tags=["Catalog History"])
+router_catalog_history = APIRouter(prefix="/catalog", tags=["Catalog History"], dependencies=[Depends(require_authorized_user)])
 
 @router_catalog_history.get("/items/{catalog_id}/history", response_model=List[CatalogOperationResponse])
 async def get_catalog_item_history_endpoint(

@@ -1,22 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from app.database.connection import get_db
 from app.schemas.locations.LocationResponse import LocationResponse, LocationShortResponse
 
 # Импорт CRUD функций
-# from app.database.locations.crud_locations import (
-#     create_location,
-#     get_locations_list,
-#     get_location_by_id,
-#     update_location,
-#     delete_location
-# )
-
 from app.database.crud_locations import *
+from app.service.auth.auth_service import require_authorized_user
 
-router_locations = APIRouter(prefix="/locations", tags=["Locations"])
+router_locations = APIRouter(prefix="/locations", tags=["Locations"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_locations.post("/", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)

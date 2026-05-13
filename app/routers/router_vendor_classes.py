@@ -16,8 +16,9 @@ from app.database.crud_vendor_classes import (
     delete_vendor_class,
     check_vendor_class_name_exists
 )
+from app.service.auth.auth_service import require_authorized_user
 
-router_vendor_classes = APIRouter(prefix="/vendor-classes", tags=["Vendor Classes"])
+router_vendor_classes = APIRouter(prefix="/vendor-classes", tags=["Vendor Classes"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_vendor_classes.post("/", response_model=VendorClassResponse, status_code=status.HTTP_201_CREATED)

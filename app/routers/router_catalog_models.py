@@ -6,8 +6,9 @@ import pandas as pd
 from app.database.connection import get_db
 from app.database.crud_catalog import create_asset_model, get_asset_models, update_asset_model, get_asset_model_by_id, get_catalog_stats_by_model
 from app.schemas.catalog.ModelSchemas import AssetModelCreate, AssetModelUpdate, AssetModelResponse
+from app.service.auth.auth_service import require_authorized_user
 
-router_catalog_models = APIRouter(prefix="/catalog/models", tags=["Asset Catalog Models"])
+router_catalog_models = APIRouter(prefix="/catalog/models", tags=["Asset Catalog Models"], dependencies=[Depends(require_authorized_user)])
 
 # === Модели оборудования ===
 @router_catalog_models.post("/", response_model=AssetModelResponse, status_code=status.HTTP_201_CREATED)

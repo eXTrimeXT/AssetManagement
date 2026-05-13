@@ -4,8 +4,9 @@ from typing import List
 from app.database.connection import get_db
 from app.database.crud_operations import get_history_by_inventory_id, get_history_by_asset_id
 from app.schemas.operations.AssetOperationSchemas import AssetOperationResponse
+from app.service.auth.auth_service import require_authorized_user
 
-router_assets_history = APIRouter(prefix="/assets", tags=["Assets History"])
+router_assets_history = APIRouter(prefix="/assets", tags=["Assets History"], dependencies=[Depends(require_authorized_user)])
 
 @router_assets_history.get("/history/{inventory_id}", response_model=List[AssetOperationResponse])
 async def get_asset_history_by_inventory_id(

@@ -15,8 +15,9 @@ from app.database.crud_vendors import (
     update_vendor,
     delete_vendor
 )
+from app.service.auth.auth_service import require_authorized_user
 
-router_vendors = APIRouter(prefix="/vendors", tags=["Vendors & Suppliers"])
+router_vendors = APIRouter(prefix="/vendors", tags=["Vendors & Suppliers"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_vendors.post("/", response_model=VendorResponse, status_code=status.HTTP_201_CREATED)

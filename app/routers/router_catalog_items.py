@@ -8,8 +8,9 @@ from app.database.connection import get_db
 from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogResponse, AssetCatalogUpdate
 
 from app.database.crud_catalog import add_to_catalog, get_catalog_list, get_catalog_item_by_id, delete_catalog_item, update_catalog_item
+from app.service.auth.auth_service import require_authorized_user
 
-router_catalog_items = APIRouter(prefix="/catalog/items", tags=["Asset Catalog Items"])
+router_catalog_items = APIRouter(prefix="/catalog/items", tags=["Asset Catalog Items"], dependencies=[Depends(require_authorized_user)])
 
 # === Каталог (Связь Активов с Моделями) ===
 @router_catalog_items.post("/", response_model=AssetCatalogResponse, status_code=status.HTTP_201_CREATED)

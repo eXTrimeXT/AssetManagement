@@ -7,8 +7,9 @@ from app.database.connection import get_db
 from app.schemas.catalog.ClassSchemas import AssetClassCreate, AssetClassUpdate, AssetClassResponse
 
 from app.database.crud_catalog import create_asset_class, get_asset_classes, update_asset_class, delete_asset_class, get_asset_class_by_id
+from app.service.auth.auth_service import require_authorized_user
 
-router_catalog_classes = APIRouter(prefix="/catalog", tags=["Asset Catalog Classes"])
+router_catalog_classes = APIRouter(prefix="/catalog", tags=["Asset Catalog Classes"], dependencies=[Depends(require_authorized_user)])
 
 # === Классы оборудования ===
 @router_catalog_classes.post("/classes", response_model=AssetClassResponse, status_code=status.HTTP_201_CREATED)

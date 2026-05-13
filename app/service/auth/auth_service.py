@@ -6,6 +6,8 @@ from app.models.UserJWTData import UserJWTData
 
 logger = logging.getLogger(__name__)
 
+JWT_SECRET_KEY = "geasd$#3neGG!#@J#nnd28n"
+
 class TokenValidationError(Exception):
     """Исключение при ошибке валидации токена"""
     pass
@@ -26,12 +28,13 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
     Raises:
         TokenValidationError: Если токен невалиден, просрочен или подпись не совпадает
     """
+    key = secret_key or JWT_SECRET_KEY
     try:
-        if secret_key:
+        if key:
             # Проверяем подпись и срок действия
             payload = jwt.decode(
                 token,
-                key=secret_key,
+                key=key,
                 algorithms=["HS256"],
                 options={"verify_exp": True}
             )
@@ -69,7 +72,8 @@ def get_user_from_token(token: str, secret_key: Optional[str] = None) -> UserJWT
     Raises:
         TokenValidationError: Если токен невалиден или истек
     """
-    payload = decode_token(token, secret_key)
+    key = secret_key or JWT_SECRET_KEY
+    payload = decode_token(token, key)
     return UserJWTData(payload)
 
 
@@ -84,8 +88,9 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
     Returns:
         True если токен валиден, иначе False
     """
+    key = secret_key or JWT_SECRET_KEY
     try:
-        decode_token(token, secret_key)
+        decode_token(token, key)
         return True
     except TokenValidationError:
         return False

@@ -29,7 +29,6 @@ from app.routers.router_auth import router_auth
 from app.routers.router_assets_excel import router_assets_excel
 
 from app.seed_api import router_seed_api
-from app.service.auth.auth_service import require_authorized_user
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -56,7 +55,6 @@ app = FastAPI(
     title="IT Assets API",
     description="API для управления IT-активами компании",
     version="1.0.0",
-    # dependencies=[Depends(require_authorized_user)] # <-- Глобальная защита
 )
 
 # --- Подключение MiddleWare ---

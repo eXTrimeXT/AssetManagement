@@ -11,15 +11,13 @@ from app.service.auth.auth_service import get_user_from_token, TokenValidationEr
 
 router_auth = APIRouter(tags=["auth"])
 
-
 @router_auth.post("/validate-token", response_model=UserInfoResponse)
 async def validate_token(
         request: TokenRequest,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
 ):
     """
-    Валидирует JWT токен, создает/обновляет пользователя в Users,
-    возвращает данные пользователя.
+    Валидирует JWT токен, создает/обновляет пользователя в Users, возвращает данные пользователя.
     """
     try:
         user_data: UserJWTData = get_user_from_token(request.token)

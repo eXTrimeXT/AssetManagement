@@ -4,11 +4,14 @@ import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
 
+from fastapi import Security, Depends, HTTPException, Request, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.UserJWTData import UserJWTData
 from app.models.User import User
 from app.database.crud_users import get_user_by_tab_id
+from app.database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +20,50 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
 class TokenValidationError(Exception):
     """Исключение при ошибке валидации токена"""
     pass
+
+# Создаём экземпляр схемы безопасности
+security = HTTPBearer()
+
+# === Dependency: получение токена из Security (Swagger-friendly) ===
+async def get_token_from_security(
+        credentials: HTTPAuthorizationCredentials = Security(security)
+) -> str:
+    """
+    Извлекает токен из заголовка Authorization: Bearer <token>
+    Работает как с curl, так и с Swagger UI (кнопка Authorize).
+    """
+    return credentials.credentials.strip()
+
+
+# === Dependency для проверки авторизации ===
+async def require_authorized_user(
+        token: str = Depends(get_token_from_security),
+        db: AsyncSession = Depends(get_db)
+) -> User:
+    """
+    Проверяет токен и наличие пользователя в таблице Users.
+    Возвращает пользователя из БД или выбрасывает 401/403.
+    """
+    try:
+        user_data = get_user_from_token(token)
+
+        if user_data.is_expired:
+            raise HTTPException(status_code=401, detail="Token expired")
+
+        db_user = await get_user_by_tab_id(db, user_data.login)
+        if not db_user:
+            raise HTTPException(
+                status_code=403,
+                detail="User not found in database. Please login first via /api/validate-token"
+            )
+
+        if not db_user.is_active:
+            raise HTTPException(status_code=403, detail="User account is deactivated.")
+
+        return db_user
+
+    except TokenValidationError as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
 def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]:
     """

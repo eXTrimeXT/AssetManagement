@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends
-from fastapi.security import HTTPBearer
 
 from app.database.connection import engine
 from app.models.Base import Base
@@ -14,28 +13,24 @@ from app.middleware.LoggingMiddleware import LoggingMiddleware
 from app.routers.router_assets import router_assets
 from app.routers.router_assets_types import router_assets_types
 from app.routers.router_assets_history import router_assets_history
-
-from app.routers.router_users import router_users, require_authorized_user
+from app.routers.router_users import router_users
 from app.routers.router_software import router_software
-
 # Catalog импорт по зависимости, от независимого к зависимому
 from app.routers.router_catalog_history import router_catalog_history   # не зависим (чисто история)
 from app.routers.router_catalog_classes import router_catalog_classes   # не зависим
 from app.routers.router_catalog_models import router_catalog_models     # зависим от класса
 from app.routers.router_catalog_items import router_catalog_items       # зависим от модели
-
 from app.routers.router_companies import router_companies
 from app.routers.router_vendors import router_vendors
 from app.routers.router_vendor_classes import router_vendor_classes
 from app.routers.router_warehouses import router_warehouses
 from app.routers.router_locations import router_locations
 from app.routers.router_auth import router_auth
-
 from app.routers.router_assets_excel import router_assets_excel
-from app.seed_api import router_seed_api
 
-# Схема безопасности для Bearer токена
-security = HTTPBearer()
+from app.seed_api import router_seed_api
+from app.service.auth.auth_service import require_authorized_user
+
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -61,10 +56,6 @@ app = FastAPI(
     title="IT Assets API",
     description="API для управления IT-активами компании",
     version="1.0.0",
-    openapi_tags=[
-        {"name": "auth", "description": "Авторизация"},
-        {"name": "Users", "description": "Управление пользователями"},
-    ],
     dependencies=[Depends(require_authorized_user)] # <-- Глобальная защита
 )
 

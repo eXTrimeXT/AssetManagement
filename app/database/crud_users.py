@@ -42,6 +42,10 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
     result = await db.execute(select(User).where(User.user_id == user_id))
     return result.scalar_one_or_none()
 
+async def get_user_by_tab_id(db: AsyncSession, user_tab_id: str) -> Optional[User]:
+    """ Получает пользователя по TAB_ID """
+    result = await db.execute(select(User).where(User.user_tab_id == user_tab_id))
+    return result.scalar_one_or_none()
 
 # CRUD ОПЕРАЦИИ
 async def create_user(db: AsyncSession, user_in: UserCreate) -> User:

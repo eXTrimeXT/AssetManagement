@@ -13,6 +13,7 @@ from app.database.crud_users import (
     create_user,
     get_users_list,
     get_user_by_id,
+    get_user_by_tab_id,
     update_user,
     deactivate_user,
     activate_user,
@@ -49,10 +50,18 @@ async def get_users_endpoint(
     return await get_users_list(db, skip, limit, department, is_active)
 
 
-@router_users.get("/{user_id}", response_model=UserResponse)
-async def get_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+@router_users.get("/id/{user_id}", response_model=UserResponse)
+async def get_user_by_id_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     """Получить пользователя по ID"""
     user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    return user
+
+@router_users.get("/tab_id/{user_tab_id}", response_model=UserResponse)
+async def get_user_by_tab_id_endpoint(user_tab_id: str, db: AsyncSession = Depends(get_db)):
+    """Получить пользователя по TAB_ID"""
+    user = await get_user_by_tab_id(db, user_tab_id)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     return user

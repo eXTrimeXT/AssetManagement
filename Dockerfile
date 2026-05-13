@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc && \
 # Копируем зависимости
 COPY packages /packages
 COPY requirements.txt .
-RUN pip install --no-cache-dir --no-index --find-links=/packages -r requirements.txt
-# RUN pip install -r requirements.txt
+# RUN pip install --no-cache-dir --no-index --find-links=/packages -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Копируем код приложения
 COPY . .

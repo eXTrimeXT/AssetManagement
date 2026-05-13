@@ -1,3 +1,4 @@
+import os
 import jwt
 from typing import Optional, Dict, Any
 import logging
@@ -6,7 +7,7 @@ from app.models.UserJWTData import UserJWTData
 
 logger = logging.getLogger(__name__)
 
-JWT_SECRET_KEY = "geasd$#3neGG!#@J#nnd28n"
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
 
 class TokenValidationError(Exception):
     """Исключение при ошибке валидации токена"""
@@ -38,9 +39,9 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 algorithms=["HS256"],
                 options={"verify_exp": True}
             )
-            logger.debug(f"{payload=}")
+            logger.warning(f"{payload=}")
         else:
-            # ⚠️ ТОЛЬКО ДЛЯ ТЕСТОВ: декодируем без проверки подписи
+            # ТОЛЬКО ДЛЯ ТЕСТОВ: декодируем без проверки подписи
             logger.warning(
                 "JWT secret key not configured. Decoding token without signature verification! "
                 "Set JWT_SECRET_KEY for production."
@@ -49,7 +50,7 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 token,
                 options={"verify_signature": False, "verify_exp": True}
             )
-            logger.debug(f"{payload=}")
+            # logger.warning(f"{payload=}")
         return payload
 
     except jwt.ExpiredSignatureError:

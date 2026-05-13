@@ -4,9 +4,10 @@ services:
     image: postgres:17-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: it_assets_db
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=$DB_PASSWORD
+      - POSTGRES_DB=$DB_NAME
+      - POSTGRES_HOST=$DB_HOST
     ports:
       - "8432:5432" # Проброс порта для подключения извне (например, через DBeaver)
     volumes:
@@ -28,8 +29,9 @@ services:
     depends_on:
       - postgres
     environment:
-      # при локальном запуске используем @localhost
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/it_assets_db
+      # при локальном запуске используем @localhost (see ./app/database/connection.py)
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}${DB_HOST}:5432/${DB_NAME}
+      - JWT_SECRET_KEY=$JWT_SECRET_KEY
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
 

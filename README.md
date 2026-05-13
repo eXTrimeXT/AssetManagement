@@ -58,21 +58,27 @@ project/
 ```
 
 
-## Предварительная настройка
-Настроить переменную окружения `DATABASE_URL` (app.database.connection.py и docker-compose.yml)
-> Примечание:
-> Используются данные по умолчанию. 
->
-> Для каждого вариант запуска используются разные ссылки!
+## Настройка переменных окружения `.env`
+### Обязательные поля:
 
-Для локального запуска:
-```postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets```
+База данных:
+- `DB_USER` = "postgres"
+- `DB_PASSWORD` = "postgres"
+- `DB_NAME` = "it_assets_db"
+- `DB_HOST` = "@postgres" # или при локальном запуске @localhost
 
-Для запуска через Docker:
-```postgresql+asyncpg://postgres:postgres@postgres:5432/it_assets```
+### Не обязательные поля:
 
-**Перед запуском проверить и настроить порты:** `docker-compose.yml`
+Секретный ключ для проверки подписи при декодировании токена:
+- `JWT_SECRET_KEY` = "geasd$#3neGG!#@J#nnd28n"
 
+> **Примечание**: Перед запуском проверить и настроить порты: `docker-compose.yml`
+> 
+> Ссылка для подключения к БД формируется автоматически из полей `DB_*`.
+> 
+> При локальном запуске необходимо использовать @localhost
+> 
+> Если запуск через Docker, то @postgres
 ---
 
 

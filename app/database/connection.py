@@ -3,12 +3,11 @@ from typing import AsyncGenerator, Any
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 """
-1. База данных (Async + Pooling)
+База данных (Async + Pooling)
 Получаем строку подключения из переменных окружения. 
-Если переменной нет, используется значение по умолчанию для локальной разработки.
+Если переменной нет, используется значение по умолчанию для локального запуска.
 Формат: postgresql+asyncpg://<user>:<password>@<host>:<port>/<dbname>
 """
-# Еще одно подключение (смотри docker-compose.yml )
 DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets")
 
 """

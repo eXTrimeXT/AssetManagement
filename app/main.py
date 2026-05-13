@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from fastapi.security import HTTPBearer
+
 from app.database.connection import engine
 from app.models.Base import Base
 
@@ -13,7 +15,7 @@ from app.routers.router_assets import router_assets
 from app.routers.router_assets_types import router_assets_types
 from app.routers.router_assets_history import router_assets_history
 
-from app.routers.router_users import router_users
+from app.routers.router_users import router_users, require_authorized_user
 from app.routers.router_software import router_software
 
 # Catalog импорт по зависимости, от независимого к зависимому
@@ -32,6 +34,8 @@ from app.routers.router_auth import router_auth
 from app.routers.router_assets_excel import router_assets_excel
 from app.seed_api import router_seed_api
 
+# Схема безопасности для Bearer токена
+security = HTTPBearer()
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -56,7 +60,12 @@ app = FastAPI(
     lifespan=lifespan,
     title="IT Assets API",
     description="API для управления IT-активами компании",
-    version="1.0.0"
+    version="1.0.0",
+    openapi_tags=[
+        {"name": "auth", "description": "Авторизация"},
+        {"name": "Users", "description": "Управление пользователями"},
+    ],
+    dependencies=[Depends(require_authorized_user)] # <-- Глобальная защита
 )
 
 # --- Подключение MiddleWare ---

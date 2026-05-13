@@ -1,5 +1,6 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
@@ -7,6 +8,9 @@ from app.database.connection import get_db
 from app.schemas.users.UserCreate import UserCreate
 from app.schemas.users.UserUpdate import UserUpdate
 from app.schemas.users.UserResponse import UserResponse, UserShortResponse
+from app.service.auth.auth_service import get_user_from_token, TokenValidationError
+
+from app.models.User import User
 
 # Импорт CRUD функций
 from app.database.crud_users import (
@@ -22,7 +26,58 @@ from app.database.crud_users import (
     check_tab_id_exists
 )
 
-router_users = APIRouter(prefix="/users", tags=["Users"])
+
+# Создаём экземпляр схемы безопасности
+security = HTTPBearer()
+
+# === Dependency: получение токена из Security (Swagger-friendly) ===
+async def get_token_from_security(
+        credentials: HTTPAuthorizationCredentials = Security(security)
+) -> str:
+    """
+    Извлекает токен из заголовка Authorization: Bearer <token>
+    Работает как с curl, так и с Swagger UI (кнопка Authorize).
+    """
+    return credentials.credentials.strip()
+
+
+# === Dependency для проверки авторизации ===
+async def require_authorized_user(
+        token: str = Depends(get_token_from_security),
+        db: AsyncSession = Depends(get_db)
+) -> User:
+    """
+    Проверяет токен и наличие пользователя в таблице Users.
+    Возвращает пользователя из БД или выбрасывает 401/403.
+    """
+    try:
+        user_data = get_user_from_token(token)
+
+        if user_data.is_expired:
+            raise HTTPException(status_code=401, detail="Token expired")
+
+        db_user = await get_user_by_tab_id(db, user_data.login)
+        if not db_user:
+            raise HTTPException(
+                status_code=403,
+                detail="User not found in database. Please login first via /api/validate-token"
+            )
+
+        if not db_user.is_active:
+            raise HTTPException(status_code=403, detail="User account is deactivated.")
+
+        return db_user
+
+    except TokenValidationError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+router_users = APIRouter(
+    prefix="/users",
+    tags=["Users"],
+    # dependencies=[Depends(require_authorized_user)]  # <-- Глобальная защита
+)
+
 
 @router_users.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
@@ -132,3 +187,14 @@ async def hard_delete_user_endpoint(user_id: int, db: AsyncSession = Depends(get
         raise HTTPException(status_code=500, detail="Ошибка при удалении")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+# === Новый эндпоинт /me ===
+@router_users.get("/me", response_model=UserResponse)
+async def get_current_user(
+        current_user: User = Depends(require_authorized_user)  # <-- Проверка авторизации
+):
+    """
+    Возвращает информацию о текущем авторизованном пользователе.
+    Доступен только если пользователь есть в таблице Users.
+    """
+    return current_user

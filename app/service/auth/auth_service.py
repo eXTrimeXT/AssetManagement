@@ -1,9 +1,14 @@
 import os
 import jwt
-from typing import Optional, Dict, Any
 import logging
+from typing import Optional, Dict, Any
+from datetime import datetime
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.UserJWTData import UserJWTData
+from app.models.User import User
+from app.database.crud_users import get_user_by_tab_id
 
 logger = logging.getLogger(__name__)
 
@@ -95,3 +100,95 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
         return True
     except TokenValidationError:
         return False
+
+
+def parse_distinguished_name(dn: str | None) -> dict[str, Any]:
+    """
+    Парсит distinguishedName из JWT токена.
+    Пример: CN=Timur Malyshev,OU=INFORMATION SYSTEMS SUPPORT SECTION (ISSS),OU=Users,OU=HMMR,DC=local
+
+    Returns: {'CN': str, 'OU': list[str], 'DC': list[str]}
+    """
+    if not dn:
+        return {'CN': None, 'OU': [], 'DC': []}
+
+    result = {'CN': None, 'OU': [], 'DC': []}
+
+    for part in dn.split(','):
+        if '=' in part:
+            key, value = part.split('=', 1)
+            key, value = key.strip(), value.strip()
+            if key == 'CN':
+                result['CN'] = value
+            elif key == 'OU':
+                result['OU'].append(value)
+            elif key == 'DC':
+                result['DC'].append(value)
+
+    return result
+
+
+def extract_role_from_dn(dn: str | None) -> str | None:
+    """
+    Извлекает роль из distinguishedName.
+    Логика: если в OU есть 'Users' → роль = 'user'.
+    Можно расширить под другие OU (Admins, Managers и т.д.).
+    """
+    parsed = parse_distinguished_name(dn)
+    ou_list = parsed.get('OU', [])
+
+    if 'Users' in ou_list:
+        return 'user'
+    # if 'Admins' in ou_list: return 'admin'  # Пример расширения
+    return 'user'  # Default fallback
+
+
+async def create_or_update_user_from_token(
+        db: AsyncSession,
+        user_data: UserJWTData
+) -> User:
+    """
+    Создает или обновляет запись пользователя в таблице Users
+    на основе данных из JWT токена.
+
+    Маппинг полей:
+    - user_tab_id = login
+    - user_en_name = fullname
+    - owner = fullname
+    - email = email
+    - department = department
+    - role = распарсить из distinguished_name (OU=Users)
+    """
+    role = extract_role_from_dn(user_data.distinguished_name)
+
+    existing_user = await get_user_by_tab_id(db, user_data.login)
+
+    if existing_user:
+        # Обновляем существующего
+        existing_user.user_en_name = user_data.fullname
+        existing_user.owner = user_data.fullname
+        existing_user.email = user_data.email
+        existing_user.department = user_data.department
+        if role:
+            existing_user.role = role
+        existing_user.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(existing_user)
+        return existing_user
+    else:
+        # Создаем нового
+        new_user = User(
+            user_tab_id=user_data.login,
+            user_en_name=user_data.fullname,
+            owner=user_data.fullname,
+            email=user_data.email,
+            department=user_data.department,
+            role=role,
+            is_active=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        return new_user

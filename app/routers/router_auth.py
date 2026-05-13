@@ -7,7 +7,7 @@ from app.database.connection import get_db
 from app.models.UserSession import UserSession
 from app.models.UserJWTData import UserJWTData
 from app.schemas.auth.AuthSchemas import UserInfoResponse, TokenRequest
-from app.service.auth.auth_service import get_user_from_token, TokenValidationError
+from app.service.auth.auth_service import get_user_from_token, TokenValidationError, create_or_update_user_from_token
 
 router_auth = APIRouter(tags=["auth"])
 
@@ -18,23 +18,25 @@ async def validate_token(
         db: AsyncSession = Depends(get_db)
 ):
     """
-    Валидирует JWT токен и возвращает данные пользователя.
+    Валидирует JWT токен, создает/обновляет пользователя в Users,
+    возвращает данные пользователя.
     """
     try:
         user_data: UserJWTData = get_user_from_token(request.token)
 
         if user_data.is_expired:
-            # Инвалидируем сессию в БД
             stmt = select(UserSession).where(UserSession.login == user_data.login)
             result = await db.execute(stmt)
             session = result.scalars().first()
-
             if session:
                 session.token = None
                 await db.commit()
             raise HTTPException(status_code=401, detail="Token expired")
 
-        # Обновляем/сохраняем сессию в БД
+        # === КЛЮЧЕВОЕ: Создаем или обновляем пользователя в таблице Users ===
+        await create_or_update_user_from_token(db, user_data)
+
+        # Сохраняем сессию
         stmt = select(UserSession).where(UserSession.login == user_data.login)
         result = await db.execute(stmt)
         user_session = result.scalars().first()

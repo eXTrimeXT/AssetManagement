@@ -24,7 +24,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "379:6379"
+      - "8379:6379"
 
 
   # Сервис приложения FastAPI

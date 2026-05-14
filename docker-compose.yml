@@ -1,4 +1,11 @@
 services:
+  # Для просмотра таблиц через веб-интерфейс (для разработки)
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "7080:8080"
+
   # Сервис PostgreSQL
   postgres:
     image: postgres:17-alpine
@@ -13,12 +20,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data # Сохранение данных БД
 
-  # Для просмотра таблиц через веб-интерфейс (для разработки)
-  adminer:
-    image: adminer
-    restart: always
+  # Сервис для сохранения сессии пользователей
+  redis:
+    image: redis:7-alpine
     ports:
-      - "7080:8080"
+      - "6379:6379"
+
 
   # Сервис приложения FastAPI
   app:
@@ -28,12 +35,18 @@ services:
       - "8800:8800"
     depends_on:
       - postgres
+      - redis
     environment:
       # при локальном запуске используем @localhost (see ./app/database/connection.py)
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}${DB_HOST}:5432/${DB_NAME}
       - JWT_SECRET_KEY=$JWT_SECRET_KEY
+      - REDIS_HOST=$REDIS_HOST
+      - REDIS_PORT=$REDIS_PORT
+      - SESSION_PREFIX=$SESSION_PREFIX
+      - SESSION_TTL=$SESSION_TTL
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
 
 volumes:
   pgdata:
+  redis_data:

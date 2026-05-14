@@ -178,6 +178,31 @@ async def update_asset_model(db: AsyncSession, model_id: int, data: AssetModelUp
     await db.commit()
     return await get_asset_model_by_id(db, model_id)
 
+async def delete_asset_model(db: AsyncSession, model_id: int) -> bool:
+    """
+    Жесткое удаление модели оборудования.
+    Возвращает True если удалено, False если не найдено.
+    Выбрасывает ValueError если модель используется в каталоге (есть связанные AssetCatalog).
+    """
+    from sqlalchemy import select
+    from app.models.AssetCatalog import AssetCatalog
+
+    # Проверяем, существует ли модель
+    obj = await db.get(AssetModel, model_id)
+    if not obj:
+        return False
+
+    # Проверяем, есть ли ссылки в каталоге (нельзя удалить используемую модель)
+    result = await db.execute(
+        select(AssetCatalog.catalog_id).where(AssetCatalog.model_id == model_id).limit(1)
+    )
+    if result.scalar_one_or_none():
+        raise ValueError("Cannot delete model: it is referenced in AssetCatalog")
+
+    # Жесткое удаление
+    await db.delete(obj)
+    await db.commit()
+    return True
 
 # === CATALOG CRUD ===
 async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_id: Optional[int] = None) -> AssetCatalog:

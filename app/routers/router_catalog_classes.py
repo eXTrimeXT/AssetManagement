@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
-import pandas as pd
 
 from app.database.connection import get_db
 from app.schemas.catalog.ClassSchemas import AssetClassCreate, AssetClassUpdate, AssetClassResponse

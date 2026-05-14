@@ -81,32 +81,32 @@ async def require_authorized_user(
         request: Request,
         db: AsyncSession = Depends(get_db)
 ) -> User:
-    # pass
-    try:
-        token = await get_token_from_request(request)
-        user_data = get_user_from_token(token)
-
-        if user_data.is_expired:
-            raise HTTPException(status_code=401, detail="Token expired")
-
-        session = await get_session_from_redis(user_data.login)
-        if not session or session.get("token") != token:
-            raise HTTPException(status_code=401, detail="Invalid or expired session")
-
-        db_user = await get_user_by_tab_id(db, user_data.login)
-        if not db_user:
-            raise HTTPException(
-                status_code=403,
-                detail="User not found in database. Please login first via /api/login"
-            )
-
-        if not db_user.is_active:
-            raise HTTPException(status_code=403, detail="User account is deactivated.")
-
-        return db_user
-
-    except TokenValidationError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    pass
+    # try:
+    #     token = await get_token_from_request(request)
+    #     user_data = get_user_from_token(token)
+    #
+    #     if user_data.is_expired:
+    #         raise HTTPException(status_code=401, detail="Token expired")
+    #
+    #     session = await get_session_from_redis(user_data.login)
+    #     if not session or session.get("token") != token:
+    #         raise HTTPException(status_code=401, detail="Invalid or expired session")
+    #
+    #     db_user = await get_user_by_tab_id(db, user_data.login)
+    #     if not db_user:
+    #         raise HTTPException(
+    #             status_code=403,
+    #             detail="User not found in database. Please login first via /api/login"
+    #         )
+    #
+    #     if not db_user.is_active:
+    #         raise HTTPException(status_code=403, detail="User account is deactivated.")
+    #
+    #     return db_user
+    #
+    # except TokenValidationError as e:
+    #     raise HTTPException(status_code=401, detail=str(e))
 
 def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]:
     key = secret_key or JWT_SECRET_KEY

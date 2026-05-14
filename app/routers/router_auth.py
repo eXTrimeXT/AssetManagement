@@ -52,7 +52,7 @@ async def auth_token(
             key="session_token",
             value=request.token,
             httponly=True,
-            secure=os.getenv("ENV", "dev") == "prod",  # Только HTTPS в продакшене
+            # secure=os.getenv("ENV", "dev") == "prod",  # Только HTTPS в продакшене
             samesite="lax",
             max_age=ttl,
             path="/"

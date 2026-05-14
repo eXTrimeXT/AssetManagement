@@ -48,6 +48,7 @@ async def require_authorized_user(
         request: Request,
         db: AsyncSession = Depends(get_db)
 ) -> User:
+    # pass
     try:
         token = await get_token_from_request(request)
         user_data = get_user_from_token(token)
@@ -63,7 +64,7 @@ async def require_authorized_user(
         if not db_user:
             raise HTTPException(
                 status_code=403,
-                detail="User not found in database. Please login first via /api/validate-token"
+                detail="User not found in database. Please login first via /api/login"
             )
 
         if not db_user.is_active:
@@ -142,6 +143,7 @@ async def create_or_update_user_from_token(
 ) -> User:
     role = extract_role_from_dn(user_data.distinguished_name)
     existing_user = await get_user_by_tab_id(db, user_data.login)
+    logger.warning(f"{user_data=}")
 
     if existing_user:
         existing_user.user_en_name = user_data.fullname

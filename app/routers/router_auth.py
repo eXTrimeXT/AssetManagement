@@ -22,7 +22,7 @@ async def save_session_to_redis(login: str, token: str, ttl: int) -> None:
     session_data = {"token": token, "login": login}
     await redis_client.set(session_key, json.dumps(session_data), ex=ttl)
 
-@router_auth.post("/auth-token", response_model=UserInfoResponse)
+@router_auth.post("/login", response_model=UserInfoResponse)
 async def auth_token(
         request: TokenRequest,
         response: Response,

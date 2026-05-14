@@ -29,7 +29,7 @@ services:
 
   # Сервис приложения FastAPI
   app:
-    image: python:3.14.3-slim
+#    image: python:3.14.3-slim
     build: .
     restart: always
     ports:

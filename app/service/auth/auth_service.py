@@ -39,6 +39,39 @@ async def get_token_from_request(request: Request) -> str:
 
     raise HTTPException(status_code=401, detail="Token not provided")
 
+# === Извлечение login из токена для логирования ===
+async def extract_login_from_request(request: Request) -> Optional[str]:
+    """
+    Пытается извлечь login из токена (заголовок или куки).
+    Возвращает login или None, если токен отсутствует/невалиден.
+    Не выбрасывает исключения — для безопасного использования в мидлваре.
+    """
+    try:
+        # 1. Пробуем взять токен из заголовка Authorization
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+        else:
+            # 2. Пробуем взять из куки
+            token = request.cookies.get("session_token")
+            if not token:
+                return None
+
+        # Декодируем токен БЕЗ строгой проверки (только для логирования)
+        payload = jwt.decode(
+            token,
+            key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+            algorithms=["HS256"],
+            options={
+                "verify_signature": bool(JWT_SECRET_KEY),
+                "verify_exp": False  # не блокируем логирование, если токен просрочен
+            }
+        )
+        return payload.get("login")
+    except Exception:
+        # Любая ошибка → возвращаем None, чтобы не ломать запрос
+        return None
+
 async def get_session_from_redis(login: str) -> Optional[Dict[str, Any]]:
     session_key = f"session:{login}"
     data = await redis_client.get(session_key)

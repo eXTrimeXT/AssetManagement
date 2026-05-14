@@ -5,6 +5,8 @@ import structlog
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.service.auth.auth_service import extract_login_from_request
+
 # Настройка structlog
 structlog.configure(
     processors=[
@@ -27,8 +29,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Генерируем уникальный ID запроса
         request_id = str(uuid.uuid4())
 
+        user_login = await extract_login_from_request(request)
+
         # Добавляем ID в контекст логов для этого запроса
-        log = logger.bind(request_id=request_id, method=request.method, url=str(request.url), )
+        log = logger.bind(request_id=request_id, method=request.method, url=str(request.url), user_login=user_login or None)
 
         start_time = time.time()
 

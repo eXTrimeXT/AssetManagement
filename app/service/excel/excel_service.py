@@ -138,61 +138,6 @@ def create_asset_import_template() -> bytes:
     wb.save(buffer)
     buffer.seek(0)
     return buffer.getvalue()
-#
-# async def parse_asset_import_excel(file_content: bytes) -> List[Dict[str, Any]]:
-#     """
-#     Парсит Excel файл импорта в список словарей.
-#     Ключи словаря будут соответствовать полям AssetExcelRow (snake_case).
-#     """
-#     df = pd.read_excel(io.BytesIO(file_content))
-#
-#     rows = []
-#     # Создаем маппинг Заголовок -> ИмяПоля
-#     header_to_field = {header: field for field, header, _ in _get_excel_columns()}
-#
-#     for _, row in df.iterrows():
-#         raw_dict = row.to_dict()
-#         mapped_dict = {}
-#
-#         for excel_header, value in raw_dict.items():
-#             if excel_header in header_to_field:
-#                 field_name = header_to_field[excel_header]
-#
-#                 # Обработка дат
-#                 if field_name.endswith('_date'):
-#                     if pd.notna(value):
-#                         if isinstance(value, pd.Timestamp):
-#                             value = value.date()
-#                         elif isinstance(value, date):
-#                             pass
-#                         else:
-#                             try:
-#                                 value = datetime.strptime(str(value), "%Y-%m-%d").date()
-#                             except:
-#                                 value = None
-#                     else:
-#                         value = None
-#
-#                 # Обработка булевых значений
-#                 if field_name == 'affixed_inventory_id':
-#                     if isinstance(value, bool):
-#                         pass
-#                     elif isinstance(value, str):
-#                         value = value.lower() in ['да', 'yes', 'true', '1']
-#                     else:
-#                         value = bool(value) if pd.notna(value) else False
-#
-#                 mapped_dict[field_name] = value
-#
-#         # Валидация обязательных полей
-#         if not mapped_dict.get('inventory_id') or not mapped_dict.get('serial_number') or not mapped_dict.get('name') or not mapped_dict.get('asset_type_name'):
-#             continue
-#
-#         rows.append(mapped_dict)
-#
-#     return rows
-
-
 
 def _is_nan(value: Any) -> bool | ndarray[Any, dtype[bool[bool]]] | NDFrame:
     """Проверяет, является ли значение NaN (pandas/numpy)"""

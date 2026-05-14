@@ -121,7 +121,6 @@ def _parse_date(val: Any) -> date | None:
 async def import_assets_from_rows(
         db: AsyncSession,
         import_rows: List[Dict[str, Any]],
-        current_user_id: int
 ) -> Dict[str, Any]:
     """
     Импортирует активы из строк Excel.

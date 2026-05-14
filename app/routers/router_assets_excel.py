@@ -47,7 +47,6 @@ async def download_template():
 @router_assets_excel.post("/import")
 async def import_assets_from_excel(
         file: UploadFile = File(...),
-        current_user_id: int = 1, # Заглушка, брать из auth context
         db: AsyncSession = Depends(get_db)
 ):
     """Импорт активов из Excel"""
@@ -61,7 +60,7 @@ async def import_assets_from_excel(
         if not rows:
             raise HTTPException(status_code=400, detail="Файл пуст или неверный формат")
 
-        results = await import_assets_from_rows(db, rows, current_user_id)
+        results = await import_assets_from_rows(db, rows)
         return {"message": "Импорт завершен", "results": results}
 
     except Exception as e:

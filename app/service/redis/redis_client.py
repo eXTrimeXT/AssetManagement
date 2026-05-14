@@ -5,7 +5,7 @@ import os
 # Асинхронный клиент Redis
 redis_client = Redis(
     host=os.getenv("REDIS_HOST", "redis"),
-    port=int(os.getenv("REDIS_PORT", "6379")),
+    port=int(os.getenv("REDIS_PORT", "8379")),
     decode_responses=True
 )
 router_redis = APIRouter(prefix="/redis", tags=["Redis"])

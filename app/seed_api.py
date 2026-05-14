@@ -170,6 +170,8 @@ def assets_post():
             "name": f"имя {i}",
             "prepared_by": user_id[i-1],
             "price": i,
+            "location_id": location_id[i-1],
+            "software_id": software_id[i-1],
             "serial_number": f"серийный номер {i}",
             "vendor_id": vendor_id[i-1]
         }

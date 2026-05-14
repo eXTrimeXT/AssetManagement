@@ -25,6 +25,12 @@ services:
     image: redis:7-alpine
     ports:
       - "8379:8379"
+    command: redis-server --port 8379 --appendonly yes  # <-- заставляем Redis слушать 8379
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "8379", "ping"]  # <-- healthcheck тоже на 8379
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 
   # Сервис приложения FastAPI

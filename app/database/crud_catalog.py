@@ -318,7 +318,7 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         return True
     except Exception as e:
         await db.rollback()
-        print(f"Error deleting catalog item: {e}")
+        print(f"Error deleting catalog item: {e}!")
         return False
 
 async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Any]:

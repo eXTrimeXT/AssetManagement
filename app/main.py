@@ -63,19 +63,19 @@ app.add_middleware(LoggingMiddleware)
 # --- Подключение API Маршрутов ---
 # Redis
 from app.service.redis.redis_client import *
-app.include_router(router_redis, prefix="/api")
+# app.include_router(router_redis, prefix="/api")
 app.include_router(router_auth, prefix="/api")              # Auth
 app.include_router(router_users, prefix="/api")             # Users
 
-app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
+# app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
 
-app.include_router(router_catalog_history, prefix="/api")   # Catalog History
+app.include_router(router_assets_types, prefix="/api")      # Asset Types
 app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes
 app.include_router(router_catalog_models, prefix="/api")    # Catalog Models
+app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_catalog_items, prefix="/api")     # Catalog Items
 app.include_router(router_assets_history, prefix="/api")    # Assets History
-app.include_router(router_assets, prefix="/api")            # Assets
-app.include_router(router_assets_types, prefix="/api")      # Asset Types
+app.include_router(router_catalog_history, prefix="/api")   # Catalog History
 app.include_router(router_software, prefix="/api")          # Software
 app.include_router(router_companies, prefix="/api")         # Companies
 app.include_router(router_warehouses, prefix="/api")        # Warehouse

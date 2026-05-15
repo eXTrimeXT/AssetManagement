@@ -18,7 +18,7 @@ class Asset(Base):
     # === Основные поля (из ТЗ) ===
     asset_status = Column(String(100), index=True, default="Приемка")           # Статус актива
     type_domain = Column(String(100))                                            # Тип домена
-    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)    # Тип актива (ссылка на справочник)
+    model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)  # Модель актива (ссылка на справочник)
     inventory_id = Column(String(50), unique=True, index=True)                  # Инвентарный номер
     affixed_inventory_id = Column(Boolean, default=False)                        # Инвентарный номер наклеен?
     info_storage_location = Column(String(200))                                  # Место хранения информации об активе
@@ -74,7 +74,8 @@ class Asset(Base):
     software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), index=True)
     software = relationship("Software", back_populates="assets", lazy="joined")
 
-    asset_type = relationship("AssetType", back_populates="assets", lazy="joined")
+    # Модель актива (вместо AssetType)
+    model = relationship("AssetModel", back_populates="assets", lazy="joined")
 
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name}, inventory_id={self.inventory_id})>"

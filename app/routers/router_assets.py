@@ -19,11 +19,10 @@ from app.database.crud_assets import (
     get_all_asset_children_recursive,
     check_duplicate_inventory_id,
     check_duplicate_serial_number,
-    check_parent_exists,
+    check_parent_exists, get_asset_model,
 )
 from app.database.crud_assets import get_asset_with_deleted
 from app.database.crud_users import get_user_by_id
-from app.database.crud_asset_types import get_asset_type_by_id
 from app.database.crud_vendors import get_vendor_by_id
 from app.service.auth.auth_service import require_authorized_user
 
@@ -63,11 +62,10 @@ async def create_asset_endpoint(
         if not await get_vendor_by_id(db, asset_in.vendor_id):
             raise HTTPException(status_code=400, detail="Поставщик с таким ID не найден")
 
-    # 6. Проверка типа актива
-    if asset_in.asset_type_id:
-        # if not await get_asset_type(db, asset_in.asset_type_id):
-        if not await get_asset_type_by_id(db, asset_in.asset_type_id):
-            raise HTTPException(status_code=400, detail="Тип актива не найден")
+    # Проверка модели актива
+    if asset_in.model_id:
+        if not await get_asset_model(db, asset_in.model_id):
+            raise HTTPException(status_code=400, detail="Модель актива не найдена")
 
     if asset_in.prepared_by:
         if not await get_user_by_id(db, asset_in.prepared_by):

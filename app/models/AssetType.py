@@ -16,7 +16,7 @@ class AssetType(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
 
     # Связь с активами
-    assets: Mapped[list["Asset"]] = relationship(
-        back_populates="asset_type",
-        lazy="selectin"
-    )
+    # assets: Mapped[list["Asset"]] = relationship(
+    #     back_populates="asset_type",
+    #     lazy="selectin"
+    # )

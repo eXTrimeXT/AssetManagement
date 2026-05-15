@@ -3,11 +3,12 @@ from datetime import date, datetime
 from typing import Optional
 
 # Импорт всех необходимых вложенных схем
-from app.schemas.warehouses.WarehouseResponse import WarehouseResponse  # <-- Заменено LocationResponse на WarehouseResponse
-from app.schemas.asset_types.AssetTypesSchemas import AssetTypeResponse
+from app.schemas.warehouses.WarehouseResponse import WarehouseResponse
 from app.schemas.users.UserResponse import UserResponse
 from app.schemas.software.SoftwareResponse import SoftwareResponse
 from app.schemas.vendors.VendorSchemas import VendorResponse
+from app.schemas.catalog.ModelSchemas import AssetModelResponse
+
 
 class AssetBase(BaseModel):
     """Базовые поля актива (простые типы)"""
@@ -23,7 +24,7 @@ class AssetBase(BaseModel):
     comment: Optional[str] = None
 
     # ID связей
-    asset_type_id: int
+    model_id: int
     warehouse_id: Optional[int] = None  # <-- Заменено location_id на warehouse_id
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
@@ -42,7 +43,7 @@ class AssetResponse(AssetBase):
     updated_at: Optional[datetime] = None
 
     # --- Вложенные объекты ---
-    asset_type: Optional[AssetTypeResponse] = None
+    model: Optional[AssetModelResponse] = None
 
     # СКЛАД (вместо локации)
     warehouse_obj: Optional[WarehouseResponse] = None  # <-- Заменено location_obj на warehouse_obj
@@ -67,7 +68,7 @@ class AssetShortResponse(BaseModel):
     inventory_id: str
     serial_number: str
     asset_status: str
-    asset_type_id: int
+    model_id: int
     warehouse_id: Optional[int] = None  # <-- Заменено location_id на warehouse_id
     parent_id: Optional[int] = None
     software_id: Optional[int] = None

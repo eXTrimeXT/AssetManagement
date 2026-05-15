@@ -37,7 +37,7 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
         .where(AssetCatalog.catalog_id == catalog_id)
         .options(
             selectinload(AssetCatalog.asset).options(
-                selectinload(Asset.asset_type),
+                selectinload(Asset.model),
                 selectinload(Asset.preparer),
                 selectinload(Asset.checker),
                 selectinload(Asset.software),
@@ -324,7 +324,7 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
 async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Any]:
     query = select(AssetCatalog).options(
         selectinload(AssetCatalog.asset).options(
-            selectinload(Asset.asset_type),
+            selectinload(Asset.model),
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.software),

@@ -1,5 +1,7 @@
+from typing import List
+
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 from app.models.Base import Base
 
@@ -24,7 +26,12 @@ class AssetModel(Base):
     updated_by = Column(Integer, ForeignKey("users.user_id"))
 
     # Связи
-    asset_class = relationship("AssetClass", back_populates="models")
+    asset_class = relationship("AssetClass", back_populates="models", lazy="joined")  # <-- lazy="joined" для немедленной загрузки
+    assets: Mapped[List["Asset"]] = relationship(
+        "Asset",
+        back_populates="model",
+        lazy="select"
+    )
     creator = relationship("User", foreign_keys=[created_by])
     updater = relationship("User", foreign_keys=[updated_by])
 

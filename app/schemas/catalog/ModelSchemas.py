@@ -31,7 +31,7 @@ class AssetModelResponse(AssetModelBase):
     # Вложенные объекты
 
     # Класс оборудования (полный объект со всеми его связями)
-    asset_class: Optional[AssetClassResponse] = Field(default=None, alias="asset_class")
+    asset_class: Optional[AssetClassResponse] = Field(default=None)
 
     # Пользователи (Создатель и Обновляющий саму модель)
     creator: Optional[UserResponse] = Field(default=None, alias="creator")

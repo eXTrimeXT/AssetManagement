@@ -24,10 +24,8 @@ class AssetCatalogResponse(AssetCatalogBase):
 
     # Актив (полный объект со всеми связями: тип, локация, юзеры, вендоры, ПО)
     asset: Optional[AssetResponse] = Field(default=None, alias="asset")
-
     # Владелец актива (Пользователь)
     owner: Optional[UserResponse] = Field(default=None, alias="owner")
-
     # Создатель записи в каталоге (Пользователь)
     creator: Optional[UserResponse] = Field(default=None, alias="creator")
 

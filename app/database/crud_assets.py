@@ -7,13 +7,12 @@ from sqlalchemy.orm import selectinload
 
 from app.models.Asset import Asset
 from app.models.Vendor import Vendor
-from app.models.AssetType import AssetType
 from app.models.Software import Software
 from app.models.Warehouse import Warehouse
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
-
+from app.models.AssetModel import AssetModel
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -73,9 +72,9 @@ async def get_vendor_by_id(db: AsyncSession, vendor_id: int) -> bool:
     result = await db.execute(select(Vendor).where(Vendor.vendor_id == vendor_id))
     return result.scalar_one_or_none() is not None
 
-async def get_asset_type(db: AsyncSession, asset_type: int) -> bool:
-    """ Проверяет существование типа актива """
-    result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type))
+async def get_asset_model(db: AsyncSession, model_id: int) -> bool:
+    """ Проверяет существование модели актива """
+    result = await db.execute(select(AssetModel).where(AssetModel.model_id == model_id))
     return result.scalar_one_or_none() is not None
 
 
@@ -106,7 +105,7 @@ async def get_assets_list(
         skip: int = 0,
         limit: int = 50,
         asset_status: Optional[str] = None,
-        asset_type_id: Optional[int] = None,
+        model_id: Optional[int] = None,
         deleted: bool = False
 ) -> Sequence[Any]:
     """
@@ -121,8 +120,8 @@ async def get_assets_list(
     # Фильтры
     if asset_status:
         query = query.where(Asset.asset_status == asset_status)
-    if asset_type_id:
-        query = query.where(Asset.asset_type_id == asset_type_id)
+    if model_id:
+        query = query.where(Asset.model_id == model_id)
 
 
     # Пагинация
@@ -140,7 +139,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .where(Asset.asset_id == asset_id)
         .where(Asset.deleted_at.is_(None))
         .options(
-            selectinload(Asset.asset_type),       # Загрузка типа
+            selectinload(Asset.model).selectinload(AssetModel.asset_class),    # Загрузка модели актива (relationship)
             selectinload(Asset.warehouse_obj),    # Загрузка склада (вместо локации)
             selectinload(Asset.preparer),         # Загрузка подготовившего (User)
             selectinload(Asset.checker),          # Загрузка проверившего (User)
@@ -374,7 +373,7 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
                  WITH RECURSIVE asset_tree AS (
                      -- Базовый случай: прямые дети указанного актива
                      SELECT
-                         asset_id, name, inventory_id, serial_number, asset_status, asset_type_id,
+                         asset_id, name, inventory_id, serial_number, asset_status, model_id,
                          warehouse_id, parent_id, deleted_at, software_id, price, 1 AS depth
                      FROM assets
                      WHERE parent_id = :root_id AND deleted_at IS NULL
@@ -383,7 +382,7 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
 
                      -- Рекурсивный случай: дети детей
                      SELECT
-                         a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.asset_type_id,
+                         a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.model_id,
                          a.warehouse_id, a.parent_id, a.deleted_at, a.software_id, a.price, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
@@ -417,7 +416,7 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
             "inventory_id": row.inventory_id,
             "serial_number": row.serial_number,
             "asset_status": row.asset_status,
-            "asset_type_id": row.asset_type_id,
+            "model_id": row.model_id,
             "warehouse_id": row.warehouse_id,  # Заменено location_id на warehouse_id
             "parent_id": row.parent_id,
             "software_id": row.software_id,

@@ -25,7 +25,6 @@ class AssetModel(Base):
 
     # Связи
     asset_class = relationship("AssetClass", back_populates="models")
-    catalog_items = relationship("AssetCatalog", back_populates="model", cascade="all, delete-orphan")
     creator = relationship("User", foreign_keys=[created_by])
     updater = relationship("User", foreign_keys=[updated_by])
 

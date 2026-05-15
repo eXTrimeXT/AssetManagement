@@ -8,7 +8,7 @@ from app.service.auth.auth_service import require_authorized_user
 
 router_assets_history = APIRouter(prefix="/assets", tags=["Assets History"], dependencies=[Depends(require_authorized_user)])
 
-@router_assets_history.get("/history/{inventory_id}", response_model=List[AssetOperationResponse])
+@router_assets_history.get("/history/inv_id/{inventory_id}", response_model=List[AssetOperationResponse])
 async def get_asset_history_by_inventory_id(
         inventory_id: str, # Используем инвентарный номер вместо ID актива
         skip: int = Query(0, ge=0),
@@ -27,7 +27,7 @@ async def get_asset_history_by_inventory_id(
 
     return history
 
-@router_assets_history.get("/history{asset_id}", response_model=List[AssetOperationResponse])
+@router_assets_history.get("/history/id/{asset_id}", response_model=List[AssetOperationResponse])
 async def get_asset_history_by_asset_id(
         asset_id: int,
         skip: int = Query(0, ge=0),

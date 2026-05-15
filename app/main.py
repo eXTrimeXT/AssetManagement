@@ -63,7 +63,7 @@ app.add_middleware(LoggingMiddleware)
 # --- Подключение API Маршрутов ---
 # Redis
 from app.service.redis.redis_client import *
-# app.include_router(router_redis, prefix="/api")
+app.include_router(router_redis, prefix="/api")
 app.include_router(router_auth, prefix="/api")              # Auth
 app.include_router(router_users, prefix="/api")             # Users
 

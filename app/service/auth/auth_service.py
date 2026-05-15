@@ -108,6 +108,15 @@ async def require_authorized_user(
     except TokenValidationError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
+async def get_current_user_id(
+        current_user: User = Depends(require_authorized_user)
+) -> int:
+    """
+    Зависимость для получения ID текущего авторизованного пользователя.
+    Используется в эндпоинтах, где нужен только user_id для аудита/логирования.
+    """
+    return current_user.user_id
+
 def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]:
     key = secret_key or JWT_SECRET_KEY
     try:

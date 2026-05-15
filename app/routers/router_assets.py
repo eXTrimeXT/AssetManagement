@@ -24,7 +24,7 @@ from app.database.crud_assets import (
 from app.database.crud_assets import get_asset_with_deleted
 from app.database.crud_users import get_user_by_id
 from app.database.crud_vendors import get_vendor_by_id
-from app.service.auth.auth_service import require_authorized_user
+from app.service.auth.auth_service import require_authorized_user, get_current_user_id
 
 router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depends(require_authorized_user)])
 
@@ -32,7 +32,7 @@ router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depen
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset_endpoint(
         asset_in: AssetCreate,
-        current_user_id: int = 1, # ЗАГЛУШКА: В реальности брать из токена
+        current_user_id: int = Depends(get_current_user_id),
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -121,7 +121,7 @@ async def get_asset_endpoint(
 async def update_asset_endpoint(
         asset_id: int,
         asset_data: AssetUpdate,
-        current_user_id: int = 1,
+        current_user_id: int = Depends(get_current_user_id),
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -163,7 +163,7 @@ async def update_asset_endpoint(
 @router_assets.post("/{asset_id}/deactivate", response_model=AssetResponse)
 async def deactivate_asset_endpoint(
         asset_id: int,
-        current_user_id: int = 1,
+        current_user_id: int = Depends(get_current_user_id),
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -179,7 +179,7 @@ async def deactivate_asset_endpoint(
 @router_assets.post("/{asset_id}/activate", response_model=AssetResponse)
 async def activate_asset_endpoint(
         asset_id: int,
-        current_user_id: int = 1,
+        current_user_id: int = Depends(get_current_user_id),
         db: AsyncSession = Depends(get_db)
 ):
     """
@@ -199,7 +199,7 @@ async def activate_asset_endpoint(
 @router_assets.delete("/{asset_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
 async def hard_delete_asset_endpoint(
         asset_id: int,
-        current_user_id: int = 1,
+        current_user_id: int = Depends(get_current_user_id),
         db: AsyncSession = Depends(get_db)
 ):
     """

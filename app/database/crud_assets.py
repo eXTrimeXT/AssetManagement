@@ -13,6 +13,8 @@ from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
 from app.models.AssetModel import AssetModel
+from app.models.User import User
+from app.database.crud_users import get_user_by_tab_id
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:

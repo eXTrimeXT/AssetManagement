@@ -1,6 +1,8 @@
 import requests
 
-from fastapi import APIRouter, status, Response
+from fastapi import APIRouter, status, Response, Depends
+
+from app.service.auth.auth_service import require_authorized_user
 
 # API_URL = "http://10.168.143.7:8800/api"
 API_URL = "http://localhost:8800/api"
@@ -201,16 +203,16 @@ router_seed_api = APIRouter(tags=["API SEED"])
 @router_seed_api.post("/seed", status_code=status.HTTP_201_CREATED)
 def seed_api():
     """ Запускает посев данных во всех таблицах, по умолчанию 10 записей за 1 прогон"""
-    # location_post()
-    # software_post()
+    location_post()
+    software_post()
     asset_types_post()
-    # vendor_classes_post()
-    # users_post()
-    # companies_post()
-    # asset_classes_post()
-    # warehouses_post()
-    # asset_models_post()
-    # vendors_post()
-    # assets_post()
-    # catalog_items_post()
+    vendor_classes_post()
+    users_post()
+    companies_post()
+    asset_classes_post()
+    warehouses_post()
+    asset_models_post()
+    vendors_post()
+    assets_post()
+    catalog_items_post()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

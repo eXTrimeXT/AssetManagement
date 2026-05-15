@@ -305,129 +305,171 @@ docker compose up -d
 
 ```mermaid
 erDiagram
-    %% Справочники и основные сущности
-    AssetType ||--o{ Asset : "has"
-    AssetType ||--o{ AssetClass : "has"
-    
-    VendorClass ||--o{ Vendor : "has"
-    
-    Company ||--o{ Vendor : "has"
-    Location ||--o{ Company : "located_at"
-    Location ||--o{ Asset : "located_at"
-    Location ||--o{ Warehouse : "located_at"
-    
-    User ||--o{ Asset : "prepared_by/checked_by"
-    User ||--o{ AssetCatalog : "owns/created_by"
-    User ||--o{ Software : "installed_by"
-    User ||--o{ Vendor : "created_by"
-    User ||--o{ AssetClass : "created_by/updated_by"
-    User ||--o{ AssetModel : "created_by/updated_by"
-    User ||--o{ Warehouse : "managed_by"
-    
-    Vendor ||--o{ Asset : "manufacturer/vendor"
-    
-    AssetClass ||--o{ AssetModel : "has"
-    AssetModel ||--o{ AssetCatalog : "has"
-    AssetClass ||--o{ AssetCatalog : "has"
-    
-    Asset ||--o{ Asset : "parent/children (self-ref)"
-    Asset ||--o| AssetCatalog : "linked_to"
-    Asset ||--o| Software : "uses"
-    
-    Warehouse ||--o{ AssetCatalog : "stored_in"
+%% ==================== CORE ENTITIES ====================
 
-    %% Определение таблиц и ключевых полей для наглядности
     Asset {
         int asset_id PK
-        int asset_type_id FK
-        int location_id FK
-        int manufacturer_id FK
-        int vendor_id FK
-        int parent_id FK
-        int prepared_by FK
-        int checked_by FK
-        int software_id FK
-        string inventory_id
+        string inventory_id UK
         string serial_number
-    }
-
-    AssetType {
-        int asset_type_id PK
         string name
-    }
-
-    AssetClass {
-        int class_id PK
-        int class_type_id FK
-        string class_name
-        int created_by FK
-        int updated_by FK
-    }
-
-    AssetModel {
-        int model_id PK
-        int class_id FK
-        string model_name
-        int created_by FK
-        int updated_by FK
-    }
-
-    AssetCatalog {
-        int catalog_id PK
-        int class_id FK
-        int model_id FK
-        int asset_id FK
-        int owner_id FK
-        int warehouse_id FK
-        int created_by FK
-    }
-
-    Vendor {
-        int vendor_id PK
-        int vendor_class_id FK
-        int company_id FK
-        int created_by FK
-        string name
-    }
-
-    VendorClass {
-        int vendor_class_id PK
-        string name
-    }
-
-    Company {
-        int company_id PK
-        int location_id FK
-        string company_name
-    }
-
-    Location {
-        int location_id PK
-        string country
-        string city
-        string address
+        string asset_status
+        float price
+        string seller
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
     }
 
     User {
         int user_id PK
-        string user_tab_id
-        string email
+        string user_tab_id UK
         string owner
+        string department
+        string position
+        string email UK
+        string hashed_password
+        boolean is_active
+        boolean is_superuser
     }
 
-    Software {
-        int software_id PK
-        int who_installed FK
-        string os_type
-        string office_type
+    Vendor {
+        int vendor_id PK
+        string name
+        string inn
+        string kpp
+        string ogrn
+        string address
+        string phone
+        string email
+    }
+
+    AssetModel {
+        int model_id PK
+        string model_name
+        string description
+    }
+
+    AssetClass {
+        int class_id PK
+        string class_name
+        string description
+    }
+
+    Company {
+        int company_id PK
+        string company_name
+        string inn
+        string kpp
+        string ogrn
+        string address
     }
 
     Warehouse {
         int warehouse_id PK
-        int location_id FK
-        int prepared_by FK
-        string name
+        string warehouse_name
+        string address
+        string contact_person
+        string phone
     }
+
+    Location {
+        int location_id PK
+        string location_name
+        string description
+    }
+
+    Software {
+        int software_id PK
+        string software_name
+        string version
+        string license_key
+        datetime license_expiry
+    }
+
+    VendorClass {
+        int vendor_class_id PK
+        string class_name
+        string description
+    }
+
+%% ==================== HISTORY ENTITIES ====================
+
+    AssetHistory {
+        int operation_id PK
+        int asset_id FK
+        string operation_type
+        int performed_by FK
+        json old_values
+        json new_values
+        string comment
+        string inventory_id_snapshot
+        string name_snapshot
+        datetime timestamp
+    }
+
+    CatalogHistory {
+        int history_id PK
+        string entity_type
+        int entity_id FK
+        string operation_type
+        int performed_by FK
+        json old_values
+        json new_values
+        string comment
+        datetime timestamp
+    }
+
+%% ==================== ASSET RELATIONSHIPS ====================
+
+    AssetClass ||--o{ AssetModel : "has models"
+    AssetModel ||--o{ Asset : "used in"
+
+    Asset }o--|| Asset : "has parent (self-ref)"
+    Asset ||--o{ Asset : "has children (self-ref)"
+
+    Asset }o--|| Warehouse : "stored in"
+    Asset }o--|| Location : "located at"
+
+    Asset }o--|| Vendor : "manufacturer"
+    Asset }o--|| Vendor : "supplier"
+
+    Asset }o--|| User : "prepared by"
+    Asset }o--|| User : "checked by"
+
+    Asset }o--|| Software : "has installed software"
+    Asset }o--|| Company : "belongs to company"
+
+%% ==================== VENDOR RELATIONSHIPS ====================
+
+    VendorClass ||--o{ Vendor : "categorizes"
+    Vendor }o--|| Company : "represents"
+    Vendor }o--|| User : "created by"
+
+%% ==================== WAREHOUSE RELATIONSHIPS ====================
+
+    Warehouse ||--o{ Location : "contains"
+
+%% ==================== HISTORY RELATIONSHIPS ====================
+
+    Asset ||--o{ AssetHistory : "has operation history"
+    User ||--o{ AssetHistory : "performed operations"
+
+    User ||--o{ CatalogHistory : "performed catalog changes"
+
+%% ==================== USER RELATIONSHIPS (ADDITIONAL) ====================
+
+    User ||--o{ Vendor : "created vendors"
+    User ||--o{ Asset : "prepared assets"
+    User ||--o{ Asset : "checked assets"
+
+%% ==================== INDEXES (DOCUMENTATION) ====================
+%% Note: Mermaid ERD doesn't support index definition,
+%% but the following fields are indexed in PostgreSQL:
+%% - Asset: inventory_id (unique), serial_number, asset_status, model_id, deleted_at
+%% - User: user_tab_id (unique), email (unique), is_active
+%% - Vendor: name, inn
+%% - AssetModel: model_name, class_id
+%% - AssetHistory: asset_id, timestamp, operation_type
 ```
 
 ### Описание основных связей:

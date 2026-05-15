@@ -5,15 +5,12 @@ from typing import Optional
 from app.schemas.assets.AssetResponse import AssetResponse
 from app.schemas.catalog.ModelSchemas import AssetModelResponse
 from app.schemas.users.UserResponse import UserResponse
-from app.schemas.warehouses.WarehouseResponse import WarehouseResponse
-
 
 class AssetCatalogBase(BaseModel):
     class_id: int
     model_id: int
     asset_id: int
     owner_id: Optional[int] = None
-    warehouse_id: Optional[int] = None
     warranty_end_date: Optional[date] = None
 
 class AssetCatalogCreate(AssetCatalogBase):
@@ -21,7 +18,6 @@ class AssetCatalogCreate(AssetCatalogBase):
 
 class AssetCatalogUpdate(BaseModel):
     owner_id: Optional[int] = None
-    warehouse_id: Optional[int] = None
     warranty_end_date: Optional[date] = None
     class_id: Optional[int] = None
     model_id: Optional[int] = None
@@ -40,9 +36,6 @@ class AssetCatalogResponse(AssetCatalogBase):
 
     # Владелец актива (Пользователь)
     owner: Optional[UserResponse] = Field(default=None, alias="owner")
-
-    # Склад (полный объект со связями: локация, менеджер)
-    warehouse: Optional[WarehouseResponse] = Field(default=None, alias="warehouse")
 
     # Создатель записи в каталоге (Пользователь)
     creator: Optional[UserResponse] = Field(default=None, alias="creator")

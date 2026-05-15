@@ -68,10 +68,10 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
                 selectinload(AssetModel.updater)
             ),
             selectinload(AssetCatalog.owner),
-            selectinload(AssetCatalog.warehouse).options(
-                selectinload(Warehouse.location),
-                selectinload(Warehouse.preparer)
-            ),
+            # selectinload(AssetCatalog.warehouse).options(
+            #     selectinload(Warehouse.location),
+            #     selectinload(Warehouse.preparer)
+            # ),
             selectinload(AssetCatalog.creator)
         )
     )
@@ -247,7 +247,7 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
         asset_inventory_id_snapshot=inv_id,
         model_name_snapshot=model_name,
         class_name_snapshot=class_name,
-        warehouse_name_snapshot=None, # При создании склада может не быть, или можно взять из data.warehouse_id если нужно
+        # warehouse_name_snapshot=None, # При создании склада может не быть, или можно взять из data.warehouse_id если нужно
         owner_name_snapshot=None,     # Аналогично
         operation_type="CREATE",
         performed_by=current_user_id,
@@ -293,12 +293,12 @@ async def update_catalog_item(
     old_model = old_full.model.model_name if old_full and old_full.model else ""
     old_class = old_full.model.asset_class.class_name if old_full and old_full.model and old_full.model.asset_class else ""
 
-    old_wh_name = old_full.warehouse.name if old_full and old_full.warehouse else "No Warehouse"
+    # old_wh_name = old_full.warehouse.name if old_full and old_full.warehouse else "No Warehouse"
     old_owner_name = old_full.owner.owner if old_full and old_full.owner else "No Owner"
 
     old_values_dict = {
         "owner_id": obj.owner_id,
-        "warehouse_id": obj.warehouse_id,
+        # "warehouse_id": obj.warehouse_id,
         "warranty_end_date": str(obj.warranty_end_date) if obj.warranty_end_date else None,
         "class_id": obj.class_id,
         "model_id": obj.model_id
@@ -349,7 +349,7 @@ async def update_catalog_item(
         asset_inventory_id_snapshot=old_inv, # Инвентарник актива обычно не меняется через каталог
         model_name_snapshot=final_model_name,
         class_name_snapshot=final_class_name,
-        warehouse_name_snapshot=old_wh_name, # Можно улучшить, если warehouse_id менялся
+        # warehouse_name_snapshot=old_wh_name, # Можно улучшить, если warehouse_id менялся
         owner_name_snapshot=old_owner_name,  # Можно улучшить, если owner_id менялся
         operation_type="UPDATE",
         performed_by=current_user_id,
@@ -385,16 +385,16 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
     inv_id = obj.asset.inventory_id if obj.asset else "Unknown"
     model_name = obj.model.model_name if obj.model else "Unknown"
     class_name = obj.model.asset_class.class_name if obj.model and obj.model.asset_class else "Unknown"
-    wh_name = obj.warehouse.name if obj.warehouse else "No Warehouse"
+    # wh_name = obj.warehouse.name if obj.warehouse else "No Warehouse"
     owner_name = obj.owner.owner if obj.owner else "No Owner"
 
-    logging.info(f"{inv_id=} {model_name=} {class_name=} {wh_name=} {owner_name=}")
+    # logging.info(f"{inv_id=} {model_name=} {class_name=} {wh_name=} {owner_name=}")
 
     detailed_old_values = {
         "catalog_id": obj.catalog_id,
         "asset": {"id": obj.asset_id, "inventory_id": inv_id, "name": obj.asset.name if obj.asset else None},
         "model": {"id": obj.model_id, "name": model_name, "class": class_name},
-        "warehouse": {"id": obj.warehouse_id, "name": wh_name},
+        # "warehouse": {"id": obj.warehouse_id, "name": wh_name},
         "owner": {"id": obj.owner_id, "name": owner_name},
         "warranty_end_date": str(obj.warranty_end_date) if obj.warranty_end_date else None
     }
@@ -405,7 +405,7 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         asset_inventory_id_snapshot=inv_id,
         model_name_snapshot=model_name,
         class_name_snapshot=class_name,
-        warehouse_name_snapshot=wh_name,
+        # warehouse_name_snapshot=wh_name,
         owner_name_snapshot=owner_name,
         operation_type="DELETE",
         performed_by=current_user_id,
@@ -456,10 +456,10 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
             selectinload(AssetModel.updater)
         ),
         selectinload(AssetCatalog.owner),
-        selectinload(AssetCatalog.warehouse).options(
-            selectinload(Warehouse.location),
-            selectinload(Warehouse.preparer)
-        ),
+        # selectinload(AssetCatalog.warehouse).options(
+        #     selectinload(Warehouse.location),
+        #     selectinload(Warehouse.preparer)
+        # ),
         selectinload(AssetCatalog.creator)
     )
     query = query.offset(skip).limit(limit)

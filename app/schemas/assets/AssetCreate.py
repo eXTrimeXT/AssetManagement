@@ -18,7 +18,7 @@ class AssetCreate(BaseModel):
     type_domain: Optional[str] = Field(None, max_length=100, description="Тип домена")
     affixed_inventory_id: Optional[bool] = Field(None, description="Инвентарный номер наклеен?")
     info_storage_location: Optional[str] = Field(None, max_length=200, description="Место хранения информации")
-    location_id: Optional[int] = Field(None, description="ID локации из справочника Locations")
+    warehouse_id: Optional[int] = Field(None, description="ID склада из справочника Warehouse")
     # passwork: Optional[str] = Field(None, max_length=200, description="Пароль/ключ")
     date_issue: Optional[date] = Field(None, description="Дата выдачи")
     date_purchasing: Optional[date] = Field(None, description="Дата покупки")

@@ -9,6 +9,7 @@ from app.models.Asset import Asset
 from app.models.Vendor import Vendor
 from app.models.AssetType import AssetType
 from app.models.Software import Software
+from app.models.Warehouse import Warehouse
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
@@ -75,7 +76,7 @@ async def get_vendor_by_id(db: AsyncSession, vendor_id: int) -> bool:
 async def get_asset_type(db: AsyncSession, asset_type: int) -> bool:
     """ Проверяет существование типа актива """
     result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type))
-    return result.scalar_one_or_none()
+    return result.scalar_one_or_none() is not None
 
 
 """ CRUD ОПЕРАЦИИ """
@@ -140,7 +141,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .where(Asset.deleted_at.is_(None))
         .options(
             selectinload(Asset.asset_type),       # Загрузка типа
-            selectinload(Asset.location_obj),     # Загрузка локации
+            selectinload(Asset.warehouse_obj),    # Загрузка склада (вместо локации)
             selectinload(Asset.preparer),         # Загрузка подготовившего (User)
             selectinload(Asset.checker),          # Загрузка проверившего (User)
             selectinload(Asset.software).options(selectinload(Software.installer)),         # Загрузка ПО
@@ -316,7 +317,7 @@ async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Op
             Asset.serial_number,
             Asset.asset_status,
             Asset.price,
-            Asset.location_id,
+            Asset.warehouse_id,  # Заменено location_id на warehouse_id
             Asset.manufacturer_id,
             Asset.vendor_id
         )
@@ -361,7 +362,7 @@ async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Op
 async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_depth: Optional[int] = None) -> List[dict]:
     """
     Получает всех дочерних активов рекурсивно с использованием CTE PostgreSQL.
-    Возвращает список словарей с актуальными полями (location_id вместо location, + seller, price).
+    Возвращает список словарей с актуальными полями (warehouse_id вместо location, + seller, price).
     """
     # Проверяем существование родителя
     parent = await db.get(Asset, asset_id)
@@ -374,7 +375,7 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
                      -- Базовый случай: прямые дети указанного актива
                      SELECT
                          asset_id, name, inventory_id, serial_number, asset_status, asset_type_id,
-                         location_id, parent_id, deleted_at, software_id, price, 1 AS depth
+                         warehouse_id, parent_id, deleted_at, software_id, price, 1 AS depth
                      FROM assets
                      WHERE parent_id = :root_id AND deleted_at IS NULL
 
@@ -383,7 +384,7 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
                      -- Рекурсивный случай: дети детей
                      SELECT
                          a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.asset_type_id,
-                         a.location_id, a.parent_id, a.deleted_at, a.software_id, a.price, at.depth + 1
+                         a.warehouse_id, a.parent_id, a.deleted_at, a.software_id, a.price, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
                      WHERE a.deleted_at IS NULL \
@@ -417,7 +418,7 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
             "serial_number": row.serial_number,
             "asset_status": row.asset_status,
             "asset_type_id": row.asset_type_id,
-            "location_id": row.location_id,
+            "warehouse_id": row.warehouse_id,  # Заменено location_id на warehouse_id
             "parent_id": row.parent_id,
             "software_id": row.software_id,
             "seller": row.seller,

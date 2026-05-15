@@ -1,11 +1,9 @@
 from operator import index
 from typing import Optional
-
 from app.models.Base import Base
 from sqlalchemy import Column, Integer, String, Date, Enum, ForeignKey, Text, DateTime, Boolean
 from datetime import datetime
 from sqlalchemy.orm import relationship, backref, Mapped
-
 
 class Asset(Base):
     """
@@ -25,17 +23,16 @@ class Asset(Base):
     affixed_inventory_id = Column(Boolean, default=False)                        # Инвентарный номер наклеен?
     info_storage_location = Column(String(200))                                  # Место хранения информации об активе
 
-    # Местоположение актива
-    location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
-    location_obj: Mapped[Optional["Location"]] = relationship(
-        "Location",
+    # === СКЛАД (вместо локации) ===
+    warehouse_id = Column(Integer, ForeignKey("warehouses.warehouse_id"), index=True)
+    warehouse_obj: Mapped[Optional["Warehouse"]] = relationship(
+        "Warehouse",
         back_populates="assets",
-        lazy="joined" # Подгружаем локацию сразу при запросе актива
+        lazy="joined"  # Подгружаем склад сразу при запросе актива
     )
 
     serial_number = Column(String(100), unique=True, index=True)                 # Серийный номер
     name = Column(String(150), nullable=False, index=True)                       # Имя актива
-    # passwork = Column(String(200))                                               # Строковое значение (пароль/ключ)
     date_issue = Column(Date)                                                    # Дата выдачи
     date_purchasing = Column(Date)                                               # Дата покупки
     comment = Column(Text)                                                       # Комментарий
@@ -45,25 +42,21 @@ class Asset(Base):
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
 
     # === Производитель и поставщик ===
-    # Производитель (ссылка на vendors.vendor_id)
     manufacturer_id = Column(Integer, ForeignKey("vendors.vendor_id"), index=True)
     manufacturer = relationship("Vendor", foreign_keys=[manufacturer_id], lazy="joined")
 
-    # Поставщик (ссылка на vendors.vendor_id)
     vendor_id = Column(Integer, ForeignKey("vendors.vendor_id"), index=True)
     vendor = relationship("Vendor", foreign_keys=[vendor_id], lazy="joined")
 
-
     # === Служебные поля ===
-    prepared_by = Column(Integer, ForeignKey("users.user_id"))                   # Подготовил (ответственный за документы)
-    checked_by = Column(Integer, ForeignKey("users.user_id"))                    # Проверил (контроль документов)
+    prepared_by = Column(Integer, ForeignKey("users.user_id"))                   # Подготовил
+    checked_by = Column(Integer, ForeignKey("users.user_id"))                    # Проверил
 
     deleted_at = Column(DateTime, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # === Связи ===
-    # Самореференция: комплектация (дочерние активы)
     parent = relationship(
         "Asset",
         remote_side=[asset_id],
@@ -75,15 +68,12 @@ class Asset(Base):
         lazy="selectin"
     )
 
-    # Связь с пользователями
     preparer = relationship("User", foreign_keys=[prepared_by])
     checker = relationship("User", foreign_keys=[checked_by])
 
-    # Связь с software
     software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), index=True)
     software = relationship("Software", back_populates="assets", lazy="joined")
 
-    # Тип актива
     asset_type = relationship("AssetType", back_populates="assets", lazy="joined")
 
     def __repr__(self):

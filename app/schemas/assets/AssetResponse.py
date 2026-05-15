@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Optional
 
 # Импорт всех необходимых вложенных схем
-from app.schemas.locations.LocationResponse import LocationResponse
+from app.schemas.warehouses.WarehouseResponse import WarehouseResponse  # <-- Заменено LocationResponse на WarehouseResponse
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeResponse
 from app.schemas.users.UserResponse import UserResponse
 from app.schemas.software.SoftwareResponse import SoftwareResponse
@@ -18,14 +18,13 @@ class AssetBase(BaseModel):
     type_domain: Optional[str] = None
     affixed_inventory_id: Optional[bool] = None
     info_storage_location: Optional[str] = None
-    # passwork: Optional[str] = None
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     comment: Optional[str] = None
 
-    # ID связей (оставляем для удобства, если клиенту нужны только ID)
+    # ID связей
     asset_type_id: int
-    location_id: Optional[int] = None
+    warehouse_id: Optional[int] = None  # <-- Заменено location_id на warehouse_id
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
     prepared_by: Optional[int] = None
@@ -36,7 +35,6 @@ class AssetBase(BaseModel):
 class AssetResponse(AssetBase):
     """
     Полная схема ответа с вложенными объектами.
-    Соответствует требуемой структуре JSON.
     """
     asset_id: int
     deleted_at: Optional[datetime] = None
@@ -44,29 +42,23 @@ class AssetResponse(AssetBase):
     updated_at: Optional[datetime] = None
 
     # --- Вложенные объекты ---
-
-    # Тип актива
     asset_type: Optional[AssetTypeResponse] = None
 
-    # Локация
-    location_obj: Optional[LocationResponse] = None
+    # СКЛАД (вместо локации)
+    warehouse_obj: Optional[WarehouseResponse] = None  # <-- Заменено location_obj на warehouse_obj
 
-    # Пользователи (Подготовил / Проверил)
-    # Используем полную схему UserResponse, так как в примере много полей
+    # Пользователи
     preparer: Optional[UserResponse] = Field(default=None)
     checker: Optional[UserResponse] = Field(default=None)
 
     # ПО
     software: Optional[SoftwareResponse] = Field(default=None)
 
-    # Производитель и Поставщик (Вендоры)
+    # Производитель и Поставщик
     manufacturer: Optional[VendorResponse] = Field(default=None)
     vendor: Optional[VendorResponse] = Field(default=None)
 
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
-
+    model_config = ConfigDict(from_attributes=True)
 
 class AssetShortResponse(BaseModel):
     """Краткая схема для списков"""
@@ -76,7 +68,7 @@ class AssetShortResponse(BaseModel):
     serial_number: str
     asset_status: str
     asset_type_id: int
-    location_id: Optional[int] = None
+    warehouse_id: Optional[int] = None  # <-- Заменено location_id на warehouse_id
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
     manufacturer_id: Optional[int] = None

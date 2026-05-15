@@ -44,7 +44,6 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
         .options(
             selectinload(AssetCatalog.asset).options(
                 selectinload(Asset.asset_type),
-                selectinload(Asset.location_obj),
                 selectinload(Asset.preparer),
                 selectinload(Asset.checker),
                 selectinload(Asset.software),
@@ -433,7 +432,6 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
     query = select(AssetCatalog).options(
         selectinload(AssetCatalog.asset).options(
             selectinload(Asset.asset_type),
-            selectinload(Asset.location_obj),
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.software),

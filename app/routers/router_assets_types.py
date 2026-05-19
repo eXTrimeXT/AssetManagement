@@ -14,6 +14,7 @@ from app.database.crud_asset_types import (
 )
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 from app.service.auth.auth_service import require_authorized_user
+from app.database.crud_asset_types import get_asset_type_by_en_name
 
 # Инициализируем логгер
 logger = structlog.get_logger()
@@ -44,7 +45,7 @@ async def create(data: AssetTypeCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal database error")
 
 
-@router_assets_types.get("/{asset_type_id}", response_model=AssetTypeResponse)
+@router_assets_types.get("/id/{asset_type_id}", response_model=AssetTypeResponse)
 async def get(asset_type_id: int, db: AsyncSession = Depends(get_db)):
     """
     Получить тип актива по внутреннему ID (asset_type_id).
@@ -66,6 +67,28 @@ async def get(asset_type_id: int, db: AsyncSession = Depends(get_db)):
         log.error("db_error", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
 
+
+@router_assets_types.get("/en_name/{en_name}", response_model=AssetTypeResponse)
+async def get(en_name: str, db: AsyncSession = Depends(get_db)):
+    """
+    Получить тип актива по внутреннему ID (asset_type_id).
+    """
+    log = logger.bind(action="get_asset_type", en_name=en_name)
+
+    try:
+        obj = await get_asset_type_by_en_name(db, en_name)
+        if not obj:
+            log.warning("not_found")
+            raise HTTPException(status_code=404, detail="Asset Type not found")
+
+        log.debug("retrieved", name=obj.name)
+        return obj
+
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        log.error("db_error", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal database error")
 
 @router_assets_types.get("/", response_model=List[AssetTypeResponse])
 async def list_all(db: AsyncSession = Depends(get_db)):

@@ -12,8 +12,11 @@ class AssetType(Base):
     # Первичный ключ (автоинкремент)
     asset_type_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    # Название типа (теперь должно быть уникальным, чтобы заменять логику type_id)
+    # Название типа должно быть уникальным
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+
+    # Название на английском (необходимо для назначения прав по типу актива)
+    en_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
 
     # Связь с активами
     # assets: Mapped[list["Asset"]] = relationship(

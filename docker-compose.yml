@@ -53,6 +53,7 @@ services:
       - SESSION_TTL=$SESSION_TTL
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
+      - ./logs:/logs
 
 volumes:
   pgdata:

@@ -156,34 +156,11 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
     except TokenValidationError:
         return False
 
-def parse_distinguished_name(dn: str | None) -> dict[str, Any]:
-    if not dn:
-        return {'CN': None, 'OU': [], 'DC': []}
-    result = {'CN': None, 'OU': [], 'DC': []}
-    for part in dn.split(','):
-        if '=' in part:
-            key, value = part.split('=', 1)
-            key, value = key.strip(), value.strip()
-            if key == 'CN':
-                result['CN'] = value
-            elif key == 'OU':
-                result['OU'].append(value)
-            elif key == 'DC':
-                result['DC'].append(value)
-    return result
-
-def extract_role_from_dn(dn: str | None) -> str | None:
-    parsed = parse_distinguished_name(dn)
-    ou_list = parsed.get('OU', [])
-    if 'Users' in ou_list:
-        return 'user'
-    return 'user'
 
 async def create_or_update_user_from_token(
         db: AsyncSession,
         user_data: UserJWTData
 ) -> User:
-    role = extract_role_from_dn(user_data.distinguished_name)
     existing_user = await get_user_by_tab_id(db, user_data.login)
 
     if existing_user:
@@ -191,8 +168,8 @@ async def create_or_update_user_from_token(
         existing_user.owner = user_data.fullname
         existing_user.email = user_data.email
         existing_user.department = user_data.department
-        if role:
-            existing_user.role = role
+        if user_data.role:
+            existing_user.role = user_data.role
         existing_user.updated_at = datetime.utcnow()
         await db.commit()
         await db.refresh(existing_user)
@@ -204,7 +181,7 @@ async def create_or_update_user_from_token(
             owner=user_data.fullname,
             email=user_data.email,
             department=user_data.department,
-            role=role,
+            role=user_data.role,
             is_active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()

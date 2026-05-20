@@ -14,5 +14,6 @@ class UserInfoResponse(BaseModel):
     distinguished_name: Optional[str]
     groups: List[str]
     permissions: List[Dict[str, Any]]
+    role: Optional[str]
     last_ip: Optional[str]
     last_time: Optional[str]

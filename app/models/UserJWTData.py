@@ -83,6 +83,10 @@ class UserJWTData:
         else:
             self.permissions = []
 
+        self.role: Optional[str] = None
+        if self.permissions and isinstance(self.permissions[0], dict):
+            self.role = self.permissions[0].get("name_group")
+
         # Timestamps
         self.iat: Optional[int] = payload.get("iat")  # issued at
         self.exp: Optional[int] = payload.get("exp")  # expiration
@@ -97,14 +101,9 @@ class UserJWTData:
     def has_permission(self, permission: str) -> bool:
         """
         Проверка наличия права доступа.
-        Реализуй свою логику на основе groups/department.
         """
-        # Пример: админы имеют все права
         if "admin" in self.groups:
             return True
-        # Пример: доступ по отделу
-        # if self.department == "ISSS" and permission in ["read", "write"]:
-        #     return True
         return False
 
     def to_dict(self) -> Dict[str, Any]:
@@ -117,6 +116,7 @@ class UserJWTData:
             "distinguished_name": self.distinguished_name,
             "groups": self.groups,
             "permissions": self.permissions,
+            "role": self.role,
             "last_ip": self.last_ip,
             "last_time": self.last_time,
             "is_expired": self.is_expired,

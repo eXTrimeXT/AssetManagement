@@ -5,7 +5,7 @@ from starlette.responses import Response
 
 from app.database.connection import get_db
 from app.schemas.users.UserCreate import UserCreate
-from app.schemas.users.UserUpdate import UserUpdate
+from app.schemas.users.UserUpdate import UserUpdate, PermissionsUpdate
 from app.schemas.users.UserResponse import UserResponse, UserShortResponse
 
 from app.models.User import User
@@ -21,7 +21,7 @@ from app.database.crud_users import (
     activate_user,
     hard_delete_user,
     check_email_exists,
-    check_tab_id_exists
+    check_tab_id_exists, update_user_permissions
 )
 from app.service.auth.auth_service import require_authorized_user, require_permission
 
@@ -93,6 +93,21 @@ async def update_user_endpoint(user_id: int, user_data: UserUpdate, db: AsyncSes
 
     return updated_user
 
+@router_users.patch("/{user_id}/permissions", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
+async def update_user_permissions_endpoint(
+        user_id: int,
+        perm_data: PermissionsUpdate,
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Обновляет права доступа для конкретного пользователя (merge).
+    Ожидает плоский dict: {"users": "1", "warehouse": "0", ...}
+    """
+    updated_user = await update_user_permissions(db, user_id, perm_data.permissions)
+    if not updated_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    return updated_user
+
 @router_users.post("/{user_id}/activate", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
 async def activate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     """Активация пользователя"""
@@ -136,10 +151,9 @@ async def hard_delete_user_endpoint(user_id: int, db: AsyncSession = Depends(get
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+# require_authorized_user = Проверка авторизации
 @router_users.get("/me", response_model=UserResponse)
-async def get_current_user(
-        current_user: User = Depends(require_authorized_user)  # <-- Проверка авторизации
-):
+async def get_current_user(current_user: User = Depends(require_authorized_user)):
     """
     Возвращает информацию о текущем авторизованном пользователе.
     Доступен если пользователь есть в таблице Users.

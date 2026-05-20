@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Optional
+from typing import Optional, Dict
+
 
 class UserUpdate(BaseModel):
     """Схема для обновления пользователя (все поля опциональны)"""
@@ -21,3 +22,7 @@ class UserUpdate(BaseModel):
             "is_active": "True"
         }
     })
+
+class PermissionsUpdate(BaseModel):
+    """Схема для обновления прав пользователя"""
+    permissions: Dict[str, str]

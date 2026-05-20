@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Any, Sequence
+from typing import List, Optional, Any, Sequence, Dict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,6 +90,34 @@ async def update_user(db: AsyncSession, user_id: int, user_data: UserUpdate) -> 
     update_data = user_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(user, key, value)
+
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+async def update_user_permissions(db: AsyncSession, user_id: int, new_permissions: Dict[str, str]) -> Optional[User]:
+    """
+    Изменяет права пользователя, объединяя их с текущими (merge).
+    - Если ключ уже существует: обновляется значение.
+    - Если ключа нет: добавляется.
+    - Ключи, которых нет в запросе, остаются без изменений.
+    """
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        return None
+
+    # Получаем текущие права, если None — создаем пустой dict
+    current_perms = user.permissions if user.permissions else {}
+
+    # === ИСПРАВЛЕНИЕ: создаём НОВЫЙ dict, чтобы SQLAlchemy увидел изменение ===
+    # Вариант 1: через распаковку (рекомендуется)
+    user.permissions = {**current_perms, **new_permissions}
+
+    # Вариант 2 (альтернатива): если всё ещё не работает, можно явно пометить поле как изменённое
+    # from sqlalchemy.orm.attributes import flag_modified
+    # flag_modified(user, 'permissions')
+
+    user.updated_at = datetime.utcnow()
 
     await db.commit()
     await db.refresh(user)

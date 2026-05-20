@@ -23,11 +23,11 @@ from app.database.crud_users import (
     check_email_exists,
     check_tab_id_exists
 )
-from app.service.auth.auth_service import require_authorized_user
+from app.service.auth.auth_service import require_authorized_user, require_permission
 
 router_users = APIRouter(prefix="/users", tags=["Users"], dependencies=[Depends(require_authorized_user)])
 
-@router_users.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router_users.post("/", response_model=UserResponse, dependencies=[Depends(require_permission("users"))], status_code=status.HTTP_201_CREATED)
 async def create_user_endpoint(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     """Создать нового пользователя"""
     # Проверка на дубликат email
@@ -41,7 +41,7 @@ async def create_user_endpoint(user_in: UserCreate, db: AsyncSession = Depends(g
 
     return await create_user(db, user_in)
 
-@router_users.get("/", response_model=list[UserShortResponse])
+@router_users.get("/", response_model=list[UserShortResponse], dependencies=[Depends(require_permission("users"))])
 async def get_users_endpoint(
         skip: int = 0,
         limit: int = 50,
@@ -53,7 +53,7 @@ async def get_users_endpoint(
     return await get_users_list(db, skip, limit, department, is_active)
 
 
-@router_users.get("/id/{user_id}", response_model=UserResponse)
+@router_users.get("/id/{user_id}", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
 async def get_user_by_id_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     """Получить пользователя по ID"""
     user = await get_user_by_id(db, user_id)
@@ -61,7 +61,7 @@ async def get_user_by_id_endpoint(user_id: int, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     return user
 
-@router_users.get("/tab_id/{user_tab_id}", response_model=UserResponse)
+@router_users.get("/tab_id/{user_tab_id}", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
 async def get_user_by_tab_id_endpoint(user_tab_id: str, db: AsyncSession = Depends(get_db)):
     """Получить пользователя по TAB_ID"""
     user = await get_user_by_tab_id(db, user_tab_id)
@@ -69,7 +69,7 @@ async def get_user_by_tab_id_endpoint(user_tab_id: str, db: AsyncSession = Depen
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     return user
 
-@router_users.patch("/{user_id}", response_model=UserResponse)
+@router_users.patch("/{user_id}", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
 async def update_user_endpoint(user_id: int, user_data: UserUpdate, db: AsyncSession = Depends(get_db)):
     """Обновить данные пользователя"""
     # Предварительные проверки перед обновлением
@@ -93,7 +93,7 @@ async def update_user_endpoint(user_id: int, user_data: UserUpdate, db: AsyncSes
 
     return updated_user
 
-@router_users.post("/{user_id}/activate", response_model=UserResponse)
+@router_users.post("/{user_id}/activate", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
 async def activate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     """Активация пользователя"""
     user = await get_user_by_id(db, user_id)
@@ -105,7 +105,7 @@ async def activate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db
 
     return await activate_user(db, user_id)
 
-@router_users.post("/{user_id}/deactivate", response_model=UserResponse)
+@router_users.post("/{user_id}/deactivate", dependencies=[Depends(require_permission("users"))], response_model=UserResponse)
 async def deactivate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     """Деактивация пользователя"""
     user = await get_user_by_id(db, user_id)
@@ -117,7 +117,7 @@ async def deactivate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_
 
     return await deactivate_user(db, user_id)
 
-@router_users.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_users.delete("/{user_id}", dependencies=[Depends(require_permission("users"))], status_code=status.HTTP_204_NO_CONTENT)
 async def hard_delete_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
     """Жесткое удаление пользователя (только если деактивирован)"""
     user = await get_user_by_id(db, user_id)

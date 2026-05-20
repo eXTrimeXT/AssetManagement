@@ -161,6 +161,11 @@ async def create_or_update_user_from_token(
         db: AsyncSession,
         user_data: UserJWTData
 ) -> User:
+    # === Извлекаем права из токена ===
+    permissions = {}
+    if user_data.permissions and isinstance(user_data.permissions, list) and len(user_data.permissions) > 0:
+        permissions = user_data.permissions[0]  # Берём первый элемент списка
+
     existing_user = await get_user_by_tab_id(db, user_data.login)
 
     if existing_user:
@@ -168,6 +173,7 @@ async def create_or_update_user_from_token(
         existing_user.owner = user_data.fullname
         existing_user.email = user_data.email
         existing_user.department = user_data.department
+        existing_user.permissions = permissions  # <-- Сохраняем права
         if user_data.role:
             existing_user.role = user_data.role
         existing_user.updated_at = datetime.utcnow()
@@ -182,6 +188,7 @@ async def create_or_update_user_from_token(
             email=user_data.email,
             department=user_data.department,
             role=user_data.role,
+            permissions=permissions,  # <-- Сохраняем права
             is_active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -190,3 +197,23 @@ async def create_or_update_user_from_token(
         await db.commit()
         await db.refresh(new_user)
         return new_user
+
+
+def require_permission(permission_code: str):
+    """
+    Dependency для проверки конкретного права.
+    Использование: dependencies=[Depends(require_permission("users"))]
+    """
+    async def checker(
+            current_user: User = Depends(require_authorized_user)
+    ) -> User:
+        # Если права не загружены — запрещаем доступ
+        if not current_user.permissions:
+            raise HTTPException(status_code=403, detail=f"Permission '{permission_code}' are not allowed")
+
+        # Проверяем флаг: "1" = разрешено, "0" или отсутствует = запрещено
+        if current_user.permissions.get(permission_code) != "1":
+            raise HTTPException(status_code=403, detail=f"Permission '{permission_code}' are not allowed")
+
+        return current_user
+    return checker

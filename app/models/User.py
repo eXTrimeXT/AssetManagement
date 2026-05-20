@@ -1,5 +1,9 @@
+from typing import Optional, Dict
+
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.Base import Base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON
 from datetime import datetime
 
 class User(Base):
@@ -23,6 +27,8 @@ class User(Base):
     # Должность и отдел
     user_position = Column(String(100))                          # Должность
     department = Column(String(100), index=True)                 # Отдел
+    # Права пользователя из токена (UserDataJWT)
+    permissions: Mapped[Optional[Dict[str, str]]] = mapped_column(JSON, default=dict, nullable=True)
 
     # Контакты
     email = Column(String(100), unique=True, index=True, nullable=False)

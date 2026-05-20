@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
+
 
 class TokenRequest(BaseModel):
     token: str
@@ -12,5 +13,6 @@ class UserInfoResponse(BaseModel):
     department: Optional[str]
     distinguished_name: Optional[str]
     groups: List[str]
+    permissions: List[Dict[str, Any]]
     last_ip: Optional[str]
     last_time: Optional[str]

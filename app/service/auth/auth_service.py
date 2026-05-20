@@ -185,7 +185,6 @@ async def create_or_update_user_from_token(
 ) -> User:
     role = extract_role_from_dn(user_data.distinguished_name)
     existing_user = await get_user_by_tab_id(db, user_data.login)
-    logger.warning(f"{user_data=}")
 
     if existing_user:
         existing_user.user_en_name = user_data.fullname

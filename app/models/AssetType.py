@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer
 from app.models.Base import Base
 
@@ -17,9 +17,3 @@ class AssetType(Base):
 
     # Название на английском (необходимо для назначения прав по типу актива)
     en_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
-
-    # Связь с активами
-    # assets: Mapped[list["Asset"]] = relationship(
-    #     back_populates="asset_type",
-    #     lazy="selectin"
-    # )

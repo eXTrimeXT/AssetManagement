@@ -21,9 +21,6 @@ class User(Base):
     owner = Column(String(150), nullable=False, index=True)                     # ФИО на русском
     user_en_name = Column(String(150), nullable=True)                           # ФИО на английском
 
-    # Роль пользователя
-    role = Column(String(40))
-
     # Должность и отдел
     user_position = Column(String(100))                          # Должность
     department = Column(String(100), index=True)                 # Отдел

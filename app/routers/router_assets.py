@@ -24,9 +24,9 @@ from app.database.crud_assets import (
 from app.database.crud_assets import get_asset_with_deleted
 from app.database.crud_users import get_user_by_id
 from app.database.crud_vendors import get_vendor_by_id
-from app.service.auth.auth_service import require_authorized_user, get_current_user_id, require_permission
+from app.service.auth.auth_service import require_authorized_user, get_current_user_id
 
-router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depends(require_authorized_user), Depends(require_permission("materials"))])
+router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depends(require_authorized_user)])
 
 
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)

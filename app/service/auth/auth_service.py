@@ -2,7 +2,7 @@ import os
 import jwt
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 from datetime import datetime
 from fastapi import Security, Depends, HTTPException, Request, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -161,11 +161,6 @@ async def create_or_update_user_from_token(
         db: AsyncSession,
         user_data: UserJWTData
 ) -> User:
-    # === Извлекаем права из токена ===
-    permissions = {}
-    if user_data.permissions and isinstance(user_data.permissions, list) and len(user_data.permissions) > 0:
-        permissions = user_data.permissions[0]  # Берём первый элемент списка
-
     existing_user = await get_user_by_tab_id(db, user_data.login)
 
     if existing_user:
@@ -173,9 +168,8 @@ async def create_or_update_user_from_token(
         existing_user.owner = user_data.fullname
         existing_user.email = user_data.email
         existing_user.department = user_data.department
-        existing_user.permissions = permissions  # <-- Сохраняем права
-        if user_data.role:
-            existing_user.role = user_data.role
+        # === Сохраняем права в новом формате ===
+        existing_user.permissions = user_data.permissions
         existing_user.updated_at = datetime.utcnow()
         await db.commit()
         await db.refresh(existing_user)
@@ -187,8 +181,7 @@ async def create_or_update_user_from_token(
             owner=user_data.fullname,
             email=user_data.email,
             department=user_data.department,
-            role=user_data.role,
-            permissions=permissions,  # <-- Сохраняем права
+            permissions=user_data.permissions,
             is_active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -199,21 +192,27 @@ async def create_or_update_user_from_token(
         return new_user
 
 
-def require_permission(permission_code: str):
+def require_access(group: str, access_type: Literal["read", "write"]):
     """
-    Dependency для проверки конкретного права.
-    Использование: dependencies=[Depends(require_permission("users"))]
-    """
-    async def checker(
-            current_user: User = Depends(require_authorized_user)
-    ) -> User:
-        # Если права не загружены — запрещаем доступ
-        if not current_user.permissions:
-            raise HTTPException(status_code=403, detail=f"Permission '{permission_code}' are not allowed")
+    Dependency для проверки доступа к группе (чтение/запись).
 
-        # Проверяем флаг: "1" = разрешено, "0" или отсутствует = запрещено
-        if current_user.permissions.get(permission_code) != "1":
-            raise HTTPException(status_code=403, detail=f"Permission '{permission_code}' are not allowed")
+    Использование:
+        @router.get("/", dependencies=[Depends(require_access("computer", "read"))])
+        @router.post("/", dependencies=[Depends(require_access("computer", "write"))])
+    """
+    async def checker(current_user: User = Depends(require_authorized_user)) -> User:
+        if not current_user.permissions:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access to '{group}' ({access_type}) is not allowed"
+            )
+
+        group_perms = current_user.permissions.get(group)
+        if not group_perms or not group_perms.get(access_type):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access to '{group}' ({access_type}) is not allowed"
+            )
 
         return current_user
     return checker

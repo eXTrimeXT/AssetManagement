@@ -10,18 +10,31 @@ T = TypeVar('T')
 # === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
 def has_read_permission(user: User, group_name: str | None) -> bool:
+    """Проверяет право `read` на группу. Root имеет доступ ко всему."""
+    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
+    if user.user_tab_id == "root":
+        return True
+
     if not group_name or not user.permissions:
         return False
     group_perms = user.permissions.get(group_name)
     return bool(group_perms and group_perms.get("read"))
 
 def has_write_permission(user: User, group_name: str | None) -> bool:
+    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
+    if user.user_tab_id == "root":
+        return True
+
     if not group_name or not user.permissions:
         return False
     group_perms = user.permissions.get(group_name)
     return bool(group_perms and group_perms.get("write"))
 
 def has_access(user: User, group_name: str | None, access_type: Literal["read", "write"] | None = None) -> bool:
+    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
+    if user.user_tab_id == "root":
+        return True
+    
     if not group_name or not user.permissions:
         return False
     group_perms = user.permissions.get(group_name)

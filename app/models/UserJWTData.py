@@ -1,6 +1,58 @@
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Literal
 
+# {
+#     "user_tab_id": "gw07015370",
+#     "owner": "Timur Malyshev",
+#     "user_en_name": "Timur Malyshev",
+#     "permissions": {
+#         "computer": {
+#             "read": false,
+#             "write": false
+#         },
+#         "mes_equipment": {
+#             "read": false,
+#             "write": true
+#         },
+#         "supplies": {
+#             "read": true,
+#             "write": false
+#         },
+#         "power_adapter": {
+#             "read": true,
+#             "write": true
+#         },
+#         "data_collection_equipment": {
+#             "read": true,
+#             "write": true
+#         },
+#         "Accessories": {
+#             "read": true,
+#             "write": true
+#         },
+#         "network_equipment": {
+#             "read": true,
+#             "write": true
+#         },
+#         "printing_equipment": {
+#             "read": true,
+#             "write": true
+#         },
+#         "server_hardware": {
+#             "read": true,
+#             "write": true
+#         }
+#     },
+#     "user_position": null,
+#     "department": "ISSS",
+#     "email": "Timur.Malyshev@hmmr.ru",
+#     "phone": null,
+#     "user_id": 1,
+#     "is_active": true,
+#     "created_at": "2026-05-15T06:27:36.390950",
+#     "updated_at": "2026-05-22T05:12:28.931741"
+# }
+
 class UserJWTData:
     """Модель данных пользователя, извлеченных из JWT токена"""
 

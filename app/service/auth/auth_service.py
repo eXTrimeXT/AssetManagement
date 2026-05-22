@@ -2,10 +2,10 @@ import os
 import jwt
 import json
 import logging
-from typing import Optional, Dict, Any, Literal
+from typing import Optional, Dict, Any
 from datetime import datetime
-from fastapi import Security, Depends, HTTPException, Request, Header
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.UserJWTData import UserJWTData
 from app.models.User import User
@@ -190,29 +190,3 @@ async def create_or_update_user_from_token(
         await db.commit()
         await db.refresh(new_user)
         return new_user
-
-
-def require_access(group: str, access_type: Literal["read", "write"]):
-    """
-    Dependency для проверки доступа к группе (чтение/запись).
-
-    Использование:
-        @router.get("/", dependencies=[Depends(require_access("computer", "read"))])
-        @router.post("/", dependencies=[Depends(require_access("computer", "write"))])
-    """
-    async def checker(current_user: User = Depends(require_authorized_user)) -> User:
-        if not current_user.permissions:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Access to '{group}' ({access_type}) is not allowed"
-            )
-
-        group_perms = current_user.permissions.get(group)
-        if not group_perms or not group_perms.get(access_type):
-            raise HTTPException(
-                status_code=403,
-                detail=f"Access to '{group}' ({access_type}) is not allowed"
-            )
-
-        return current_user
-    return checker

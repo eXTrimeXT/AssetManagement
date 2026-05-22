@@ -1,57 +1,52 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-
 from app.database.connection import get_db
-from app.database.crud_catalog import create_asset_model, get_asset_models, update_asset_model, get_asset_model_by_id, delete_asset_model
+from app.database.crud_catalog import create_asset_model, get_asset_models, update_asset_model, get_asset_model_by_id
 from app.schemas.catalog.ModelSchemas import AssetModelCreate, AssetModelUpdate, AssetModelResponse
 from app.service.auth.auth_service import require_authorized_user
+from app.database.crud_catalog import get_asset_class_by_id
+from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_read_permission, has_write_permission
 
 router_catalog_models = APIRouter(prefix="/catalog/models", tags=["Asset Catalog Models"], dependencies=[Depends(require_authorized_user)])
 
-# === Модели оборудования ===
 @router_catalog_models.post("/", response_model=AssetModelResponse, status_code=status.HTTP_201_CREATED)
-async def create_model(data: AssetModelCreate, db: AsyncSession = Depends(get_db)):
+async def create_model(data: AssetModelCreate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
+    cls_obj = await get_asset_class_by_id(db, data.class_id)
+    if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
+        raise HTTPException(403, f"No write access to type '{cls_obj.asset_type.en_name}'")
     return await create_asset_model(db, data)
 
+@router_catalog_models.get("/", response_model=List[AssetModelResponse])
+async def list_models(
+        class_id: Optional[int] = None,
+        items = Depends(FilteredByAccessWithParams(get_asset_models, "asset_class.asset_type.en_name", "read"))
+):
+    return items
+
 @router_catalog_models.get("/{model_id}", response_model=AssetModelResponse)
-async def get_model(model_id: int, db: AsyncSession = Depends(get_db)):
+async def get_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Model not found")
+    if not obj: raise HTTPException(404, "Model not found")
+    if not has_read_permission(current_user, obj.asset_class.asset_type.en_name): raise HTTPException(404, "No read access")
     return obj
 
-@router_catalog_models.get("/", response_model=List[AssetModelResponse])
-async def list_models(class_id: Optional[int] = None, skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db)):
-    return await get_asset_models(db, class_id, skip, limit)
-
 @router_catalog_models.patch("/{model_id}", response_model=AssetModelResponse)
-async def patch_model(model_id: int, data: AssetModelUpdate, db: AsyncSession = Depends(get_db)):
-    res = await update_asset_model(db, model_id, data)
-    if not res: raise HTTPException(404, "Model not found")
-    return res
+async def patch_model(model_id: int, data: AssetModelUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
+    obj = await get_asset_model_by_id(db, model_id)
+    if not obj: raise HTTPException(404, "Model not found")
+    target_cls_id = data.class_id if data.class_id is not None else obj.class_id
+    if target_cls_id:
+        cls_obj = await get_asset_class_by_id(db, target_cls_id)
+        if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
+            raise HTTPException(403, f"No write access to type '{cls_obj.asset_type.en_name}'")
+    return await update_asset_model(db, model_id, data)
 
 @router_catalog_models.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_model(model_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Жестко удалить модель оборудования.
-    Вернет 400 если модель используется в каталоге.
-    """
-    from sqlalchemy.exc import IntegrityError
-
-    try:
-        deleted = await delete_asset_model(db, model_id)
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Model not found")
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    except ValueError as e:
-        # Модель используется в каталоге
-        raise HTTPException(status_code=400, detail=str(e))
-    except IntegrityError:
-        # Защита на уровне БД (если вдруг пропустили проверку)
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete model: foreign key constraint failed"
-        )
+async def delete_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
+    obj = await get_asset_model_by_id(db, model_id)
+    if not obj: raise HTTPException(404, "Model not found")
+    if not has_write_permission(current_user, obj.asset_class.asset_type.en_name): raise HTTPException(403, "No write access")
+    # Вызов delete_asset_model из crud_catalog, если он там есть, или db.delete(obj)
+    await db.delete(obj)
+    await db.commit()

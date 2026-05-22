@@ -97,12 +97,19 @@ async def update_user_endpoint(user_id: int, user_data: UserUpdate, db: AsyncSes
 async def update_user_permissions_endpoint(
         user_id: int,
         perm_data: PermissionsUpdate,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        # current_user: User = Depends(require_authorized_user)  # <-- проверка авторизации
 ):
     """
     Обновляет права доступа для конкретного пользователя (merge).
-    Ожидает плоский dict: {"users": "1", "warehouse": "0", ...}
+    Ожидает dict: {"computer": {"read": true, "write": false}, ...}
+    Доступно только пользователям с правом `users: write` (или аналогичным).
     """
+    # Опционально: проверка, что текущий пользователь может менять права
+    # (если нужно — раскомментируй)
+    # if not current_user.permissions or not current_user.permissions.get("users", {}).get("write"):
+    #     raise HTTPException(status_code=403, detail="Permission 'users:write' required")
+
     updated_user = await update_user_permissions(db, user_id, perm_data.permissions)
     if not updated_user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")

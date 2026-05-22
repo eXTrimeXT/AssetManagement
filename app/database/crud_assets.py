@@ -8,13 +8,11 @@ from sqlalchemy.orm import selectinload
 from app.models.Asset import Asset
 from app.models.Vendor import Vendor
 from app.models.Software import Software
-from app.models.Warehouse import Warehouse
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
 from app.models.AssetModel import AssetModel
-from app.models.User import User
-from app.database.crud_users import get_user_by_tab_id
+from app.models.AssetClass import AssetClass
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -111,9 +109,19 @@ async def get_assets_list(
         deleted: bool = False
 ) -> Sequence[Any]:
     """
-    Получает список активов с применением фильтров и пагинации.
+    Получает список активов с применением фильтров и пагинацией.
+    Загружает связи для корректной работы фильтрации по правам.
     """
-    query = select(Asset)
+    from sqlalchemy.orm import selectinload
+    from app.models.AssetModel import AssetModel
+    from app.models.AssetClass import AssetClass
+
+    query = select(Asset).options(
+        # === Загружаем связи для фильтрации по asset_type.en_name ===
+        selectinload(Asset.model)
+        .selectinload(AssetModel.asset_class)
+        .selectinload(AssetClass.asset_type)
+    )
 
     # Фильтр по удалению
     if not deleted:
@@ -124,7 +132,6 @@ async def get_assets_list(
         query = query.where(Asset.asset_status == asset_status)
     if model_id:
         query = query.where(Asset.model_id == model_id)
-
 
     # Пагинация
     query = query.offset(skip).limit(limit)
@@ -360,32 +367,32 @@ async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Op
 
     return True
 
-async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_depth: Optional[int] = None) -> List[dict]:
+async def get_all_asset_children_recursive(
+        db: AsyncSession,
+        asset_id: int,
+        max_depth: Optional[int] = None
+) -> List[Asset]:
     """
-    Получает всех дочерних активов рекурсивно с использованием CTE PostgreSQL.
-    Возвращает список словарей с актуальными полями (warehouse_id вместо location, + seller, price).
+    Получает всех дочерних активов рекурсивно через CTE.
+    Возвращает объекты Asset с загруженными связями для проверки прав.
     """
     # Проверяем существование родителя
     parent = await db.get(Asset, asset_id)
     if not parent or parent.deleted_at:
         return []
 
-    # Формирование RAW SQL запроса
+    # CTE-запрос для получения всех детей (только активные)
     base_query = """
                  WITH RECURSIVE asset_tree AS (
-                     -- Базовый случай: прямые дети указанного актива
-                     SELECT
-                         asset_id, name, inventory_id, serial_number, asset_status, model_id,
-                         warehouse_id, parent_id, deleted_at, software_id, price, 1 AS depth
+                     -- Базовый случай: прямые дети
+                     SELECT asset_id, parent_id, deleted_at, 1 AS depth
                      FROM assets
                      WHERE parent_id = :root_id AND deleted_at IS NULL
 
                      UNION ALL
 
-                     -- Рекурсивный случай: дети детей
-                     SELECT
-                         a.asset_id, a.name, a.inventory_id, a.serial_number, a.asset_status, a.model_id,
-                         a.warehouse_id, a.parent_id, a.deleted_at, a.software_id, a.price, at.depth + 1
+                     -- Рекурсия: дети детей
+                     SELECT a.asset_id, a.parent_id, a.deleted_at, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
                      WHERE a.deleted_at IS NULL \
@@ -395,35 +402,33 @@ async def get_all_asset_children_recursive(db: AsyncSession, asset_id: int, max_
         base_query += " AND at.depth < :max_depth"
 
     base_query += """
-    )
-    SELECT * FROM asset_tree
-    ORDER BY depth, asset_id
+        )
+        SELECT asset_id FROM asset_tree ORDER BY depth, asset_id
     """
 
     params = {"root_id": asset_id}
     if max_depth:
         params["max_depth"] = max_depth
 
-    final_query = text(base_query)
+    # Выполняем CTE, получаем список ID детей
+    result = await db.execute(text(base_query), params)
+    child_ids = [row[0] for row in result.fetchall()]
 
-    result = await db.execute(final_query, params)
-    rows = result.fetchall()
+    if not child_ids:
+        return []
 
-    # 3. Конвертация в список словарей
-    children = []
-    for row in rows:
-        children.append({
-            "asset_id": row.asset_id,
-            "name": row.name,
-            "inventory_id": row.inventory_id,
-            "serial_number": row.serial_number,
-            "asset_status": row.asset_status,
-            "model_id": row.model_id,
-            "warehouse_id": row.warehouse_id,  # Заменено location_id на warehouse_id
-            "parent_id": row.parent_id,
-            "software_id": row.software_id,
-            "seller": row.seller,
-            "price": row.price
-        })
+    # Загружаем объекты с необходимыми связями для проверки прав
+    result = await db.execute(
+        select(Asset)
+        .where(Asset.asset_id.in_(child_ids))
+        .options(
+            # Загружаем цепочку: model → asset_class → asset_type
+            selectinload(Asset.model)
+            .selectinload(AssetModel.asset_class)
+            .selectinload(AssetClass.asset_type)
+        )
+    )
 
-    return children
+    # Возвращаем в порядке из CTE (по глубине)
+    assets_map = {a.asset_id: a for a in result.scalars().all()}
+    return [assets_map[cid] for cid in child_ids if cid in assets_map]

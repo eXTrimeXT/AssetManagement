@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import List, Optional, Sequence, Any, Dict
-from sqlalchemy import select, func
+from typing import Optional, Sequence, Any
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.AssetClass import AssetClass
@@ -10,12 +10,8 @@ from app.models.Asset import Asset
 from app.schemas.catalog.ClassSchemas import AssetClassCreate, AssetClassUpdate
 from app.schemas.catalog.ModelSchemas import AssetModelCreate, AssetModelUpdate
 from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogUpdate
-from app.models.User import User
-from app.models.Warehouse import Warehouse
-from app.models.Company import Company
-from app.models.Vendor import Vendor
 # Импорт для логирования
-from app.database.crud_catalog_operations import create_catalog_operation_log, _serialize_for_json
+from app.database.crud_catalog_operations import _serialize_for_json
 from app.models.CatalogOperation import CatalogOperation
 
 # === HELPERS ===
@@ -31,31 +27,28 @@ async def get_catalog_item_full(db: AsyncSession, catalog_id: int):
     return result.scalar_one_or_none()
 
 async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[AssetCatalog]:
-    """Полные связи для ответа API"""
-    result = await db.execute(
-        select(AssetCatalog)
-        .where(AssetCatalog.catalog_id == catalog_id)
-        .options(
-            selectinload(AssetCatalog.asset).options(
-                selectinload(Asset.model),
-                selectinload(Asset.preparer),
-                selectinload(Asset.checker),
-                selectinload(Asset.software),
-                selectinload(Asset.manufacturer).options(
-                    selectinload(Vendor.vendor_class),
-                    selectinload(Vendor.company).options(selectinload(Company.location_obj)),
-                    selectinload(Vendor.creator)
-                ),
-                selectinload(Asset.vendor).options(
-                    selectinload(Vendor.vendor_class),
-                    selectinload(Vendor.company).options(selectinload(Company.location_obj)),
-                    selectinload(Vendor.creator)
-                )
-            ),
-            selectinload(AssetCatalog.owner),
-            selectinload(AssetCatalog.creator)
-        )
+    """
+    Получает запись каталога по ID с загруженными связями для фильтрации по правам и ответа API.
+    Правильный путь: AssetCatalog → asset → model → asset_class → asset_type
+    """
+    from sqlalchemy.orm import selectinload
+    from app.models.Asset import Asset
+    from app.models.AssetModel import AssetModel
+    from app.models.AssetClass import AssetClass
+
+    query = select(AssetCatalog).where(AssetCatalog.catalog_id == catalog_id).options(
+        # === Загружаем цепочку для фильтрации по asset_type.en_name ===
+        # AssetCatalog → asset → model → asset_class → asset_type
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.model)
+        .selectinload(AssetModel.asset_class)
+        .selectinload(AssetClass.asset_type),
+        # Остальные связи для ответа API
+        selectinload(AssetCatalog.owner),
+        selectinload(AssetCatalog.creator)
     )
+
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 # === CLASS CRUD ===
@@ -116,17 +109,18 @@ async def create_asset_model(db: AsyncSession, data: AssetModelCreate) -> AssetM
     return db_obj
 
 async def get_asset_model_by_id(db: AsyncSession, model_id: int) -> Optional[AssetModel]:
+    """Получает модель с загруженными связями для проверки прав"""
+    from sqlalchemy.orm import selectinload
+    from app.models.AssetClass import AssetClass
+    from app.models.AssetType import AssetType
+
     result = await db.execute(
         select(AssetModel)
         .where(AssetModel.model_id == model_id)
         .options(
-            selectinload(AssetModel.asset_class).options(
-                selectinload(AssetClass.asset_type),
-                selectinload(AssetClass.creator),
-                selectinload(AssetClass.updater)
-            ),
-            selectinload(AssetModel.creator),
-            selectinload(AssetModel.updater)
+            # === Загружаем цепочку до asset_type для проверки прав ===
+            selectinload(AssetModel.asset_class)
+            .selectinload(AssetClass.asset_type)
         )
     )
     return result.scalar_one_or_none()
@@ -322,26 +316,26 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         return False
 
 async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Any]:
+    """
+    Получает список записей каталога с загруженными связями для фильтрации по правам.
+    Правильный путь: AssetCatalog → asset → model → asset_class → asset_type
+    """
+    from sqlalchemy.orm import selectinload
+    from app.models.AssetModel import AssetModel
+    from app.models.AssetClass import AssetClass
+
     query = select(AssetCatalog).options(
-        selectinload(AssetCatalog.asset).options(
-            selectinload(Asset.model),
-            selectinload(Asset.preparer),
-            selectinload(Asset.checker),
-            selectinload(Asset.software),
-            selectinload(Asset.manufacturer).options(
-                selectinload(Vendor.vendor_class),
-                selectinload(Vendor.company).options(selectinload(Company.location_obj)),
-                selectinload(Vendor.creator)
-            ),
-            selectinload(Asset.vendor).options(
-                selectinload(Vendor.vendor_class),
-                selectinload(Vendor.company).options(selectinload(Company.location_obj)),
-                selectinload(Vendor.creator)
-            )
-        ),
+        # === Загружаем цепочку для фильтрации по asset_type.en_name ===
+        # AssetCatalog → asset → model → asset_class → asset_type
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.model)
+        .selectinload(AssetModel.asset_class)
+        .selectinload(AssetClass.asset_type),
+        # Остальные связи для ответа API
         selectinload(AssetCatalog.owner),
         selectinload(AssetCatalog.creator)
     )
+
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()

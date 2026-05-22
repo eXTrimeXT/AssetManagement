@@ -91,6 +91,8 @@ async def update_user(db: AsyncSession, user_id: int, user_data: UserUpdate) -> 
     await db.refresh(user)
     return user
 
+# В конец файла, после других CRUD-функций
+
 async def update_user_permissions(
         db: AsyncSession,
         user_id: int,

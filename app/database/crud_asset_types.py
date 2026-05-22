@@ -19,10 +19,13 @@ async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> type[Ass
 
 async def get_asset_type_by_en_name(db: AsyncSession, en_name: str) -> type[AssetType] | None:
     """Получение по en_name"""
-    return await db.get(AssetType, en_name)
+    result = await db.execute(
+        select(AssetType).where(AssetType.en_name == en_name)
+    )
+    return result.scalar_one_or_none()
 
 async def list_asset_types(db: AsyncSession) -> Sequence[AssetType]:
-    """Полный список типов"""
+    """Полный список типов с пагинацией"""
     result = await db.execute(select(AssetType))
     return result.scalars().all()
 

@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc && \
 COPY packages /packages
 COPY requirements.txt .
 # Если не доступен Docker на сервере
-#RUN pip install --no-cache-dir --no-index --find-links=/packages -r requirements.txt
+RUN pip install --no-cache-dir --no-index --find-links=/packages -r requirements.txt
 
 # Если локальная сборка образа имеет доступ к pypi.org
-RUN pip install -r requirements.txt
+# RUN pip install -r requirements.txt
 
 # Копируем код приложения
 COPY . .

@@ -9,7 +9,7 @@ class UserUpdate(BaseModel):
     owner: Optional[str] = None
     user_en_name: Optional[str] = None
     user_position: Optional[str] = None
-    department: Optional[str] = None
+    department_id: Optional[int] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     is_active: Optional[bool] = None
@@ -17,7 +17,7 @@ class UserUpdate(BaseModel):
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "owner": "Иванов Иван Иванович (обновлено)",
-            "department": "Отдел разработки",
+            "department_id": "RDC",
             "is_active": "True"
         }
     })

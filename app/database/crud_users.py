@@ -60,7 +60,7 @@ async def get_users_list(
         db: AsyncSession,
         skip: int = 0,
         limit: int = 50,
-        department: Optional[str] = None,
+        department_id: Optional[int] = None,
         is_active: bool = True,
 ) -> Sequence[Any]:
     """
@@ -69,8 +69,8 @@ async def get_users_list(
     """
     query = select(User).where(User.is_active == is_active)
 
-    if department:
-        query = query.where(User.department == department)
+    if department_id:
+        query = query.where(User.department_id == department_id)
 
     query = query.offset(skip).limit(limit)
 

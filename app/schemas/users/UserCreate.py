@@ -8,7 +8,7 @@ class UserCreate(BaseModel):
     owner: str  # ФИО на русском (обязательно)
     user_en_name: Optional[str] = None  # ФИО на английском
     user_position: Optional[str] = None  # Должность
-    department: Optional[str] = None  # Отдел
+    department_id: Optional[int] = None  # Отдел
     email: EmailStr  # Email (валидация формата)
     phone: Optional[str] = None  # Телефон
     is_active: bool = True  # Статус по умолчанию
@@ -19,7 +19,7 @@ class UserCreate(BaseModel):
             "owner": "Иванов Иван Иванович",
             "user_en_name": "Ivanov Ivan",
             "user_position": "Инженер",
-            "department": "IT-отдел",
+            "department_id": "RDC",
             "email": "ivanov@company.com",
             "phone": "+7 (999) 123-45-67",
             "is_active": True,

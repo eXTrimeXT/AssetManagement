@@ -19,6 +19,7 @@ class Department(Base):
         back_populates="department",
         lazy="select"
     )
+    users: Mapped[List["User"]] = relationship("User", back_populates="department", lazy="select")
 
     def __repr__(self):
         return f"<Department(id={self.id}, name='{self.name}', abbreviation='{self.abbreviation}')>"

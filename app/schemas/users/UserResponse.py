@@ -2,9 +2,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
 from typing import Optional, Dict
 
-from sqlalchemy.orm import Mapped
-
-
 class UserBase(BaseModel):
     """Базовая схема пользователя"""
     user_tab_id: Optional[str] = None
@@ -12,7 +9,7 @@ class UserBase(BaseModel):
     user_en_name: Optional[str] = None
     permissions: Dict[str, Dict[str, bool]] = {}
     user_position: Optional[str] = None
-    department: Optional[str] = None
+    department_id: Optional[int] = None
     email: EmailStr
     phone: Optional[str] = None
 
@@ -30,7 +27,7 @@ class UserShortResponse(BaseModel):
     user_tab_id: Optional[str] = None
     owner: str
     user_position: Optional[str] = None
-    department: Optional[str] = None
+    department_id: Optional[int] = None
     email: EmailStr
 
     model_config = ConfigDict(from_attributes=True)

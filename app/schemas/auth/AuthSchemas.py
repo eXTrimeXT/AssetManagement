@@ -8,7 +8,6 @@ class UserInfoResponse(BaseModel):
     login: str
     email: Optional[str]
     fullname: Optional[str]
-    department: Optional[str]
     distinguished_name: Optional[str]
     groups: List[str]
     permissions: Dict[str, Dict[str, bool]]  # {"computer": {"read": true, "write": false}, ...}

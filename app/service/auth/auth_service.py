@@ -168,7 +168,7 @@ async def create_or_update_user_from_token(
         existing_user.user_en_name = user_data.fullname
         existing_user.owner = user_data.fullname
         existing_user.email = user_data.email
-        existing_user.department = user_data.department
+        # existing_user.department_id = user_data.department_id
         # === Сохраняем права в новом формате ===
         existing_user.permissions = user_data.permissions
         existing_user.updated_at = datetime.utcnow()
@@ -181,7 +181,7 @@ async def create_or_update_user_from_token(
             user_en_name=user_data.fullname,
             owner=user_data.fullname,
             email=user_data.email,
-            department=user_data.department,
+            # department_id=user_data.department_id,
             permissions=user_data.permissions,
             is_active=True,
             created_at=datetime.utcnow(),

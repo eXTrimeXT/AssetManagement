@@ -1,9 +1,9 @@
 from typing import Optional, Dict
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.Base import Base
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, ForeignKey
 from datetime import datetime
 
 class User(Base):
@@ -23,7 +23,10 @@ class User(Base):
 
     # Должность и отдел
     user_position = Column(String(100))                          # Должность
-    department = Column(String(100), index=True)                 # Отдел
+    # department = Column(String(100), index=True)                 # Отдел
+    # Ссылка на департамент
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+
     # Права пользователя из токена (UserDataJWT)
     permissions: Mapped[Optional[Dict[str, str]]] = mapped_column(JSON, default=dict, nullable=True)
 
@@ -35,6 +38,9 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Связь
+    department: Mapped[Optional["Department"]] = relationship("Department", back_populates="users")
 
     def __repr__(self):
         return f"<User(id={self.user_id}, tab_id={self.user_tab_id}, owner={self.owner})>"

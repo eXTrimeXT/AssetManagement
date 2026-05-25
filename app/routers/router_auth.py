@@ -35,16 +35,6 @@ async def login_root(
     Требует заголовок X-Root-Secret, совпадающий с ROOT_SECRET из .env.
     Root получает полный доступ ко всем типам активов (проверяется в has_*_permission).
     """
-    # === Проверка секрета ===
-    # root_secret = os.getenv("ROOT_SECRET")
-    root_secret = "root"
-    if not root_secret:
-        raise HTTPException(status_code=500, detail="ROOT_SECRET not configured")
-
-    # provided_secret = request.headers.get("X-Root-Secret")
-    # if not provided_secret or provided_secret != root_secret:
-    #     raise HTTPException(status_code=403, detail="Invalid root secret")
-
     # === Создаём или получаем root-пользователя в БД ===
     root_user = await get_user_by_tab_id(db, "root")
 
@@ -55,8 +45,7 @@ async def login_root(
             user_en_name="Root Admin",
             owner="Root Admin",
             email="root@localhost",
-            department="System",
-            role="root",
+
             permissions={},  # Root имеет все права через проверку user_tab_id == "root"
             is_active=True,
             created_at=now,
@@ -80,12 +69,12 @@ async def login_root(
         "login": "root",
         "last_ip": request.client.host if request.client else "127.0.0.1",
         "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
-        "department": "System",
+        # "department": "System",
         "permissions": [],  # Root проверяется отдельно, права не нужны
         "user_data": {
             "email": "root@localhost",
             "fullname": "Root Admin",
-            "department": "System",
+            # "department": "System",
             "distinguishedName": "CN=Root Admin,OU=System,DC=local",
             "groups": ["root", "admin"]
         }
@@ -116,7 +105,6 @@ async def login_root(
         login="root",
         email="root@localhost",
         fullname="Root Admin",
-        department="System",
         distinguished_name="CN=Root Admin,OU=System,DC=local",
         groups=["root", "admin"],
         permissions={},  # Root не нуждается в явных правах

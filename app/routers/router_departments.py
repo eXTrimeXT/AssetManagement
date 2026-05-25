@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.Division import Division
 from app.models.Group import Group
+from app.schemas.departments.SearchByAbbResponse import SearchByAbbreviationResponse
 
 router_departments = APIRouter(
     prefix="/departments",
@@ -49,7 +50,7 @@ async def get_departments_endpoint(
     return await get_departments_list(db, skip, limit, name, abbreviation)
 
 
-@router_departments.get("/{department_id}", response_model=DepartmentWithDivisionsAndGroupsResponse)
+@router_departments.get("/id/{department_id}", response_model=DepartmentWithDivisionsAndGroupsResponse)
 async def get_department_endpoint(
         department_id: int,
         db: AsyncSession = Depends(get_db)
@@ -116,3 +117,45 @@ async def delete_department_endpoint(
     if not success:
         raise HTTPException(status_code=404, detail="Департамент не найден")
     return None
+
+
+@router_departments.get("/abb/{abbreviation}", response_model=SearchByAbbreviationResponse)
+async def search_by_abbreviation_endpoint(
+        abbreviation: str,
+        db: AsyncSession = Depends(get_db)
+):
+    abbreviation = abbreviation.upper()
+    # 1. Поиск в департаментах
+    result = await db.execute(select(Department).where(Department.abbreviation == abbreviation))
+    item = result.scalar_one_or_none()
+    if item:
+        return SearchByAbbreviationResponse(
+            entity_type="department",
+            id=item.id,
+            name=item.name,
+            abbreviation=item.abbreviation
+        )
+
+    # 2. Поиск в отделах
+    result = await db.execute(select(Division).where(Division.abbreviation == abbreviation))
+    item = result.scalar_one_or_none()
+    if item:
+        return SearchByAbbreviationResponse(
+            entity_type="division",
+            id=item.id,
+            name=item.name,
+            abbreviation=item.abbreviation
+        )
+
+    # 3. Поиск в группах
+    result = await db.execute(select(Group).where(Group.abbreviation == abbreviation))
+    item = result.scalar_one_or_none()
+    if item:
+        return SearchByAbbreviationResponse(
+            entity_type="group",
+            id=item.id,
+            name=item.name,
+            abbreviation=item.abbreviation
+        )
+
+    raise HTTPException(status_code=404, detail="Подразделение с указанной аббревиатурой не найдено")

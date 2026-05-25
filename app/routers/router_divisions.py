@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 
 from app.database.connection import get_db
-from app.schemas.divisions.DivisionResponse import DivisionResponse, DivisionShortResponse
+from app.schemas.divisions.DivisionResponse import DivisionResponse, DivisionShortResponse, DivisionWithGroupsResponse
 from app.schemas.divisions.DivisionCreate import DivisionCreate
 from app.schemas.divisions.DivisionUpdate import DivisionUpdate
 from app.database.crud_divisions import *
 from app.service.auth.auth_service import require_authorized_user
+from app.models.Group import Group
 
 router_divisions = APIRouter(prefix="/divisions", tags=["Divisions"], dependencies=[Depends(require_authorized_user)])
 
@@ -16,7 +17,13 @@ async def create_division_endpoint(
         division_in: DivisionCreate,
         db: AsyncSession = Depends(get_db)
 ):
-    return await create_division(db, division_in)
+    try:
+        return await create_division(db, division_in)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Отдел с аббревиатурой '{division_in.abbreviation}' уже существует"
+        )
 
 
 @router_divisions.get("/", response_model=List[DivisionShortResponse])
@@ -31,7 +38,7 @@ async def get_divisions_endpoint(
     return await get_divisions_list(db, skip, limit, name, abbreviation, department_id)
 
 
-@router_divisions.get("/{division_id}", response_model=DivisionResponse)
+@router_divisions.get("/{division_id}", response_model=DivisionWithGroupsResponse)
 async def get_division_endpoint(
         division_id: int,
         db: AsyncSession = Depends(get_db)
@@ -39,7 +46,22 @@ async def get_division_endpoint(
     division = await get_division_by_id(db, division_id)
     if not division:
         raise HTTPException(status_code=404, detail="Отдел не найден")
-    return division
+
+    result = await db.execute(
+        select(Group).where(Group.division_id == division_id)
+    )
+    groups = result.scalars().all()
+
+    return DivisionWithGroupsResponse(
+        id=division.id,
+        name=division.name,
+        abbreviation=division.abbreviation,
+        department_id=division.department_id,
+        groups=[
+            {"id": g.id, "name": g.name, "abbreviation": g.abbreviation}
+            for g in groups
+        ]
+    )
 
 
 @router_divisions.patch("/{division_id}", response_model=DivisionResponse)
@@ -48,10 +70,16 @@ async def update_division_endpoint(
         division_data: DivisionUpdate,
         db: AsyncSession = Depends(get_db)
 ):
-    updated_division = await update_division(db, division_id, division_data)
-    if not updated_division:
-        raise HTTPException(status_code=404, detail="Отдел не найден")
-    return updated_division
+    try:
+        updated_department = await update_division(db, division_id, division_data)
+        if not updated_department:
+            raise HTTPException(status_code=404, detail="Отдел не найден")
+        return updated_department
+    except IntegrityError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Аббревиатура '{division_data.abbreviation}' уже занята"
+        )
 
 
 @router_divisions.delete("/{division_id}", status_code=status.HTTP_204_NO_CONTENT)

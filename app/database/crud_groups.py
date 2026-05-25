@@ -1,6 +1,7 @@
 from typing import Optional, Sequence, Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.Group import Group
@@ -18,9 +19,13 @@ async def get_group_by_id(db: AsyncSession, group_id: int) -> Optional[Group]:
 async def create_group(db: AsyncSession, group_in: GroupCreate) -> Group:
     db_group = Group(**group_in.model_dump())
     db.add(db_group)
-    await db.commit()
-    await db.refresh(db_group)
-    return db_group
+    try:
+        await db.commit()
+        await db.refresh(db_group)
+        return db_group
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def get_groups_list(
@@ -58,9 +63,13 @@ async def update_group(
     for key, value in update_data.items():
         setattr(group, key, value)
 
-    await db.commit()
-    await db.refresh(group)
-    return group
+    try:
+        await db.commit()
+        await db.refresh(group)
+        return group
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def delete_group(db: AsyncSession, group_id: int) -> bool:

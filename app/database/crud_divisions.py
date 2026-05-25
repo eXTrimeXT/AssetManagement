@@ -1,6 +1,7 @@
 from typing import Optional, Sequence, Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.Division import Division
@@ -18,9 +19,13 @@ async def get_division_by_id(db: AsyncSession, division_id: int) -> Optional[Div
 async def create_division(db: AsyncSession, division_in: DivisionCreate) -> Division:
     db_division = Division(**division_in.model_dump())
     db.add(db_division)
-    await db.commit()
-    await db.refresh(db_division)
-    return db_division
+    try:
+        await db.commit()
+        await db.refresh(db_division)
+        return db_division
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def get_divisions_list(
@@ -58,9 +63,13 @@ async def update_division(
     for key, value in update_data.items():
         setattr(division, key, value)
 
-    await db.commit()
-    await db.refresh(division)
-    return division
+    try:
+        await db.commit()
+        await db.refresh(division)
+        return division
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def delete_division(db: AsyncSession, division_id: int) -> bool:

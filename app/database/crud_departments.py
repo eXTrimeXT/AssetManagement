@@ -2,6 +2,8 @@ from typing import Optional, Sequence, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+
 
 from app.models.Department import Department
 from app.schemas.departments.DepartmentCreate import DepartmentCreate
@@ -18,9 +20,13 @@ async def get_department_by_id(db: AsyncSession, department_id: int) -> Optional
 async def create_department(db: AsyncSession, department_in: DepartmentCreate) -> Department:
     db_department = Department(**department_in.model_dump())
     db.add(db_department)
-    await db.commit()
-    await db.refresh(db_department)
-    return db_department
+    try:
+        await db.commit()
+        await db.refresh(db_department)
+        return db_department
+    except IntegrityError:
+        await db.rollback()
+        raise  # Пробрасываем ошибку дальше, обработаем в router
 
 
 async def get_departments_list(
@@ -55,9 +61,13 @@ async def update_department(
     for key, value in update_data.items():
         setattr(department, key, value)
 
-    await db.commit()
-    await db.refresh(department)
-    return department
+    try:
+        await db.commit()
+        await db.refresh(department)
+        return department
+    except IntegrityError:
+        await db.rollback()
+        raise
 
 
 async def delete_department(db: AsyncSession, department_id: int) -> bool:

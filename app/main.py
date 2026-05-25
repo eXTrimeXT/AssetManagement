@@ -11,13 +11,13 @@ from app.middleware.LoggingMiddleware import LoggingMiddleware
 
 # Импорт роутеров
 from app.routers.router_assets import router_assets
-from app.routers.router_assets_types import router_assets_types
 from app.routers.router_assets_history import router_assets_history
-from app.routers.router_users import router_users
+from app.routers.router_users import router_users                       # не зависим
 from app.routers.router_software import router_software
 # Catalog импорт по зависимости, от независимого к зависимому
 from app.routers.router_catalog_history import router_catalog_history   # не зависим (чисто история)
-from app.routers.router_catalog_classes import router_catalog_classes   # не зависим
+from app.routers.router_assets_types import router_assets_types         # не зависим
+from app.routers.router_catalog_classes import router_catalog_classes   # зависит от типа
 from app.routers.router_catalog_models import router_catalog_models     # зависим от класса
 from app.routers.router_catalog_items import router_catalog_items       # зависим от модели
 from app.routers.router_companies import router_companies
@@ -27,6 +27,10 @@ from app.routers.router_warehouses import router_warehouses
 from app.routers.router_locations import router_locations
 from app.routers.router_auth import router_auth
 from app.routers.router_assets_excel import router_assets_excel
+# Департамент -> Отдел -> Группа
+from app.routers.router_departments import router_departments
+from app.routers.router_divisions import router_divisions
+from app.routers.router_groups import router_groups
 
 from app.seed_api import router_seed_api
 
@@ -68,6 +72,10 @@ app.include_router(router_auth, prefix="/api")              # Auth
 app.include_router(router_users, prefix="/api")             # Users
 
 # app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
+
+app.include_router(router_departments)
+app.include_router(router_divisions)
+app.include_router(router_groups)
 
 app.include_router(router_assets_types, prefix="/api")      # Asset Types
 app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes

@@ -127,7 +127,6 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 algorithms=["HS256"],
                 options={"verify_exp": True}
             )
-            logger.warning(f"{payload=}")
         else:
             logger.warning(
                 "JWT secret key not configured. Decoding token without signature verification! "
@@ -137,6 +136,8 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 token,
                 options={"verify_signature": False, "verify_exp": True}
             )
+        logger.info(f"{payload=}")
+        print(f"{payload=}")
         return payload
     except jwt.ExpiredSignatureError:
         raise TokenValidationError("Token has expired")

@@ -43,7 +43,12 @@ async def create(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router_assets_types.get("/", response_model=List[AssetTypeResponse])
-async def list_all(items: List[AssetType] = Depends(FilteredByAccess(list_asset_types, "en_name", "read"))):
+async def list_all(db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
+    # items: List[AssetType] = Depends(FilteredByAccess(list_asset_types, "en_name", "read"))
+    items = await list_asset_types(db)
+    for item in items:
+        if not has_read_permission(current_user, item.en_name):
+            raise HTTPException(404, "No read access")
     return items
 
 @router_assets_types.get("/id/{asset_type_id}", response_model=AssetTypeResponse)

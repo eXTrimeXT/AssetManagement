@@ -1,3 +1,4 @@
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
@@ -15,7 +16,6 @@ from app.service.redis.redis_client import redis_client
 from app.database.crud_users import get_user_by_tab_id
 from app.models.User import User
 from app.service.auth.external_auth import external_login
-import jwt
 
 router_auth = APIRouter(tags=["auth"])
 
@@ -64,7 +64,6 @@ async def login_by_credentials(
                 await db.commit()
 
             # Генерируем JWT токен для root
-            import jwt
             from datetime import timedelta
 
             payload = {
@@ -210,7 +209,6 @@ async def auth_token(
 async def logout(
         response: Response,
         token: str = Depends(lambda: None),  # Placeholder, токен берём из куки
-        request: dict = Depends(lambda: {}),  # Для доступа к request, если нужно
 ):
     """Удаляет сессию из Redis и очищает куки"""
     # Токен берём из куки, которую отправил браузер

@@ -9,10 +9,14 @@ T = TypeVar('T')
 
 # === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
+def check_root(user_tab_id):
+    """Проверяем является ли текущий пользователь root-пользователем"""
+    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
+    return user_tab_id == "root"
+
 def has_read_permission(user: User, group_name: str | None) -> bool:
     """Проверяет право `read` на группу. Root имеет доступ ко всему."""
-    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
-    if user.user_tab_id == "root":
+    if check_root(user.user_tab_id):
         return True
 
     if not group_name or not user.permissions:
@@ -21,8 +25,7 @@ def has_read_permission(user: User, group_name: str | None) -> bool:
     return bool(group_perms and group_perms.get("read"))
 
 def has_write_permission(user: User, group_name: str | None) -> bool:
-    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
-    if user.user_tab_id == "root":
+    if check_root(user.user_tab_id):
         return True
 
     if not group_name or not user.permissions:
@@ -31,8 +34,7 @@ def has_write_permission(user: User, group_name: str | None) -> bool:
     return bool(group_perms and group_perms.get("write"))
 
 def has_access(user: User, group_name: str | None, access_type: Literal["read", "write"] | None = None) -> bool:
-    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
-    if user.user_tab_id == "root":
+    if check_root(user.user_tab_id):
         return True
     
     if not group_name or not user.permissions:

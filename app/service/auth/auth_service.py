@@ -64,7 +64,8 @@ async def extract_login_from_request(request: Request) -> Optional[str]:
             algorithms=["HS256"],
             options={
                 "verify_signature": bool(JWT_SECRET_KEY),
-                "verify_exp": False  # не блокируем логирование, если токен просрочен
+                "verify_exp": False,  # не блокируем логирование, если токен просрочен
+                "verify_iat": False
             }
         )
         return payload.get("login")

@@ -3,9 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 import jwt
 import json
-import os
 from app.database.connection import get_db
-from app.schemas.auth.AuthSchemas import UserInfoResponse, TokenRequest
+from app.schemas.auth.AuthSchemas import UserInfoResponse, TokenRequest, LoginRequest
 from app.service.auth.auth_service import (
     get_user_from_token,
     TokenValidationError,
@@ -16,6 +15,7 @@ from app.models.UserJWTData import UserJWTData
 from app.service.redis.redis_client import redis_client
 from app.database.crud_users import get_user_by_tab_id
 from app.models.User import User
+from app.service.auth.external_auth import external_login
 
 router_auth = APIRouter(tags=["auth"])
 
@@ -113,6 +113,64 @@ async def login_root(
     )
 
 @router_auth.post("/login", response_model=UserInfoResponse)
+async def login_by_credentials(
+        credentials: LoginRequest,
+        response: Response,
+        db: AsyncSession = Depends(get_db),
+):
+    """
+    Вход по логину и паролю.
+    Пароль шифруется RSA через внешний сервис, возвращается JWT токен.
+    """
+    try:
+        # Получаем токен от внешнего сервиса
+        token = external_login(credentials.login, credentials.password)
+
+        # Декодируем токен для извлечения данных пользователя
+        user_data: UserJWTData = get_user_from_token(token)
+        if user_data.is_expired:
+            raise HTTPException(status_code=401, detail="Token expired")
+
+        # Создаём/обновляем пользователя в БД
+        await create_or_update_user_from_token(db, user_data)
+
+        # Сохраняем сессию в Redis
+        payload = jwt.decode(
+            token,
+            key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+            algorithms=["HS256"],
+            options={
+                "verify_signature": bool(JWT_SECRET_KEY),
+                "verify_exp": False,
+                "verify_iat": False
+            }
+        )
+        exp = payload.get("exp")
+        ttl = int(exp - datetime.utcnow().timestamp()) if exp else 3600
+        ttl = max(ttl, 60)
+
+        await save_session_to_redis(user_data.login, token, ttl)
+
+        # Устанавливаем HTTP-only куки
+        response.set_cookie(
+            key="session_token",
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=ttl,
+            path="/"
+        )
+
+        return user_data.to_dict()
+
+    except RuntimeError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except TokenValidationError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+@router_auth.post("/auth_token", response_model=UserInfoResponse)
 async def auth_token(
         request: TokenRequest,
         response: Response,

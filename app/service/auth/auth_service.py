@@ -147,6 +147,7 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
 def get_user_from_token(token: str, secret_key: Optional[str] = None) -> UserJWTData:
     key = secret_key or JWT_SECRET_KEY
     payload = decode_token(token, key)
+    # logger.info(f"{payload}")
     return UserJWTData(payload)
 
 def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:

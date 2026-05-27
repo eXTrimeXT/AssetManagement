@@ -97,13 +97,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(request)
+            # === ДОБАВЛЯЕМ ЗАГОЛОВОК С REQUEST_ID ===
+            response.headers["X-Request-ID"] = request_id
+
             process_time = time.time() - start_time
 
             # Логируем успех
             log.info(
                 "request_completed",
                 status_code=response.status_code,
-                duration_ms=round(process_time * 1000, 2)
+                duration_ms=round(process_time * 1000, 2),
             )
             std_log.info(
                 f"{request.method} {request.url.path} - {response.status_code}",

@@ -1,12 +1,14 @@
 from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
+
 
 class UserBase(BaseModel):
     """Базовая схема пользователя"""
     user_tab_id: Optional[str] = None
     owner: str
     user_en_name: Optional[str] = None
+    # permissions: Dict[str, Union[Dict[str, bool], str, bool]] = {}
     permissions: Dict[str, Dict[str, bool]] = {}
     user_position: Optional[str] = None
     department_id: Optional[int] = None

@@ -63,10 +63,7 @@ async def get_users_list(
         department_id: Optional[int] = None,
         is_active: bool = True,
 ) -> Sequence[Any]:
-    """
-    Получает список пользователей с фильтрацией и пагинацией.
-    Добавлен фильтр по роли.
-    """
+    """Получает список пользователей с фильтрацией и пагинацией."""
     query = select(User).where(User.is_active == is_active)
 
     if department_id:
@@ -91,7 +88,15 @@ async def update_user(db: AsyncSession, user_id: int, user_data: UserUpdate) -> 
     await db.refresh(user)
     return user
 
-# В конец файла, после других CRUD-функций
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Рекурсивно объединяет словари, не перезаписывая соседние вложенные ключи."""
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
 
 async def update_user_permissions(
         db: AsyncSession,
@@ -99,16 +104,16 @@ async def update_user_permissions(
         new_permissions: Dict[str, Dict[str, bool]]
 ) -> Optional[User]:
     """
-    Обновляет права пользователя (merge).
-    Ожидает dict: {"computer": {"read": true, "write": false}, ...}
+    Обновляет права пользователя (глубокое слияние).
+    Обновляет только переданные вложенные ключи, сохраняя остальные.
     """
     user = await get_user_by_id(db, user_id)
     if not user:
         return None
 
-    current_perms = user.permissions if user.permissions else {}
-    # Сливаем новые права со старыми (создаём новый dict для SQLAlchemy)
-    user.permissions = {**current_perms, **new_permissions}
+    current_perms = user.permissions or {}
+    # Глубокое слияние вместо поверхностного обновления
+    user.permissions = _deep_merge(current_perms, new_permissions)
     user.updated_at = datetime.utcnow()
 
     await db.commit()

@@ -45,12 +45,12 @@ async def create_user_endpoint(user_in: UserCreate, db: AsyncSession = Depends(g
 async def get_users_endpoint(
         skip: int = 0,
         limit: int = 50,
-        department: Optional[str] = None,
+        department_id: Optional[int] = None,
         is_active: bool = True,
         db: AsyncSession = Depends(get_db)
 ):
     """Получить список пользователей с фильтрацией"""
-    return await get_users_list(db, skip, limit, department, is_active)
+    return await get_users_list(db, skip, limit, department_id, is_active)
 
 
 @router_users.get("/id/{user_id}", response_model=UserResponse)
@@ -102,7 +102,12 @@ async def update_user_permissions_endpoint(
 ):
     """
     Обновляет права доступа для конкретного пользователя (merge).
-    Ожидает dict: {"computer": {"read": true, "write": false}, ...}
+
+    Тело запроса:
+    {
+        "computer": {"read": true, "write": false},
+        "supplies": {"read": true, "write": false}
+    }
     Доступно только пользователям с правом `users: write` (или аналогичным).
     """
     # Опционально: проверка, что текущий пользователь может менять права

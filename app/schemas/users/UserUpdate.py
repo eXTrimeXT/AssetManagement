@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 
 class UserUpdate(BaseModel):
@@ -17,11 +17,26 @@ class UserUpdate(BaseModel):
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "owner": "Иванов Иван Иванович (обновлено)",
-            "department_id": "RDC",
+            "department_id": 1,
             "is_active": "True"
         }
     })
 
 class PermissionsUpdate(BaseModel):
     """Схема для обновления прав пользователя"""
-    permissions: Dict[str, str]
+    permissions: Dict[str, Dict[str, bool]]
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "permissions": {
+                "group1": {
+                    "read": True,
+                    "write": False
+                },
+                "group2": {
+                    "read": True,
+                    "write": False
+                }
+            }
+        }
+    })
+

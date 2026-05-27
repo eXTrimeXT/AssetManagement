@@ -37,7 +37,7 @@ async def get_token_from_request(request: Request) -> str:
     if token:
         return token.strip()
 
-    raise HTTPException(status_code=401, detail="Token not provided")
+    raise HTTPException(status_code=401, detail="Токен не предоставлен")
 
 # === Извлечение login из токена для логирования ===
 async def extract_login_from_request(request: Request) -> Optional[str]:
@@ -88,26 +88,26 @@ async def require_authorized_user(
         user_data = get_user_from_token(token)
 
         if user_data.is_expired:
-            raise HTTPException(status_code=401, detail="Token expired")
+            raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         session = await get_session_from_redis(user_data.login)
         if not session or session.get("token") != token:
-            raise HTTPException(status_code=401, detail="Invalid or expired session")
+            raise HTTPException(status_code=401, detail="Недействительный или просроченный сеанс")
 
         db_user = await get_user_by_tab_id(db, user_data.login)
         if not db_user:
             raise HTTPException(
                 status_code=403,
-                detail="User not found in database. Please login first via /api/login"
+                detail="Пользователь не найден в базе данных. Войдите в систему через /api/login или /api/auth_token"
             )
 
         if not db_user.is_active:
-            raise HTTPException(status_code=403, detail="User account is deactivated.")
+            raise HTTPException(status_code=403, detail="Учетная запись пользователя деактивирована")
 
         return db_user
 
     except TokenValidationError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
 
 async def get_current_user_id(
         current_user: User = Depends(require_authorized_user)
@@ -130,8 +130,8 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
             )
         else:
             logger.warning(
-                "JWT secret key not configured. Decoding token without signature verification! "
-                "Set JWT_SECRET_KEY for production."
+                "Секретный ключ JWT не настроен. Токен декодирования без проверки подписи!"
+                "Установите JWT_SECRET_KEY для работы."
             )
             payload = jwt.decode(
                 token,
@@ -141,9 +141,9 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
         print(f"{payload=}")
         return payload
     except jwt.ExpiredSignatureError:
-        raise TokenValidationError("Token has expired")
+        raise TokenValidationError("Срок действия токена истек")
     except jwt.InvalidTokenError as e:
-        raise TokenValidationError(f"Invalid token: {str(e)}")
+        raise TokenValidationError(f"Недопустимый токен: {str(e)}")
 
 def get_user_from_token(token: str, secret_key: Optional[str] = None) -> UserJWTData:
     key = secret_key or JWT_SECRET_KEY

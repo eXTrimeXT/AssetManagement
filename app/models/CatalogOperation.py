@@ -9,7 +9,6 @@ class CatalogOperation(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # ВАЖНО: Нет ondelete="CASCADE". История должна жить своей жизнью.
-    # catalog_id = Column(Integer, ForeignKey("asset_catalog.catalog_id", ondelete="SET NULL"), nullable=False, index=True)
     catalog_id = Column(Integer, nullable=True, index=True)
 
     # === СНАПШОТЫ (Копии данных на момент операции) ===

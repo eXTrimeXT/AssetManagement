@@ -19,5 +19,5 @@ async def set_value(key: str, value: str):
 async def get_value(key: str):
     value = await redis_client.get(key)
     if value is None:
-        raise HTTPException(status_code=404, detail="Key not found")
+        raise HTTPException(status_code=404, detail="Ключ не найден")
     return {"key": key, "value": value}

@@ -113,7 +113,7 @@ async def update_user_permissions_endpoint(
     # Опционально: проверка, что текущий пользователь может менять права
     # (если нужно — раскомментируй)
     # if not current_user.permissions or not current_user.permissions.get("users", {}).get("write"):
-    #     raise HTTPException(status_code=403, detail="Permission 'users:write' required")
+    #     raise HTTPException(status_code=403, detail="Требуется разрешение: 'users:write'")
 
     updated_user = await update_user_permissions(db, user_id, perm_data.permissions)
     if not updated_user:

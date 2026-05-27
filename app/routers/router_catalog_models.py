@@ -14,7 +14,7 @@ router_catalog_models = APIRouter(prefix="/catalog/models", tags=["Asset Catalog
 async def create_model(data: AssetModelCreate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     cls_obj = await get_asset_class_by_id(db, data.class_id)
     if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
-        raise HTTPException(403, f"No write access to type '{cls_obj.asset_type.en_name}'")
+        raise HTTPException(403, f"Нет доступа на запись к типу '{cls_obj.asset_type.en_name}'")
     return await create_asset_model(db, data)
 
 @router_catalog_models.get("/", response_model=List[AssetModelResponse])
@@ -27,26 +27,26 @@ async def list_models(
 @router_catalog_models.get("/{model_id}", response_model=AssetModelResponse)
 async def get_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
-    if not obj: raise HTTPException(404, "Model not found")
-    if not has_read_permission(current_user, obj.asset_class.asset_type.en_name): raise HTTPException(404, "No read access")
+    if not obj: raise HTTPException(404, "Модель не найдена")
+    if not has_read_permission(current_user, obj.asset_class.asset_type.en_name): raise HTTPException(404, "Нет доступа для чтения")
     return obj
 
 @router_catalog_models.patch("/{model_id}", response_model=AssetModelResponse)
 async def patch_model(model_id: int, data: AssetModelUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
-    if not obj: raise HTTPException(404, "Model not found")
+    if not obj: raise HTTPException(404, "Модель не найдена")
     target_cls_id = data.class_id if data.class_id is not None else obj.class_id
     if target_cls_id:
         cls_obj = await get_asset_class_by_id(db, target_cls_id)
         if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
-            raise HTTPException(403, f"No write access to type '{cls_obj.asset_type.en_name}'")
+            raise HTTPException(403, f"Нет доступа на запись к типуe '{cls_obj.asset_type.en_name}'")
     return await update_asset_model(db, model_id, data)
 
 @router_catalog_models.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
-    if not obj: raise HTTPException(404, "Model not found")
-    if not has_write_permission(current_user, obj.asset_class.asset_type.en_name): raise HTTPException(403, "No write access")
+    if not obj: raise HTTPException(404, "Модель не найдена")
+    if not has_write_permission(current_user, obj.asset_class.asset_type.en_name): raise HTTPException(403, "Нет доступа для записи")
     # Вызов delete_asset_model из crud_catalog, если он там есть, или db.delete(obj)
     await db.delete(obj)
     await db.commit()

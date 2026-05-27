@@ -36,7 +36,7 @@ async def create_asset_endpoint(
 
     # 3. Проверка write на тип актива (используем en_name, а не ID!)
     if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
-        raise HTTPException(403, f"No write access to type '{asset_type_en_name}'")
+        raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
 
     # 4. Остальные проверки
     if await check_duplicate_inventory_id(db, asset_in.inventory_id):
@@ -69,7 +69,7 @@ async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), 
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     if not has_read_permission(current_user, asset.model.asset_class.asset_type.en_name):
-        raise HTTPException(status_code=404, detail="No read access")
+        raise HTTPException(status_code=404, detail="Нет доступа для чтения")
     return asset
 
 
@@ -85,7 +85,7 @@ async def update_asset_endpoint(
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-        raise HTTPException(403, "No write access")
+        raise HTTPException(403, "Нет доступа для записи")
 
     updated_asset = await update_asset(db, asset_id, asset_data, current_user.user_id)
     if not updated_asset:
@@ -101,7 +101,7 @@ async def deactivate_asset_endpoint(
 ):
     asset = await get_asset_by_id(db, asset_id)
     if not asset: raise HTTPException(404, detail="Актив не найден")
-    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name): raise HTTPException(403, "No write access")
+    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name): raise HTTPException(403, "Нет доступа для записи")
     return await deactivate_asset(db, asset_id, current_user.user_id)
 
 
@@ -131,7 +131,7 @@ async def hard_delete_asset_endpoint(
         raise HTTPException(status_code=400, detail="Сначала деактивируйте актив.")
 
     if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-        raise HTTPException(403, "No write access")
+        raise HTTPException(403, "Нет доступа для записи")
 
     success = await hard_delete_asset(db, asset_id, current_user.user_id)
     if not success:
@@ -156,7 +156,7 @@ async def get_all_asset_children_endpoint(
         raise HTTPException(status_code=404, detail="Родительский актив не найден")
 
     if not has_read_permission(current_user, parent.model.asset_class.asset_type.en_name):
-        raise HTTPException(status_code=403, detail="No read access")
+        raise HTTPException(status_code=403, detail="Нет доступа для чтения")
 
     # Получаем детей с загруженными связями
     children = await get_all_asset_children_recursive(db, asset_id, max_depth)

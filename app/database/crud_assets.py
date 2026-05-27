@@ -112,10 +112,6 @@ async def get_assets_list(
     Получает список активов с применением фильтров и пагинацией.
     Загружает связи для корректной работы фильтрации по правам.
     """
-    from sqlalchemy.orm import selectinload
-    from app.models.AssetModel import AssetModel
-    from app.models.AssetClass import AssetClass
-
     query = select(Asset).options(
         # === Загружаем связи для фильтрации по asset_type.en_name ===
         selectinload(Asset.model)

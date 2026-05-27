@@ -1,5 +1,4 @@
-# app/database/crud_operations.py
-from typing import List, Optional, Dict, Any, Sequence
+from typing import Optional, Dict, Any, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -48,13 +47,13 @@ async def create_operation_log(
     await db.refresh(db_op)
     return db_op
 
-# Получить историю по id, нужно для удобства
 async def get_history_by_asset_id(
         db: AsyncSession,
         asset_id: int,
         skip: int = 0,
         limit: int = 50
 ) -> Sequence[Any]:
+    """ Получить историю по id, нужно для удобства """
     query = (
         select(AssetOperation)
         .where(AssetOperation.asset_id == asset_id) # Ищем по ID
@@ -66,13 +65,13 @@ async def get_history_by_asset_id(
     result = await db.execute(query)
     return result.scalars().all()
 
-# Получить историю по инвентарному номеру (если актив удален)
 async def get_history_by_inventory_id(
         db: AsyncSession,
         inventory_id: str,
         skip: int = 0,
         limit: int = 50
 ) -> Sequence[Any]:
+    """ Получить историю по инвентарному номеру (если актив удален) """
     query = (
         select(AssetOperation)
         .where(AssetOperation.inventory_id_snapshot == inventory_id)

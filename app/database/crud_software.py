@@ -11,15 +11,6 @@ from app.schemas.software.SoftwareUpdate import SoftwareUpdate
 
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-# async def get_software_by_id(db: AsyncSession, software_id: int) -> Optional[Software]:
-#     """
-#     Получает запись о ПО по ID.
-#     Возвращает None, если не найдено.
-#     """
-#     result = await db.execute(
-#         select(Software).where(Software.software_id == software_id)
-#     )
-#     return result.scalar_one_or_none()
 async def get_software_by_id(db: AsyncSession, software_id: int) -> Optional[Software]:
     """
     Получает запись о ПО по ID с подгрузкой пользователя.

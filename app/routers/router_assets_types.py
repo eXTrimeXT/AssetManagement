@@ -31,14 +31,14 @@ async def create(
     log = logger.bind(action="create_asset_type", requested_en_name=data.en_name)
     if not has_write_permission(current_user, data.en_name):
         log.warning("forbidden", reason="no_write_permission", en_name=data.en_name)
-        raise HTTPException(status_code=403, detail=f"Write access to asset type '{data.en_name}' is not allowed")
+        raise HTTPException(status_code=403, detail=f"Доступ на запись к ресурсу типа '{data.en_name}' не разрешен")
 
     try:
         new_obj = await create_asset_type(db, data)
         log.info("success", name=new_obj.name, en_name=new_obj.en_name)
         return new_obj
     except IntegrityError as e:
-        raise HTTPException(status_code=400, detail="Database constraint violation")
+        raise HTTPException(status_code=400, detail="Нарушение ограничений базы данных")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -48,33 +48,33 @@ async def list_all(db: AsyncSession = Depends(get_db), current_user = Depends(re
     items = await list_asset_types(db)
     for item in items:
         if not has_read_permission(current_user, item.en_name):
-            raise HTTPException(404, "No read access")
+            raise HTTPException(404, "Нет доступа для чтения")
     return items
 
 @router_assets_types.get("/id/{asset_type_id}", response_model=AssetTypeResponse)
 async def get_by_id(asset_type_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_type_by_id(db, asset_type_id)
-    if not obj: raise HTTPException(404, "Asset Type not found")
-    if not has_read_permission(current_user, obj.en_name): raise HTTPException(404, "No read access")
+    if not obj: raise HTTPException(404, "Тип актива не найден")
+    if not has_read_permission(current_user, obj.en_name): raise HTTPException(404, "Нет доступа для чтения")
     return obj
 
 @router_assets_types.get("/en_name/{en_name}", response_model=AssetTypeResponse)
 async def get_by_en_name(en_name: str, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_type_by_en_name(db, en_name)
-    if not obj: raise HTTPException(404, "Asset Type not found")
-    if not has_read_permission(current_user, obj.en_name): raise HTTPException(404, "No read access")
+    if not obj: raise HTTPException(404, "Тип актива не найден")
+    if not has_read_permission(current_user, obj.en_name): raise HTTPException(404, "Нет доступа для чтения")
     return obj
 
 @router_assets_types.patch("/{asset_type_id}", response_model=AssetTypeResponse)
 async def patch(asset_type_id: int, data: AssetTypeUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_type_by_id(db, asset_type_id)
-    if not obj: raise HTTPException(404, "Asset Type not found")
-    if not has_write_permission(current_user, obj.en_name): raise HTTPException(403, "No write access")
+    if not obj: raise HTTPException(404, "Тип актива не найден")
+    if not has_write_permission(current_user, obj.en_name): raise HTTPException(403, "Нет доступа для записи")
     return await update_asset_type(db, obj, data)
 
 @router_assets_types.delete("/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete(asset_type_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_type_by_id(db, asset_type_id)
-    if not obj: raise HTTPException(404, "Asset Type not found")
-    if not has_write_permission(current_user, obj.en_name): raise HTTPException(403, "No write access")
+    if not obj: raise HTTPException(404, "Тип актива не найден")
+    if not has_write_permission(current_user, obj.en_name): raise HTTPException(403, "Нет доступа для записи")
     await delete_asset_type(db, obj)

@@ -25,7 +25,7 @@ class AssetBase(BaseModel):
 
     # ID связей
     model_id: int
-    warehouse_id: Optional[int] = None  # <-- Заменено location_id на warehouse_id
+    warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
     prepared_by: Optional[int] = None
@@ -45,8 +45,8 @@ class AssetResponse(AssetBase):
     # --- Вложенные объекты ---
     model: Optional[AssetModelResponse] = None
 
-    # СКЛАД (вместо локации)
-    warehouse_obj: Optional[WarehouseResponse] = None  # <-- Заменено location_obj на warehouse_obj
+    # СКЛАД
+    warehouse_obj: Optional[WarehouseResponse] = None
 
     # Пользователи
     preparer: Optional[UserResponse] = Field(default=None)
@@ -69,7 +69,7 @@ class AssetShortResponse(BaseModel):
     serial_number: str
     asset_status: str
     model_id: int
-    warehouse_id: Optional[int] = None  # <-- Заменено location_id на warehouse_id
+    warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
     manufacturer_id: Optional[int] = None

@@ -10,9 +10,7 @@ from app.schemas.locations.LocationUpdate import LocationUpdate
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 async def get_location_by_id(db: AsyncSession, location_id: int) -> Optional[Location]:
-    """
-    Получает локацию по ID.
-    """
+    """ Получает локацию по ID """
     result = await db.execute(
         select(Location).where(Location.location_id == location_id)
     )
@@ -21,9 +19,7 @@ async def get_location_by_id(db: AsyncSession, location_id: int) -> Optional[Loc
 
 # CRUD ОПЕРАЦИИ
 async def create_location(db: AsyncSession, location_in: LocationCreate) -> Location:
-    """
-    Создает новую запись о локации.
-    """
+    """ Создает новую запись о локации """
     db_location = Location(**location_in.model_dump())
     db.add(db_location)
     await db.commit()
@@ -37,9 +33,7 @@ async def get_locations_list(
         city: Optional[str] = None,
         country: Optional[str] = None
 ) -> Sequence[Any]:
-    """
-    Получает список локаций с фильтрацией и пагинацией.
-    """
+    """ Получает список локаций с фильтрацией и пагинацией """
     query = select(Location)
 
     if city:
@@ -58,9 +52,7 @@ async def update_location(
         location_id: int,
         location_data: LocationUpdate
 ) -> Optional[Location]:
-    """
-    Обновляет данные локации.
-    """
+    """ Обновляет данные локации """
     location = await get_location_by_id(db, location_id)
     if not location:
         return None

@@ -4,14 +4,14 @@ from typing import Optional
 class UserCreate(BaseModel):
     """Схема для создания нового пользователя"""
 
-    user_tab_id: Optional[str] = None  # Табельный номер (не обязателен)
-    owner: str  # ФИО на русском (обязательно)
-    user_en_name: Optional[str] = None  # ФИО на английском
-    user_position: Optional[str] = None  # Должность
-    department_id: Optional[int] = None  # Отдел
-    email: EmailStr  # Email (валидация формата)
-    phone: Optional[str] = None  # Телефон
-    is_active: bool = True  # Статус по умолчанию
+    user_tab_id: Optional[str] = None       # Табельный номер (не обязателен)
+    owner: str                              # ФИО на русском (обязательно)
+    user_en_name: Optional[str] = None      # ФИО на английском
+    user_position: Optional[str] = None     # Должность
+    department_id: Optional[int] = None     # Отдел
+    email: EmailStr                         # Email (валидация формата)
+    phone: Optional[str] = None             # Телефон
+    is_active: bool = True                  # Статус по умолчанию
 
     model_config = ConfigDict(json_schema_extra={
         "example": {

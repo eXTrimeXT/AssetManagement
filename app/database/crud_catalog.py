@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Optional, Sequence, Any
 from sqlalchemy import select
@@ -31,11 +32,6 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
     Получает запись каталога по ID с загруженными связями для фильтрации по правам и ответа API.
     Правильный путь: AssetCatalog → asset → model → asset_class → asset_type
     """
-    from sqlalchemy.orm import selectinload
-    from app.models.Asset import Asset
-    from app.models.AssetModel import AssetModel
-    from app.models.AssetClass import AssetClass
-
     query = select(AssetCatalog).where(AssetCatalog.catalog_id == catalog_id).options(
         # === Загружаем цепочку для фильтрации по asset_type.en_name ===
         # AssetCatalog → asset → model → asset_class → asset_type
@@ -110,10 +106,6 @@ async def create_asset_model(db: AsyncSession, data: AssetModelCreate) -> AssetM
 
 async def get_asset_model_by_id(db: AsyncSession, model_id: int) -> Optional[AssetModel]:
     """Получает модель с загруженными связями для проверки прав"""
-    from sqlalchemy.orm import selectinload
-    from app.models.AssetClass import AssetClass
-    from app.models.AssetType import AssetType
-
     result = await db.execute(
         select(AssetModel)
         .where(AssetModel.model_id == model_id)
@@ -156,8 +148,6 @@ async def delete_asset_model(db: AsyncSession, model_id: int) -> bool:
     Возвращает True если удалено, False если не найдено.
     Выбрасывает ValueError если модель используется в каталоге (есть связанные AssetCatalog).
     """
-    from sqlalchemy import select
-    from app.models.AssetCatalog import AssetCatalog
     # Проверяем, существует ли модель
     obj = await db.get(AssetModel, model_id)
     if not obj:
@@ -273,7 +263,6 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
     """
     Удаляет запись каталога с логированием.
     """
-    import logging
     # 1. Получаем объект с полными данными для снапшота
     obj = await get_catalog_item_by_id(db, catalog_id)
     logging.info(obj)
@@ -320,10 +309,6 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
     Получает список записей каталога с загруженными связями для фильтрации по правам.
     Правильный путь: AssetCatalog → asset → model → asset_class → asset_type
     """
-    from sqlalchemy.orm import selectinload
-    from app.models.AssetModel import AssetModel
-    from app.models.AssetClass import AssetClass
-
     query = select(AssetCatalog).options(
         # === Загружаем цепочку для фильтрации по asset_type.en_name ===
         # AssetCatalog → asset → model → asset_class → asset_type

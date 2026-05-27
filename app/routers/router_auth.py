@@ -119,7 +119,7 @@ async def login_by_credentials(
         # Декодируем токен для извлечения данных пользователя
         user_data: UserJWTData = get_user_from_token(token)
         if user_data.is_expired:
-            raise HTTPException(status_code=401, detail="Token expired")
+            raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         # Создаём/обновляем пользователя в БД
         await create_or_update_user_from_token(db, user_data)
@@ -154,11 +154,11 @@ async def login_by_credentials(
         return user_data.to_dict()
 
     except RuntimeError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=f"Ошибка времени выполнения: {str(e)}")
     except TokenValidationError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 @router_auth.post("/auth_token", response_model=UserInfoResponse)
 async def auth_token(
@@ -171,7 +171,7 @@ async def auth_token(
     try:
         user_data: UserJWTData = get_user_from_token(request.token)
         if user_data.is_expired:
-            raise HTTPException(status_code=401, detail="Token expired")
+            raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         await create_or_update_user_from_token(db, user_data)
 
@@ -201,9 +201,9 @@ async def auth_token(
         return user_data.to_dict()
 
     except TokenValidationError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 @router_auth.post("/logout")
 async def logout(

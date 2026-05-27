@@ -14,8 +14,6 @@ class AssetTypeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: str
     en_name: str
-
-    # Внутренний первичный ключ базы данных (autoincrement).
     # Добавляется только в ответ, так как при создании он генерируется БД автоматически.
     asset_type_id: int
 

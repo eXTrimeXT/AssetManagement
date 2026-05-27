@@ -123,7 +123,7 @@ class UserJWTData:
             "department": self.department,
             "distinguished_name": self.distinguished_name,
             "groups": self.groups,
-            "permissions": self.permissions,  # Теперь {"computer": {"read": false, "write": true}, ...}
+            "permissions": self.permissions,
             "last_ip": self.last_ip,
             "last_time": self.last_time,
             "is_expired": self.is_expired,

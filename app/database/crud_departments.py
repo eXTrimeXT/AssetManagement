@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
-
 from app.models.Department import Department
 from app.schemas.departments.DepartmentCreate import DepartmentCreate
 from app.schemas.departments.DepartmentUpdate import DepartmentUpdate

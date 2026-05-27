@@ -7,14 +7,12 @@ from app.database.connection import get_db
 from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogResponse, AssetCatalogUpdate
 from app.database.crud_catalog import (
     add_to_catalog, get_catalog_list, get_catalog_item_by_id,
-    delete_catalog_item, update_catalog_item, get_asset_model_by_id
+    delete_catalog_item, update_catalog_item,
 )
 from app.service.auth.auth_service import require_authorized_user
-from app.service.permissions.permissions_rules import (
-    FilteredByAccessWithParams, has_write_permission, has_read_permission
-)
+from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
 from app.models.User import User
-from app.database.crud_assets import get_asset_by_id  # <-- Добавляем импорт
+from app.database.crud_assets import get_asset_by_id
 
 router_catalog_items = APIRouter(
     prefix="/catalog/items",
@@ -64,7 +62,7 @@ async def add_catalog_item(
     # 1. Получаем актив, который добавляем в каталог
     asset = await get_asset_by_id(db, data.asset_id)
     if not asset:
-        raise HTTPException(404, detail="Asset not found")
+        raise HTTPException(404, detail="Актив не найден")
 
     # 2. Получаем модель актива и извлекаем en_name типа
     asset_type_en_name = None
@@ -73,7 +71,7 @@ async def add_catalog_item(
 
     # 3. Проверка права `write` на тип актива
     if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
-        raise HTTPException(403, f"No write access to type '{asset_type_en_name}'")
+        raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
 
     # 4. Создаём запись в каталоге
     try:
@@ -114,7 +112,7 @@ async def get_catalog_item(
     # === Проверка права `read` на тип актива ===
     en_name = _get_catalog_asset_type_en_name(item)
     if not has_read_permission(current_user, en_name):
-        raise HTTPException(404, detail="No read access")
+        raise HTTPException(404, detail="Нет доступа для чтения")
 
     return item
 
@@ -136,11 +134,11 @@ async def patch_catalog_item(
 
     en_name = _get_asset_type_en_name(item)
     if not has_write_permission(current_user, en_name):
-        raise HTTPException(403, f"No write access to type '{en_name}'")
+        raise HTTPException(403, f"Нет доступа на запись к типу '{en_name}'")
 
     res = await update_catalog_item(db, catalog_id, data, current_user_id=current_user.user_id)
     if not res:
-        raise HTTPException(404, detail="Failed to update")
+        raise HTTPException(404, detail="Ошибка обновления")
     return res
 
 
@@ -160,10 +158,10 @@ async def delete_catalog_item_endpoint(
 
     en_name = _get_catalog_asset_type_en_name(item)
     if not has_write_permission(current_user, en_name):
-        raise HTTPException(403, f"No write access to type '{en_name}'")
+        raise HTTPException(403, f"Нет доступа на запись к типу '{en_name}'")
 
     success = await delete_catalog_item(db, catalog_id, current_user.user_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Failed to delete")
+        raise HTTPException(status_code=404, detail="Ошибка удаления")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

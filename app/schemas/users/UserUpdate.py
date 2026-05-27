@@ -1,10 +1,8 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Optional, Dict, Union
-
+from typing import Optional, Dict
 
 class UserUpdate(BaseModel):
     """Схема для обновления пользователя (все поля опциональны)"""
-
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_en_name: Optional[str] = None
@@ -39,4 +37,3 @@ class PermissionsUpdate(BaseModel):
             }
         }
     })
-

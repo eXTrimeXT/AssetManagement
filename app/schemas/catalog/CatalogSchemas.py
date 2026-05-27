@@ -20,8 +20,6 @@ class AssetCatalogResponse(AssetCatalogBase):
     catalog_id: int
     created_at: datetime
 
-    # --- Вложенные объекты вместо ID ---
-
     # Актив (полный объект со всеми связями: тип, локация, юзеры, вендоры, ПО)
     asset: Optional[AssetResponse] = Field(default=None, alias="asset")
     # Владелец актива (Пользователь)

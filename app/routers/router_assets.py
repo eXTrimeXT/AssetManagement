@@ -6,14 +6,13 @@ from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.schemas.assets.AssetResponse import AssetResponse, AssetShortResponse
 from app.database.connection import get_db
-from app.database.crud_asset_types import get_asset_type_by_id
 from app.database.crud_assets import (
     create_asset, get_assets_list, get_asset_by_id, update_asset,
     deactivate_asset, activate_asset, hard_delete_asset,
     get_all_asset_children_recursive, check_duplicate_inventory_id,
     check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted
 )
-from app.service.auth.auth_service import require_authorized_user, get_current_user_id
+from app.service.auth.auth_service import require_authorized_user
 from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
 from app.database.crud_catalog import get_asset_model_by_id
 

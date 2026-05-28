@@ -1,5 +1,6 @@
 import logging
 import jwt
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
@@ -27,6 +28,78 @@ async def save_session_to_redis(login: str, token: str, ttl: int) -> None:
     session_data = {"token": token, "login": login}
     await redis_client.set(session_key, json.dumps(session_data), ex=ttl)
 
+
+async def create_or_get_user(db, request, response, login):
+    # Создаём или получаем пользователя в БД
+    user = await get_user_by_tab_id(db, login)
+    now = datetime.utcnow()
+
+    if not user:
+        user = User(
+            user_tab_id=login,
+            user_en_name=login,
+            owner=login,
+            email=f"{login}@hmmr.ru",
+            permissions={},
+            is_active=True,
+            created_at=now,
+            updated_at=now
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    else:
+        user.updated_at = now
+        await db.commit()
+
+    # Генерируем JWT токен для root
+    payload = {
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(hours=12)).timestamp()),
+        "login": login,
+        "last_ip": request.client.host if request.client else "127.0.0.1",
+        "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
+        "permissions": [],
+        "user_data": {
+            "email": f"{login}@hmmr.ru",
+            "fullname": login,
+            "distinguishedName": f"CN={login}",
+            "groups": [login]
+        }
+    }
+
+    token = jwt.encode(
+        payload,
+        key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+        algorithm="HS256" if JWT_SECRET_KEY else "none"
+    )
+
+    # Сохраняем сессию в Redis
+    ttl = 12 * 60 * 60  # 12 часов
+    await save_session_to_redis(login, token, ttl)
+
+    # Устанавливаем куки
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=ttl,
+        path="/"
+    )
+
+    return UserInfoResponse(
+        login=login,
+        email=f"{login}@hmmr.ru",
+        fullname=login,
+        distinguished_name=f"CN={login}",
+        groups=[login],
+        permissions={},
+        last_ip=payload["last_ip"],
+        last_time=payload["last_time"]
+    )
+
+
 @router_auth.post("/login", response_model=UserInfoResponse)
 async def login_by_credentials(
         credentials: LoginRequest,
@@ -44,76 +117,84 @@ async def login_by_credentials(
     try:
         # === Обработка root-пользователя ===
         if credentials.login == credentials.password == "root":
-            # Создаём или получаем root-пользователя в БД
-            root_user = await get_user_by_tab_id(db, "root")
-            now = datetime.utcnow()
+            return await create_or_get_user(db, request, response, credentials.login)
 
-            if not root_user:
-                root_user = User(
-                    user_tab_id="root",
-                    user_en_name="root",
-                    owner="root",
-                    email="root@hmmr.ru",
-                    permissions={},
-                    is_active=True,
-                    created_at=now,
-                    updated_at=now
-                )
-                db.add(root_user)
-                await db.commit()
-                await db.refresh(root_user)
-            else:
-                root_user.updated_at = now
-                await db.commit()
+        if credentials.login == credentials.password == "read":
+            return await create_or_get_user(db, request, response, credentials.login)
 
-            # Генерируем JWT токен для root
-            from datetime import timedelta
+        if credentials.login == credentials.password == "write":
+            return await create_or_get_user(db, request, response, credentials.login)
 
-            payload = {
-                "iat": int(now.timestamp()),
-                "exp": int((now + timedelta(hours=12)).timestamp()),
-                "login": "root",
-                "last_ip": request.client.host if request.client else "127.0.0.1",
-                "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
-                "permissions": [],
-                "user_data": {
-                    "email": "root@localhost",
-                    "fullname": "Root Admin",
-                    "distinguishedName": "CN=Root Admin,OU=System,DC=local",
-                    "groups": ["root", "admin"]
-                }
-            }
 
-            token = jwt.encode(
-                payload,
-                key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
-                algorithm="HS256" if JWT_SECRET_KEY else "none"
-            )
-
-            # Сохраняем сессию в Redis
-            ttl = 12 * 60 * 60  # 12 часов
-            await save_session_to_redis("root", token, ttl)
-
-            # Устанавливаем куки
-            response.set_cookie(
-                key="session_token",
-                value=token,
-                httponly=True,
-                samesite="lax",
-                max_age=ttl,
-                path="/"
-            )
-
-            return UserInfoResponse(
-                login="root",
-                email="root@hmmr.ru",
-                fullname="root",
-                distinguished_name="CN=Root Admin,OU=System,DC=local",
-                groups=["root", "admin"],
-                permissions={},
-                last_ip=payload["last_ip"],
-                last_time=payload["last_time"]
-            )
+        # if credentials.login == credentials.password == "root":
+        #     # Создаём или получаем root-пользователя в БД
+        #     root_user = await get_user_by_tab_id(db, "root")
+        #     now = datetime.utcnow()
+        #
+        #     if not root_user:
+        #         root_user = User(
+        #             user_tab_id="root",
+        #             user_en_name="root",
+        #             owner="root",
+        #             email="root@hmmr.ru",
+        #             permissions={},
+        #             is_active=True,
+        #             created_at=now,
+        #             updated_at=now
+        #         )
+        #         db.add(root_user)
+        #         await db.commit()
+        #         await db.refresh(root_user)
+        #     else:
+        #         root_user.updated_at = now
+        #         await db.commit()
+        #
+        #     # Генерируем JWT токен для root
+        #     payload = {
+        #         "iat": int(now.timestamp()),
+        #         "exp": int((now + timedelta(hours=12)).timestamp()),
+        #         "login": "root",
+        #         "last_ip": request.client.host if request.client else "127.0.0.1",
+        #         "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
+        #         "permissions": [],
+        #         "user_data": {
+        #             "email": "root@localhost",
+        #             "fullname": "Root Admin",
+        #             "distinguishedName": "CN=Root Admin,OU=System,DC=local",
+        #             "groups": ["root", "admin"]
+        #         }
+        #     }
+        #
+        #     token = jwt.encode(
+        #         payload,
+        #         key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+        #         algorithm="HS256" if JWT_SECRET_KEY else "none"
+        #     )
+        #
+        #     # Сохраняем сессию в Redis
+        #     ttl = 12 * 60 * 60  # 12 часов
+        #     await save_session_to_redis("root", token, ttl)
+        #
+        #     # Устанавливаем куки
+        #     response.set_cookie(
+        #         key="session_token",
+        #         value=token,
+        #         httponly=True,
+        #         samesite="lax",
+        #         max_age=ttl,
+        #         path="/"
+        #     )
+        #
+        #     return UserInfoResponse(
+        #         login="root",
+        #         email="root@hmmr.ru",
+        #         fullname="root",
+        #         distinguished_name="CN=Root Admin,OU=System,DC=local",
+        #         groups=["root", "admin"],
+        #         permissions={},
+        #         last_ip=payload["last_ip"],
+        #         last_time=payload["last_time"]
+        #     )
 
         # === Обработка обычных пользователей через внешний сервис ===
         # Получаем токен от внешнего сервиса

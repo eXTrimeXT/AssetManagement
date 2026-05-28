@@ -10,13 +10,33 @@ T = TypeVar('T')
 # === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
 def check_root(user_tab_id):
-    """Проверяем является ли текущий пользователь root-пользователем"""
-    # === ROOT-ПРОВЕРКА: если user_tab_id == "root" — разрешаем всё ===
+    """Проверяем является ли текущий пользователь root-пользователем, проверка и разрешение на `всё`"""
     return user_tab_id == "root"
 
+def check_read(user_tab_id):
+    """
+        Проверяем является ли текущий пользователь `read`-пользователем
+        Проверка и разрешение только на `чтение`.
+        """
+    return user_tab_id == "read"
+
+def check_write(user_tab_id):
+    """
+        Проверяем является ли текущий пользователь `write`-пользователем,
+        Проверка и разрешение только на `запись`, `создание`, `удаление`.
+    """
+    return user_tab_id == "write"
+
 def has_read_permission(user: User, group_name: str | None) -> bool:
-    """Проверяет право `read` на группу. Root имеет доступ ко всему."""
+    """
+        Проверяет право `read` на группу.
+        Пользователь Root имеет доступ ко всему.
+        Пользователь read может просматривать всё.
+    """
     if check_root(user.user_tab_id):
+        return True
+
+    if check_read(user.user_tab_id):
         return True
 
     if not group_name or not user.permissions:
@@ -25,7 +45,15 @@ def has_read_permission(user: User, group_name: str | None) -> bool:
     return bool(group_perms and group_perms.get("read"))
 
 def has_write_permission(user: User, group_name: str | None) -> bool:
+    """
+        Проверяет право `write` на группу.
+        Пользователь Root имеет доступ ко всему.
+        Пользователь write имеет доступ на запись, создание, удаление.
+    """
     if check_root(user.user_tab_id):
+        return True
+
+    if check_write(user.user_tab_id):
         return True
 
     if not group_name or not user.permissions:

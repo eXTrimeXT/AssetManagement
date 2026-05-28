@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 
@@ -7,6 +9,8 @@ from app.schemas.locations.LocationResponse import LocationResponse, LocationSho
 # Импорт CRUD функций
 from app.database.crud_locations import *
 from app.service.auth.auth_service import require_authorized_user
+
+logger = logging.getLogger(__name__)
 
 router_locations = APIRouter(prefix="/locations", tags=["Locations"], dependencies=[Depends(require_authorized_user)])
 
@@ -40,6 +44,7 @@ async def get_location_endpoint(
     """Получить полную информацию о локации по ID"""
     location = await get_location_by_id(db, location_id)
     if not location:
+        logger.warning("Локация не найдена")
         raise HTTPException(status_code=404, detail="Локация не найдена")
     return location
 
@@ -53,6 +58,7 @@ async def update_location_endpoint(
     """Обновить данные локации"""
     updated_location = await update_location(db, location_id, location_data)
     if not updated_location:
+        logger.warning("Локация не найдена")
         raise HTTPException(status_code=404, detail="Локация не найдена")
     return updated_location
 
@@ -65,5 +71,6 @@ async def delete_location_endpoint(
     """Удалить локацию"""
     success = await delete_location(db, location_id)
     if not success:
+        logger.warning("Локация не найдена")
         raise HTTPException(status_code=404, detail="Локация не найдена")
     return None

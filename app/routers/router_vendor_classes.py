@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -18,6 +20,8 @@ from app.database.crud_vendor_classes import (
 )
 from app.service.auth.auth_service import require_authorized_user
 
+logger = logging.getLogger(__name__)
+
 router_vendor_classes = APIRouter(prefix="/vendor-classes", tags=["Vendor Classes"], dependencies=[Depends(require_authorized_user)])
 
 
@@ -28,6 +32,7 @@ async def create_vendor_class_endpoint(
 ):
     """Создать новый класс вендора/поставщика"""
     if await check_vendor_class_name_exists(db, data.name):
+        logger.warning("Класс с таким названием уже существует")
         raise HTTPException(status_code=400, detail="Класс с таким названием уже существует")
 
     return await create_vendor_class(db, data)
@@ -51,6 +56,7 @@ async def get_vendor_class_endpoint(
     """Получить класс по ID"""
     obj = await get_vendor_class_by_id(db, vendor_class_id)
     if not obj:
+        logger.warning("Класс не найден")
         raise HTTPException(status_code=404, detail="Класс не найден")
     return obj
 
@@ -66,10 +72,12 @@ async def update_vendor_class_endpoint(
         current = await get_vendor_class_by_id(db, vendor_class_id)
         if current and data.name != current.name:
             if await check_vendor_class_name_exists(db, data.name, exclude_id=vendor_class_id):
+                logger.warning("Класс с таким названием уже существует")
                 raise HTTPException(status_code=400, detail="Класс с таким названием уже существует")
 
     updated_obj = await update_vendor_class(db, vendor_class_id, data)
     if not updated_obj:
+        logger.warning("Класс не найден")
         raise HTTPException(status_code=404, detail="Класс не найден")
     return updated_obj
 
@@ -82,5 +90,6 @@ async def delete_vendor_class_endpoint(
     """Удалить класс"""
     success = await delete_vendor_class(db, vendor_class_id)
     if not success:
+        logger.warning("Класс не найден")
         raise HTTPException(status_code=404, detail="Класс не найден")
     return None

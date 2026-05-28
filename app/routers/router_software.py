@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
@@ -19,6 +21,8 @@ from app.database.crud_software import (
     get_assets_by_software_id
 )
 from app.service.auth.auth_service import require_authorized_user
+
+logger = logging.getLogger(__name__)
 
 router_software = APIRouter(prefix="/software", tags=["Software"], dependencies=[Depends(require_authorized_user)])
 
@@ -47,6 +51,7 @@ async def get_software_endpoint(software_id: int, db: AsyncSession = Depends(get
     """Получить запись о ПО по ID"""
     software = await get_software_by_id(db, software_id)
     if not software:
+        logger.warning("Запись о ПО не найдена")
         raise HTTPException(status_code=404, detail="Запись о ПО не найдена")
     return software
 
@@ -55,6 +60,7 @@ async def update_software_endpoint(software_id: int, software_data: SoftwareUpda
     """Обновить запись о ПО"""
     updated_software = await update_software(db, software_id, software_data)
     if not updated_software:
+        logger.warning("Запись о ПО не найдена")
         raise HTTPException(status_code=404, detail="Запись о ПО не найдена")
     return updated_software
 
@@ -65,11 +71,13 @@ async def delete_software_endpoint(software_id: int, db: AsyncSession = Depends(
     # 1. Проверка существования
     software = await get_software_by_id(db, software_id)
     if not software:
+        logger.warning("Запись о ПО не найдена")
         raise HTTPException(status_code=404, detail="Запись о ПО не найдена")
 
     # 2. Проверка привязок
     if await check_software_has_assets(db, software_id):
-        raise HTTPException(status_code=400, detail="Невозможно удалить ПО, привязанное к активам.")
+        logger.warning("Невозможно удалить ПО, привязанное к активам")
+        raise HTTPException(status_code=400, detail="Невозможно удалить ПО, привязанное к активам")
 
     # 3. Удаление
     await delete_software(db, software_id)
@@ -82,6 +90,7 @@ async def get_assets_by_software_endpoint(software_id: int, db: AsyncSession = D
     # Проверка существования ПО
     software = await get_software_by_id(db, software_id)
     if not software:
+        logger.warning("Запись о ПО не найдена")
         raise HTTPException(status_code=404, detail="Запись о ПО не найдена")
 
     return await get_assets_by_software_id(db, software_id)

@@ -1,6 +1,7 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-
 from app.database.connection import get_db
 from app.schemas.divisions.DivisionResponse import DivisionResponse, DivisionShortResponse, DivisionWithGroupsResponse
 from app.schemas.divisions.DivisionCreate import DivisionCreate
@@ -8,6 +9,8 @@ from app.schemas.divisions.DivisionUpdate import DivisionUpdate
 from app.database.crud_divisions import *
 from app.service.auth.auth_service import require_authorized_user
 from app.models.Group import Group
+
+logger = logging.getLogger(__name__)
 
 router_divisions = APIRouter(prefix="/divisions", tags=["Divisions"], dependencies=[Depends(require_authorized_user)])
 
@@ -20,6 +23,7 @@ async def create_division_endpoint(
     try:
         return await create_division(db, division_in)
     except IntegrityError:
+        logger.warning(f"Отдел с аббревиатурой '{division_in.abbreviation}' уже существует")
         raise HTTPException(
             status_code=400,
             detail=f"Отдел с аббревиатурой '{division_in.abbreviation}' уже существует"
@@ -45,6 +49,7 @@ async def get_division_endpoint(
 ):
     division = await get_division_by_id(db, division_id)
     if not division:
+        logger.warning("Отдел не найден")
         raise HTTPException(status_code=404, detail="Отдел не найден")
 
     result = await db.execute(
@@ -76,6 +81,7 @@ async def update_division_endpoint(
             raise HTTPException(status_code=404, detail="Отдел не найден")
         return updated_department
     except IntegrityError:
+        logger.warning(f"Аббревиатура '{division_data.abbreviation}' уже занята")
         raise HTTPException(
             status_code=400,
             detail=f"Аббревиатура '{division_data.abbreviation}' уже занята"
@@ -89,5 +95,6 @@ async def delete_division_endpoint(
 ):
     success = await delete_division(db, division_id)
     if not success:
+        logger.warning("Отдел не найден")
         raise HTTPException(status_code=404, detail="Отдел не найден")
     return None

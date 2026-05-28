@@ -1,3 +1,4 @@
+import logging
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,8 @@ from app.service.redis.redis_client import redis_client
 from app.database.crud_users import get_user_by_tab_id
 from app.models.User import User
 from app.service.auth.external_auth import external_login
+
+logger = logging.getLogger(__name__)
 
 router_auth = APIRouter(tags=["auth"])
 
@@ -119,6 +122,7 @@ async def login_by_credentials(
         # Декодируем токен для извлечения данных пользователя
         user_data: UserJWTData = get_user_from_token(token)
         if user_data.is_expired:
+            logger.warning("Срок действия токена истек")
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         # Создаём/обновляем пользователя в БД
@@ -150,14 +154,17 @@ async def login_by_credentials(
             max_age=ttl,
             path="/"
         )
-
+        logger.info("Авторизация успешна")
         return user_data.to_dict()
 
     except RuntimeError as e:
+        logger.error(f"Ошибка времени выполнения: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Ошибка времени выполнения: {str(e)}")
     except TokenValidationError as e:
+        logger.warning(f"Недопустимый токен: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
     except Exception as e:
+        logger.error(f"Внутренняя ошибка: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 @router_auth.post("/auth_token", response_model=UserInfoResponse)
@@ -171,6 +178,7 @@ async def auth_token(
     try:
         user_data: UserJWTData = get_user_from_token(request.token)
         if user_data.is_expired:
+            logger.warning("Срок действия токена истек")
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         await create_or_update_user_from_token(db, user_data)
@@ -201,8 +209,10 @@ async def auth_token(
         return user_data.to_dict()
 
     except TokenValidationError as e:
+        logger.warning(f"Недопустимый токен: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
     except Exception as e:
+        logger.error(f"Внутренняя ошибка: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 @router_auth.post("/logout")

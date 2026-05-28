@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
@@ -18,6 +19,8 @@ from app.models.Division import Division
 from app.models.Group import Group
 from app.schemas.departments.SearchByAbbResponse import SearchByAbbreviationResponse
 
+logger = logging.getLogger(__name__)
+
 router_departments = APIRouter(
     prefix="/departments",
     tags=["Departments"],
@@ -33,6 +36,7 @@ async def create_department_endpoint(
     try:
         return await create_department(db, department_in)
     except IntegrityError:
+        logger.warning(f"Департамент с аббревиатурой '{department_in.abbreviation}' уже существует")
         raise HTTPException(
             status_code=400,
             detail=f"Департамент с аббревиатурой '{department_in.abbreviation}' уже существует"
@@ -57,6 +61,7 @@ async def get_department_endpoint(
 ):
     department = await get_department_by_id(db, department_id)
     if not department:
+        logger.warning("Департамент не найден")
         raise HTTPException(status_code=404, detail="Департамент не найден")
 
     # Получаем все отделы департамента
@@ -99,9 +104,11 @@ async def update_department_endpoint(
     try:
         updated_department = await update_department(db, department_id, department_data)
         if not updated_department:
+            logger.warning("Департамент не найден")
             raise HTTPException(status_code=404, detail="Департамент не найден")
         return updated_department
     except IntegrityError:
+        logger.warning(f"Аббревиатура '{department_data.abbreviation}' уже занята")
         raise HTTPException(
             status_code=400,
             detail=f"Аббревиатура '{department_data.abbreviation}' уже занята"
@@ -115,6 +122,7 @@ async def delete_department_endpoint(
 ):
     success = await delete_department(db, department_id)
     if not success:
+        logger.warning("Департамент не найден")
         raise HTTPException(status_code=404, detail="Департамент не найден")
     return None
 
@@ -157,5 +165,5 @@ async def search_by_abbreviation_endpoint(
             name=item.name,
             abbreviation=item.abbreviation
         )
-
+    logger.warning("Подразделение с указанной аббревиатурой не найдено")
     raise HTTPException(status_code=404, detail="Подразделение с указанной аббревиатурой не найдено")

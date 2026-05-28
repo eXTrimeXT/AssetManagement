@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -18,6 +19,8 @@ from app.database.crud_companies import (
 )
 from app.service.auth.auth_service import require_authorized_user
 
+logger = logging.getLogger(__name__)
+
 router_companies = APIRouter(prefix="/companies", tags=["Companies"], dependencies=[Depends(require_authorized_user)])
 
 
@@ -28,6 +31,7 @@ async def create_company_endpoint(
 ):
     """Создать новую компанию"""
     if await check_company_name_exists(db, data.company_name):
+        logger.warning("Компания с таким названием уже существует")
         raise HTTPException(status_code=400, detail="Компания с таким названием уже существует")
 
     return await create_company(db, data)
@@ -51,6 +55,7 @@ async def get_company_endpoint(
     """Получить компанию по ID"""
     obj = await get_company_by_id(db, company_id)
     if not obj:
+        logger.warning("Компания не найдена")
         raise HTTPException(status_code=404, detail="Компания не найдена")
     return obj
 
@@ -66,10 +71,12 @@ async def update_company_endpoint(
         current = await get_company_by_id(db, company_id)
         if current and data.company_name != current.company_name:
             if await check_company_name_exists(db, data.company_name, exclude_id=company_id):
+                logger.warning("Компания с таким названием уже существует")
                 raise HTTPException(status_code=400, detail="Компания с таким названием уже существует")
 
     updated_obj = await update_company(db, company_id, data)
     if not updated_obj:
+        logger.warning("Компания не найдена")
         raise HTTPException(status_code=404, detail="Компания не найдена")
     return updated_obj
 
@@ -82,5 +89,6 @@ async def delete_company_endpoint(
     """Удалить компанию"""
     success = await delete_company(db, company_id)
     if not success:
+        logger.warning("Компания не найдена")
         raise HTTPException(status_code=404, detail="Компания не найдена")
     return None

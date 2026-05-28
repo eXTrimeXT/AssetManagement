@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -17,6 +19,8 @@ from app.database.crud_warehouses import (
 )
 from app.service.auth.auth_service import require_authorized_user
 
+logger = logging.getLogger(__name__)
+
 router_warehouses = APIRouter(prefix="/warehouses", tags=["Warehouses"], dependencies=[Depends(require_authorized_user)])
 
 
@@ -24,6 +28,7 @@ router_warehouses = APIRouter(prefix="/warehouses", tags=["Warehouses"], depende
 async def create_warehouse_endpoint(warehouse_in: WarehouseCreate, db: AsyncSession = Depends(get_db)):
     """Создать новый склад"""
     if await check_name_exists(db, warehouse_in.name):
+        logger.warning("Склад с таким названием уже существует")
         raise HTTPException(status_code=400, detail="Склад с таким названием уже существует")
 
     # Опционально: можно добавить проверку существования location_id и prepared_by перед созданием
@@ -44,6 +49,7 @@ async def get_warehouse_endpoint(warehouse_id: int, db: AsyncSession = Depends(g
     """Получить полную информацию о складе по ID"""
     warehouse = await get_warehouse_by_id(db, warehouse_id)
     if not warehouse:
+        logger.warning("Склад не найден")
         raise HTTPException(status_code=404, detail="Склад не найден")
     return warehouse
 
@@ -55,10 +61,12 @@ async def update_warehouse_endpoint(warehouse_id: int, warehouse_data: Warehouse
         current = await get_warehouse_by_id(db, warehouse_id)
         if current and warehouse_data.name != current.name:
             if await check_name_exists(db, warehouse_data.name, exclude_id=warehouse_id):
+                logger.warning("Склад с таким названием уже существует")
                 raise HTTPException(status_code=400, detail="Склад с таким названием уже существует")
 
     updated_warehouse = await update_warehouse(db, warehouse_id, warehouse_data)
     if not updated_warehouse:
+        logger.warning("Склад не найден")
         raise HTTPException(status_code=404, detail="Склад не найден")
     return updated_warehouse
 
@@ -67,5 +75,6 @@ async def delete_warehouse_endpoint(warehouse_id: int, db: AsyncSession = Depend
     """Удалить склад"""
     success = await delete_warehouse(db, warehouse_id)
     if not success:
+        logger.warning("Склад не найден")
         raise HTTPException(status_code=404, detail="Склад не найден")
     return None

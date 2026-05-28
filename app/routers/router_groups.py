@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 
@@ -7,6 +9,8 @@ from app.schemas.groups.GroupCreate import GroupCreate
 from app.schemas.groups.GroupUpdate import GroupUpdate
 from app.database.crud_groups import *
 from app.service.auth.auth_service import require_authorized_user
+
+logger = logging.getLogger(__name__)
 
 router_groups = APIRouter(prefix="/groups", tags=["Groups"], dependencies=[Depends(require_authorized_user)])
 
@@ -38,6 +42,7 @@ async def get_group_endpoint(
 ):
     group = await get_group_by_id(db, group_id)
     if not group:
+        logger.warning("Группа не найдена")
         raise HTTPException(status_code=404, detail="Группа не найдена")
     return group
 
@@ -50,6 +55,7 @@ async def update_group_endpoint(
 ):
     updated_group = await update_group(db, group_id, group_data)
     if not updated_group:
+        logger.warning("Группа не найдена")
         raise HTTPException(status_code=404, detail="Группа не найдена")
     return updated_group
 
@@ -61,5 +67,6 @@ async def delete_group_endpoint(
 ):
     success = await delete_group(db, group_id)
     if not success:
+        logger.warning("Группа не найдена")
         raise HTTPException(status_code=404, detail="Группа не найдена")
     return None

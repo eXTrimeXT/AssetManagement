@@ -2,7 +2,7 @@ import structlog
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError
 
 from app.database.connection import get_db
 from app.database.crud_asset_types import (
@@ -12,7 +12,7 @@ from app.database.crud_asset_types import (
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 from app.service.auth.auth_service import require_authorized_user
 from app.models.AssetType import AssetType
-from app.service.permissions.permissions_rules import FilteredByAccess, has_read_permission, has_write_permission
+from app.service.permissions.permissions_rules import has_read_permission, has_write_permission
 
 logger = structlog.get_logger()
 
@@ -28,18 +28,19 @@ async def create(
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    log = logger.bind(action="create_asset_type", requested_en_name=data.en_name)
     if not has_write_permission(current_user, data.en_name):
-        log.warning("forbidden", reason="no_write_permission", en_name=data.en_name)
+        logger.warning("forbidden", reason="no_write_permission", status_code=403)
         raise HTTPException(status_code=403, detail=f"Доступ на запись к ресурсу типа '{data.en_name}' не разрешен")
 
     try:
         new_obj = await create_asset_type(db, data)
-        log.info("success", name=new_obj.name, en_name=new_obj.en_name)
+        logger.info("success", reason="Тип создан", status_code=200)
         return new_obj
     except IntegrityError as e:
+        logger.error("error", reason="Нарушение ограничений базы данных")
         raise HTTPException(status_code=400, detail="Нарушение ограничений базы данных")
     except Exception as e:
+        logger.error("error", f"Ошибка {str(e)}", status_code=500)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router_assets_types.get("/", response_model=List[AssetTypeResponse])

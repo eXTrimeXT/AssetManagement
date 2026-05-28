@@ -137,8 +137,8 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 token,
                 options={"verify_signature": False, "verify_exp": True}
             )
-        logger.info(f"{payload=}")
-        print(f"{payload=}")
+        # logger.info(f"{payload=}")
+        # print(f"{payload=}")
         return payload
     except jwt.ExpiredSignatureError:
         raise TokenValidationError("Срок действия токена истек")

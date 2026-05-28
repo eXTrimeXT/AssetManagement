@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -6,6 +8,8 @@ from app.database.crud_operations import get_history_by_inventory_id, get_histor
 from app.schemas.operations.AssetOperationSchemas import AssetOperationResponse
 from app.service.auth.auth_service import require_authorized_user
 
+
+logger = logging.getLogger(__name__)
 router_assets_history = APIRouter(prefix="/assets", tags=["Assets History"], dependencies=[Depends(require_authorized_user)])
 
 @router_assets_history.get("/history/inv_id/{inventory_id}", response_model=List[AssetOperationResponse])
@@ -23,6 +27,7 @@ async def get_asset_history_by_inventory_id(
     history = await get_history_by_inventory_id(db, inventory_id, skip, limit)
 
     if not history and skip == 0:
+        logger.error("История для данного инвентарного номера не найдена")
         raise HTTPException(status_code=404, detail="История для данного инвентарного номера не найдена")
 
     return history
@@ -40,6 +45,7 @@ async def get_asset_history_by_asset_id(
     """
     history = await get_history_by_asset_id(db, asset_id, skip, limit)
     if not history and skip == 0:
+        logger.error("История для данного инвентарного номера не найдена")
         raise HTTPException(status_code=404, detail="История для данного инвентарного номера не найдена")
 
     return history

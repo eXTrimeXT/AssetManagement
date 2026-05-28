@@ -1,130 +1,298 @@
+# app/middleware/LoggingMiddleware.py
 import logging
 import uuid
 import time
-import os
+import sys
 import json
+import re
+import traceback
 import structlog
-from datetime import datetime
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional, Dict, Any
+from fastapi import Request, HTTPException, status
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response
 from app.service.auth.auth_service import extract_login_from_request
 
-# === НАСТРОЙКА ЛОГИРОВАНИЯ В ФАЙЛ ===
-LOG_DIR = "/logs"
-LOG_FILE = os.path.join(LOG_DIR, "app.log")
+# === КОНФИГУРАЦИЯ ===
+PROJECT_ROOT = Path("/app")
+LOG_DIR = Path("/logs")
+LOG_FILE = LOG_DIR / "app.log"
+EXCLUDED_MODULE = "LoggingMiddleware"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-# Создаём директорию, если не существует
-os.makedirs(LOG_DIR, exist_ok=True)
+# Regex для ANSI-кодов
+ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
 
-# Файловый хендлер с ротацией (опционально)
-file_handler = logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8')
-file_handler.setLevel(logging.INFO)
+def _strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE.sub('', text)
 
-# Форматтер для файла (текстовый или JSON)
-class JSONFormatter(logging.Formatter):
+def _get_relative_path(filepath: str) -> str:
+    try:
+        return str(Path(filepath).relative_to(PROJECT_ROOT))
+    except ValueError:
+        return filepath
+
+# === ФИЛЬТР: только файлы проекта /app, исключая LoggingMiddleware ===
+class ProjectFileFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not record.pathname:
+            return False
+        pathname = Path(record.pathname)
+        if not str(pathname).startswith(str(PROJECT_ROOT)):
+            return False
+        if pathname.name == f"{EXCLUDED_MODULE}.py":
+            return False
+        return True
+
+# === ФОРМАТТЕР ДЛЯ КОНСОЛИ ===
+class ConsoleFormatter(logging.Formatter):
+    COLORS = {
+        "DEBUG": "\033[36m", "INFO": "\033[32m", "WARNING": "\033[33m",
+        "ERROR": "\033[31m", "CRITICAL": "\033[35m", "RESET": "\033[0m",
+        "BOLD": "\033[1m", "GRAY": "\033[90m"
+    }
+
     def format(self, record: logging.LogRecord) -> str:
-        log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "logger": record.name,
-            "module": record.module,
-            "function": record.funcName,
-            "line": record.lineno,
-        }
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        level = record.levelname
+        color = self.COLORS.get(level, self.COLORS["RESET"])
+        rel_path = _get_relative_path(record.pathname)
+        msg = _strip_ansi(record.getMessage())
+
+        parts = [
+            f"{color}{self.COLORS['BOLD']}{level:8s}{self.COLORS['RESET']}",
+            f"{self.COLORS['GRAY']}{timestamp}{self.COLORS['RESET']}",
+            f"{self.COLORS['GRAY']}[{rel_path}:{record.funcName}:{record.lineno}]{self.COLORS['RESET']}",
+            f"- {msg}"
+        ]
+
+        ctx = {}
+        for key in ["request_id", "client_ip", "user_login", "route", "method",
+                    "status_code", "duration_ms", "query_params", "request_body",
+                    "error_type", "error_message", "permission_check"]:
+            val = getattr(record, key, None)
+            if val is not None:
+                ctx[key] = val
+
+        if ctx:
+            ctx_str = " | ".join(f"{k}={v}" for k, v in ctx.items())
+            parts.append(f"{self.COLORS['GRAY']}[{ctx_str}]{self.COLORS['RESET']}")
+
         if record.exc_info:
-            log_entry["exception"] = self.formatException(record.exc_info)
-        if hasattr(record, "request_id"):
-            log_entry["request_id"] = record.request_id
-        if hasattr(record, "user_login"):
-            log_entry["user_login"] = record.user_login
-        if hasattr(record, "duration_ms"):
-            log_entry["duration_ms"] = record.duration_ms
-        if hasattr(record, "status_code"):
-            log_entry["status_code"] = record.status_code
-        return json.dumps(log_entry, ensure_ascii=False)
+            exc_text = self.formatException(record.exc_info)
+            filtered = []
+            for line in exc_text.split("\n"):
+                clean = _strip_ansi(line)
+                if "/app/" in clean and EXCLUDED_MODULE not in clean:
+                    filtered.append(f"{self.COLORS['GRAY']}{clean}{self.COLORS['RESET']}")
+                elif clean.strip() and not any(s in clean for s in ["site-packages", "starlette", "fastapi"]):
+                    filtered.append(f"{color}{clean}{self.COLORS['RESET']}")
+            if filtered:
+                parts.append("\n" + "\n".join(filtered))
 
-file_handler.setFormatter(JSONFormatter())
+        return " ".join(parts)
 
-# Настройка root-логгера
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
-# Убираем дублирующиеся хендлеры
-root_logger.handlers = [h for h in root_logger.handlers if not isinstance(h, logging.FileHandler)]
-root_logger.addHandler(file_handler)
+# === ФОРМАТТЕР ДЛЯ ФАЙЛА (JSON) ===
+class FileJSONFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        rel_path = _get_relative_path(record.pathname)
+        log_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            "level": record.levelname,
+            "message": _strip_ansi(record.getMessage()),
+            "logger": record.name,
+            "location": {
+                "filename": Path(record.pathname).name,
+                "filepath": rel_path,
+                "full_path": record.pathname,
+                "function": record.funcName,
+                "line": record.lineno,
+            },
+        }
 
-# === НАСТРОЙКА STRUCTLOG (для консоли/отладки) ===
-structlog.configure(
-    processors=[
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.dev.ConsoleRenderer() if os.getenv("ENV", "dev") == "dev" else structlog.processors.JSONRenderer(),
-    ],
-    wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-    context_class=dict,
-    logger_factory=structlog.PrintLoggerFactory(),
-    cache_logger_on_first_use=True,
-)
+        for key in [
+            "request_id", "client_ip", "user_login", "route", "method", "url",
+            "duration_ms", "status_code", "error_type", "error_message",
+            "query_params", "request_body", "permission_check"
+        ]:
+            val = getattr(record, key, None)
+            if val is not None:
+                log_entry[key] = val
 
-logger = structlog.get_logger()
+        if record.exc_info:
+            log_entry["exception"] = {
+                "type": record.exc_info[0].__name__ if record.exc_info[0] else None,
+                "value": str(record.exc_info[1]) if record.exc_info[1] else None,
+                "traceback": [_strip_ansi(l) for l in traceback.format_exception(*record.exc_info)]
+            }
+
+        return json.dumps(log_entry, ensure_ascii=False, default=str)
+
+
+# === НАСТРОЙКА ЛОГИРОВАНИЯ ===
+_logging_configured = False
+
+def setup_logging():
+    global _logging_configured
+    if _logging_configured:
+        return
+    _logging_configured = True
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(ConsoleFormatter())
+    console_handler.addFilter(ProjectFileFilter())
+
+    file_handler = logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(FileJSONFormatter())
+    file_handler.addFilter(ProjectFileFilter())
+
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    root.handlers.clear()
+    root.addHandler(console_handler)
+    root.addHandler(file_handler)
+    root.propagate = False
+
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+    logging.getLogger("structlog").setLevel(logging.WARNING)
+
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.format_exc_info,
+            structlog.stdlib.ExtraAdder(),
+            structlog.processors.KeyValueRenderer(),
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+
+setup_logging()
+logger = logging.getLogger("app.middleware")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Генерируем уникальный ID запроса
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = str(uuid.uuid4())
-
-        # Извлекаем логин пользователя (если есть)
         user_login = await extract_login_from_request(request)
+        client_ip = request.client.host if request.client else None
+        route_path = request.url.path
+        method = request.method
 
-        # Создаём логгер с контекстом
-        log = logger.bind(
+        # Флаги для контроля логирования
+        response_status_code = 200
+        response_received = False
+
+        request_body = None
+        if method in ("POST", "PUT", "PATCH") and request.headers.get("content-type", "").startswith("application/json"):
+            try:
+                body = await request.body()
+                request_body = json.loads(body.decode("utf-8"))
+                request._body = body
+            except Exception:
+                pass
+
+        # Привязываем контекст ко ВСЕМ логам в рамках этого запроса
+        structlog.contextvars.bind_contextvars(
             request_id=request_id,
-            method=request.method,
-            url=str(request.url),
-            user_login=user_login
+            client_ip=client_ip,
+            user_login=user_login,
+            route=route_path,
+            method=method,
+            query_params=dict(request.query_params) if request.query_params else None,
+            request_body=request_body
         )
-
-        # Добавляем контекст в стандартный logging (для file_handler)
-        std_log = logging.getLogger("app.requests")
-        std_log_extra = {
-            "request_id": request_id,
-            "user_login": user_login
-        }
 
         start_time = time.time()
 
         try:
-            response = await call_next(request)
-            # === ДОБАВЛЯЕМ ЗАГОЛОВОК С REQUEST_ID ===
+            response: Response = await call_next(request)
+            process_time = time.time() - start_time
+            response_status_code = response.status_code
+            response_received = True
+
+            # Добавляем ID запроса в заголовок ответа
             response.headers["X-Request-ID"] = request_id
 
-            process_time = time.time() - start_time
+            # Логируем успешный ответ
+            log_level = logging.INFO if response_status_code < 400 else logging.WARNING
+            logger.log(
+                log_level,
+                f"{method} {route_path} → {response_status_code}",
+                extra={
+                    "request_id": request_id,
+                    "client_ip": client_ip,
+                    "user_login": user_login,
+                    "route": route_path,
+                    "method": method,
+                    "url": str(request.url),
+                    "duration_ms": round(process_time * 1000, 2),
+                    "status_code": response_status_code,
+                    "query_params": dict(request.query_params) if request.query_params else None,
+                    "request_body": request_body
+                }
+            )
 
-            # Логируем успех
-            log.info(
-                "request_completed",
-                status_code=response.status_code,
-                duration_ms=round(process_time * 1000, 2),
-            )
-            std_log.info(
-                f"{request.method} {request.url.path} - {response.status_code}",
-                extra={**std_log_extra, "duration_ms": round(process_time * 1000, 2), "status_code": response.status_code}
-            )
             return response
-        except Exception as e:
+
+        except HTTPException as e:
             process_time = time.time() - start_time
-            # Логируем ошибку
-            log.error(
-                "request_failed",
-                error=str(e),
-                duration_ms=round(process_time * 1000, 2),
-                exc_info=True
-            )
-            std_log.error(
-                f"{request.method} {request.url.path} - ERROR: {str(e)}",
-                extra={**std_log_extra, "duration_ms": round(process_time * 1000, 2), "exc_info": True},
-                exc_info=True
+            response_status_code = e.status_code
+
+            # Логируем HTTP исключение
+            logger.error(
+                f"{method} {route_path} → HTTP {response_status_code}: {e.detail}",
+                exc_info=False,  # HTTP исключения не требуют traceback
+                extra={
+                    "request_id": request_id,
+                    "client_ip": client_ip,
+                    "user_login": user_login,
+                    "route": route_path,
+                    "method": method,
+                    "url": str(request.url),
+                    "duration_ms": round(process_time * 1000, 2),
+                    "status_code": response_status_code,
+                    "error_type": "HTTPException",
+                    "error_message": str(e.detail),
+                    "query_params": dict(request.query_params) if request.query_params else None,
+                    "request_body": request_body
+                }
             )
             raise
+
+        except Exception as e:
+            process_time = time.time() - start_time
+            response_status_code = 500
+
+            # Логируем внутреннюю ошибку сервера
+            logger.error(
+                f"{method} {route_path} → ERROR 500: {type(e).__name__}: {str(e)}",
+                exc_info=True,  # Внутренние ошибки требуют traceback
+                extra={
+                    "request_id": request_id,
+                    "client_ip": client_ip,
+                    "user_login": user_login,
+                    "route": route_path,
+                    "method": method,
+                    "url": str(request.url),
+                    "duration_ms": round(process_time * 1000, 2),
+                    "status_code": 500,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "query_params": dict(request.query_params) if request.query_params else None,
+                    "request_body": request_body
+                }
+            )
+            raise
+
+        finally:
+            # Очищаем контекст
+            structlog.contextvars.clear_contextvars()

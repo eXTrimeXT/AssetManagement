@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
@@ -16,6 +17,7 @@ from app.service.auth.auth_service import require_authorized_user, get_current_u
 from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
 from app.database.crud_catalog import get_asset_model_by_id
 
+logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depends(require_authorized_user)])
 
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
@@ -27,6 +29,7 @@ async def create_asset_endpoint(
     # 1. Получаем модель с загруженными связями
     model = await get_asset_model_by_id(db, asset_in.model_id)
     if not model:
+        logger.error("Модель актива не найдена")
         raise HTTPException(status_code=400, detail="Модель актива не найдена")
 
     # 2. Извлекаем en_name типа актива через цепочку: model -> class -> type
@@ -36,14 +39,18 @@ async def create_asset_endpoint(
 
     # 3. Проверка write на тип актива (используем en_name, а не ID!)
     if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
+        logger.error(f"Нет доступа на запись к типу '{asset_type_en_name}'")
         raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
 
     # 4. Остальные проверки
     if await check_duplicate_inventory_id(db, asset_in.inventory_id):
+        logger.error(f"Инвентарный номер уже существует")
         raise HTTPException(status_code=400, detail="Инвентарный номер уже существует")
     if await check_duplicate_serial_number(db, asset_in.serial_number):
+        logger.error(f"Серийный номер уже существует")
         raise HTTPException(status_code=400, detail="Серийный номер уже существует")
     if asset_in.parent_id and not await check_parent_exists(db, asset_in.parent_id):
+        logger.error(f"Родительский актив не найден")
         raise HTTPException(status_code=400, detail="Родительский актив не найден")
 
     # 5. Создаём актив
@@ -66,9 +73,11 @@ async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), 
     asset = await get_asset_by_id(db, asset_id)
 
     if not asset:
+        logger.error(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     if not has_read_permission(current_user, asset.model.asset_class.asset_type.en_name):
+        logger.error(f"Нет доступа для чтения")
         raise HTTPException(status_code=404, detail="Нет доступа для чтения")
     return asset
 
@@ -82,13 +91,16 @@ async def update_asset_endpoint(
 ):
     asset = await get_asset_by_id(db, asset_id)
     if not asset:
+        logger.error(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
+        logger.error(f"Нет доступа для записи")
         raise HTTPException(403, "Нет доступа для записи")
 
     updated_asset = await update_asset(db, asset_id, asset_data, current_user.user_id)
     if not updated_asset:
+        logger.error(f"Ошибка при обновлении")
         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
     return updated_asset
 
@@ -100,8 +112,12 @@ async def deactivate_asset_endpoint(
         db: AsyncSession = Depends(get_db)
 ):
     asset = await get_asset_by_id(db, asset_id)
-    if not asset: raise HTTPException(404, detail="Актив не найден")
-    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name): raise HTTPException(403, "Нет доступа для записи")
+    if not asset:
+        logger.error(f"Актив не найден")
+        raise HTTPException(404, detail="Актив не найден")
+    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
+        logger.error(f"Нет доступа для записи")
+        raise HTTPException(403, "Нет доступа для записи")
     return await deactivate_asset(db, asset_id, current_user.user_id)
 
 
@@ -112,7 +128,9 @@ async def activate_asset_endpoint(
         db: AsyncSession = Depends(get_db)
 ):
     activated = await activate_asset(db, asset_id, current_user.user_id)
-    if not activated: raise HTTPException(status_code=404, detail="Актив не найден")
+    if not activated:
+        logger.error(f"Актив не найден")
+        raise HTTPException(status_code=404, detail="Актив не найден")
     return activated
 
 
@@ -125,16 +143,20 @@ async def hard_delete_asset_endpoint(
     asset = await get_asset_with_deleted(db, asset_id)
 
     if not asset:
+        logger.error(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     if asset.deleted_at is None:
+        logger.error(f"Сначала деактивируйте актив.")
         raise HTTPException(status_code=400, detail="Сначала деактивируйте актив.")
 
     if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
+        logger.error(f"Нет доступа для записи")
         raise HTTPException(403, "Нет доступа для записи")
 
     success = await hard_delete_asset(db, asset_id, current_user.user_id)
     if not success:
+        logger.error(f"Ошибка при удалении актива")
         raise HTTPException(status_code=500, detail="Ошибка при удалении актива")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -153,9 +175,11 @@ async def get_all_asset_children_endpoint(
     """
     parent = await get_asset_with_deleted(db, asset_id)
     if not parent:
+        logger.error(f"Родительский актив не найден")
         raise HTTPException(status_code=404, detail="Родительский актив не найден")
 
     if not has_read_permission(current_user, parent.model.asset_class.asset_type.en_name):
+        logger.error(f"Нет доступа для чтения")
         raise HTTPException(status_code=403, detail="Нет доступа для чтения")
 
     # Получаем детей с загруженными связями

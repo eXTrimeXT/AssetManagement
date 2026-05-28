@@ -1,3 +1,6 @@
+import logging
+
+import structlog
 from fastapi import FastAPI, Depends
 
 from app.database.connection import engine
@@ -7,7 +10,7 @@ from app.models.Base import Base
 from contextlib import asynccontextmanager
 
 # Импорт класса логирования в middleware
-from app.middleware.LoggingMiddleware import LoggingMiddleware
+from app.middleware.LoggingMiddleware import LoggingMiddleware, setup_logging
 
 # Импорт роутеров
 from app.routers.router_assets import router_assets

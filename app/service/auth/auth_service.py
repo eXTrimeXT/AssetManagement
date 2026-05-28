@@ -14,6 +14,7 @@ from app.database.connection import get_db
 from app.service.redis.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
+
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
 
 class TokenValidationError(Exception):
@@ -37,6 +38,7 @@ async def get_token_from_request(request: Request) -> str:
     if token:
         return token.strip()
 
+    logger.warning("Токен не предоставлен")
     raise HTTPException(status_code=401, detail="Токен не предоставлен")
 
 # === Извлечение login из токена для логирования ===
@@ -69,8 +71,9 @@ async def extract_login_from_request(request: Request) -> Optional[str]:
             }
         )
         return payload.get("login")
-    except Exception:
+    except Exception as e:
         # Любая ошибка → возвращаем None, чтобы не ломать запрос
+        logger.error(f"Ошибка: {str(e)}")
         return None
 
 async def get_session_from_redis(login: str) -> Optional[Dict[str, Any]]:
@@ -88,25 +91,30 @@ async def require_authorized_user(
         user_data = get_user_from_token(token)
 
         if user_data.is_expired:
+            logger.warning("Срок действия токена истек")
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         session = await get_session_from_redis(user_data.login)
         if not session or session.get("token") != token:
+            logger.warning("Недействительный или просроченный сеанс")
             raise HTTPException(status_code=401, detail="Недействительный или просроченный сеанс")
 
         db_user = await get_user_by_tab_id(db, user_data.login)
         if not db_user:
+            logger.warning("Пользователь не найден в базе данных. Войдите в систему через /api/login или /api/auth_token")
             raise HTTPException(
                 status_code=403,
                 detail="Пользователь не найден в базе данных. Войдите в систему через /api/login или /api/auth_token"
             )
 
         if not db_user.is_active:
+            logger.warning("Учетная запись пользователя деактивирована")
             raise HTTPException(status_code=403, detail="Учетная запись пользователя деактивирована")
 
         return db_user
 
     except TokenValidationError as e:
+        logger.warning(f"Недопустимый токен: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
 
 async def get_current_user_id(
@@ -137,18 +145,17 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 token,
                 options={"verify_signature": False, "verify_exp": True}
             )
-        # logger.info(f"{payload=}")
-        # print(f"{payload=}")
         return payload
     except jwt.ExpiredSignatureError:
+        logger.warning("Срок действия токена истек")
         raise TokenValidationError("Срок действия токена истек")
     except jwt.InvalidTokenError as e:
+        logger.warning(f"Недопустимый токен: {str(e)}")
         raise TokenValidationError(f"Недопустимый токен: {str(e)}")
 
 def get_user_from_token(token: str, secret_key: Optional[str] = None) -> UserJWTData:
     key = secret_key or JWT_SECRET_KEY
     payload = decode_token(token, key)
-    # logger.info(f"{payload}")
     return UserJWTData(payload)
 
 def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
@@ -157,6 +164,7 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
         decode_token(token, key)
         return True
     except TokenValidationError:
+        logger.error("Исключение: TokenValidationError")
         return False
 
 

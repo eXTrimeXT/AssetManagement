@@ -1,8 +1,11 @@
+import logging
 import base64
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
+
+logger = logging.getLogger(__name__)
 
 API_BASE_URL = "http://gps-test.hmmr.ru/api"
 
@@ -33,5 +36,6 @@ def external_login(username: str, password: str) -> str:
 
     data = resp.json()
     if data.get("status") != "success":
+        logger.error(f"Ошибка авторизации: {data.get('msg')}")
         raise RuntimeError(f"Ошибка авторизации: {data.get('msg')}")
     return data["data"]["token"]

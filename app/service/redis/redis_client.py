@@ -18,7 +18,7 @@ redis_client = Redis(
 async def set_value(key: str, value: str):
     is_set = await redis_client.set(key, value)
     if is_set:
-        logger.info(f"Ключ {key} со значением {value} сохранены")
+        logger.info(f"Ключ {key} со значением {value} сохранен")
     return {"status": "ok", "key": key, "value": value}
 
 @router_redis.get("/get/{key}")

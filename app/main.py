@@ -10,7 +10,7 @@ from app.models.Base import Base
 from contextlib import asynccontextmanager
 
 # Импорт класса логирования в middleware
-from app.middleware.LoggingMiddleware import LoggingMiddleware, setup_logging
+# from app.middleware.LoggingMiddleware import LoggingMiddleware
 
 # Импорт роутеров
 from app.routers.router_assets import router_assets
@@ -36,6 +36,7 @@ from app.routers.router_divisions import router_divisions
 from app.routers.router_groups import router_groups
 
 from app.seed_api import router_seed_api
+from app.middleware.LoggingMiddleware import LoggingMiddleware
 
 
 # --- Управление жизненным циклом (Lifespan) ---

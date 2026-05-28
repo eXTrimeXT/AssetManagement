@@ -71,7 +71,7 @@ async def get_user_by_tab_id_endpoint(user_tab_id: str, db: AsyncSession = Depen
     """Получить пользователя по TAB_ID"""
     user = await get_user_by_tab_id(db, user_tab_id)
     if not user:
-        logger.error("Пользователь не найден")
+        # logger.error("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     return user
 

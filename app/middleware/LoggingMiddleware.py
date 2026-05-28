@@ -1,4 +1,3 @@
-# app/middleware/LoggingMiddleware.py
 import logging
 import uuid
 import time
@@ -143,12 +142,12 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(ConsoleFormatter())
-    console_handler.addFilter(ProjectFileFilter())
+    # console_handler.addFilter(ProjectFileFilter())
 
     file_handler = logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8')
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(FileJSONFormatter())
-    file_handler.addFilter(ProjectFileFilter())
+    # file_handler.addFilter(ProjectFileFilter())
 
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)

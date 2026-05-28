@@ -8,8 +8,7 @@ import traceback
 import structlog
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 from app.service.auth.auth_service import extract_login_from_request
@@ -33,18 +32,6 @@ def _get_relative_path(filepath: str) -> str:
     except ValueError:
         return filepath
 
-# === ФИЛЬТР: только файлы проекта /app, исключая LoggingMiddleware ===
-class ProjectFileFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        if not record.pathname:
-            return False
-        pathname = Path(record.pathname)
-        if not str(pathname).startswith(str(PROJECT_ROOT)):
-            return False
-        if pathname.name == f"{EXCLUDED_MODULE}.py":
-            return False
-        return True
-
 # === ФОРМАТТЕР ДЛЯ КОНСОЛИ ===
 class ConsoleFormatter(logging.Formatter):
     COLORS = {
@@ -57,6 +44,9 @@ class ConsoleFormatter(logging.Formatter):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         level = record.levelname
         color = self.COLORS.get(level, self.COLORS["RESET"])
+        # Путь до файла (middleware видит только url, а не путь к файлу эндпоинта)
+        # Поэтому логировать надо внутри эндпоинта
+        # Тогда будет точно видно номер строки
         rel_path = _get_relative_path(record.pathname)
         msg = _strip_ansi(record.getMessage())
 
@@ -68,8 +58,7 @@ class ConsoleFormatter(logging.Formatter):
         ]
 
         ctx = {}
-        for key in ["request_id", "client_ip", "user_login", "route", "method",
-                    "status_code", "duration_ms", "query_params", "request_body",
+        for key in ["request_id", "client_ip", "user_login", "duration_ms", "query_params", "request_body",
                     "error_type", "error_message", "permission_check"]:
             val = getattr(record, key, None)
             if val is not None:
@@ -96,24 +85,16 @@ class ConsoleFormatter(logging.Formatter):
 # === ФОРМАТТЕР ДЛЯ ФАЙЛА (JSON) ===
 class FileJSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        rel_path = _get_relative_path(record.pathname)
         log_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             "level": record.levelname,
             "message": _strip_ansi(record.getMessage()),
             "logger": record.name,
-            "location": {
-                "filename": Path(record.pathname).name,
-                "filepath": rel_path,
-                "full_path": record.pathname,
-                "function": record.funcName,
-                "line": record.lineno,
-            },
         }
 
         for key in [
-            "request_id", "client_ip", "user_login", "route", "method", "url",
-            "duration_ms", "status_code", "error_type", "error_message",
+            "request_id", "client_ip", "user_login", "url",
+            "duration_ms", "error_type", "error_message",
             "query_params", "request_body", "permission_check"
         ]:
             val = getattr(record, key, None)
@@ -142,12 +123,10 @@ def setup_logging():
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(ConsoleFormatter())
-    # console_handler.addFilter(ProjectFileFilter())
 
     file_handler = logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8')
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(FileJSONFormatter())
-    # file_handler.addFilter(ProjectFileFilter())
 
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
@@ -186,10 +165,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         route_path = request.url.path
         method = request.method
 
-        # Флаги для контроля логирования
-        response_status_code = 200
-        response_received = False
-
         request_body = None
         if method in ("POST", "PUT", "PATCH") and request.headers.get("content-type", "").startswith("application/json"):
             try:
@@ -216,8 +191,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
             process_time = time.time() - start_time
             response_status_code = response.status_code
-            response_received = True
-
             # Добавляем ID запроса в заголовок ответа
             response.headers["X-Request-ID"] = request_id
 
@@ -230,11 +203,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "client_ip": client_ip,
                     "user_login": user_login,
-                    "route": route_path,
-                    "method": method,
                     "url": str(request.url),
                     "duration_ms": round(process_time * 1000, 2),
-                    "status_code": response_status_code,
                     "query_params": dict(request.query_params) if request.query_params else None,
                     "request_body": request_body
                 }
@@ -254,11 +224,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "client_ip": client_ip,
                     "user_login": user_login,
-                    "route": route_path,
-                    "method": method,
                     "url": str(request.url),
                     "duration_ms": round(process_time * 1000, 2),
-                    "status_code": response_status_code,
                     "error_type": "HTTPException",
                     "error_message": str(e.detail),
                     "query_params": dict(request.query_params) if request.query_params else None,
@@ -269,8 +236,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             process_time = time.time() - start_time
-            response_status_code = 500
-
             # Логируем внутреннюю ошибку сервера
             logger.error(
                 f"{method} {route_path} → ERROR 500: {type(e).__name__}: {str(e)}",
@@ -279,11 +244,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "client_ip": client_ip,
                     "user_login": user_login,
-                    "route": route_path,
-                    "method": method,
                     "url": str(request.url),
                     "duration_ms": round(process_time * 1000, 2),
-                    "status_code": 500,
                     "error_type": type(e).__name__,
                     "error_message": str(e),
                     "query_params": dict(request.query_params) if request.query_params else None,

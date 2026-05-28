@@ -1,4 +1,4 @@
-import structlog
+import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +11,9 @@ from app.database.crud_asset_types import (
 )
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 from app.service.auth.auth_service import require_authorized_user
-from app.models.AssetType import AssetType
 from app.service.permissions.permissions_rules import has_read_permission, has_write_permission
 
-logger = structlog.get_logger()
+logger = logging.getLogger(__name__)
 
 router_assets_types = APIRouter(
     prefix="/assets-types",
@@ -29,18 +28,18 @@ async def create(
         current_user = Depends(require_authorized_user)
 ):
     if not has_write_permission(current_user, data.en_name):
-        logger.warning("forbidden", reason="no_write_permission", status_code=403)
+        logger.warning(f"Доступ на запись к ресурсу типа '{data.en_name}' не разрешен")
         raise HTTPException(status_code=403, detail=f"Доступ на запись к ресурсу типа '{data.en_name}' не разрешен")
 
     try:
         new_obj = await create_asset_type(db, data)
-        logger.info("success", reason="Тип создан", status_code=200)
+        logger.info("Тип создан")
         return new_obj
     except IntegrityError as e:
-        logger.error("error", reason="Нарушение ограничений базы данных")
+        logger.error("Нарушение ограничений базы данных")
         raise HTTPException(status_code=400, detail="Нарушение ограничений базы данных")
     except Exception as e:
-        logger.error("error", f"Ошибка {str(e)}", status_code=500)
+        logger.error(f"Ошибка {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router_assets_types.get("/", response_model=List[AssetTypeResponse])

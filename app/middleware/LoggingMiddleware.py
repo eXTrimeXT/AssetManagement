@@ -85,16 +85,24 @@ class ConsoleFormatter(logging.Formatter):
 # === ФОРМАТТЕР ДЛЯ ФАЙЛА (JSON) ===
 class FileJSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
+        rel_path = _get_relative_path(record.pathname)
         log_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             "level": record.levelname,
             "message": _strip_ansi(record.getMessage()),
             "logger": record.name,
+            "location": {
+                "filename": Path(record.pathname).name,
+                "filepath": rel_path,
+                "full_path": record.pathname,
+                "function": record.funcName,
+                "line": record.lineno,
+            },
         }
 
         for key in [
-            "request_id", "client_ip", "user_login", "url",
-            "duration_ms", "error_type", "error_message",
+            "request_id", "client_ip", "user_login", "route", "url",
+            "duration_ms", "status_code", "error_type", "error_message",
             "query_params", "request_body", "permission_check"
         ]:
             val = getattr(record, key, None)

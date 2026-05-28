@@ -1,7 +1,4 @@
-import logging
-
-import structlog
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 
 from app.database.connection import engine
 from app.models.Base import Base
@@ -10,33 +7,40 @@ from app.models.Base import Base
 from contextlib import asynccontextmanager
 
 # Импорт класса логирования в middleware
-# from app.middleware.LoggingMiddleware import LoggingMiddleware
+from app.middleware.LoggingMiddleware import LoggingMiddleware
 
 # Импорт роутеров
-from app.routers.router_assets import router_assets
-from app.routers.router_assets_history import router_assets_history
-from app.routers.router_users import router_users                       # не зависим
-from app.routers.router_software import router_software
+# Redis
+from app.service.redis.redis_client import router_redis
+# Catalog импорт по зависимости, от независимого к зависимому
+from app.routers.router_assets_history import router_assets_history     # не зависим
+from app.routers.router_users import router_users                       # не зависим (ссылка на департамент)
+from app.routers.router_software import router_software                 # не зависим
 # Catalog импорт по зависимости, от независимого к зависимому
 from app.routers.router_catalog_history import router_catalog_history   # не зависим (чисто история)
-from app.routers.router_assets_types import router_assets_types         # не зависим
-from app.routers.router_catalog_classes import router_catalog_classes   # зависит от типа
-from app.routers.router_catalog_models import router_catalog_models     # зависим от класса
-from app.routers.router_catalog_items import router_catalog_items       # зависим от модели
-from app.routers.router_companies import router_companies
-from app.routers.router_vendors import router_vendors
-from app.routers.router_vendor_classes import router_vendor_classes
-from app.routers.router_warehouses import router_warehouses
-from app.routers.router_locations import router_locations
-from app.routers.router_auth import router_auth
-from app.routers.router_assets_excel import router_assets_excel
-# Департамент -> Отдел -> Группа
-from app.routers.router_departments import router_departments
-from app.routers.router_divisions import router_divisions
-from app.routers.router_groups import router_groups
+from app.routers.router_assets_excel import router_assets_excel         # не зависим
+from app.routers.router_locations import router_locations               # не зависим
 
-from app.seed_api import router_seed_api
-from app.middleware.LoggingMiddleware import LoggingMiddleware
+from app.routers.router_assets_types import router_assets_types         # тип не зависим
+from app.routers.router_catalog_classes import router_catalog_classes   # класс зависит от типа
+from app.routers.router_catalog_models import router_catalog_models     # модель зависим от класса
+from app.routers.router_assets import router_assets                     # зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
+from app.routers.router_catalog_items import router_catalog_items       # каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
+
+from app.routers.router_companies import router_companies               # зависим от локации
+from app.routers.router_vendors import router_vendors                   # зависим от vendor_classes, компании
+from app.routers.router_vendor_classes import router_vendor_classes     # не зависим
+from app.routers.router_warehouses import router_warehouses             # зависим от локации
+from app.routers.router_auth import router_auth                         # работает с redis и таблицей users
+
+
+# Департамент -> Отдел -> Группа
+from app.routers.router_departments import router_departments           # департамент зависит от отдела
+from app.routers.router_divisions import router_divisions               # отдел зависит от группы
+from app.routers.router_groups import router_groups                     # группа не зависима
+
+# Роутер заполнения таблиц
+from app.seed_api import router_seed_api                                # не зависим
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -70,29 +74,33 @@ app.add_middleware(LoggingMiddleware)
 
 # --- Подключение API Маршрутов ---
 # Redis
-from app.service.redis.redis_client import *
-app.include_router(router_redis, prefix="/api")
+app.include_router(router_redis, prefix="/api")             # Only DEV: check redis storage
+
 app.include_router(router_auth, prefix="/api")              # Auth
 app.include_router(router_users, prefix="/api")             # Users
 
 # app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
 
-app.include_router(router_departments)
-app.include_router(router_divisions)
-app.include_router(router_groups)
+app.include_router(router_departments)                      # Департамент
+app.include_router(router_divisions)                        # Отдел
+app.include_router(router_groups)                           # Группа
 
 app.include_router(router_assets_types, prefix="/api")      # Asset Types
 app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes
 app.include_router(router_catalog_models, prefix="/api")    # Catalog Models
 app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_catalog_items, prefix="/api")     # Catalog Items
+
 app.include_router(router_assets_history, prefix="/api")    # Assets History
 app.include_router(router_catalog_history, prefix="/api")   # Catalog History
+
 app.include_router(router_software, prefix="/api")          # Software
-app.include_router(router_companies, prefix="/api")         # Companies
-app.include_router(router_warehouses, prefix="/api")        # Warehouse
-app.include_router(router_vendors, prefix="/api")           # Vendors
 app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
+app.include_router(router_vendors, prefix="/api")           # Vendors
+app.include_router(router_warehouses, prefix="/api")        # Warehouse
+app.include_router(router_companies, prefix="/api")         # Companies
+
 app.include_router(router_locations, prefix="/api")         # Location
+
 app.include_router(router_assets_excel, prefix="/api")      # Excel
 

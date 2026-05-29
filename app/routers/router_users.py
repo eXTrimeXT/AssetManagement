@@ -25,13 +25,22 @@ from app.database.crud_users import (
     check_tab_id_exists, update_user_permissions
 )
 from app.service.auth.auth_service import require_authorized_user
+from app.service.permissions.permissions_rules import has_read_permission, has_write_permission
 
 logger = logging.getLogger(__name__)
 router_users = APIRouter(prefix="/users", tags=["Users"], dependencies=[Depends(require_authorized_user)])
 
 @router_users.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user_endpoint(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
+async def create_user_endpoint(
+        user_in: UserCreate,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
     """Создать нового пользователя"""
+    if not has_write_permission(current_user, "users"):
+        logger.warning(f"Нет доступа на создание пользователей")
+        raise HTTPException(status_code=403, detail=f"Нет доступа на создание пользователей")
+
     # Проверка на дубликат email
     if await check_email_exists(db, user_in.email):
         logger.warning("Email уже зарегистрирован")
@@ -51,15 +60,27 @@ async def get_users_endpoint(
         limit: int = 50,
         department_id: Optional[int] = None,
         is_active: bool = True,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
 ):
     """Получить список пользователей с фильтрацией"""
+    if not has_read_permission(current_user, "users"):
+        logger.warning(f"Просмотр пользователей запрещен")
+        raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
     return await get_users_list(db, skip, limit, department_id, is_active)
 
 
 @router_users.get("/id/{user_id}", response_model=UserResponse)
-async def get_user_by_id_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_by_id_endpoint(
+        user_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
     """Получить пользователя по ID"""
+    if not has_read_permission(current_user, "users"):
+        logger.warning(f"Просмотр пользователей запрещен")
+        raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
+
     user = await get_user_by_id(db, user_id)
     if not user:
         logger.warning("Пользователь не найден")
@@ -67,8 +88,16 @@ async def get_user_by_id_endpoint(user_id: int, db: AsyncSession = Depends(get_d
     return user
 
 @router_users.get("/tab_id/{user_tab_id}", response_model=UserResponse)
-async def get_user_by_tab_id_endpoint(user_tab_id: str, db: AsyncSession = Depends(get_db)):
+async def get_user_by_tab_id_endpoint(
+        user_tab_id: str,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
     """Получить пользователя по TAB_ID"""
+    if not has_read_permission(current_user, "users"):
+        logger.warning(f"Просмотр пользователей запрещен")
+        raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
+
     user = await get_user_by_tab_id(db, user_tab_id)
     if not user:
         logger.warning("Пользователь не найден")
@@ -76,8 +105,17 @@ async def get_user_by_tab_id_endpoint(user_tab_id: str, db: AsyncSession = Depen
     return user
 
 @router_users.patch("/{user_id}", response_model=UserResponse)
-async def update_user_endpoint(user_id: int, user_data: UserUpdate, db: AsyncSession = Depends(get_db)):
+async def update_user_endpoint(
+        user_id: int,
+        user_data: UserUpdate,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
     """Обновить данные пользователя"""
+    if not has_write_permission(current_user, "users"):
+        logger.warning(f"Нет доступа на редактирование пользователей")
+        raise HTTPException(status_code=403, detail=f"Нет доступа на редактирование пользователей")
+
     # Предварительные проверки перед обновлением
     current_user = await get_user_by_id(db, user_id)
     if not current_user:
@@ -108,7 +146,7 @@ async def update_user_permissions_endpoint(
         user_id: int,
         perm_data: PermissionsUpdate,
         db: AsyncSession = Depends(get_db),
-        # current_user: User = Depends(require_authorized_user)  # <-- проверка авторизации
+        current_user: User = Depends(require_authorized_user)
 ):
     """
     Обновляет права доступа для конкретного пользователя (merge).
@@ -122,8 +160,9 @@ async def update_user_permissions_endpoint(
     """
     # Опционально: проверка, что текущий пользователь может менять права
     # (если нужно — раскомментируй)
-    # if not current_user.permissions or not current_user.permissions.get("users", {}).get("write"):
-    #     raise HTTPException(status_code=403, detail="Требуется разрешение: 'users:write'")
+    if not has_write_permission(current_user, "users"):
+        logger.warning("Нет доступа на редактирование прав пользователей")
+        raise HTTPException(status_code=403, detail="Нет доступа на редактирование прав пользователей")
 
     updated_user = await update_user_permissions(db, user_id, perm_data.permissions)
     if not updated_user:
@@ -132,8 +171,16 @@ async def update_user_permissions_endpoint(
     return updated_user
 
 @router_users.post("/{user_id}/activate", response_model=UserResponse)
-async def activate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+async def activate_user_endpoint(
+        user_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(require_authorized_user)
+):
     """Активация пользователя"""
+    if not has_write_permission(current_user, "users"):
+        logger.warning("Нет доступа на активацию пользователей")
+        raise HTTPException(status_code=403, detail="Нет доступа на активацию пользователей")
+
     user = await get_user_by_id(db, user_id)
     if not user:
         logger.warning("Пользователь не найден")
@@ -146,8 +193,16 @@ async def activate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db
     return await activate_user(db, user_id)
 
 @router_users.post("/{user_id}/deactivate", response_model=UserResponse)
-async def deactivate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+async def deactivate_user_endpoint(
+        user_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(require_authorized_user)
+):
     """Деактивация пользователя"""
+    if not has_write_permission(current_user, "users"):
+        logger.warning("Нет доступа на деактивацию пользователей")
+        raise HTTPException(status_code=403, detail="Нет доступа на деактивацию пользователей")
+
     user = await get_user_by_id(db, user_id)
     if not user:
         logger.warning("Пользователь не найден")
@@ -160,8 +215,16 @@ async def deactivate_user_endpoint(user_id: int, db: AsyncSession = Depends(get_
     return await deactivate_user(db, user_id)
 
 @router_users.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def hard_delete_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
+async def hard_delete_user_endpoint(
+        user_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(require_authorized_user)
+):
     """Жесткое удаление пользователя (только если деактивирован)"""
+    if not has_write_permission(current_user, "users"):
+        logger.warning("Нет доступа на удаление пользователей")
+        raise HTTPException(status_code=403, detail="Нет доступа на удаление пользователей")
+
     user = await get_user_by_id(db, user_id)
     if not user:
         logger.warning("Пользователь не найден")
@@ -187,4 +250,6 @@ async def get_current_user(current_user: User = Depends(require_authorized_user)
     Возвращает информацию о текущем авторизованном пользователе.
     Доступен если пользователь есть в таблице Users.
     """
+    # Не делаем никаких проверок, потому что смотреть на самого себя можно
+    # А проверка на авторизацию есть в зависимости
     return current_user

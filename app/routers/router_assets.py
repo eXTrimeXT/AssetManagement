@@ -131,6 +131,10 @@ async def activate_asset_endpoint(
     if not activated:
         logger.warning(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
+
+    if not has_write_permission(current_user, activated.model.asset_class.asset_type.en_name):
+        logger.warning(f"Нет доступа для записи")
+        raise HTTPException(403, "Нет доступа для записи")
     return activated
 
 

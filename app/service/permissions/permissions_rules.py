@@ -1,9 +1,12 @@
+import logging
 from typing import Any, Literal, List, TypeVar, Awaitable, Callable, Optional
 from fastapi import Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.User import User
 from app.database.connection import get_db
 from app.service.auth.auth_service import require_authorized_user
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -23,7 +26,7 @@ def check_read(user_tab_id):
 def check_write(user_tab_id):
     """
         Проверяем является ли текущий пользователь `write`-пользователем,
-        Проверка и разрешение только на `запись`, `создание`, `удаление`.
+        Проверка и разрешение только на `запись`, `создание`, `удаление`, `активацию`, `деактивацию`.
     """
     return user_tab_id == "write"
 
@@ -51,14 +54,18 @@ def has_write_permission(user: User, group_name: str | None) -> bool:
         Пользователь write имеет доступ на запись, создание, удаление.
     """
     if check_root(user.user_tab_id):
+        # logger.warning("ROOT:WRITE")
         return True
 
     if check_write(user.user_tab_id):
+        # logger.warning("WRITE:WRITE")
         return True
 
     if not group_name or not user.permissions:
+        # logger.warning(f"{user}:{group_name}: FALSE")
         return False
     group_perms = user.permissions.get(group_name)
+    # logger.warning(f"{group_perms=}")
     return bool(group_perms and group_perms.get("write"))
 
 def has_access(user: User, group_name: str | None, access_type: Literal["read", "write"] | None = None) -> bool:

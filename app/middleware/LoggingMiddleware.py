@@ -51,8 +51,8 @@ class ConsoleFormatter(logging.Formatter):
         msg = _strip_ansi(record.getMessage())
 
         parts = [
-            f"{color}{self.COLORS['BOLD']}{level:8s}{self.COLORS['RESET']}",
-            f"{self.COLORS['GRAY']}{timestamp}{self.COLORS['RESET']}",
+            f"{color}{self.COLORS['BOLD']}{level}{self.COLORS['RESET']}",
+            f"{self.COLORS['RESET']}{timestamp}{self.COLORS['RESET']}",
             f"{self.COLORS['GRAY']}[{rel_path}:{record.funcName}:{record.lineno}]{self.COLORS['RESET']}",
             f"- {msg}"
         ]

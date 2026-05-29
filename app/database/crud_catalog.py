@@ -14,6 +14,9 @@ from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogU
 # Импорт для логирования
 from app.database.crud_catalog_operations import _serialize_for_json
 from app.models.CatalogOperation import CatalogOperation
+from app.models.Software import Software
+from app.models.Vendor import Vendor
+
 
 # === HELPERS ===
 async def get_catalog_item_full(db: AsyncSession, catalog_id: int):
@@ -29,17 +32,42 @@ async def get_catalog_item_full(db: AsyncSession, catalog_id: int):
 
 async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[AssetCatalog]:
     """
-    Получает запись каталога по ID с загруженными связями для фильтрации по правам и ответа API.
-    Правильный путь: AssetCatalog → asset → model → asset_class → asset_type
+    Получает запись каталога по ID с загруженными связями для фильтрации по правам
+    и для корректной сериализации ответа.
     """
     query = select(AssetCatalog).where(AssetCatalog.catalog_id == catalog_id).options(
-        # === Загружаем цепочку для фильтрации по asset_type.en_name ===
-        # AssetCatalog → asset → model → asset_class → asset_type
+        # === Цепочка для фильтрации по правам ===
         selectinload(AssetCatalog.asset)
         .selectinload(Asset.model)
         .selectinload(AssetModel.asset_class)
         .selectinload(AssetClass.asset_type),
-        # Остальные связи для ответа API
+
+        # === Связи для сериализации AssetResponse ===
+        # asset.model.creator
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.model)
+        .selectinload(AssetModel.creator),
+
+        # asset.preparer, asset.checker
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.preparer),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.checker),
+
+        # asset.software.installer
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.software)
+        .selectinload(Software.installer),
+
+        # asset.manufacturer.creator, asset.vendor.creator
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.manufacturer)
+        .selectinload(Vendor.creator),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.vendor)
+        .selectinload(Vendor.creator),
+
+        # === Связи для самой записи каталога ===
         selectinload(AssetCatalog.owner),
         selectinload(AssetCatalog.creator)
     )
@@ -305,22 +333,47 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         return False
 
 async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Any]:
-    """
-    Получает список записей каталога с загруженными связями для фильтрации по правам.
-    Правильный путь: AssetCatalog → asset → model → asset_class → asset_type
-    """
-    query = select(AssetCatalog).options(
-        # === Загружаем цепочку для фильтрации по asset_type.en_name ===
-        # AssetCatalog → asset → model → asset_class → asset_type
-        selectinload(AssetCatalog.asset)
-        .selectinload(Asset.model)
-        .selectinload(AssetModel.asset_class)
-        .selectinload(AssetClass.asset_type),
-        # Остальные связи для ответа API
-        selectinload(AssetCatalog.owner),
-        selectinload(AssetCatalog.creator)
-    )
+        """
+        Получает список записей каталога с загруженными связями для фильтрации по правам
+        и для корректной сериализации ответа.
+        """
+        query = select(AssetCatalog).options(
+            # === Цепочка для фильтрации по правам ===
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.model)
+            .selectinload(AssetModel.asset_class)
+            .selectinload(AssetClass.asset_type),
 
-    query = query.offset(skip).limit(limit)
-    result = await db.execute(query)
-    return result.scalars().all()
+            # === Связи для сериализации AssetResponse ===
+            # asset.model.creator
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.model)
+            .selectinload(AssetModel.creator),
+
+            # asset.preparer, asset.checker
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.preparer),
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.checker),
+
+            # asset.software.installer
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.software)
+            .selectinload(Software.installer),
+
+            # asset.manufacturer.creator, asset.vendor.creator
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.manufacturer)
+            .selectinload(Vendor.creator),
+            selectinload(AssetCatalog.asset)
+            .selectinload(Asset.vendor)
+            .selectinload(Vendor.creator),
+
+            # === Связи для самой записи каталога ===
+            selectinload(AssetCatalog.owner),
+            selectinload(AssetCatalog.creator)
+        )
+
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()

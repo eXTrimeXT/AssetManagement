@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 
 from app.database.connection import engine
 from app.models.Base import Base
@@ -104,3 +104,14 @@ app.include_router(router_locations, prefix="/api")         # Location
 
 app.include_router(router_assets_excel, prefix="/api")      # Excel
 
+router_root = APIRouter(tags=["/"])
+@router_root.get("/")
+async def root():
+    host = "localhost"
+    port = "8800"
+    return {
+        "docs": f"http://{host}:{port}/docs",
+        "api": f"http://{host}:{port}/api"
+    }
+
+app.include_router(router_root)                             # корень веб-приложения

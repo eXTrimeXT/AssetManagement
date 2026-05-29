@@ -8,11 +8,11 @@ from sqlalchemy.orm import selectinload
 from app.models.Asset import Asset
 from app.models.Vendor import Vendor
 from app.models.Software import Software
+from app.models.AssetModel import AssetModel
+from app.models.AssetClass import AssetClass
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
-from app.models.AssetModel import AssetModel
-from app.models.AssetClass import AssetClass
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:

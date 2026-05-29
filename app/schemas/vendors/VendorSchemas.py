@@ -31,7 +31,7 @@ class VendorResponse(VendorBase):
     vendor_class: VendorClassShortResponse
     # company: Optional[CompanyShortResponse] = None
     company: Optional[CompanyResponse] = None
-    creator: UserShortResponse
+    creator: Optional[UserShortResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 

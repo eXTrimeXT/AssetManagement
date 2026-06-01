@@ -52,7 +52,7 @@ async def update_pc_data(db: AsyncSession, username: str, pc_data: PCDataCreate)
     user_result = await db.execute(select(User).where(User.user_tab_id == pc_data.user.username))
     db_user = user_result.scalars().first()
     if not db_user:
-        raise HTTPException(status_code=400, detail="User not found in users table")
+        db_user.user_id = None
 
     result = await db.execute(select(PCData).where(PCData.username == username))
     db_pc = result.scalars().first()

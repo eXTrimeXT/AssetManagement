@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.PCData import PCData
 from app.models.User import User
 from app.schemas.pc_data.pc_data_schemas import PCDataCreate
+from app.middleware.LoggingMiddleware import logger
+
 
 async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):
     # Пытаемся найти пользователя по user_tab_id == username
@@ -41,8 +43,22 @@ async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):
     return db_pc
 
 async def get_pc_data(db: AsyncSession, username: str):
+    """
+    Поиск: сначала по столбцу PCData.username,
+    если не найдено — по полю user->>'username' внутри JSONB.
+    """
+    # 1. Основной поиск по индексируемому столбцу
     result = await db.execute(select(PCData).where(PCData.username == username))
-    return result.scalars().first()
+    db_pc = result.scalars().first()
+
+    # 2. Если не найдено — ищем внутри JSONB (простой вариант)
+    if db_pc is None:
+        result = await db.execute(
+            select(PCData).where(PCData.user['username'].astext == username)
+        )
+        db_pc = result.scalars().first()
+
+    return db_pc
 
 async def get_all_pc_data(db: AsyncSession, skip: int = 0, limit: int = 100):
     result = await db.execute(select(PCData).offset(skip).limit(limit))

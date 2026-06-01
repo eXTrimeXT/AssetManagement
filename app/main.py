@@ -41,6 +41,7 @@ from app.routers.router_groups import router_groups                     # гру
 
 # Роутер заполнения таблиц
 from app.seed_api import router_seed_api                                # не зависим
+from app.routers.router_pc_data import router_pc_data
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -103,6 +104,8 @@ app.include_router(router_companies, prefix="/api")         # Companies
 app.include_router(router_locations, prefix="/api")         # Location
 
 app.include_router(router_assets_excel, prefix="/api")      # Excel
+
+app.include_router(router_pc_data, prefix="/api")           # PC DATA
 
 router_root = APIRouter(tags=["/"])
 @router_root.get("/")

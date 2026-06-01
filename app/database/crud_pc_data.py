@@ -10,7 +10,7 @@ async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):
     db_user = user_result.scalars().first()
 
     # Если не найден — ставим None, ошибки не поднимаем
-    user_id = db_user.id if db_user else None
+    user_id = db_user.user_id if db_user else None
 
     result = await db.execute(select(PCData).where(PCData.username == pc_data.user.username))
     db_pc = result.scalars().first()
@@ -51,7 +51,7 @@ async def get_all_pc_data(db: AsyncSession, skip: int = 0, limit: int = 100):
 async def update_pc_data(db: AsyncSession, username: str, pc_data: PCDataCreate):
     user_result = await db.execute(select(User).where(User.user_tab_id == pc_data.user.username))
     db_user = user_result.scalars().first()
-    user_id = db_user.id if db_user else None  # None если пользователь не найден
+    user_id = db_user.user_id if db_user else None  # None если пользователь не найден
 
     result = await db.execute(select(PCData).where(PCData.username == username))
     db_pc = result.scalars().first()

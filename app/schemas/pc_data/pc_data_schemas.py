@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List
+from typing import List, Optional
+
 
 class User(BaseModel):
     username: str
@@ -64,5 +65,5 @@ class PCDataCreate(BaseModel):
 
 class PCDataResponse(PCDataCreate):
     id: int
-    user_id: int
+    user_id: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)

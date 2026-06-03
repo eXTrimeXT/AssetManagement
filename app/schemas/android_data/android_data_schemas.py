@@ -12,6 +12,8 @@ class SystemInfo(BaseModel):
     language: str
     timezone: str
     uptime: str
+    request_time: str
+
 
 class HardwareInfo(BaseModel):
     processor: str
@@ -27,6 +29,7 @@ class NetworkInfo(BaseModel):
     connection_type: str
     wifi_ssid: Optional[str] = None
     wifi_bssid: Optional[str] = None
+    wifi_gateway: Optional[str] = None
     mac_address: Optional[str] = None
     ip_addresses: Optional[str] = None
     bluetooth: Optional[str] = None

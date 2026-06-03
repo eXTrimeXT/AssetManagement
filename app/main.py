@@ -41,7 +41,10 @@ from app.routers.router_groups import router_groups                     # гру
 
 # Роутер заполнения таблиц
 from app.seed_api import router_seed_api                                # не зависим
+
+# Роутеры для данных о ПК и андроид устройств
 from app.routers.router_pc_data import router_pc_data
+from app.routers.router_android_data import router_android_data
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -106,6 +109,7 @@ app.include_router(router_locations, prefix="/api")         # Location
 app.include_router(router_assets_excel, prefix="/api")      # Excel
 
 app.include_router(router_pc_data, prefix="/api")           # PC DATA
+app.include_router(router_android_data, prefix="/api")      # Android DATA
 
 router_root = APIRouter(tags=["/"])
 @router_root.get("/")

@@ -1,0 +1,61 @@
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.AndroidData import AndroidData
+from app.schemas.android_data.android_data_schemas import AndroidDataCreate
+
+async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreate):
+    result = await db.execute(select(AndroidData).where(AndroidData.android_id == data.android_id))
+    db_record = result.scalars().first()
+
+    payload = {
+        "device": data.device.model_dump(),
+        "system": data.system.model_dump(),
+        "hardware": data.hardware.model_dump(),
+        "network": data.network.model_dump(),
+        "battery": data.battery.model_dump()
+    }
+
+    if db_record:
+        for k, v in payload.items():
+            setattr(db_record, k, v)
+    else:
+        db_record = AndroidData(
+            android_id=data.android_id,
+            **payload
+        )
+        db.add(db_record)
+
+    await db.commit()
+    await db.refresh(db_record)
+    return db_record
+
+async def get_android_data(db: AsyncSession, android_id: str):
+    result = await db.execute(select(AndroidData).where(AndroidData.android_id == android_id))
+    return result.scalars().first()
+
+async def get_all_android_data(db: AsyncSession, skip: int = 0, limit: int = 100):
+    result = await db.execute(select(AndroidData).offset(skip).limit(limit))
+    return result.scalars().all()
+
+async def update_android_data(db: AsyncSession, android_id: str, data: AndroidDataCreate):
+    result = await db.execute(select(AndroidData).where(AndroidData.android_id == android_id))
+    db_record = result.scalars().first()
+
+    if db_record:
+        db_record.device = data.device.model_dump()
+        db_record.system = data.system.model_dump()
+        db_record.hardware = data.hardware.model_dump()
+        db_record.network = data.network.model_dump()
+        db_record.battery = data.battery.model_dump()
+        await db.commit()
+        await db.refresh(db_record)
+    return db_record
+
+async def delete_android_data(db: AsyncSession, android_id: str):
+    result = await db.execute(select(AndroidData).where(AndroidData.android_id == android_id))
+    db_record = result.scalars().first()
+
+    if db_record:
+        await db.delete(db_record)
+        await db.commit()
+    return db_record

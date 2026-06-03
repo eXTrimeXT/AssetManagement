@@ -7,6 +7,7 @@ class DeviceInfo(BaseModel):
 
 class SystemInfo(BaseModel):
     android_version: str
+    android_api_version: str
     build_number: str
     language: str
     timezone: str

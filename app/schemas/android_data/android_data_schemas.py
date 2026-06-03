@@ -14,6 +14,7 @@ class SystemInfo(BaseModel):
 
 class HardwareInfo(BaseModel):
     processor: str
+    processor_architecture: str
     ram_total: str
     ram_free: str
     storage_total: str

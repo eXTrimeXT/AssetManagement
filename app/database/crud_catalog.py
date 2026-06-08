@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional, Sequence, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from app.models.AssetClass import AssetClass
 from app.models.AssetModel import AssetModel
 from app.models.AssetCatalog import AssetCatalog
@@ -139,8 +139,8 @@ async def get_asset_model_by_id(db: AsyncSession, model_id: int) -> Optional[Ass
         .where(AssetModel.model_id == model_id)
         .options(
             # === Загружаем цепочку до asset_type для проверки прав ===
-            selectinload(AssetModel.asset_class)
-            .selectinload(AssetClass.asset_type)
+            joinedload(AssetModel.asset_class)
+            .joinedload(AssetClass.asset_type)
         )
     )
     return result.scalar_one_or_none()

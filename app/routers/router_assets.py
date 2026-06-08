@@ -16,6 +16,7 @@ from app.database.crud_assets import (
 from app.service.auth.auth_service import require_authorized_user
 from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
 from app.database.crud_catalog import get_asset_model_by_id
+from app.database.crud_vendors import get_or_create_vendor_by_supplier_number
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +157,8 @@ async def add_assets_from_sap(
         inventory_number_val = material.get("inventory_number", "")
         serial_number = material.get("serial_number", "")
         base_material_name = material.get("base_material_name", "")
+        supplier_number = material.get("supplier_number", "")
+        supplier_number = "TEST"
 
         if not inventory_number_val or not base_material_name:
             skipped_count += 1
@@ -171,11 +174,20 @@ async def add_assets_from_sap(
             skipped_count += 1
             continue
 
-        asset_in = AssetCreate(
-            inventory_id=inventory_number_val,
-            serial_number=serial_number if serial_number else None,
-            name=base_material_name
-        )
+        # === Логика работы с vendor_id ===
+        asset_kwargs = {
+            "inventory_id": inventory_number_val,
+            "serial_number": serial_number if serial_number else None,
+            "name": base_material_name
+        }
+
+        if supplier_number:  # Если supplier_number есть — ищем/создаем вендора
+            vendor_id = await get_or_create_vendor_by_supplier_number(db, supplier_number, current_user.user_id)
+            asset_kwargs["vendor_id"] = vendor_id
+        # Если supplier_number == "" — просто не добавляем vendor_id в kwargs
+        # =================================
+
+        asset_in = AssetCreate(**asset_kwargs)
 
         await create_asset(db, asset_in, current_user_id=current_user.user_id)
         created_count += 1

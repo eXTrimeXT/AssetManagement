@@ -16,12 +16,12 @@ class Asset(Base):
     asset_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # === Основные поля (из ТЗ) ===
-    asset_status = Column(String(100), index=True, default="Приемка")           # Статус актива
-    type_domain = Column(String(100))                                            # Тип домена
-    model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)  # Модель актива (ссылка на справочник)
-    inventory_id = Column(String(50), unique=True, index=True)                  # Инвентарный номер
-    affixed_inventory_id = Column(Boolean, default=False)                        # Инвентарный номер наклеен?
-    info_storage_location = Column(String(200))                                  # Место хранения информации об активе
+    asset_status = Column(String(100), index=True, default="Приемка")               # Статус актива
+    type_domain = Column(String(100))                                               # Тип домена
+    model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True, nullable=True)  # Модель актива (ссылка на справочник)
+    inventory_id = Column(String(100), unique=True, index=True)                     # Инвентарный номер
+    affixed_inventory_id = Column(Boolean, default=False)                           # Инвентарный номер наклеен?
+    info_storage_location = Column(String(200))                                     # Место хранения информации об активе
 
     # === СКЛАД (вместо локации) ===
     warehouse_id = Column(Integer, ForeignKey("warehouses.warehouse_id"), index=True)
@@ -31,7 +31,7 @@ class Asset(Base):
         lazy="joined"  # Подгружаем склад сразу при запросе актива
     )
 
-    serial_number = Column(String(100), unique=True, index=True)                 # Серийный номер
+    serial_number = Column(String(100), unique=True, index=True, nullable=True)  # Серийный номер
     name = Column(String(150), nullable=False, index=True)                       # Имя актива
     date_issue = Column(Date)                                                    # Дата выдачи
     date_purchasing = Column(Date)                                               # Дата покупки

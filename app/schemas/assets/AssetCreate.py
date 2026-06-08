@@ -8,8 +8,8 @@ class AssetCreate(BaseModel):
     # Обязательные поля
     name: str = Field(..., min_length=1, max_length=150, description="Имя актива")
     inventory_id: str = Field(..., min_length=1, max_length=50, description="Инвентарный номер")
-    serial_number: str = Field(..., min_length=1, max_length=100, description="Серийный номер")
-    model_id: int = Field(..., description="Модель актива (ссылка на справочник)")
+    serial_number: Optional[str] = Field(..., max_length=100, description="Серийный номер")
+    model_id: Optional[int] = Field(None, description="Модель актива (ссылка на справочник)")
 
     # Статус
     asset_status: str = Field(default="Приемка", max_length=50, description="Статус актива")

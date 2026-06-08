@@ -1,4 +1,5 @@
 import logging
+import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
@@ -55,6 +56,88 @@ async def create_asset_endpoint(
 
     # 5. Создаём актив
     return await create_asset(db, asset_in, current_user_id=current_user.user_id)
+
+
+from typing import Optional
+
+@router_assets.post("/add", status_code=status.HTTP_201_CREATED)
+async def add_assets_from_sap(
+        limit: Optional[int] = Query(None, description="Количество записей"),
+        offset: Optional[int] = Query(None, description="Смещение"),
+        order: Optional[int] = Query(None, description="Порядок сортировки"),
+        inventory_number: Optional[int] = Query(None, description="Фильтр по инвентарному номеру"),
+        cost_center_code: Optional[int] = Query(None, description="Фильтр по коду центра затрат"),
+        cost_center_code_from: Optional[int] = Query(None, description="Фильтр по коду центра затрат от"),
+        base_material_name_like: Optional[int] = Query(None, description="Фильтр по названию базового материала"),
+        current_user = Depends(require_authorized_user),
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Получает данные материалов из SAP API и добавляет их в таблицу assets.
+    """
+    sap_api_url = "http://10.168.143.7:8123/sap/base_materials"
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "order": order,
+        "inventory_number": inventory_number,
+        "cost_center_code": cost_center_code,
+        "cost_center_code_from": cost_center_code_from,
+        "base_material_name_like": base_material_name_like
+    }
+    # Удаляем None значения из параметров
+    params = {k: v for k, v in params.items() if v is not None}
+
+    try:
+        response = requests.get(sap_api_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as e:
+        logger.error(f"Ошибка при запросе к SAP API: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при запросе к SAP API: {str(e)}")
+
+    if not data.get("success"):
+        logger.error(f"SAP API вернул ошибку: {data.get('message')}")
+        raise HTTPException(status_code=500, detail=f"SAP API вернул ошибку: {data.get('message')}")
+
+    materials = data.get("response", {}).get("data", [])
+    created_count = 0
+    skipped_count = 0
+
+    for material in materials:
+        inventory_number_val = material.get("inventory_number", "")
+        serial_number = material.get("serial_number", "")
+        base_material_name = material.get("base_material_name", "")
+
+        if not inventory_number_val or not base_material_name:
+            skipped_count += 1
+            continue
+
+        if await check_duplicate_inventory_id(db, inventory_number_val):
+            logger.info(f"Инвентарный номер {inventory_number_val} уже существует, пропускаем")
+            skipped_count += 1
+            continue
+
+        if serial_number and await check_duplicate_serial_number(db, serial_number):
+            logger.info(f"Серийный номер {serial_number} уже существует, пропускаем")
+            skipped_count += 1
+            continue
+
+        asset_in = AssetCreate(
+            inventory_id=inventory_number_val,
+            serial_number=serial_number if serial_number else None,
+            name=base_material_name
+        )
+
+        await create_asset(db, asset_in, current_user_id=current_user.user_id)
+        created_count += 1
+
+    return {
+        "message": "Импорт завершен",
+        "created": created_count,
+        "skipped": skipped_count,
+        "total_received": len(materials)
+    }
 
 
 @router_assets.get("/", response_model=List[AssetShortResponse])

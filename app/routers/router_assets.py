@@ -65,10 +65,10 @@ async def add_assets_from_sap(
         limit: Optional[int] = Query(None, description="Количество записей"),
         offset: Optional[int] = Query(None, description="Смещение"),
         order: Optional[int] = Query(None, description="Порядок сортировки"),
-        inventory_number: Optional[int] = Query(None, description="Фильтр по инвентарному номеру"),
-        cost_center_code: Optional[int] = Query(None, description="Фильтр по коду центра затрат"),
-        cost_center_code_from: Optional[int] = Query(None, description="Фильтр по коду центра затрат от"),
-        base_material_name_like: Optional[int] = Query(None, description="Фильтр по названию базового материала"),
+        inventory_number: Optional[str] = Query(None, description="Фильтр по инвентарному номеру"),
+        cost_center_code: Optional[str] = Query(None, description="Фильтр по коду центра затрат"),
+        cost_center_code_from: Optional[str] = Query(None, description="Фильтр по коду центра затрат от"),
+        base_material_name_like: Optional[str] = Query(None, description="Фильтр по названию базового материала"),
         current_user = Depends(require_authorized_user),
         db: AsyncSession = Depends(get_db)
 ):

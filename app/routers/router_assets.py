@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depends(require_authorized_user)])
 
+
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset_endpoint(
         asset_in: AssetCreate,
@@ -58,7 +59,54 @@ async def create_asset_endpoint(
     return await create_asset(db, asset_in, current_user_id=current_user.user_id)
 
 
-from typing import Optional
+@router_assets.get("/get-from-sap")
+async def get_assets_from_sap(
+        limit: Optional[int] = Query(None, description="Количество записей"),
+        offset: Optional[int] = Query(None, description="Смещение"),
+        order: Optional[int] = Query(None, description="Порядок сортировки"),
+        inventory_number: Optional[str] = Query(None, description="Фильтр по инвентарному номеру"),
+        cost_center_code: Optional[str] = Query(None, description="Фильтр по коду центра затрат"),
+        cost_center_code_from: Optional[str] = Query(None, description="Фильтр по коду центра затрат от"),
+        base_material_name_like: Optional[str] = Query(None, description="Фильтр по названию базового материала"),
+        current_user = Depends(require_authorized_user)
+):
+    """
+    Получает данные материалов из SAP API и возвращает их без сохранения в БД.
+    """
+    sap_api_url = "http://10.168.143.7:8123/sap/base_materials"
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "order": order,
+        "inventory_number": inventory_number,
+        "cost_center_code": cost_center_code,
+        "cost_center_code_from": cost_center_code_from,
+        "base_material_name_like": base_material_name_like
+    }
+    params = {k: v for k, v in params.items() if v is not None}
+
+    try:
+        response = requests.get(sap_api_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as e:
+        logger.error(f"Ошибка при запросе к SAP API: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при запросе к SAP API: {str(e)}")
+
+    if not data.get("success"):
+        logger.error(f"SAP API вернул ошибку: {data.get('message')}")
+        raise HTTPException(status_code=500, detail=f"SAP API вернул ошибку: {data.get('message')}")
+
+    sap_response = data.get("response", {})
+    materials = sap_response.get("data", [])
+
+    return {
+        "message": "Данные получены из SAP",
+        "total": sap_response.get("total", 0),  # общее количество записей в источнике
+        "count": len(materials),                # количество записей в текущем ответе
+        "data": materials
+    }
+
 
 @router_assets.post("/add", status_code=status.HTTP_201_CREATED)
 async def add_assets_from_sap(

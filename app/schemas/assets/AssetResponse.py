@@ -14,7 +14,7 @@ class AssetBase(BaseModel):
     """Базовые поля актива (простые типы)"""
     name: str
     inventory_id: str
-    serial_number: str
+    serial_number: Optional[str]
     asset_status: str
     type_domain: Optional[str] = None
     affixed_inventory_id: Optional[bool] = None
@@ -24,7 +24,7 @@ class AssetBase(BaseModel):
     comment: Optional[str] = None
 
     # ID связей
-    model_id: int
+    model_id: Optional[int]
     warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
@@ -66,9 +66,9 @@ class AssetShortResponse(BaseModel):
     asset_id: int
     name: str
     inventory_id: str
-    serial_number: str
+    serial_number: Optional[str]
     asset_status: str
-    model_id: int
+    model_id: Optional[int]
     warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None

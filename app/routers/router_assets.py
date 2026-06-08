@@ -158,7 +158,6 @@ async def add_assets_from_sap(
         serial_number = material.get("serial_number", "")
         base_material_name = material.get("base_material_name", "")
         supplier_number = material.get("supplier_number", "")
-        supplier_number = "TEST"
 
         if not inventory_number_val or not base_material_name:
             skipped_count += 1

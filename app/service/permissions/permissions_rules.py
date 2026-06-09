@@ -121,12 +121,8 @@ class FilteredByRead:
             # === ЯВНЫЕ ПАРАМЕТРЫ ДЛЯ /docs И ПЕРЕДАЧИ В CRUD ===
             skip: int = Query(0, ge=0),
             limit: int = Query(50, le=100),
-            class_id: Optional[int] = Query(None)
     ) -> List[T]:
         params = {**self.extra_params, "skip": skip, "limit": limit}
-        if class_id is not None:
-            params["class_id"] = class_id
-
         items = await self.crud_func(db, **params)
         return [item for item in items if has_read_permission(current_user, _get_nested_attr(item, self.group_field))]
 
@@ -143,11 +139,8 @@ class FilteredByWrite:
             current_user: User = Depends(require_authorized_user),
             skip: int = Query(0, ge=0),
             limit: int = Query(50, le=100),
-            class_id: Optional[int] = Query(None)
     ) -> List[T]:
         params = {**self.extra_params, "skip": skip, "limit": limit}
-        if class_id is not None:
-            params["class_id"] = class_id
 
         items = await self.crud_func(db, **params)
         return [item for item in items if has_write_permission(current_user, _get_nested_attr(item, self.group_field))]
@@ -183,11 +176,7 @@ class FilteredByAccessWithParams:
             current_user: User = Depends(require_authorized_user),
             skip: int = Query(0, ge=0),
             limit: int = Query(50, le=100),
-            class_id: Optional[int] = Query(None)
     ) -> List[T]:
         params = {**self.extra_params, "skip": skip, "limit": limit}
-        if class_id is not None:
-            params["class_id"] = class_id
-
         items = await self.crud_func(db, **params)
         return [item for item in items if has_access(current_user, _get_nested_attr(item, self.group_field), self.access_type)]

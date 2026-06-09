@@ -45,11 +45,16 @@ async def create(
 @router_assets_types.get("/", response_model=List[AssetTypeResponse])
 async def list_all(db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     items = await list_asset_types(db)
+    items_permissions = []
     for item in items:
-        if not has_read_permission(current_user, item.en_name):
-            logger.warning("Нет доступа для чтения")
-            raise HTTPException(403, "Нет доступа для чтения")
-    return items
+        if has_read_permission(current_user, item.en_name):
+            items_permissions.append(item)
+
+    if len(items_permissions) == 0:
+        logger.warning("Нет доступа для чтения")
+        raise HTTPException(403, "Нет доступа для чтения")
+
+    return items_permissions
 
 @router_assets_types.get("/id/{asset_type_id}", response_model=AssetTypeResponse)
 async def get_by_id(asset_type_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):

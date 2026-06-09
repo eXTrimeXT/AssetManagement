@@ -77,5 +77,12 @@ class Asset(Base):
     # Модель актива (вместо AssetType)
     model = relationship("AssetModel", back_populates="assets", lazy="joined")
 
+    @property
+    def type_asset(self) -> Optional[str]:
+        """Извлекает en_name типа актива через цепочку: model -> class -> type"""
+        if self.model and self.model.asset_class and self.model.asset_class.asset_type:
+            return self.model.asset_class.asset_type.en_name
+        return None
+
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name}, inventory_id={self.inventory_id})>"

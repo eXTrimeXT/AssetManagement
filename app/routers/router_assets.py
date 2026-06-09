@@ -56,8 +56,13 @@ async def create_asset_endpoint(
         logger.warning(f"Родительский актив не найден")
         raise HTTPException(status_code=400, detail="Родительский актив не найден")
 
+    # Добавить проверку по пользователям !!! Иначе error 500
+
     # 5. Создаём актив
-    return await create_asset(db, asset_in, current_user_id=current_user.user_id)
+    created_asset = await create_asset(db, asset_in, current_user_id=current_user.user_id)
+
+    # 6. Перезагружаем актив с полными связями для корректной сериализации
+    return await get_asset_by_id(db, created_asset.asset_id)
 
 
 @router_assets.get("/get-from-sap")

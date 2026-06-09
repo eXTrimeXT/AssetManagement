@@ -69,6 +69,7 @@ class AssetShortResponse(BaseModel):
     serial_number: Optional[str]
     asset_status: str
     model_id: Optional[int]
+    type_asset: Optional[str] = None
     warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None

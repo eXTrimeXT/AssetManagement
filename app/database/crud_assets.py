@@ -145,6 +145,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .where(Asset.deleted_at.is_(None))
         .options(
             selectinload(Asset.model).selectinload(AssetModel.asset_class),    # Загрузка модели актива (relationship)
+            selectinload(Asset.model).selectinload(AssetModel.creator),
             selectinload(Asset.warehouse_obj),    # Загрузка склада (вместо локации)
             selectinload(Asset.preparer),         # Загрузка подготовившего (User)
             selectinload(Asset.checker),          # Загрузка проверившего (User)

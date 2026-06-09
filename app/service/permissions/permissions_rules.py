@@ -42,7 +42,11 @@ def has_read_permission(user: User, group_name: str | None) -> bool:
     if check_read(user.user_tab_id):
         return True
 
-    if not group_name or not user.permissions:
+    # Если у актива нет группы разрешаем просмотр этого актива
+    if group_name is None:
+        return True
+
+    if not user.permissions:
         return False
     group_perms = user.permissions.get(group_name)
     return bool(group_perms and group_perms.get("read"))
@@ -61,7 +65,11 @@ def has_write_permission(user: User, group_name: str | None) -> bool:
         # logger.warning("WRITE:WRITE")
         return True
 
-    if not group_name or not user.permissions:
+    # Если у актива нет группы также разрешаем редактирование
+    if group_name is None:
+        return True
+
+    if not user.permissions:
         # logger.warning(f"{user}:{group_name}: FALSE")
         return False
     group_perms = user.permissions.get(group_name)
@@ -71,12 +79,18 @@ def has_write_permission(user: User, group_name: str | None) -> bool:
 def has_access(user: User, group_name: str | None, access_type: Literal["read", "write"] | None = None) -> bool:
     if check_root(user.user_tab_id):
         return True
-    
-    if not group_name or not user.permissions:
+
+    # Если нет группы доступ разрешен
+    if group_name is None:
+        return True
+
+    if not user.permissions:
         return False
+
     group_perms = user.permissions.get(group_name)
     if not group_perms:
         return False
+
     if access_type is None:
         return bool(group_perms.get("read") or group_perms.get("write"))
     return bool(group_perms.get(access_type))

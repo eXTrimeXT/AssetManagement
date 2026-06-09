@@ -218,7 +218,7 @@ async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), 
         logger.warning(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-    if not asset.model.asset_class:
+    if asset.model.asset_class is None:
         logger.warning(f"Класс актива не найден")
         raise HTTPException(status_code=404, detail="Класс актива не найден")
 

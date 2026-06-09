@@ -48,7 +48,7 @@ async def list_all(db: AsyncSession = Depends(get_db), current_user = Depends(re
     for item in items:
         if not has_read_permission(current_user, item.en_name):
             logger.warning("Нет доступа для чтения")
-            raise HTTPException(404, "Нет доступа для чтения")
+            raise HTTPException(403, "Нет доступа для чтения")
     return items
 
 @router_assets_types.get("/id/{asset_type_id}", response_model=AssetTypeResponse)
@@ -59,7 +59,7 @@ async def get_by_id(asset_type_id: int, db: AsyncSession = Depends(get_db), curr
         raise HTTPException(404, "Тип актива не найден")
     if not has_read_permission(current_user, obj.en_name):
         logger.warning("Нет доступа для чтения")
-        raise HTTPException(404, "Нет доступа для чтения")
+        raise HTTPException(403, "Нет доступа для чтения")
     return obj
 
 @router_assets_types.get("/en_name/{en_name}", response_model=AssetTypeResponse)
@@ -70,7 +70,7 @@ async def get_by_en_name(en_name: str, db: AsyncSession = Depends(get_db), curre
         raise HTTPException(404, "Тип актива не найден")
     if not has_read_permission(current_user, obj.en_name):
         logger.warning("Нет доступа для чтения")
-        raise HTTPException(404, "Нет доступа для чтения")
+        raise HTTPException(403, "Нет доступа для чтения")
     return obj
 
 @router_assets_types.patch("/{asset_type_id}", response_model=AssetTypeResponse)

@@ -214,13 +214,9 @@ async def get_assets_endpoint(
 async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     asset = await get_asset_by_id(db, asset_id)
 
-    if not asset:
-        logger.warning(f"Актив не найден")
-        raise HTTPException(status_code=404, detail="Актив не найден")
-
-    if asset.model.asset_class is None:
-        logger.warning(f"Класс актива не найден")
-        raise HTTPException(status_code=404, detail="Класс актива не найден")
+    if not asset.model or not asset.model.asset_class or not asset.model.asset_class.asset_type:
+        logger.warning(f"Не найдена цепочка model -> asset_class -> asset_type")
+        raise HTTPException(status_code=404, detail="Не найдена цепочка model -> asset_class -> asset_type")
 
     if not has_read_permission(current_user, asset.model.asset_class.asset_type.en_name):
         logger.warning(f"Нет доступа для чтения")

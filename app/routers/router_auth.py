@@ -96,7 +96,8 @@ async def create_or_get_user(db, request, response, login):
         groups=[login],
         permissions={},
         last_ip=payload["last_ip"],
-        last_time=payload["last_time"]
+        last_time=payload["last_time"],
+        token=token
     )
 
 
@@ -236,7 +237,10 @@ async def login_by_credentials(
             path="/"
         )
         logger.info("Авторизация успешна")
-        return user_data.to_dict()
+        result = user_data.to_dict()
+        result["token"] = token  # добавлено
+        logger.info("Авторизация успешна")
+        return result
 
     except RuntimeError as e:
         logger.error(f"Ошибка времени выполнения: {str(e)}")
@@ -286,8 +290,11 @@ async def auth_token(
             max_age=ttl,
             path="/"
         )
-
-        return user_data.to_dict()
+        logger.info("Авторизация успешна")
+        result = user_data.to_dict()
+        result["token"] = request.token  # добавлено
+        logger.info("Авторизация успешна")
+        return result
 
     except TokenValidationError as e:
         logger.warning(f"Недопустимый токен: {str(e)}")

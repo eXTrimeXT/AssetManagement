@@ -13,6 +13,7 @@ class UserInfoResponse(BaseModel):
     permissions: Dict[str, Dict[str, bool]]  # {"computer": {"read": true, "write": false}, ...}
     last_ip: Optional[str]
     last_time: Optional[str]
+    token: Optional[str] = None
 
 class LoginRequest(BaseModel):
     login: str

@@ -218,6 +218,10 @@ async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), 
         logger.warning(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
+    if not asset.model.asset_class:
+        logger.warning(f"Класс актива не найден")
+        raise HTTPException(status_code=404, detail="Класс актива не найден")
+
     if not has_read_permission(current_user, asset.model.asset_class.asset_type.en_name):
         logger.warning(f"Нет доступа для чтения")
         raise HTTPException(status_code=404, detail="Нет доступа для чтения")

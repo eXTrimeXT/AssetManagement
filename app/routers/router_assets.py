@@ -218,12 +218,14 @@ async def get_assets_endpoint(
 @router_assets.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     asset = await get_asset_by_id(db, asset_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Актив не найден")
 
     try:
         if asset.model or asset.model.asset_class or asset.model.asset_class.asset_type:
             if not has_read_permission(current_user, asset.model.asset_class.asset_type.en_name):
                 logger.warning(f"Нет доступа для чтения")
-                raise HTTPException(status_code=404, detail="Нет доступа для чтения")
+                raise HTTPException(status_code=403, detail="Нет доступа для чтения")
     except:
         logger.warning("model_id = NULL")
     return asset

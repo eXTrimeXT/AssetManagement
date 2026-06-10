@@ -120,7 +120,7 @@ async def get_catalog_item(
     en_name = _get_catalog_asset_type_en_name(item)
     if not has_read_permission(current_user, en_name):
         logger.warning("Нет доступа для чтения")
-        raise HTTPException(404, detail="Нет доступа для чтения")
+        raise HTTPException(403, detail="Нет доступа для чтения")
 
     return item
 

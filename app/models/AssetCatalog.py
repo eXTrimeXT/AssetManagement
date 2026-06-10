@@ -1,6 +1,4 @@
-from tokenize import String
-
-from sqlalchemy import Column, Integer, Date, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base

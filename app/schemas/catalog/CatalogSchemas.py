@@ -5,7 +5,7 @@ from app.schemas.assets.AssetResponse import AssetResponse
 from app.schemas.users.UserResponse import UserResponse
 
 class AssetCatalogBase(BaseModel):
-    asset_id: int
+    asset_id: Optional[int] = None
     android_id: Optional[str] = None
     owner_id: Optional[int] = None
 

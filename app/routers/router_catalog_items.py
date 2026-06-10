@@ -61,24 +61,29 @@ async def add_catalog_item(
     """
     Добавить запись в каталог.
     Требуется право `write` на тип актива модели, к которой привязан актив.
+    Если указан только android_id (без asset_id) — проверка прав пропускается.
     """
-    # 1. Получаем актив, который добавляем в каталог
-    asset = await get_asset_by_id(db, data.asset_id)
-    if not asset:
-        logger.warning("Актив не найден")
-        raise HTTPException(404, detail="Актив не найден")
+    # 1. Проверка: должен быть указан хотя бы один идентификатор
+    if not data.asset_id and not data.android_id:
+        logger.warning("Не указан ни asset_id, ни android_id")
+        raise HTTPException(400, detail="Необходимо указать asset_id или android_id")
 
-    # 2. Получаем модель актива и извлекаем en_name типа
-    asset_type_en_name = None
-    if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-        asset_type_en_name = asset.model.asset_class.asset_type.en_name
+    # 2. Если указан asset_id — проверяем права на запись по типу актива
+    if data.asset_id:
+        asset = await get_asset_by_id(db, data.asset_id)
+        if not asset:
+            logger.warning("Актив не найден")
+            raise HTTPException(404, detail="Актив не найден")
 
-    # 3. Проверка права `write` на тип актива
-    if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
-        logger.warning(f"Нет доступа на запись к типу '{asset_type_en_name}'")
-        raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
+        asset_type_en_name = None
+        if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
+            asset_type_en_name = asset.model.asset_class.asset_type.en_name
 
-    # 4. Создаём запись в каталоге
+        if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
+            logger.warning(f"Нет доступа на запись к типу '{asset_type_en_name}'")
+            raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
+
+    # 3. Создаём запись в каталоге (crud сам проверит существование asset/android)
     try:
         return await add_to_catalog(db, data, current_user_id=current_user.user_id)
     except ValueError as e:

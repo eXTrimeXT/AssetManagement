@@ -16,6 +16,7 @@ from app.database.crud_catalog_operations import _serialize_for_json
 from app.models.CatalogOperation import CatalogOperation
 from app.models.Software import Software
 from app.models.Vendor import Vendor
+from app.models.AndroidData import AndroidData
 
 
 # === HELPERS ===
@@ -41,6 +42,9 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
         .selectinload(Asset.model)
         .selectinload(AssetModel.asset_class)
         .selectinload(AssetClass.asset_type),
+
+        # === Связь с android_id ===
+        selectinload(AssetCatalog.android_data),
 
         # === Связи для сериализации AssetResponse ===
         # asset.model.creator
@@ -187,24 +191,92 @@ async def delete_asset_model(db: AsyncSession, model_id: int) -> bool:
     return True
 
 # === CATALOG CRUD ===
+# async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_id: Optional[int] = None) -> AssetCatalog:
+#     """
+#     Создает запись в каталоге и логирует операцию CREATE в одной транзакции.
+#     """
+#     # 1. Проверки
+#     asset = await db.get(Asset, data.asset_id)
+#     if not asset:
+#         raise ValueError("Asset not found")
+#     existing = await db.execute(select(AssetCatalog).where(AssetCatalog.asset_id == data.asset_id))
+#     if existing.scalar_one_or_none():
+#         raise ValueError(f"Asset {data.asset_id} already in catalog")
+#
+#     # 2. Создаем основной объект
+#     db_obj = AssetCatalog(**data.model_dump())
+#     db.add(db_obj)
+#
+#     # Получаем данные для снапшота заранее
+#     inv_id = asset.inventory_id
+#
+#     # 3. Создаем запись лога
+#     log_entry = CatalogOperation(
+#         catalog_id=db_obj.catalog_id,
+#         asset_inventory_id_snapshot=inv_id,
+#         owner_name_snapshot=None,
+#         operation_type="CREATE",
+#         performed_by=current_user_id,
+#         old_values=None,
+#         new_values=_serialize_for_json(data.model_dump()),
+#         comment="Запись добавлена в каталог",
+#         timestamp=datetime.utcnow()
+#     )
+#     db.add(log_entry)
+#
+#     # 4. Единый коммит для создания записи и лога
+#     try:
+#         await db.commit()
+#     except Exception as e:
+#         await db.rollback()
+#         raise e
+#
+#     # 5. Возвращаем полный объект с подгруженными связями для ответа API
+#     full_obj = await get_catalog_item_by_id(db, db_obj.catalog_id)
+#     if not full_obj:
+#         raise ValueError("Failed to retrieve created catalog item")
+#
+#     return full_obj
+
 async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_id: Optional[int] = None) -> AssetCatalog:
     """
     Создает запись в каталоге и логирует операцию CREATE в одной транзакции.
     """
-    # 1. Проверки
-    asset = await db.get(Asset, data.asset_id)
-    if not asset:
-        raise ValueError("Asset not found")
-    existing = await db.execute(select(AssetCatalog).where(AssetCatalog.asset_id == data.asset_id))
-    if existing.scalar_one_or_none():
-        raise ValueError(f"Asset {data.asset_id} already in catalog")
+    # 1. Проверки — должен быть указан хотя бы один идентификатор
+    if not data.asset_id and not data.android_id:
+        raise ValueError("Необходимо указать asset_id или android_id")
+
+    # Проверка существования asset
+    if data.asset_id:
+        asset = await db.get(Asset, data.asset_id)
+        if not asset:
+            raise ValueError("Asset not found")
+        existing = await db.execute(
+            select(AssetCatalog).where(AssetCatalog.asset_id == data.asset_id)
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError(f"Asset {data.asset_id} already in catalog")
+
+    # Проверка существования android_data по строковому android_id
+    if data.android_id:
+        result = await db.execute(
+            select(AndroidData).where(AndroidData.android_id == data.android_id)
+        )
+        android = result.scalar_one_or_none()
+        if not android:
+            raise ValueError(f"AndroidData with android_id='{data.android_id}' not found")
+        existing = await db.execute(
+            select(AssetCatalog).where(AssetCatalog.android_id == data.android_id)
+        )
+        if existing.scalar_one_or_none():
+            raise ValueError(f"AndroidData '{data.android_id}' already in catalog")
 
     # 2. Создаем основной объект
     db_obj = AssetCatalog(**data.model_dump())
     db.add(db_obj)
 
-    # Получаем данные для снапшота заранее
-    inv_id = asset.inventory_id
+    # Получаем данные для снапшота
+    inv_id = asset.inventory_id if data.asset_id and asset else None
 
     # 3. Создаем запись лога
     log_entry = CatalogOperation(
@@ -220,14 +292,14 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
     )
     db.add(log_entry)
 
-    # 4. Единый коммит для создания записи и лога
+    # 4. Единый коммит
     try:
         await db.commit()
     except Exception as e:
         await db.rollback()
         raise e
 
-    # 5. Возвращаем полный объект с подгруженными связями для ответа API
+    # 5. Возвращаем полный объект с подгруженными связями
     full_obj = await get_catalog_item_by_id(db, db_obj.catalog_id)
     if not full_obj:
         raise ValueError("Failed to retrieve created catalog item")
@@ -343,6 +415,9 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
             .selectinload(Asset.model)
             .selectinload(AssetModel.asset_class)
             .selectinload(AssetClass.asset_type),
+
+            # === Связь с android_id ===
+            selectinload(AssetCatalog.android_data),
 
             # === Связи для сериализации AssetResponse ===
             # asset.model.creator

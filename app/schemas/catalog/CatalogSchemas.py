@@ -6,15 +6,16 @@ from app.schemas.users.UserResponse import UserResponse
 
 class AssetCatalogBase(BaseModel):
     asset_id: int
+    android_id: Optional[str] = None
     owner_id: Optional[int] = None
-    warranty_end_date: Optional[date] = None
 
 class AssetCatalogCreate(AssetCatalogBase):
     created_by: int
 
 class AssetCatalogUpdate(BaseModel):
+    asset_id: Optional[int] = None
     owner_id: Optional[int] = None
-    warranty_end_date: Optional[date] = None
+    android_id: Optional[str] = None
 
 class AssetCatalogResponse(AssetCatalogBase):
     catalog_id: int
@@ -22,6 +23,8 @@ class AssetCatalogResponse(AssetCatalogBase):
 
     # Актив (полный объект со всеми связями: тип, локация, юзеры, вендоры, ПО)
     asset: Optional[AssetResponse] = Field(default=None, alias="asset")
+    # Android данные (полный объект)
+    android_data_obj: Optional[dict] = Field(default=None, alias="android_data")
     # Владелец актива (Пользователь)
     owner: Optional[UserResponse] = Field(default=None, alias="owner")
     # Создатель записи в каталоге (Пользователь)

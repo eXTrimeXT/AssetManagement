@@ -28,6 +28,7 @@ class Os(BaseModel):
     device_type: str
     product_id: str
     device_id: str
+    serial_number: str
 
 class Cpu(BaseModel):
     name: str

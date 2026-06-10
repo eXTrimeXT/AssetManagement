@@ -10,7 +10,7 @@ class AssetCatalog(Base):
     """
     __tablename__ = "asset_catalog"
 
-    catalog_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    catalog_id = Column(Integer, primary_key=True, index=True, autoincrement=True, unique=False)
 
     # Связь с конкретным активом
     asset_id = Column(Integer, ForeignKey("assets.asset_id"), unique=False, nullable=True, index=True)

@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 
@@ -62,6 +63,7 @@ class PCDataCreate(BaseModel):
     components: Components
     office_package: List[str]
     programs: List[str]
+    updated_at: datetime
 
 class PCDataResponse(PCDataCreate):
     id: int

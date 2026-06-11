@@ -4,7 +4,7 @@ from app.models.AndroidData import AndroidData
 from app.schemas.android_data.android_data_schemas import AndroidDataCreate
 
 async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreate):
-    result = await db.execute(select(AndroidData).where(AndroidData.android_id == data.android_id))
+    result = await db.execute(select(AndroidData).where(AndroidData.serial_number == data.serial_number))
     db_record = result.scalars().first()
 
     payload = {
@@ -20,7 +20,7 @@ async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreat
             setattr(db_record, k, v)
     else:
         db_record = AndroidData(
-            android_id=data.android_id,
+            serial_number=data.serial_number,
             **payload
         )
         db.add(db_record)
@@ -29,16 +29,16 @@ async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreat
     await db.refresh(db_record)
     return db_record
 
-async def get_android_data(db: AsyncSession, android_id: str):
-    result = await db.execute(select(AndroidData).where(AndroidData.android_id == android_id))
+async def get_android_data(db: AsyncSession, serial_number: str):
+    result = await db.execute(select(AndroidData).where(AndroidData.serial_number == serial_number))
     return result.scalars().first()
 
 async def get_all_android_data(db: AsyncSession, skip: int = 0, limit: int = 100):
     result = await db.execute(select(AndroidData).offset(skip).limit(limit))
     return result.scalars().all()
 
-async def update_android_data(db: AsyncSession, android_id: str, data: AndroidDataCreate):
-    result = await db.execute(select(AndroidData).where(AndroidData.android_id == android_id))
+async def update_android_data(db: AsyncSession, serial_number: str, data: AndroidDataCreate):
+    result = await db.execute(select(AndroidData).where(AndroidData.serial_number == serial_number))
     db_record = result.scalars().first()
 
     if db_record:
@@ -51,8 +51,8 @@ async def update_android_data(db: AsyncSession, android_id: str, data: AndroidDa
         await db.refresh(db_record)
     return db_record
 
-async def delete_android_data(db: AsyncSession, android_id: str):
-    result = await db.execute(select(AndroidData).where(AndroidData.android_id == android_id))
+async def delete_android_data(db: AsyncSession, serial_number: str):
+    result = await db.execute(select(AndroidData).where(AndroidData.serial_number == serial_number))
     db_record = result.scalars().first()
 
     if db_record:

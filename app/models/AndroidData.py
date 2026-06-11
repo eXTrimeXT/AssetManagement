@@ -6,7 +6,7 @@ class AndroidData(Base):
     __tablename__ = "android_data"
 
     id = Column(Integer, primary_key=True, index=True)
-    android_id = Column(String(50), unique=True, nullable=False, index=True)
+    serial_number = Column(String(50), unique=True, nullable=False, index=True)
     device = Column(JSONB, nullable=False)
     system = Column(JSONB, nullable=False)
     hardware = Column(JSONB, nullable=False)

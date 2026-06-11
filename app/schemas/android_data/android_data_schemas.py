@@ -4,7 +4,6 @@ from typing import Optional
 class DeviceInfo(BaseModel):
     model: str
     name: str
-    serial_number: str
 
 class SystemInfo(BaseModel):
     android_version: str
@@ -41,7 +40,7 @@ class BatteryInfo(BaseModel):
     temperature: str
 
 class AndroidDataCreate(BaseModel):
-    android_id: str
+    serial_number: str
     device: DeviceInfo
     system: SystemInfo
     hardware: HardwareInfo

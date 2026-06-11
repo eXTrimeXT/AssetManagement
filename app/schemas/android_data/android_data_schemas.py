@@ -4,6 +4,7 @@ from typing import Optional
 class DeviceInfo(BaseModel):
     model: str
     name: str
+    serial_number: str
 
 class SystemInfo(BaseModel):
     android_version: str

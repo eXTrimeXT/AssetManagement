@@ -28,8 +28,9 @@ class AssetCatalog(Base):
     # Связи
     asset = relationship("Asset", backref="catalog_entry", uselist=False) # Обратная связь один к одному
     android_data = relationship(
-        "AndroidData",  # Имя класса модели (не таблицы!)
+        "AndroidData",
         foreign_keys=[serial_number],
+        primaryjoin="AssetCatalog.serial_number == AndroidData.serial_number",
         backref="catalog_entries",
         uselist=False,
         lazy="joined"

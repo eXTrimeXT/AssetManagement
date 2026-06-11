@@ -16,7 +16,7 @@ class AssetCatalog(Base):
     asset_id = Column(Integer, ForeignKey("assets.asset_id"), unique=False, nullable=True, index=True)
 
     # Связь с android
-    android_id = Column(String, ForeignKey("android_data.android_id"), unique=False, nullable=True, index=True)
+    serial_number = Column(String, ForeignKey("android_data.serial_number"), unique=False, nullable=True, index=True)
 
     # Владелец (дублируем или синхронизируем с текущим статусом актива, но здесь исторический владелец записи в каталоге)
     owner_id = Column(Integer, ForeignKey("users.user_id"), index=True)
@@ -29,7 +29,7 @@ class AssetCatalog(Base):
     asset = relationship("Asset", backref="catalog_entry", uselist=False) # Обратная связь один к одному
     android_data = relationship(
         "AndroidData",
-        primaryjoin="AssetCatalog.android_id == foreign(AndroidData.android_id)",
+        primaryjoin="AssetCatalog.serial_number == foreign(AndroidData.serial_number)",
         backref="catalog_entries",
         uselist=False,
         lazy="joined"
@@ -38,4 +38,4 @@ class AssetCatalog(Base):
     creator = relationship("User", foreign_keys=[created_by])
 
     def __repr__(self):
-        return f"<AssetCatalog(catalog_id={self.catalog_id}, asset_id={self.asset_id})>, android_id={self.android_id})>"
+        return f"<AssetCatalog(catalog_id={self.catalog_id}, asset_id={self.asset_id})>, serial_number={self.serial_number})>"

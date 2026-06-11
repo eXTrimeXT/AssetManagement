@@ -8,7 +8,7 @@ from app.schemas.android_data.android_data_schemas import AndroidDataResponse
 
 class AssetCatalogBase(BaseModel):
     asset_id: Optional[int] = None
-    android_id: Optional[str] = None
+    serial_number: Optional[str] = None
     owner_id: Optional[int] = None
 
 class AssetCatalogCreate(AssetCatalogBase):
@@ -17,7 +17,7 @@ class AssetCatalogCreate(AssetCatalogBase):
 class AssetCatalogUpdate(BaseModel):
     asset_id: Optional[int] = None
     owner_id: Optional[int] = None
-    android_id: Optional[str] = None
+    serial_number: Optional[str] = None
 
 class AssetCatalogResponse(AssetCatalogBase):
     catalog_id: int

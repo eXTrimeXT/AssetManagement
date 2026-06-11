@@ -61,12 +61,12 @@ async def add_catalog_item(
     """
     Добавить запись в каталог.
     Требуется право `write` на тип актива модели, к которой привязан актив.
-    Если указан только android_id (без asset_id) — проверка прав пропускается.
+    Если указан только serial_number (без asset_id) — проверка прав пропускается.
     """
     # 1. Проверка: должен быть указан хотя бы один идентификатор
-    if not data.asset_id and not data.android_id:
-        logger.warning("Не указан ни asset_id, ни android_id")
-        raise HTTPException(400, detail="Необходимо указать asset_id или android_id")
+    if not data.asset_id and not data.serial_number:
+        logger.warning("Не указан ни asset_id, ни serial_number")
+        raise HTTPException(400, detail="Необходимо указать asset_id или serial_number")
 
     # 2. Если указан asset_id — проверяем права на запись по типу актива
     if data.asset_id:

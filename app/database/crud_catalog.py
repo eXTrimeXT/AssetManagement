@@ -43,7 +43,7 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
         .selectinload(AssetModel.asset_class)
         .selectinload(AssetClass.asset_type),
 
-        # === Связь с android_id ===
+        # === Связь с serial_number ===
         selectinload(AssetCatalog.android_data),
 
         # === Связи для сериализации AssetResponse ===
@@ -243,8 +243,8 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
     Создает запись в каталоге и логирует операцию CREATE в одной транзакции.
     """
     # 1. Проверки — должен быть указан хотя бы один идентификатор
-    if not data.asset_id and not data.android_id:
-        raise ValueError("Необходимо указать asset_id или android_id")
+    if not data.asset_id and not data.serial_number:
+        raise ValueError("Необходимо указать asset_id или serial_number")
 
     # Проверка существования asset
     if data.asset_id:
@@ -257,19 +257,19 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
         if existing.scalar_one_or_none():
             raise ValueError(f"Asset {data.asset_id} already in catalog")
 
-    # Проверка существования android_data по строковому android_id
-    if data.android_id:
+    # Проверка существования android_data по строковому serial_number
+    if data.serial_number:
         result = await db.execute(
-            select(AndroidData).where(AndroidData.android_id == data.android_id)
+            select(AndroidData).where(AndroidData.serial_number == data.serial_number)
         )
         android = result.scalar_one_or_none()
         if not android:
-            raise ValueError(f"AndroidData with android_id='{data.android_id}' not found")
+            raise ValueError(f"AndroidData with serial_number='{data.serial_number}' not found")
         existing = await db.execute(
-            select(AssetCatalog).where(AssetCatalog.android_id == data.android_id)
+            select(AssetCatalog).where(AssetCatalog.serial_number == data.serial_number)
         )
         if existing.scalar_one_or_none():
-            raise ValueError(f"AndroidData '{data.android_id}' already in catalog")
+            raise ValueError(f"AndroidData '{data.serial_number}' already in catalog")
 
     # 2. Создаем основной объект
     db_obj = AssetCatalog(**data.model_dump())
@@ -416,7 +416,7 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
             .selectinload(AssetModel.asset_class)
             .selectinload(AssetClass.asset_type),
 
-            # === Связь с android_id ===
+            # === Связь с serial_number ===
             selectinload(AssetCatalog.android_data),
 
             # === Связи для сериализации AssetResponse ===

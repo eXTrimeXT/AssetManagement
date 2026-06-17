@@ -36,6 +36,7 @@ async def create_or_get_user(db, request, response, login):
 
     if not user:
         user = User(
+            user_id=user.user_id,
             user_tab_id=login,
             user_en_name=login,
             owner=login,
@@ -208,7 +209,7 @@ async def login_by_credentials(
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
         # Создаём/обновляем пользователя в БД
-        await create_or_update_user_from_token(db, user_data)
+        db_user = await create_or_update_user_from_token(db, user_data)
 
         # Сохраняем сессию в Redis
         payload = jwt.decode(
@@ -239,6 +240,7 @@ async def login_by_credentials(
         logger.info("Авторизация успешна")
         result = user_data.to_dict()
         result["token"] = token  # добавлено
+        result["user_id"] = db_user.user_id
         logger.info("Авторизация успешна")
         return result
 
@@ -266,7 +268,7 @@ async def auth_token(
             logger.warning("Срок действия токена истек")
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
-        await create_or_update_user_from_token(db, user_data)
+        db_user = await create_or_update_user_from_token(db, user_data)
 
         payload = jwt.decode(
             request.token,
@@ -293,6 +295,7 @@ async def auth_token(
         logger.info("Авторизация успешна")
         result = user_data.to_dict()
         result["token"] = request.token  # добавлено
+        result["user_id"] = db_user.user_id
         logger.info("Авторизация успешна")
         return result
 

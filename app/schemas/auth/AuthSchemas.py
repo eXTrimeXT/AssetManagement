@@ -5,6 +5,7 @@ class TokenRequest(BaseModel):
     token: str
 
 class UserInfoResponse(BaseModel):
+    user_id: int
     login: str
     email: Optional[str]
     fullname: Optional[str]

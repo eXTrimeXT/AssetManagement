@@ -14,14 +14,20 @@ class WorkshopCreate(BaseModel):
 
     # Карта цеха
     background_image_url: Optional[str] = Field(None, max_length=500, description="URL фона карты")
-    map_width: Optional[int] = Field(1920, ge=100, le=10000, description="Ширина карты в пикселях")
-    map_height: Optional[int] = Field(1080, ge=100, le=10000, description="Высота карты в пикселях")
 
     # === ГЕОМЕТРИЯ ЦЕХА ===
     geometry: Optional[dict] = Field(
         None,
-        description="Геометрия цеха (полигон) для сложных форм. Пример: {'type': 'polygon', 'coordinates': [[0,0], [1920,0], ...]}"
+        description="Геометрия цеха (полигон) для сложных форм. Пример: {'coordinates': [[0,0], [1920,0], ...]}"
     )
+
+    # === РАЗМЕРЫ ПРЯМОУГОЛЬНИКА (если geometry нет) ===
+    workshop_width: Optional[int] = Field(None, ge=100, le=10000, description="Ширина прямоугольника цеха")
+    workshop_height: Optional[int] = Field(None, ge=100, le=10000, description="Высота прямоугольника цеха")
+
+    # === ПОЗИЦИЯ НА ОБЩЕЙ КАРТЕ ===
+    offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
+    offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
     @field_validator('geometry')
     @classmethod
@@ -62,13 +68,19 @@ class WorkshopUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
 
     background_image_url: Optional[str] = Field(None, max_length=500)
-    map_width: Optional[int] = Field(None, ge=100, le=10000)
-    map_height: Optional[int] = Field(None, ge=100, le=10000)
 
     is_active: Optional[bool] = None
 
     # === ГЕОМЕТРИЯ ЦЕХА ===
     geometry: Optional[dict] = Field(None, description="Геометрия цеха (полигон)")
+
+    # === РАЗМЕРЫ ПРЯМОУГОЛЬНИКА ===
+    workshop_width: Optional[int] = Field(None, ge=100, le=10000)
+    workshop_height: Optional[int] = Field(None, ge=100, le=10000)
+
+    # === ПОЗИЦИЯ НА ОБЩЕЙ КАРТЕ ===
+    offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
+    offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
     @field_validator('geometry')
     @classmethod
@@ -112,13 +124,19 @@ class WorkshopResponse(BaseModel):
     description: Optional[str] = None
 
     background_image_url: Optional[str] = None
-    map_width: int
-    map_height: int
 
     is_active: bool
 
     # === ГЕОМЕТРИЯ ЦЕХА ===
     geometry: Optional[dict] = None
+
+    # === РАЗМЕРЫ ПРЯМОУГОЛЬНИКА ===
+    workshop_width: Optional[int] = None
+    workshop_height: Optional[int] = None
+
+    # === ПОЗИЦИЯ НА ОБЩЕЙ КАРТЕ ===
+    offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
+    offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
     created_at: datetime
     updated_at: datetime
@@ -138,6 +156,14 @@ class WorkshopListResponse(BaseModel):
 
     # === ГЕОМЕТРИЯ ЦЕХА ===
     geometry: Optional[dict] = None
+
+    # === РАЗМЕРЫ ПРЯМОУГОЛЬНИКА ===
+    workshop_width: Optional[int] = None
+    workshop_height: Optional[int] = None
+
+    # === ПОЗИЦИЯ НА ОБЩЕЙ КАРТЕ ===
+    offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
+    offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
 
 # === СХЕМА С АКТИВАМИ (для карты) ===

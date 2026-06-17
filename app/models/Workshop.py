@@ -1,4 +1,3 @@
-from typing import Optional
 from sqlalchemy.dialects.postgresql import JSONB
 from app.models.Base import Base
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
@@ -22,9 +21,9 @@ class Workshop(Base):
     description = Column(Text)                              # Описание цеха
 
     # === Карта цеха ===
-    background_image_url = Column(String(500))              # Путь к фону (плану цеха)
-    map_width = Column(Integer, default=1920)               # Ширина карты в пикселях
-    map_height = Column(Integer, default=1080)              # Высота карты в пикселях
+    background_image_url = Column(String(500))                          # Путь к фону (плану цеха)
+
+    map_size = Column(Integer, default=4000, server_default="4000")    # Ширина и высота карты в пикселях
 
     # === ГЕОМЕТРИЯ ЦЕХА (для сложных форм: Г-образные, П-образные и т.д.) ===
     # Пример для Г-образного цеха:
@@ -33,6 +32,15 @@ class Workshop(Base):
     #   "coordinates": [[0,0], [1920,0], [1920,540], [960,540], [960,1080], [0,1080]]
     # }
     geometry = Column(JSONB, nullable=True)
+
+    # Если нет геометрии и это простая прямоугольная фигура
+    workshop_width = Column(Integer, nullable=True)        # Ширина цеха
+    workshop_height = Column(Integer, nullable=True)       # Высота цеха
+
+    # === ПОЗИЦИЯ НА ОБЩЕЙ КАРТЕ (для относительных координат активов) ===
+    offset_x = Column(Integer, default=0, server_default="0")  # Смещение по X на общей карте
+    offset_y = Column(Integer, default=0, server_default="0")  # Смещение по Y на общей карте
+
 
     # === Статус ===
     is_active = Column(Boolean, default=True, index=True)   # Активен ли цех

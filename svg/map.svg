@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 1000 1200"
+    width="100%"
+    height="100%"
+    style="border: 2px solid #333; background: #fafafa;">
+
+    <defs>
+        <!-- Тень -->
+        <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="3" dy="3" stdDeviation="4" flood-opacity="0.4"/>
+        </filter>
+    </defs>
+
+    <!-- ЦЕХ ДВИГАТЕЛЕЙ (желтый, вверху по центру) -->
+    <polygon
+        points="400,0 650,0 650,150 400,150"
+        fill="#D4C82A"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="525" y="75"
+        font-family="Arial, sans-serif"
+        font-size="22"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ЦЕХ ДВИГАТЕЛЕЙ
+    </text>
+
+    <!-- ЦЕХ СБОРКИ 1-04 (серо-зеленый, Г-образный, большой) -->
+    <polygon
+        points="350,170 900,170 900, 400 350,400"
+        fill="#5F7A72"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="625" y="250"
+        font-family="Arial, sans-serif"
+        font-size="24"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ЦЕХ СБОРКИ
+    </text>
+    <text x="625" y="285"
+        font-family="Arial, sans-serif"
+        font-size="20"
+        fill="#fff"
+        text-anchor="middle">
+        1-04
+    </text>
+
+    <!-- ЛОГИСТИКА 1-06 (оранжевый, слева) -->
+    <polygon
+        points="0,150 250,150 250,400 0,400"
+        fill="#E8943A"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="125" y="275"
+        font-family="Arial, sans-serif"
+        font-size="22"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ЛОГИСТИКА
+    </text>
+    <text x="125" y="310"
+        font-family="Arial, sans-serif"
+        font-size="20"
+        fill="#fff"
+        text-anchor="middle">
+        1-06
+    </text>
+
+    <!-- ЦЕХ СВАРКИ 1-02 (красный, по центру) -->
+    <polygon
+        points="250,400 550,400 550,750 250,750"
+        fill="#B8422A"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="400" y="575"
+        font-family="Arial, sans-serif"
+        font-size="24"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ЦЕХ СВАРКИ
+    </text>
+    <text x="400" y="610"
+        font-family="Arial, sans-serif"
+        font-size="20"
+        fill="#fff"
+        text-anchor="middle">
+        1-02
+    </text>
+
+    <!-- ЦЕХ ОКРАСКИ 1-03 (бирюзовый, справа большой) -->
+    <polygon
+        points="600,400 900,400 900,1000 600,1000"
+        fill="#4DB8A8"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="750" y="675"
+        font-family="Arial, sans-serif"
+        font-size="24"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ЦЕХ ОКРАСКИ
+    </text>
+    <text x="750" y="710"
+        font-family="Arial, sans-serif"
+        font-size="20"
+        fill="#fff"
+        text-anchor="middle">
+        1-03
+    </text>
+
+    <!-- ЦЕХ ШТАМПОВКИ 1-01 (синий, внизу слева) -->
+    <polygon
+        points="100,750 550,750 550,900 100,900"
+        fill="#1E3A6E"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="325" y="825"
+        font-family="Arial, sans-serif"
+        font-size="22"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ЦЕХ ШТАМПОВКИ
+    </text>
+    <text x="325" y="860"
+        font-family="Arial, sans-serif"
+        font-size="20"
+        fill="#fff"
+        text-anchor="middle">
+        1-01
+    </text>
+
+    <!-- ГЛАВНЫЙ ОФИС 1-07 (зеленый, внизу справа) -->
+    <polygon
+        points="600,1000 900,1000 900,1150 600,1150"
+        fill="#2E7D32"
+        stroke="#333"
+        stroke-width="3"
+        filter="url(#shadow)"
+    />
+    <text x="750" y="1075"
+        font-family="Arial, sans-serif"
+        font-size="22"
+        fill="#fff"
+        text-anchor="middle"
+        font-weight="bold">
+        ГЛАВНЫЙ ОФИС
+    </text>
+    <text x="750" y="1110"
+        font-family="Arial, sans-serif"
+        font-size="20"
+        fill="#fff"
+        text-anchor="middle">
+        1-07
+    </text>
+
+</svg>

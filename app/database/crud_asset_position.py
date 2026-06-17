@@ -2,7 +2,6 @@ from typing import Optional, List, Any, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.exc import IntegrityError
-
 from app.models.AssetPosition import AssetPosition
 from app.models.Workshop import Workshop
 from app.models.Asset import Asset
@@ -12,6 +11,7 @@ from app.schemas.asset_position.AssetPosition import AssetPositionCreate, AssetP
 async def create_position(db: AsyncSession, data: AssetPositionCreate) -> AssetPosition:
     """
     Создание новой позиции актива на карте.
+    Координаты x, y относительны workshop (0,0 = левый верхний угол workshop).
     """
     # Проверяем существование актива и цеха
     asset = await db.get(Asset, data.asset_id)
@@ -21,6 +21,13 @@ async def create_position(db: AsyncSession, data: AssetPositionCreate) -> AssetP
     workshop = await db.get(Workshop, data.workshop_id)
     if not workshop:
         raise ValueError(f"Workshop with id {data.workshop_id} not found.")
+
+    # === ВАЛИДАЦИЯ: проверяем, что координаты в пределах workshop ===
+    if workshop.workshop_width and data.x > workshop.workshop_width:
+        raise ValueError(f"Coordinate x={data.x} exceeds workshop width={workshop.workshop_width}")
+
+    if workshop.workshop_height and data.y > workshop.workshop_height:
+        raise ValueError(f"Coordinate y={data.y} exceeds workshop height={workshop.workshop_height}")
 
     try:
         # Если уже есть активная позиция для этого актива, деактивируем её
@@ -36,15 +43,14 @@ async def create_position(db: AsyncSession, data: AssetPositionCreate) -> AssetP
         raise ValueError("Failed to create position.")
 
 
-async def get_position(db: AsyncSession, position_id: int) -> type[AssetPosition] | Any:
+async def get_position(db: AsyncSession, position_id: int) -> Optional[AssetPosition]:
     """
     Получение позиции по ID.
     """
     return await db.get(AssetPosition, position_id)
 
 
-async def get_positions_by_workshop(db: AsyncSession, workshop_id: int, skip: int = 0, limit: int = 100) -> Sequence[
-    Any]:
+async def get_positions_by_workshop(db: AsyncSession, workshop_id: int, skip: int = 0, limit: int = 100) -> Sequence[Any]:
     """
     Получение всех активных позиций для конкретного цеха.
     """
@@ -60,8 +66,7 @@ async def get_positions_by_workshop(db: AsyncSession, workshop_id: int, skip: in
     return result.scalars().all()
 
 
-async def update_position(db: AsyncSession, position_id: int, data: AssetPositionUpdate) -> type[
-                                                                                                AssetPosition] | None | Any:
+async def update_position(db: AsyncSession, position_id: int, data: AssetPositionUpdate) -> Optional[AssetPosition]:
     """
     Обновление позиции (перемещение).
     """

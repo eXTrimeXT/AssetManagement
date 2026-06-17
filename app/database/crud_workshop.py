@@ -12,7 +12,13 @@ async def create_workshop(db: AsyncSession, data: WorkshopCreate) -> Workshop:
     Создание нового цеха.
     """
     try:
-        new_workshop = Workshop(**data.model_dump())
+        # Исключаем map_size из создания
+        workshop_data = data.model_dump(exclude={'map_size'})
+        new_workshop = Workshop(**workshop_data)
+
+        # Устанавливаем hardcoded значения
+        new_workshop.map_size = 4000
+
         db.add(new_workshop)
         await db.commit()
         await db.refresh(new_workshop)
@@ -48,7 +54,7 @@ async def update_workshop(db: AsyncSession, workshop_id: int, data: WorkshopUpda
     Обновление данных цеха.
     """
     try:
-        update_data = data.model_dump(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True, exclude={'map_size'})
         if not update_data:
             return await get_workshop(db, workshop_id)
 

@@ -33,6 +33,16 @@ class AssetBase(BaseModel):
     manufacturer_id: Optional[int] = None
     vendor_id: Optional[int] = None
 
+class AssetWorkshopInfo(BaseModel):
+    """
+    Информация о цехе в составе актива.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    workshop_id: int
+    name: str
+    code: str
+
 class AssetResponse(AssetBase):
     """
     Полная схема ответа с вложенными объектами.
@@ -47,6 +57,11 @@ class AssetResponse(AssetBase):
 
     # СКЛАД
     warehouse_obj: Optional[WarehouseResponse] = None
+
+    # === НОВОЕ ПОЛЕ ===
+    workshop_id: Optional[int] = None
+    workshop: Optional[AssetWorkshopInfo] = None
+
 
     # Пользователи
     preparer: Optional[UserResponse] = Field(default=None)

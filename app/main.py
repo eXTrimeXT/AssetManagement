@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter
+from starlette.middleware.cors import CORSMiddleware
 
 from app.database.connection import engine
 from app.models.Base import Base
@@ -46,6 +47,10 @@ from app.seed_api import router_seed_api                                # не �
 from app.routers.router_pc_data import router_pc_data
 from app.routers.router_android_data import router_android_data
 
+# Роутеры для карты активов
+from app.routers.router_asset_position import router_asset_position
+from app.routers.router_workshop import router_workshop
+
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -74,25 +79,37 @@ app = FastAPI(
 )
 
 # --- Подключение MiddleWare ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # В продакшене укажи конкретные домены
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешить все HTTP методы
+    allow_headers=["*"],  # Разрешить все заголовки
+)
+
 app.add_middleware(LoggingMiddleware)
 
 # --- Подключение API Маршрутов ---
+# Карта активов
+app.include_router(router_auth, prefix="/api")              # Auth
+app.include_router(router_assets, prefix="/api")            # Assets
+app.include_router(router_workshop, prefix="/api")
+app.include_router(router_asset_position, prefix="/api")
+
 # Redis
 app.include_router(router_redis, prefix="/api")             # Only DEV: check redis storage
 
-app.include_router(router_auth, prefix="/api")              # Auth
 app.include_router(router_users, prefix="/api")             # Users
 
-# app.include_router(router_seed_api, prefix="/api")          # Only DEV: seed api
+# app.include_router(router_seed_api, prefix="/api")        # Only DEV: seed api
 
-app.include_router(router_departments)                      # Департамент
-app.include_router(router_divisions)                        # Отдел
-app.include_router(router_groups)                           # Группа
+app.include_router(router_departments, prefix="/api")       # Департамент
+app.include_router(router_divisions, prefix="/api")         # Отдел
+app.include_router(router_groups, prefix="/api")            # Группа
 
 app.include_router(router_assets_types, prefix="/api")      # Asset Types
 app.include_router(router_catalog_classes, prefix="/api")   # Catalog Classes
 app.include_router(router_catalog_models, prefix="/api")    # Catalog Models
-app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_catalog_items, prefix="/api")     # Catalog Items
 
 app.include_router(router_assets_history, prefix="/api")    # Assets History
@@ -110,6 +127,7 @@ app.include_router(router_assets_excel, prefix="/api")      # Excel
 
 app.include_router(router_pc_data, prefix="/api")           # PC DATA
 app.include_router(router_android_data, prefix="/api")      # Android DATA
+
 
 router_root = APIRouter(tags=["/"])
 @router_root.get("/")

@@ -3,9 +3,15 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
+
+from app.service.auth.auth_service import require_authorized_user
+from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
+
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.schemas.assets.AssetResponse import AssetResponse, AssetShortResponse
+from app.schemas.asset_position.AssetPosition import AssetPositionResponse
+
 from app.database.connection import get_db
 from app.database.crud_assets import (
     create_asset, get_assets_list, get_asset_by_id, update_asset,
@@ -13,10 +19,9 @@ from app.database.crud_assets import (
     get_all_asset_children_recursive, check_duplicate_inventory_id,
     check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted
 )
-from app.service.auth.auth_service import require_authorized_user
-from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
 from app.database.crud_catalog import get_asset_model_by_id
 from app.database.crud_vendors import get_or_create_vendor_by_supplier_number
+from app.database import crud_assets
 
 logger = logging.getLogger(__name__)
 
@@ -351,3 +356,42 @@ async def get_all_asset_children_endpoint(
 
     # Конвертируем в ответ (Pydantic v2)
     return [AssetShortResponse.model_validate(child) for child in filtered_children]
+
+
+
+# === НОВЫЕ ЭНДПОИНТЫ ДЛЯ КАРТЫ АКТИВОВ ===
+@router_assets.get("/{asset_id}/positions", response_model=List[AssetPositionResponse])
+async def get_asset_positions(
+        asset_id: int,
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Получение всех позиций актива на картах (история + текущая).
+    """
+    # Проверяем существование актива
+    asset = await crud_assets.get_active_asset(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    positions = await crud_assets.get_asset_positions(db, asset_id)
+    return positions
+
+
+@router_assets.get("/{asset_id}/position/active", response_model=AssetPositionResponse)
+async def get_active_asset_position(
+        asset_id: int,
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Получение текущей (активной) позиции актива.
+    """
+    # Проверяем существование актива
+    asset = await crud_assets.get_active_asset(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    position = await crud_assets.get_active_asset_position(db, asset_id)
+    if not position:
+        raise HTTPException(status_code=404, detail="Position not found")
+
+    return position

@@ -15,7 +15,7 @@ class Asset(Base):
     # === Идентификаторы ===
     asset_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
-    # === Основные поля (из ТЗ) ===
+    # === Основные поля ===
     asset_status = Column(String(100), index=True, default="Приемка")               # Статус актива
     type_domain = Column(String(100))                                               # Тип домена
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True, nullable=True)  # Модель актива (ссылка на справочник)
@@ -23,13 +23,6 @@ class Asset(Base):
     affixed_inventory_id = Column(Boolean, default=False)                           # Инвентарный номер наклеен?
     info_storage_location = Column(String(200))                                     # Место хранения информации об активе
 
-    # === СКЛАД (вместо локации) ===
-    warehouse_id = Column(Integer, ForeignKey("warehouses.warehouse_id"), index=True)
-    warehouse_obj: Mapped[Optional["Warehouse"]] = relationship(
-        "Warehouse",
-        back_populates="assets",
-        lazy="joined"  # Подгружаем склад сразу при запросе актива
-    )
 
     serial_number = Column(String(100), unique=True, index=True, nullable=True)  # Серийный номер
     name = Column(String(150), nullable=False, index=True)                       # Имя актива
@@ -56,6 +49,16 @@ class Asset(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+    preparer = relationship("User", foreign_keys=[prepared_by])
+    checker = relationship("User", foreign_keys=[checked_by])
+
+    software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), index=True)
+    software = relationship("Software", back_populates="assets", lazy="joined")
+
+    # Модель актива (вместо AssetType)
+    model = relationship("AssetModel", back_populates="assets", lazy="joined")
+
     # === Связи ===
     parent = relationship(
         "Asset",
@@ -67,15 +70,30 @@ class Asset(Base):
         ),
         lazy="selectin"
     )
+    
+    # === СКЛАД (вместо локации) ===
+    warehouse_id = Column(Integer, ForeignKey("warehouses.warehouse_id"), index=True)
+    warehouse_obj: Mapped[Optional["Warehouse"]] = relationship(
+        "Warehouse",
+        back_populates="assets",
+        lazy="joined"  # Подгружаем склад сразу при запросе актива
+    )
 
-    preparer = relationship("User", foreign_keys=[prepared_by])
-    checker = relationship("User", foreign_keys=[checked_by])
+    # === ЦЕХ (для карты активов) ===
+    workshop_id = Column(Integer, ForeignKey("workshops.workshop_id", ondelete="SET NULL"), index=True, nullable=True)
+    workshop: Mapped[Optional["Workshop"]] = relationship(
+        "Workshop",
+        back_populates="assets",
+        lazy="select"
+    )
 
-    software_id = Column(Integer, ForeignKey("software.software_id", ondelete="SET NULL"), index=True)
-    software = relationship("Software", back_populates="assets", lazy="joined")
-
-    # Модель актива (вместо AssetType)
-    model = relationship("AssetModel", back_populates="assets", lazy="joined")
+    # === СВЯЗЬ С ПОЗИЦИЯМИ НА КАРТЕ ===
+    asset_positions: Mapped[list["AssetPosition"]] = relationship(
+        "AssetPosition",
+        back_populates="asset",
+        lazy="select",
+        cascade="all, delete-orphan"
+    )
 
     @property
     def type_asset(self) -> Optional[str]:

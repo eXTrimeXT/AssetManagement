@@ -13,6 +13,7 @@ from app.models.AssetClass import AssetClass
 from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
+from app.models.AssetPosition import AssetPosition
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -429,3 +430,28 @@ async def get_all_asset_children_recursive(
     # Возвращаем в порядке из CTE (по глубине)
     assets_map = {a.asset_id: a for a in result.scalars().all()}
     return [assets_map[cid] for cid in child_ids if cid in assets_map]
+
+
+##############    Для карты активов    ##############
+async def get_asset_positions(db: AsyncSession, asset_id: int) -> Sequence[Any]:
+    """
+    Получение всех позиций актива на картах (история + текущая).
+    """
+    result = await db.execute(
+        select(AssetPosition)
+        .where(AssetPosition.asset_id == asset_id)
+        .order_by(AssetPosition.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+async def get_active_asset_position(db: AsyncSession, asset_id: int) -> Optional[AssetPosition]:
+    """
+    Получение текущей (активной) позиции актива.
+    """
+    result = await db.execute(
+        select(AssetPosition)
+        .where(AssetPosition.asset_id == asset_id, AssetPosition.is_active == True)
+    )
+    return result.scalar_one_or_none()
+##############  ////  Для карты активов  ////  ##############

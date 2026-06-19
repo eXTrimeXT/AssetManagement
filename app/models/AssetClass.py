@@ -6,7 +6,7 @@ from app.models.Base import Base
 class AssetClass(Base):
     __tablename__ = "asset_classes"
 
-    class_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    class_id = mapped_column(Integer, primary_key=True, autoincrement=True, index=True)
     class_name = mapped_column(String(100), nullable=False, index=True)
 
     # === ЯВНАЯ СВЯЗЬ НА asset_type_id ===

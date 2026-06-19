@@ -563,6 +563,9 @@ erDiagram
     Asset }o--|| Vendor : "производитель (manufacturer_id)"
     Asset }o--|| Vendor : "поставщик (vendor_id)"
 
+%% ПО
+    Software ||--o{ Asset : "установлено на (software_id)"
+
 %% Ответственные лица
     Asset }o--|| User : "подготовлен (prepared_by)"
     Asset }o--|| User : "проверен (checked_by)"

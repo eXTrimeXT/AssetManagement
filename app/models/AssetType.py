@@ -15,10 +15,10 @@ class AssetType(Base):
     asset_type_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # Название типа должно быть уникальным
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=True, unique=True, index=True)
 
     # Название на английском (необходимо для назначения прав по типу актива)
-    en_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    en_name: Mapped[str] = mapped_column(String(100), nullable=True, unique=True, index=True)
 
     # Обратная связь: у типа может быть много классов
     asset_classes: Mapped[List["AssetClass"]] = relationship("AssetClass", back_populates="asset_type", lazy="selectin")

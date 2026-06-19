@@ -22,13 +22,15 @@ class MapConfigService:
 
         # Дефолтные значения
         return {
-            "map_size": 4000,
+            "map_width": 2000,
+            "map_height": 2000,
         }
 
     @classmethod
     async def update_config(
             cls,
-            map_size: Optional[int] = None,
+            map_width: Optional[int] = None,
+            map_height: Optional[int] = None,
     ) -> dict:
         """
         Обновить конфигурацию карты.
@@ -37,8 +39,10 @@ class MapConfigService:
         config = await cls.get_config()
 
         # Обновляем поля
-        if map_size is not None:
-            config["map_size"] = map_size
+        if map_width is not None:
+            config["map_width"] = map_width
+        if map_height is not None:
+            config["map_height"] = map_height
 
         # Сохраняем в Redis
         await redis_client.set(
@@ -49,10 +53,17 @@ class MapConfigService:
         return config
 
     @classmethod
-    async def get_map_size(cls) -> int:
-        """Получить размер карты"""
+    async def get_map_width(cls) -> int:
+        """Получить ширину карты"""
         config = await cls.get_config()
-        return config.get("map_size", 4000)
+        return config.get("map_width", 2000)
+
+    @classmethod
+    async def get_map_height(cls) -> int:
+        """Получить высоту карты"""
+        config = await cls.get_config()
+        return config.get("map_height", 2000)
+
 
     @classmethod
     async def init_default_config(cls) -> None:
@@ -66,6 +77,7 @@ class MapConfigService:
             await redis_client.set(
                 cls.CONFIG_KEY,
                 json.dumps({
-                    "map_size": 4000,
+                    "map_width": 2000,
+                    "map_height": 2000,
                 })
             )

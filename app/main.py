@@ -50,6 +50,8 @@ from app.routers.router_android_data import router_android_data
 # Роутеры для карты активов
 from app.routers.router_asset_position import router_asset_position
 from app.routers.router_workshop import router_workshop
+from app.routers.router_map_config import router_map_config
+from app.service.map_asset.map_config_service import MapConfigService
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -63,6 +65,9 @@ async def lifespan(app: FastAPI):
     2. conn.run_sync(Base.metadata.create_all) синхронно создает все таблицы,
        описанные в моделях (классы, наследующие Base), если они еще не существуют в БД.
     """
+
+    # Инициализация дефолтного конфига карты
+    await MapConfigService.init_default_config()
 
     # Для разработки раскомментировать
     async with engine.begin() as conn:
@@ -94,6 +99,7 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(router_auth, prefix="/api")              # Auth
 app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_workshop, prefix="/api")
+app.include_router(router_map_config, prefix="/api")
 app.include_router(router_asset_position, prefix="/api")
 
 # Redis

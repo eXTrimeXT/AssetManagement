@@ -28,3 +28,8 @@ async def get_value(key: str):
         logger.error("Ключ не найден")
         raise HTTPException(status_code=404, detail="Ключ не найден")
     return {"key": key, "value": value}
+
+@router_redis.get("/get-keys")
+async def get_all_keys():
+    keys = await redis_client.keys()
+    return {"key": keys}

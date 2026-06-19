@@ -1,6 +1,6 @@
 from sqlalchemy.dialects.postgresql import JSONB
 from app.models.Base import Base
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float
 from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 
@@ -23,8 +23,6 @@ class Workshop(Base):
     # === Карта цеха ===
     background_image_url = Column(String(500))                          # Путь к фону (плану цеха)
 
-    map_size = Column(Integer, default=4000, server_default="4000")    # Ширина и высота карты в пикселях
-
     # === ГЕОМЕТРИЯ ЦЕХА (для сложных форм: Г-образные, П-образные и т.д.) ===
     # Пример для Г-образного цеха:
     # {
@@ -41,6 +39,11 @@ class Workshop(Base):
     offset_x = Column(Integer, default=0, server_default="0")  # Смещение по X на общей карте
     offset_y = Column(Integer, default=0, server_default="0")  # Смещение по Y на общей карте
 
+    # === МАСШТАБ ЦЕХА ===
+    workshop_scale = Column(Float, default=1.0, server_default="1.0")
+
+    # === ЦВЕТ ЦЕХА (hex формат: #RRGGBB или #RRGGBBAA) ===
+    color = Column(String(20), default="#546E7A", server_default="#546E7A", nullable=True)
 
     # === Статус ===
     is_active = Column(Boolean, default=True, index=True)   # Активен ли цех

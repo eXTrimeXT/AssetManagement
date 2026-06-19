@@ -29,6 +29,19 @@ class WorkshopCreate(BaseModel):
     offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
     offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
+    # === МАСШТАБ ЦЕХА ===
+    workshop_scale: Optional[float] = Field(1.0, ge=0.1, le=10.0, description="Масштаб цеха")
+
+    # === ЦВЕТ ЦЕХА ===
+    color: Optional[str] = Field("#546E7A", pattern=r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$", description="Цвет цеха в hex формате (#RRGGBB или #RRGGBBAA)")
+
+    @field_validator('color')
+    @classmethod
+    def validate_color(cls, v):
+        if v and not v.startswith('#'):
+            raise ValueError('Color must start with #')
+        return v.upper()
+
     @field_validator('geometry')
     @classmethod
     def validate_geometry(cls, v):
@@ -81,6 +94,19 @@ class WorkshopUpdate(BaseModel):
     # === ПОЗИЦИЯ НА ОБЩЕЙ КАРТЕ ===
     offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
     offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
+
+    # === МАСШТАБ ЦЕХА ===
+    workshop_scale: Optional[float] = Field(1.0, ge=0.1, le=10.0, description="Масштаб цеха")
+
+    # === ЦВЕТ ЦЕХА ===
+    color: Optional[str] = Field("#546E7A", pattern=r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$", description="Цвет цеха в hex формате (#RRGGBB или #RRGGBBAA)")
+
+    @field_validator('color')
+    @classmethod
+    def validate_color(cls, v):
+        if v and not v.startswith('#'):
+            raise ValueError('Color must start with #')
+        return v.upper()
 
     @field_validator('geometry')
     @classmethod
@@ -138,6 +164,12 @@ class WorkshopResponse(BaseModel):
     offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
     offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
+    # === МАСШТАБ ЦЕХА ===
+    workshop_scale: float = Field(default=1.0, description="Масштаб цеха")
+
+    # === ЦВЕТ ЦЕХА ===
+    color: str = Field(default="#546E7A", description="Цвет цеха в hex формате")
+
     created_at: datetime
     updated_at: datetime
 
@@ -165,6 +197,11 @@ class WorkshopListResponse(BaseModel):
     offset_x: Optional[int] = Field(0, ge=0, description="Смещение по X на общей карте")
     offset_y: Optional[int] = Field(0, ge=0, description="Смещение по Y на общей карте")
 
+    # === МАСШТАБ ЦЕХА ===
+    workshop_scale: float = Field(default=1.0, description="Масштаб цеха")
+
+    # === ЦВЕТ ЦЕХА ===
+    color: str = Field(default="#546E7A", description="Цвет цеха в hex формате")
 
 # === СХЕМА С АКТИВАМИ (для карты) ===
 class WorkshopWithAssetsResponse(WorkshopResponse):

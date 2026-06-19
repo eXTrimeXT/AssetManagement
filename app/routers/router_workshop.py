@@ -299,8 +299,8 @@ async def get_all_workshops_map(
         
         <div class="map-container">
             <div class="controls">
-                <button onclick="zoomIn()">➕ Приблизить</button>
-                <button onclick="zoomOut()">➖ Отдалить</button>
+                <button onclick="zoomIn()">➕</button>
+                <button onclick="zoomOut()">➖</button>
                 <button onclick="resetZoom()">🔄 Сброс</button>
                 <button onclick="toggleTheme()" class="theme-toggle">🌓 Тема</button>
             </div>
@@ -620,8 +620,8 @@ async def get_workshop_map(
     <body>
         <div class="map-container">
             <div class="controls">
-                <button onclick="zoomIn()">➕ Приблизить</button>
-                <button onclick="zoomOut()">➖ Отдалить</button>
+                <button onclick="zoomIn()">➕</button>
+                <button onclick="zoomOut()">➖</button>
                 <button onclick="resetZoom()">🔄 Сброс</button>
                 <button onclick="toggleTheme()" class="theme-toggle">🌓 Тема</button>
             </div>

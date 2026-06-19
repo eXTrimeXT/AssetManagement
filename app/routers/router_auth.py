@@ -90,6 +90,7 @@ async def create_or_get_user(db, request, response, login):
     )
 
     return UserInfoResponse(
+        user_id=user.user_id,
         login=login,
         email=f"{login}@hmmr.ru",
         fullname=login,
@@ -239,7 +240,7 @@ async def login_by_credentials(
         )
         logger.info("Авторизация успешна")
         result = user_data.to_dict()
-        result["token"] = token  # добавлено
+        result["token"] = token
         result["user_id"] = db_user.user_id
         logger.info("Авторизация успешна")
         return result

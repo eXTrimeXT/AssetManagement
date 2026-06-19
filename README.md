@@ -313,69 +313,157 @@ erDiagram
         string serial_number
         string name
         string asset_status
-        float price
-        string seller
+        int price
+        int model_id FK
+        int manufacturer_id FK
+        int vendor_id FK
+        int warehouse_id FK
+        int workshop_id FK
+        int prepared_by FK
+        int checked_by FK
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
 
-    User {
-        int user_id PK
-        string user_tab_id UK
-        string owner
-        string department
-        string position
-        string email UK
-        string hashed_password
-        boolean is_active
-        boolean is_superuser
-    }
-
-    Vendor {
-        int vendor_id PK
-        string name
-        string inn
-        string kpp
-        string ogrn
-        string address
-        string phone
-        string email
-    }
-
-    AssetModel {
-        int model_id PK
-        string model_name
+    AssetType {
+        int asset_type_id PK
+        string name UK
+        string en_name UK
         string description
+        datetime created_at
+        datetime updated_at
     }
 
     AssetClass {
         int class_id PK
         string class_name
+        int class_type_id FK
         string description
+        int created_by FK
+        int updated_by FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    AssetModel {
+        int model_id PK
+        string model_name
+        int class_id FK
+        string description
+        boolean is_active
+        boolean is_serial_required
+        int created_by FK
+        int updated_by FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    AssetCatalog {
+        int catalog_id PK
+        int asset_id FK
+        string serial_number
+        int owner_id FK
+        int created_by FK
+        datetime created_at
+    }
+
+    AssetPosition {
+        int id PK
+        int asset_id FK
+        int workshop_id FK
+        int x
+        int y
+        int rotation
+        int scale
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    Workshop {
+        int workshop_id PK
+        string name
+        string code UK
+        string description
+        string background_image_url
+        jsonb geometry
+        int workshop_width
+        int workshop_height
+        int offset_x
+        int offset_y
+        float workshop_scale
+        string color
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    User {
+        int user_id PK
+        string user_tab_id UK
+        string user_en_name
+        string owner
+        string email
+        int department_id FK
+        json permissions
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    Vendor {
+        int vendor_id PK
+        string name
+        int vendor_class_id FK
+        int company_id FK
+        int created_by FK
+        datetime created_at
+    }
+
+    VendorClass {
+        int vendor_class_id PK
+        string name UK
+        datetime created_at
     }
 
     Company {
         int company_id PK
         string company_name
-        string inn
-        string kpp
-        string ogrn
-        string address
+        string gen_director
+        string phone_number
+        int location_id FK
     }
 
     Warehouse {
         int warehouse_id PK
-        string warehouse_name
-        string address
-        string contact_person
-        string phone
+        string name UK
+        int location_id FK
+        int prepared_by FK
     }
 
     Location {
         int location_id PK
-        string location_name
-        string description
+        string country
+        string city
+        string address
+        string room
+        string floor
+    }
+
+    Department {
+        int id PK
+        string name
+    }
+
+    Division {
+        int id PK
+        string name
+    }
+
+    Group {
+        int id PK
+        string name
     }
 
     Software {
@@ -384,121 +472,265 @@ erDiagram
         string version
         string license_key
         datetime license_expiry
+        boolean admin_permission
+        int who_installed FK
     }
 
-    VendorClass {
-        int vendor_class_id PK
-        string class_name
-        string description
+    PCData {
+        int id PK
+        string username UK
+        int user_id FK
+        jsonb user
+        jsonb network
+        jsonb os
+        jsonb components
+        jsonb office_package
+        jsonb programs
+        datetime updated_at
+    }
+
+    AndroidData {
+        int id PK
+        string serial_number UK
+        jsonb device
+        jsonb system
+        jsonb hardware
+        jsonb network
+        jsonb battery
+    }
+
+    UserSession {
+        int id PK
+        string login UK
+        string token
+        string user_info
+        datetime created_at
     }
 
 %% ==================== HISTORY ENTITIES ====================
 
-    AssetHistory {
-        int operation_id PK
+    AssetOperation {
+        int id PK
         int asset_id FK
-        string operation_type
-        int performed_by FK
-        json old_values
-        json new_values
-        string comment
         string inventory_id_snapshot
         string name_snapshot
-        datetime timestamp
-    }
-
-    CatalogHistory {
-        int history_id PK
-        string entity_type
-        int entity_id FK
         string operation_type
-        int performed_by FK
         json old_values
         json new_values
+        int performed_by FK
         string comment
         datetime timestamp
     }
 
-%% ==================== ASSET RELATIONSHIPS ====================
+    CatalogOperation {
+        int id PK
+        int catalog_id FK
+        string asset_inventory_id_snapshot
+        string model_name_snapshot
+        string class_name_snapshot
+        string warehouse_name_snapshot
+        string owner_name_snapshot
+        string operation_type
+        json old_values
+        json new_values
+        int performed_by FK
+        string comment
+        datetime timestamp
+    }
 
-    AssetClass ||--o{ AssetModel : "has models"
-    AssetModel ||--o{ Asset : "used in"
+%% ==================== CORE RELATIONSHIPS ====================
 
-    Asset }o--|| Asset : "has parent (self-ref)"
-    Asset ||--o{ Asset : "has children (self-ref)"
+%% Иерархия типов активов
+    AssetType ||--o{ AssetClass : "классифицирует (class_type_id)"
+    AssetClass ||--o{ AssetModel : "содержит модели (class_id)"
+    AssetModel ||--o{ Asset : "используется в (model_id)"
 
-    Asset }o--|| Warehouse : "stored in"
-    Asset }o--|| Location : "located at"
+%% Актив и его позиции
+    Asset ||--o{ AssetCatalog : "записан в каталог"
+    Asset ||--o{ AssetPosition : "позиция на карте"
+    Asset ||--o{ AssetOperation : "история операций"
 
-    Asset }o--|| Vendor : "manufacturer"
-    Asset }o--|| Vendor : "supplier"
+%% Местоположение и хранение
+    Asset }o--|| Warehouse : "хранится на складе"
+    Asset }o--|| Workshop : "находится в цеху"
 
-    Asset }o--|| User : "prepared by"
-    Asset }o--|| User : "checked by"
+%% Контрагенты
+    Asset }o--|| Vendor : "производитель (manufacturer_id)"
+    Asset }o--|| Vendor : "поставщик (vendor_id)"
 
-    Asset }o--|| Software : "has installed software"
-    Asset }o--|| Company : "belongs to company"
+%% Ответственные лица
+    Asset }o--|| User : "подготовлен (prepared_by)"
+    Asset }o--|| User : "проверен (checked_by)"
 
-%% ==================== VENDOR RELATIONSHIPS ====================
+%% Каталог
+    AssetCatalog }o--|| User : "владелец (owner_id)"
+    AssetCatalog }o--|| User : "создан (created_by)"
+    AssetCatalog ||--o{ CatalogOperation : "история изменений"
 
-    VendorClass ||--o{ Vendor : "categorizes"
-    Vendor }o--|| Company : "represents"
-    Vendor }o--|| User : "created by"
+%% Позиции на карте
+    AssetPosition }o--|| Workshop : "позиция в цеху"
 
-%% ==================== WAREHOUSE RELATIONSHIPS ====================
+%% Контрагенты - внутренние связи
+    Vendor }o--|| VendorClass : "класс контрагента"
+    Vendor }o--o| Company : "представляет компанию"
+    Vendor }o--|| User : "создан пользователем"
 
-    Warehouse ||--o{ Location : "contains"
+%% Компании и локации
+    Company }o--o| Location : "адрес компании"
+    Warehouse }o--o| Location : "адрес склада"
 
-%% ==================== HISTORY RELATIONSHIPS ====================
+%% Пользователи и отделы
+    User }o--o| Department : "отдел пользователя"
 
-    Asset ||--o{ AssetHistory : "has operation history"
-    User ||--o{ AssetHistory : "performed operations"
+%% ПО и устройства
+    Software }o--o| User : "установил (who_installed)"
+    PCData }o--o| User : "данные ПК пользователя"
+    AssetCatalog }o--o| AndroidData : "связь по serial_number"
 
-    User ||--o{ CatalogHistory : "performed catalog changes"
-
-%% ==================== USER RELATIONSHIPS (ADDITIONAL) ====================
-
-    User ||--o{ Vendor : "created vendors"
-    User ||--o{ Asset : "prepared assets"
-    User ||--o{ Asset : "checked assets"
+%% История операций
+    AssetOperation }o--|| User : "операцию выполнил"
+    CatalogOperation }o--|| User : "операцию выполнил"
 
 %% ==================== INDEXES (DOCUMENTATION) ====================
 %% Note: Mermaid ERD doesn't support index definition,
 %% but the following fields are indexed in PostgreSQL:
-%% - Asset: inventory_id (unique), serial_number, asset_status, model_id, deleted_at
-%% - User: user_tab_id (unique), email (unique), is_active
-%% - Vendor: name, inn
-%% - AssetModel: model_name, class_id
-%% - AssetHistory: asset_id, timestamp, operation_type
+%% - Asset: inventory_id, serial_number, asset_status, model_id, manufacturer_id, vendor_id, warehouse_id, workshop_id, price
+%% - AssetType: name (unique), en_name (unique)
+%% - AssetClass: class_name, class_type_id
+%% - AssetModel: model_name, class_id, is_active
+%% - AssetPosition: asset_id, workshop_id, is_active
+%% - Workshop: name, code (unique), is_active
+%% - User: user_tab_id (unique), email, department_id
+%% - Vendor: name, vendor_class_id, company_id
+%% - PCData: username (unique)
+%% - AndroidData: serial_number (unique)
+%% - AssetOperation: asset_id, inventory_id_snapshot
+%% - CatalogOperation: catalog_id, asset_inventory_id_snapshot
 ```
 
-### Описание основных связей:
+## Описание основных связей
 
-1.  **Asset (Активы)**:
-    *   Связан с `AssetType` (тип актива).
-    *   Связан с `Location` (местоположение).
-    *   Связан с `Vendor` дважды: как `manufacturer_id` (производитель) и `vendor_id` (поставщик).
-    *   Имеет самореференцию `parent_id` для иерархии (комплектующие внутри основного устройства).
-    *   Связан с `User` через `prepared_by` и `checked_by`.
-    *   Связан с `Software` (установленное ПО на активе).
-    *   Связан с `AssetCatalog` (один к одному, запись в каталоге соответствует физическому активу).
+### 1. **Иерархия типов активов (3 уровня)**
 
-2.  **AssetCatalog (Каталог активов)**:
-    *   Связывает конкретный `Asset` с его классом (`AssetClass`) и моделью (`AssetModel`).
-    *   Указывает владельца (`User`) и место хранения (`Warehouse`).
+```
+AssetType (Тип) → AssetClass (Класс) → AssetModel (Модель) → Asset (Актив)
+```
 
-3.  **Иерархия типов**:
-    *   `AssetType` -> `AssetClass` -> `AssetModel`.
-    *   Тип (например, "Компьютеры") содержит Классы (например, "Ноутбуки"), которые содержат Модели (например, "ThinkPad X1").
+- **AssetType** — верхний уровень классификации (например, "Компьютеры", "Сетевое оборудование")
+    - Имеет уникальные поля `name` и `en_name`
+- **AssetClass** — средний уровень (например, "Ноутбуки", "Серверы")
+    - Связан с `AssetType` через `class_type_id`
+- **AssetModel** — конкретная модель (например, "ThinkPad X1 Carbon")
+    - Связан с `AssetClass` через `class_id`
+    - Имеет флаг `is_serial_required` (обязателен ли серийный номер)
 
-4.  **Контрагенты**:
-    *   `Vendor` (конкретный поставщик/бренд) ссылается на `VendorClass` (роль: производитель, поставщик и т.д.) и опционально на `Company` (юридическое лицо).
-    *   `Company` привязана к `Location` (адрес юрлица).
+### 2. **Asset (Активы) — центральная сущность**
 
-5.  **Пользователи и Локации**:
-    *   `User` участвует во многих таблицах как создатель, ответственный или владелец.
-    *   `Location` используется в `Asset`, `Company` и `Warehouse` для указания физического адреса.
+Связи актива:
+- **model_id** → `AssetModel` (какая модель)
+- **manufacturer_id** → `Vendor` (производитель)
+- **vendor_id** → `Vendor` (поставщик)
+- **warehouse_id** → `Warehouse` (склад хранения)
+- **workshop_id** → `Workshop` (цех размещения)
+- **prepared_by** → `User` (кто подготовил)
+- **checked_by** → `User` (кто проверил)
 
+Особенности:
+- Поддерживает мягкое удаление через `deleted_at`
+- Имеет `price` для учёта стоимости
+
+### 3. **AssetCatalog (Каталог активов)**
+
+Связывает физический актив с его учётными данными:
+- **asset_id** → `Asset` (сам актив)
+- **serial_number** → `AndroidData` (для Android-устройств)
+- **owner_id** → `User` (владелец)
+- **created_by** → `User` (кто создал запись)
+
+### 4. **Карта цехов и позиций активов**
+
+```
+Workshop (Цех) ←── AssetPosition (Позиция) ──→ Asset (Актив)
+```
+
+- **Workshop** — производственный цех
+    - Может быть описан полигоном (`geometry` JSONB) или прямоугольником (`workshop_width`, `workshop_height`)
+    - Имеет позицию на общей карте (`offset_x`, `offset_y`)
+    - Имеет индивидуальный `workshop_scale` и `color`
+- **AssetPosition** — позиция конкретного актива на карте цеха
+    - Координаты `x`, `y` относительны цеха (0,0 = левый верхний угол)
+    - Поддерживает `rotation` и `scale`
+    - Имеет флаг `is_active` (для истории перемещений)
+
+### 5. **Контрагенты (Vendor)**
+
+- **Vendor** — конкретный поставщик/бренд
+    - Связан с `VendorClass` (роль: производитель, поставщик, сервисный центр)
+    - Опционально связан с `Company` (юридическое лицо)
+- **VendorClass** — классификация контрагентов
+- **Company** — юридическое лицо с адресом через `Location`
+
+### 6. **Локации и склады**
+
+```
+Location (Адрес) ←── Company (Юрлицо)
+                 ←── Warehouse (Склад)
+```
+
+- **Location** — физический адрес (страна, город, адрес, комната, этаж)
+- **Warehouse** — склад, привязанный к локации
+- **Company** — компания с адресом и директором
+
+### 7. **Данные об устройствах**
+
+- **PCData** — данные о ПК (пользователь, сеть, ОС, компоненты, программы)
+    - Связан с `User` через `user_id`
+    - Все технические данные в JSONB
+- **AndroidData** — данные об Android-устройствах
+    - Связан с `AssetCatalog` через `serial_number`
+    - Данные о железе, сети, батарее в JSONB
+
+### 8. **Пользователи и права**
+
+- **User** — пользователь системы
+    - `user_tab_id` — уникальный табельный номер
+    - `permissions` — JSON с правами доступа по типам активов:
+      ```json
+      {
+        "computer": {"read": true, "write": false},
+        "network_equipment": {"read": true, "write": true}
+      }
+      ```
+    - `department_id` → `Department` (отдел)
+- **Department**, **Division**, **Group** — организационная структура
+
+### 9. **История операций**
+
+- **AssetOperation** — история изменений активов
+    - Сохраняет `old_values` и `new_values` (JSON)
+    - Снапшоты `inventory_id_snapshot`, `name_snapshot`
+- **CatalogOperation** — история изменений каталога
+    - Снапшоты модели, класса, склада, владельца
+
+### 10. **Сессии пользователей**
+
+- **UserSession** — активные сессии
+    - Хранит `token` (JWT)
+    - Дублируется в Redis для быстрого доступа
+
+---
+
+## Ключевые особенности архитектуры
+
+| Особенность          | Описание                                                              |
+|----------------------|-----------------------------------------------------------------------|
+| **Мягкое удаление**  | `Asset.deleted_at` — активы не удаляются физически                    |
+| **История операций** | `AssetOperation`, `CatalogOperation` — полный аудит                   |
+| **JSONB поля**       | `geometry`, `permissions`, `PCData`, `AndroidData` — гибкая структура |
+| **Карта цехов**      | Относительные координаты + offset + scale для каждого цеха            |
+| **Права доступа**    | Гранулярные права по типам активов (read/write)                       |
+| **Самореференция**   | `Asset` может иметь иерархию (комплектующие)                          |
+| **Снапшоты**         | В истории сохраняются значения на момент операции                     |
 
 
 
@@ -625,3 +857,133 @@ erDiagram
 | GET    | `/warehouses/{warehouse_id}` | Получить полную информацию о складе по ID. Возвращает 404, если склад не найден. |
 | PATCH  | `/warehouses/{warehouse_id}` | Обновить данные склада по ID. Проверяет уникальность названия при изменении.     |
 | DELETE | `/warehouses/{warehouse_id}` | Удалить склад по ID. Возвращает 204 при успешном удалении.                       |
+
+
+
+## Карта цехов
+
+### Конфигурация карты
+
+Размеры карты хранятся в Redis и могут быть изменены через API:
+
+```bash
+# Получить конфигурацию
+GET /api/map-config/
+
+# Обновить размеры
+PATCH /api/map-config/
+{
+  "map_width": 3000,
+  "map_height": 2500
+}
+
+# Сбросить к значениям по умолчанию
+POST /api/map-config/reset
+```
+
+### Управление цехами
+
+#### Создание цеха
+
+```bash
+POST /api/workshops/
+{
+  "name": "Цех сборки",
+  "code": "1-04",
+  "workshop_width": 800,
+  "workshop_height": 600,
+  "offset_x": 200,
+  "offset_y": 150,
+  "workshop_scale": 1.5,
+  "color": "#FF5733"
+}
+```
+
+#### Создание цеха со сложной геометрией (Г-образный)
+> Примечание: Используется экранная система координат ( (0,0) - левый верхний, (2000,2000) - правый нижний угол) 
+```bash
+POST /api/workshops/
+{
+  "name": "Цех сборки",
+  "code": "1-04",
+  "geometry": {
+    "type": "polygon",
+    "coordinates": [
+      [75, 600],
+      [1050, 600],
+      [1050, 0],
+      [750, 0],
+      [750, 225],
+      [75, 225]
+    ]
+  },
+  "offset_x": 75,
+  "offset_y": 0,
+  "workshop_scale": 1.0,
+  "color": "#5F7A72"
+}
+```
+
+#### Обновление цеха
+
+```bash
+PATCH /api/workshops/{workshop_id}
+{
+  "workshop_scale": 2.0,
+  "color": "#00FF00",
+  "offset_x": 300,
+  "offset_y": 200
+}
+```
+
+### Просмотр карты
+
+#### Карта одного цеха
+
+```bash
+GET /api/workshops/map/{workshop_id}
+```
+
+Возвращает HTML-страницу с интерактивной SVG-картой цеха с возможностью:
+- Zoom (колесико мыши, кнопки)
+- Pan (перетаскивание)
+- Переключение темы (тёмная/белая)
+
+#### Карта всех цехов
+
+```bash
+GET /api/workshops/map
+```
+
+Возвращает HTML-страницу с картой всех активных цехов и связанными с ними активами.
+
+### Параметры цеха
+
+| Параметр          | Тип    | Описание                          |
+|-------------------|--------|-----------------------------------|
+| `name`            | string | Название цеха                     |
+| `code`            | string | Уникальный код (например, "1-04") |
+| `workshop_width`  | int    | Ширина прямоугольника цеха        |
+| `workshop_height` | int    | Высота прямоугольника цеха        |
+| `geometry`        | dict   | Сложная геометрия (полигон)       |
+| `offset_x`        | int    | Смещение по X на общей карте      |
+| `offset_y`        | int    | Смещение по Y на общей карте      |
+| `workshop_scale`  | float  | Масштаб цеха (0.1 - 10.0)         |
+| `color`           | string | Цвет цеха в hex формате (#RRGGBB) |
+
+
+### Размещение актива на карте
+
+```bash
+POST /api/asset-positions/
+{
+  "asset_id": 1,
+  "workshop_id": 2,
+  "x": 100,
+  "y": 200,
+  "rotation": 0,
+  "scale": 1
+}
+```
+
+**Важно:** Координаты `x` и `y` относительны цеха (0,0 = левый верхний угол цеха).

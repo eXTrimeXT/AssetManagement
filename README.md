@@ -454,16 +454,21 @@ erDiagram
     Department {
         int id PK
         string name
+        string abbreviation UK
     }
 
     Division {
         int id PK
         string name
+        string abbreviation UK
+        int department_id FK
     }
 
     Group {
         int id PK
         string name
+        string abbreviation UK
+        int division_id FK
     }
 
     Software {
@@ -580,7 +585,17 @@ erDiagram
     Warehouse }o--o| Location : "адрес склада"
 
 %% Пользователи и отделы
-    User }o--o| Department : "отдел пользователя"
+%% Иерархия организационной структуры
+    Department ||--o{ Division : "содержит отделы"
+    Division ||--o{ Group : "содержит группы"
+
+%% Пользователи привязаны к департаменту
+    Department ||--o{ User : "сотрудники департамента"
+
+%% Обратные связи
+    Division }o--|| Department : "входит в департамент"
+    Group }o--|| Division : "входит в отдел"
+    User }o--o| Department : "работает в департаменте"
 
 %% ПО и устройства
     Software }o--o| User : "установил (who_installed)"

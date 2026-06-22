@@ -1,5 +1,8 @@
 from operator import index
 from typing import Optional
+
+from pydantic import computed_field
+
 from app.models.Base import Base
 from sqlalchemy import Column, Integer, String, Date, Enum, ForeignKey, Text, DateTime, Boolean
 from datetime import datetime
@@ -101,6 +104,34 @@ class Asset(Base):
         if self.model and self.model.asset_class and self.model.asset_class.asset_type:
             return self.model.asset_class.asset_type.en_name
         return None
+
+        # === Вычисляемые поля на основе связей ===
+
+    @computed_field
+    @property
+    def model_name(self) -> Optional[str]:
+        return self.model.model_name if self.model else None
+
+    @computed_field
+    @property
+    def warehouse_name(self) -> Optional[str]:
+        # В твоей SQLAlchemy модели связь называется warehouse_obj
+        return self.warehouse_obj.name if self.warehouse_obj else None
+
+    @computed_field
+    @property
+    def parent_name(self) -> Optional[str]:
+        return self.parent.name if self.parent else None
+
+    @computed_field
+    @property
+    def manufacturer_name(self) -> Optional[str]:
+        return self.manufacturer.name if self.manufacturer else None
+
+    @computed_field
+    @property
+    def vendor_name(self) -> Optional[str]:
+        return self.vendor.name if self.vendor else None
 
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name}, inventory_id={self.inventory_id})>"

@@ -134,7 +134,9 @@ async def get_assets_list(
     query = query.offset(skip).limit(limit)
 
     result = await db.execute(query)
-    return result.scalars().all()
+    res = result.scalars().all()
+    print(f"{res=}")
+    return res
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     """

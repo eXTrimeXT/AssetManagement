@@ -163,6 +163,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.manufacturer).selectinload(Vendor.company),
             selectinload(Asset.manufacturer).selectinload(Vendor.vendor_class),
             selectinload(Asset.manufacturer).selectinload(Vendor.creator),
+            selectinload(Asset.workshop),  # Загрузка цеха
         )
     )
     return result.scalar_one_or_none()

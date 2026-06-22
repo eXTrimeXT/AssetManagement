@@ -73,7 +73,9 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
 
         # === Связи для самой записи каталога ===
         selectinload(AssetCatalog.owner),
-        selectinload(AssetCatalog.creator)
+        selectinload(AssetCatalog.creator),
+
+        selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
     )
 
     result = await db.execute(query)
@@ -446,7 +448,9 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
 
             # === Связи для самой записи каталога ===
             selectinload(AssetCatalog.owner),
-            selectinload(AssetCatalog.creator)
+            selectinload(AssetCatalog.creator),
+
+            selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
         )
 
         query = query.offset(skip).limit(limit)

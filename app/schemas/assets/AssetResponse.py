@@ -83,6 +83,7 @@ class AssetShortResponse(BaseModel):
     inventory_id: str
     serial_number: Optional[str]
     asset_status: str
+    comment: Optional[str] = None
 
     model_id: Optional[int]
     model_name: Optional[str] = None

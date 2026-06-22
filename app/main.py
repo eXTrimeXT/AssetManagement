@@ -7,8 +7,11 @@ from app.models.Base import Base
 # Менеджер контекста для асинхронного управления жизненным циклом приложения
 from contextlib import asynccontextmanager
 
+# Middleware's
 # Импорт класса логирования в middleware
 from app.middleware.LoggingMiddleware import LoggingMiddleware
+# Middleware для автоматической авторизации
+from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
 
 # Импорт роутеров
 # Redis
@@ -93,6 +96,7 @@ app.add_middleware(
 )
 
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(AuthTokenMiddleware)
 
 # --- Подключение API Маршрутов ---
 # Карта активов

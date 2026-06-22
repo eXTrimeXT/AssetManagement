@@ -66,6 +66,53 @@ async def get_positions_by_workshop(db: AsyncSession, workshop_id: int, skip: in
     return result.scalars().all()
 
 
+async def get_all_positions(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 100
+) -> Sequence[Any]:
+    """
+    Получение всех активных позиций всех активов.
+    """
+    result = await db.execute(
+        select(AssetPosition)
+        .where(AssetPosition.is_active == True)
+        .offset(skip)
+        .limit(limit)
+        .order_by(AssetPosition.workshop_id, AssetPosition.asset_id)
+    )
+    return result.scalars().all()
+
+
+async def get_all_positions_with_assets(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 100
+) -> Sequence[Any]:
+    """
+    Получение всех активных позиций с данными активов.
+    """
+    result = await db.execute(
+        select(
+            AssetPosition,
+            Asset.name,
+            Asset.inventory_id,
+            Asset.serial_number,
+            Workshop.name.label("workshop_name"),
+            Workshop.code.label("workshop_code")
+        )
+        .join(Asset, AssetPosition.asset_id == Asset.asset_id)
+        .join(Workshop, AssetPosition.workshop_id == Workshop.workshop_id)
+        .where(
+            AssetPosition.is_active == True,
+            Asset.deleted_at.is_(None)
+        )
+        .offset(skip)
+        .limit(limit)
+        .order_by(Workshop.code, Asset.name)
+    )
+    return result.fetchall()
+
 async def update_position(db: AsyncSession, position_id: int, data: AssetPositionUpdate) -> Optional[AssetPosition]:
     """
     Обновление позиции (перемещение).

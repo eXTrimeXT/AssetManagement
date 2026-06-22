@@ -29,6 +29,54 @@ async def create_asset_position(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router_asset_position.get("/", response_model=List[AssetPositionResponse])
+async def get_all_asset_positions(
+        skip: int = Query(0, ge=0, description="Пропуск записей"),
+        limit: int = Query(100, ge=1, le=1000, description="Лимит записей"),
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Получение списка всех активных позиций всех активов.
+    Возвращает позиции с данными активов и цехов.
+    """
+    positions_data = await crud_asset_position.get_all_positions_with_assets(
+        db, skip=skip, limit=limit
+    )
+
+    result = []
+    for pos_data in positions_data:
+        position = pos_data[0]
+        asset_name = pos_data[1]
+        asset_inventory_id = pos_data[2]
+        asset_serial_number = pos_data[3]
+        workshop_name = pos_data[4]
+        workshop_code = pos_data[5]
+
+        # Определяем тип актива через цепочку model -> class -> type
+        asset_type = None
+        if position.asset and position.asset.model:
+            if position.asset.model.asset_class and position.asset.model.asset_class.asset_type:
+                asset_type = position.asset.model.asset_class.asset_type.en_name
+
+        result.append(AssetPositionResponse(
+            id=position.id,
+            asset_id=position.asset_id,
+            workshop_id=position.workshop_id,
+            x=position.x,
+            y=position.y,
+            rotation=position.rotation,
+            scale=position.scale,
+            is_active=position.is_active,
+            created_at=position.created_at,
+            updated_at=position.updated_at,
+            asset_name=asset_name,
+            asset_inventory_id=asset_inventory_id,
+            asset_serial_number=asset_serial_number,
+            asset_type=asset_type
+        ))
+
+    return result
+
 
 @router_asset_position.get("/workshop/{workshop_id}", response_model=List[AssetPositionResponse])
 async def get_positions_by_workshop(
@@ -60,7 +108,7 @@ async def get_position(
     return position
 
 
-@router_asset_position.patch("/{position_id}", response_model=AssetPositionResponse)
+@router_asset_position.patch("/id/{position_id}", response_model=AssetPositionResponse)
 async def update_asset_position(
         position_id: int,
         data: AssetPositionUpdate,

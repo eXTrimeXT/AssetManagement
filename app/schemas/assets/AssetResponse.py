@@ -83,12 +83,19 @@ class AssetShortResponse(BaseModel):
     inventory_id: str
     serial_number: Optional[str]
     asset_status: str
+
     model_id: Optional[int]
+
     type_asset: Optional[str] = None
+
     warehouse_id: Optional[int] = None
+
     parent_id: Optional[int] = None
+
     software_id: Optional[int] = None
+
     manufacturer_id: Optional[int] = None
+
     vendor_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

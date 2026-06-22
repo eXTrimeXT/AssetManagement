@@ -26,6 +26,30 @@ ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
 def _strip_ansi(text: str) -> str:
     return ANSI_ESCAPE.sub('', text)
 
+def _strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE.sub('', text)
+
+
+def _sanitize_data(data: any, sensitive_keys: set = None) -> any:
+    """
+    Рекурсивно маскирует чувствительные поля в dict/list.
+    """
+    if sensitive_keys is None:
+        sensitive_keys = {
+            "password", "passwd", "pwd", "secret", "token", "api_key",
+            "access_token", "refresh_token", "private_key", "credential"
+        }
+
+    if isinstance(data, dict):
+        return {
+            k: "***" if k.lower() in sensitive_keys else _sanitize_data(v, sensitive_keys)
+            for k, v in data.items()
+        }
+    elif isinstance(data, list):
+        return [_sanitize_data(item, sensitive_keys) for item in data]
+    else:
+        return data
+
 def _get_relative_path(filepath: str) -> str:
     try:
         return str(Path(filepath).relative_to(PROJECT_ROOT))
@@ -174,11 +198,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         method = request.method
 
         request_body = None
-        if method in ("POST", "PUT", "PATCH") and request.headers.get("content-type", "").startswith("application/json"):
+        if method in ("POST", "PUT", "PATCH") and request.headers.get("content-type", " ").startswith("application/json"):
             try:
                 body = await request.body()
-                request_body = json.loads(body.decode("utf-8"))
-                request._body = body
+                raw_body = json.loads(body.decode("utf-8"))
+                request_body = _sanitize_data(raw_body)  # ← Маскируем перед логированием
+                request._body = body  # ← Оригинальное тело сохраняем для дальнейшего использования
             except Exception:
                 pass
 

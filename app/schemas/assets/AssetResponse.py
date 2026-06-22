@@ -87,7 +87,8 @@ class AssetShortResponse(BaseModel):
     model_id: Optional[int]
     model_name: Optional[str] = None
 
-    type_asset: Optional[str] = None
+    type_asset_id: Optional[int] = None
+    type_asset_name: Optional[str] = None
 
     warehouse_id: Optional[int] = None
     warehouse_name: Optional[str] = None
@@ -96,6 +97,7 @@ class AssetShortResponse(BaseModel):
     parent_name: Optional[str] = None
 
     software_id: Optional[int] = None
+    software_office_type: Optional[str] = None
 
     manufacturer_id: Optional[int] = None
     manufacturer_name: Optional[str] = None

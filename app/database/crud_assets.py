@@ -114,10 +114,16 @@ async def get_assets_list(
     Загружает связи для корректной работы фильтрации по правам.
     """
     query = select(Asset).options(
-        # === Загружаем связи для фильтрации по asset_type.en_name ===
+        # Для type_asset
         selectinload(Asset.model)
         .selectinload(AssetModel.asset_class)
-        .selectinload(AssetClass.asset_type)
+        .selectinload(AssetClass.asset_type),
+
+        # === ДОБАВЬ ЭТИ СТРОКИ для работы *_name в списках ===
+        selectinload(Asset.parent),        # Обязательно, т.к. в модели lazy="selectin"
+        selectinload(Asset.software),      # Для software_name и software_office_type
+        selectinload(Asset.warehouse_obj), # На всякий случай
+        selectinload(Asset.workshop),      # Чтобы не падало в роутерах каталога
     )
 
     # Фильтр по удалению

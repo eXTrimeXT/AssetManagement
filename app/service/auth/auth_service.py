@@ -101,11 +101,9 @@ async def require_authorized_user(
 
         db_user = await get_user_by_tab_id(db, user_data.login)
         if not db_user:
-            logger.warning("Пользователь не найден в базе данных. Войдите в систему через /api/login или /api/auth_token")
-            raise HTTPException(
-                status_code=403,
-                detail="Пользователь не найден в базе данных. Войдите в систему через /api/login или /api/auth_token"
-            )
+            logger.info(f"Пользователь {user_data.login} не найден в БД. Автоматическое создание из токена.")
+            db_user = await create_or_update_user_from_token(db, user_data)
+            logger.info(f"Пользователь {user_data.login} успешно создан в БД")
 
         if not db_user.is_active:
             logger.warning("Учетная запись пользователя деактивирована")

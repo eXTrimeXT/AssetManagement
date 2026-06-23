@@ -7,7 +7,7 @@ from typing import Optional, List
 from app.service.auth.auth_service import require_authorized_user
 from app.service.permissions.permissions_rules import FilteredByAccessWithParams, has_write_permission, has_read_permission
 
-from app.schemas.assets.AssetCreate import AssetCreate
+from app.schemas.assets.AssetCreate import AssetCreate, AssetCreateRequest
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.schemas.assets.AssetResponse import AssetResponse, AssetShortResponse
 from app.schemas.asset_position.AssetPosition import AssetPositionResponse
@@ -17,11 +17,16 @@ from app.database.crud_assets import (
     create_asset, get_assets_list, get_asset_by_id, update_asset,
     deactivate_asset, activate_asset, hard_delete_asset,
     get_all_asset_children_recursive, check_duplicate_inventory_id,
-    check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted
+    check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted, search_assets_by_name,
+    create_asset_for_mu
 )
-from app.database.crud_catalog import get_asset_model_by_id
+from app.database.crud_catalog import get_asset_model_by_id, search_asset_models_by_name
 from app.database.crud_vendors import get_or_create_vendor_by_supplier_number
 from app.database import crud_assets
+from app.database.crud_asset_types import get_asset_type_by_name_or_en_name
+from app.database.crud_software import search_software_by_office_type
+from app.database.crud_vendors import search_vendors_by_name
+from app.database.crud_warehouses import search_warehouses_by_name
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +74,103 @@ async def create_asset_endpoint(
     # 6. Перезагружаем актив с полными связями для корректной сериализации
     return await get_asset_by_id(db, created_asset.asset_id)
 
+
+@router_assets.post("/mu/", response_model=AssetResponse)
+async def create_asset_for_mu_endpoint(
+        asset_data: AssetCreateRequest,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    """Создание нового актива"""
+
+    # Поиск model_id по model_name, заглушка id=1 если не найден
+    model_id = 1
+    if asset_data.model_name:
+        models = await search_asset_models_by_name(db, asset_data.model_name)
+        if models:
+            model_id = models[0].model_id
+
+    # Поиск type_asset_id по type_asset_en_name, заглушка id=1 если не найден
+    type_asset_id = 1
+    if asset_data.type_asset_en_name:
+        type_asset = await get_asset_type_by_name_or_en_name(db, search_name=asset_data.type_asset_en_name)
+        if type_asset:
+            type_asset_id = type_asset.asset_type_id
+
+    # Поиск warehouse_id по warehouse_name, заглушка id=1 если не найден
+    warehouse_id = 1
+    if asset_data.warehouse_name:
+        warehouses = await search_warehouses_by_name(db, asset_data.warehouse_name)
+        if warehouses:
+            warehouse_id = warehouses[0].warehouse_id
+
+    # Поиск parent_id по parent_name, None если не найден
+    parent_id = None
+    if asset_data.parent_name:
+        parents = await search_assets_by_name(db, asset_data.parent_name)
+        if parents:
+            parent_id = parents[0].asset_id
+
+    # Поиск software_id по software_office_type, None если не найден
+    software_id = None
+    if asset_data.software_office_type:
+        softwares = await search_software_by_office_type(db, asset_data.software_office_type)
+        if softwares:
+            software_id = softwares[0].id
+
+    # Поиск manufacturer_id по manufacturer_name, None если не найден
+    manufacturer_id = None
+    if asset_data.manufacturer_name:
+        manufacturers = await search_vendors_by_name(db, asset_data.manufacturer_name)
+        if manufacturers:
+            manufacturer_id = manufacturers[0].vendor_id
+
+    # Поиск vendor_id по vendor_name, None если не найден
+    vendor_id = None
+    if asset_data.vendor_name:
+        vendors = await search_vendors_by_name(db, asset_data.vendor_name)
+        if vendors:
+            vendor_id = vendors[0].vendor_id
+
+    # Создание актива через create_asset_for_mu
+    asset = await create_asset_for_mu(
+        db=db,
+        name=asset_data.name,
+        inventory_id=asset_data.inventory_id,
+        serial_number=asset_data.serial_number,
+        asset_status=asset_data.asset_status or "Приемка",
+        comment=asset_data.comment,
+        model_id=model_id,
+        type_asset_id=type_asset_id,
+        warehouse_id=warehouse_id,
+        parent_id=parent_id,
+        software_id=software_id,
+        manufacturer_id=manufacturer_id,
+        vendor_id=vendor_id
+    )
+
+    return asset
+
+@router_assets.get("/search", response_model=List[AssetShortResponse])
+async def search_assets_endpoint(
+        name: str = Query(..., min_length=1),
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    """Поиск активов по name"""
+    items = await search_assets_by_name(db, name)
+
+    # Фильтрация по правам доступа
+    items_permissions = []
+    for item in items:
+        try:
+            if item.model and item.model.asset_class and item.model.asset_class.asset_type:
+                if has_read_permission(current_user, item.model.asset_class.asset_type.en_name):
+                    items_permissions.append(item)
+        except Exception:
+            continue
+
+    return items_permissions
 
 @router_assets.get("/get-from-sap")
 async def get_assets_from_sap(

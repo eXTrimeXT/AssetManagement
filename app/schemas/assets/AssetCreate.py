@@ -57,3 +57,21 @@ class AssetCreate(BaseModel):
             "software_id": None
         }
     })
+
+class AssetCreateRequest(BaseModel):
+    name: str
+    inventory_id: str
+    serial_number: str
+    asset_status: Optional[str] = "Приемка"
+    comment: Optional[str] = None
+    model_name: Optional[str] = None
+    type_asset_en_name: Optional[str] = None
+    type_asset_name: Optional[str] = None
+    warehouse_name: Optional[str] = None
+    parent_name: Optional[str] = None
+    software_office_type: Optional[str] = None
+    manufacturer_name: Optional[str] = None
+    vendor_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True

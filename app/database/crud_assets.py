@@ -464,3 +464,56 @@ async def get_active_asset_position(db: AsyncSession, asset_id: int) -> Optional
     )
     return result.scalar_one_or_none()
 ##############  ////  Для карты активов  ////  ##############
+
+
+async def search_assets_by_name(db: AsyncSession, name: str) -> Sequence[Asset]:
+    """Поиск активов по name (частичное совпадение, без учета регистра)"""
+    query = select(Asset).options(
+        selectinload(Asset.model).selectinload(AssetModel.asset_class).selectinload(AssetClass.asset_type),
+        selectinload(Asset.parent),
+        selectinload(Asset.software),
+        selectinload(Asset.warehouse_obj),
+        selectinload(Asset.manufacturer),
+        selectinload(Asset.vendor)
+    ).where(
+        Asset.name.ilike(f"%{name}%"),
+        Asset.deleted_at.is_(None)
+    )
+
+    result = await db.execute(query)
+    return result.scalars().all()
+
+async def create_asset_for_mu(
+        db: AsyncSession,
+        name: str,
+        inventory_id: str,
+        serial_number: str,
+        asset_status: str,
+        comment: Optional[str],
+        model_id: Optional[int],
+        type_asset_id: Optional[int],
+        warehouse_id: Optional[int],
+        parent_id: Optional[int],
+        software_id: Optional[int],
+        manufacturer_id: Optional[int],
+        vendor_id: Optional[int]
+) -> Asset:
+    """Создание нового актива"""
+    asset = Asset(
+        name=name,
+        inventory_id=inventory_id,
+        serial_number=serial_number,
+        asset_status=asset_status,
+        comment=comment,
+        model_id=model_id,
+        type_asset_id=type_asset_id,
+        warehouse_id=warehouse_id,
+        parent_id=parent_id,
+        software_id=software_id,
+        manufacturer_id=manufacturer_id,
+        vendor_id=vendor_id
+    )
+    db.add(asset)
+    await db.commit()
+    await db.refresh(asset)
+    return asset

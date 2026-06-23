@@ -101,14 +101,31 @@ class Asset(Base):
         cascade="all, delete-orphan"
     )
 
+    # === Вычисляемые поля на основе связей ===
+    @computed_field
     @property
-    def type_asset_name(self) -> Optional[str]:
+    def type_asset_id(self) -> Optional[int]:
+        if self.model and self.model.asset_class and self.model.asset_class.asset_type:
+            # Берем ID типа (проверь точное имя поля в твоей модели AssetType: type_id, asset_type_id или id)
+            return getattr(self.model.asset_class.asset_type, 'type_id', None) or \
+                getattr(self.model.asset_class.asset_type, 'asset_type_id', None) or \
+                getattr(self.model.asset_class.asset_type, 'id', None)
+        return None
+
+    @property
+    def type_asset_en_name(self) -> Optional[str]:
         """Извлекает en_name типа актива через цепочку: model -> class -> type"""
         if self.model and self.model.asset_class and self.model.asset_class.asset_type:
             return self.model.asset_class.asset_type.en_name
         return None
 
-    # === Вычисляемые поля на основе связей ===
+    @property
+    def type_asset_name(self) -> Optional[str]:
+        """Извлекает name типа актива через цепочку: model -> class -> type"""
+        if self.model and self.model.asset_class and self.model.asset_class.asset_type:
+            return self.model.asset_class.asset_type.name
+        return None
+
     @computed_field
     @property
     def model_name(self) -> Optional[str]:
@@ -124,16 +141,6 @@ class Asset(Base):
     @property
     def parent_name(self) -> Optional[str]:
         return self.parent.name if self.parent else None
-
-    @computed_field
-    @property
-    def type_asset_id(self) -> Optional[int]:
-        if self.model and self.model.asset_class and self.model.asset_class.asset_type:
-            # Берем ID типа (проверь точное имя поля в твоей модели AssetType: type_id, asset_type_id или id)
-            return getattr(self.model.asset_class.asset_type, 'type_id', None) or \
-                getattr(self.model.asset_class.asset_type, 'asset_type_id', None) or \
-                getattr(self.model.asset_class.asset_type, 'id', None)
-        return None
 
     @computed_field
     @property

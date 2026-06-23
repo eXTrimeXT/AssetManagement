@@ -59,9 +59,9 @@ class AssetCreate(BaseModel):
     })
 
 class AssetCreateRequest(BaseModel):
-    name: str
-    inventory_id: str
-    serial_number: str
+    name: Optional[str]
+    inventory_id: Optional[str]
+    serial_number: Optional[str]
     asset_status: Optional[str] = "Приемка"
     comment: Optional[str] = None
     model_name: Optional[str] = None

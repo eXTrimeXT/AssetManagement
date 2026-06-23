@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from select import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
@@ -18,7 +19,8 @@ from app.database.crud_software import (
     update_software,
     delete_software,
     check_software_has_assets,
-    get_assets_by_software_id
+    get_assets_by_software_id,
+    search_software_by_office_type
 )
 from app.service.auth.auth_service import require_authorized_user
 
@@ -45,6 +47,14 @@ async def get_software_list_endpoint(
 ):
     """Список ПО с фильтрацией"""
     return await get_software_list(db, skip, limit, admin_permission, os_type)
+
+@router_software.get("/search", response_model=List[SoftwareShortResponse])
+async def search_software_endpoint(
+        office_type: str = Query(..., min_length=1),
+        db: AsyncSession = Depends(get_db)
+):
+    """Поиск ПО по office_type"""
+    return await search_software_by_office_type(db, office_type)
 
 @router_software.get("/{software_id}", response_model=SoftwareResponse)
 async def get_software_endpoint(software_id: int, db: AsyncSession = Depends(get_db)):

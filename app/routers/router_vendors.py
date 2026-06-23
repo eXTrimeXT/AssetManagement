@@ -15,7 +15,8 @@ from app.database.crud_vendors import (
     get_vendor_by_id,
     get_vendors_list,
     update_vendor,
-    delete_vendor
+    delete_vendor,
+    search_vendors_by_name
 )
 from app.service.auth.auth_service import require_authorized_user
 
@@ -45,6 +46,13 @@ async def get_vendors_endpoint(
     """Получить список продавцов/поставщиков с фильтрацией"""
     return await get_vendors_list(db, skip, limit, vendor_class_id, company_id)
 
+@router_vendors.get("/search", response_model=List[VendorShortResponse])
+async def search_vendors_endpoint(
+        name: str = Query(..., min_length=1),
+        db: AsyncSession = Depends(get_db)
+):
+    """Поиск продавцов/поставщиков по name"""
+    return await search_vendors_by_name(db, name)
 
 @router_vendors.get("/{vendor_id}", response_model=VendorResponse)
 async def get_vendor_endpoint(

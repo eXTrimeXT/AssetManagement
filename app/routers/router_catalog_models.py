@@ -1,9 +1,9 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.database.crud_catalog import create_asset_model, get_asset_models, update_asset_model, get_asset_model_by_id
+from app.database.crud_catalog import create_asset_model, get_asset_models, update_asset_model, get_asset_model_by_id, search_asset_models_by_name
 from app.schemas.catalog.ModelSchemas import AssetModelCreate, AssetModelUpdate, AssetModelResponse
 from app.service.auth.auth_service import require_authorized_user
 from app.database.crud_catalog import get_asset_class_by_id
@@ -26,6 +26,14 @@ async def list_models(
         items = Depends(FilteredByAccessWithParams(get_asset_models, "asset_class.asset_type.en_name", "read"))
 ):
     return items
+
+@router_catalog_models.get("/search", response_model=List[AssetModelResponse])
+async def search_models_endpoint(
+        model_name: str = Query(..., min_length=1),
+        db: AsyncSession = Depends(get_db)
+):
+    """Поиск моделей по model_name"""
+    return await search_asset_models_by_name(db, model_name)
 
 @router_catalog_models.get("/{model_id}", response_model=AssetModelResponse)
 async def get_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):

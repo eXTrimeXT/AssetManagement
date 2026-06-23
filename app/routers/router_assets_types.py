@@ -1,13 +1,14 @@
 import logging
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.database.connection import get_db
 from app.database.crud_asset_types import (
     create_asset_type, list_asset_types, update_asset_type,
-    delete_asset_type, get_asset_type_by_id, get_asset_type_by_en_name
+    delete_asset_type, get_asset_type_by_id,
+    get_asset_type_by_name_or_en_name
 )
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeResponse, AssetTypeUpdate
 from app.service.auth.auth_service import require_authorized_user
@@ -67,9 +68,17 @@ async def get_by_id(asset_type_id: int, db: AsyncSession = Depends(get_db), curr
         raise HTTPException(403, "Нет доступа для чтения")
     return obj
 
-@router_assets_types.get("/en_name/{en_name}", response_model=AssetTypeResponse)
-async def get_by_en_name(en_name: str, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
-    obj = await get_asset_type_by_en_name(db, en_name)
+@router_assets_types.get("/search", response_model=AssetTypeResponse)
+async def get_asset_type_by_name_endpoint(
+        search_name: Optional[str] = Query(None),
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    """Получение типа актива по name и/или en_name"""
+    if not search_name:
+        raise HTTPException(status_code=400, detail="Укажите name или en_name")
+
+    obj = await get_asset_type_by_name_or_en_name(db, search_name)
     if not obj:
         logger.warning("Тип актива не найден")
         raise HTTPException(404, "Тип актива не найден")

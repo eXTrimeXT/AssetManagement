@@ -27,6 +27,15 @@ async def get_warehouse_by_id(db: AsyncSession, warehouse_id: int) -> Optional[W
     )
     return result.scalar_one_or_none()
 
+async def search_warehouses_by_name(db: AsyncSession, name: str) -> Sequence[Any]:
+    """Поиск складов по name (частичное совпадение, без учета регистра)"""
+    query = select(Warehouse).options(
+        selectinload(Warehouse.location),
+        selectinload(Warehouse.preparer)
+    ).where(Warehouse.name.ilike(f"%{name}%"))
+
+    result = await db.execute(query)
+    return result.scalars().all()
 
 async def create_warehouse(db: AsyncSession, warehouse_in: WarehouseCreate) -> Warehouse:
     """Создает новый склад"""

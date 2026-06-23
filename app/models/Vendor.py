@@ -21,11 +21,11 @@ class Vendor(Base):
     vendor_class = relationship("VendorClass", back_populates="vendors", lazy="joined")
 
     # Ссылка на компанию (опционально, если вендор является частью компании из таблицы Company)
-    company_id = Column(Integer, ForeignKey("companies.company_id"), index=True)
+    company_id = Column(Integer, ForeignKey("companies.company_id"), index=True, nullable=True)
     company = relationship("Company", back_populates="vendors", lazy="joined")
 
     # Кто создал запись
-    created_by = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.user_id"), nullable=True)
     creator = relationship("User", foreign_keys=[created_by], lazy="joined")
 
     # Дата создания

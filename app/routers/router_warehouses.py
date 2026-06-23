@@ -15,7 +15,8 @@ from app.database.crud_warehouses import (
     get_warehouse_by_id,
     update_warehouse,
     delete_warehouse,
-    check_name_exists
+    check_name_exists,
+    search_warehouses_by_name
 )
 from app.service.auth.auth_service import require_authorized_user
 
@@ -43,6 +44,14 @@ async def get_warehouses_endpoint(
         db: AsyncSession = Depends(get_db)):
     """Получить список всех складов"""
     return await get_warehouses_list(db, skip, limit)
+
+@router_warehouses.get("/search", response_model=List[WarehouseShortResponse])
+async def search_warehouses_endpoint(
+        name: str = Query(..., min_length=1),
+        db: AsyncSession = Depends(get_db)
+):
+    """Поиск складов по name"""
+    return await search_warehouses_by_name(db, name)
 
 @router_warehouses.get("/{warehouse_id}", response_model=WarehouseResponse)
 async def get_warehouse_endpoint(warehouse_id: int, db: AsyncSession = Depends(get_db)):

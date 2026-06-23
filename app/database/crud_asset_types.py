@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_, func
 from app.models.AssetType import AssetType
 from app.schemas.asset_types.AssetTypesSchemas import AssetTypeCreate, AssetTypeUpdate
-from typing import Sequence
+from typing import Sequence, Optional
 
 
 async def create_asset_type(db: AsyncSession, data: AssetTypeCreate) -> AssetType:
@@ -17,11 +17,21 @@ async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> type[Ass
     """Получение по первичному ключу (asset_type_id)"""
     return await db.get(AssetType, asset_type_id)
 
-async def get_asset_type_by_en_name(db: AsyncSession, en_name: str) -> type[AssetType] | None:
-    """Получение по en_name"""
-    result = await db.execute(
-        select(AssetType).where(AssetType.en_name == en_name)
+async def get_asset_type_by_name_or_en_name(db: AsyncSession, search_name: Optional[str] = None) -> AssetType | None:
+    """Получение типа актива по name и/или en_name (точное совпадение)"""
+    if not search_name:
+        return None
+
+    search_name_lower = search_name.lower()
+
+    query = select(AssetType).where(
+        or_(
+            func.lower(AssetType.name) == search_name_lower,
+            func.lower(AssetType.en_name) == search_name_lower
+        )
     )
+
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 async def list_asset_types(db: AsyncSession) -> Sequence[AssetType]:

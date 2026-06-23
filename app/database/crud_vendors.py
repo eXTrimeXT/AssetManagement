@@ -53,6 +53,16 @@ async def get_vendor_by_id(db: AsyncSession, vendor_id: int) -> Optional[Vendor]
     )
     return result.scalar_one_or_none()
 
+async def search_vendors_by_name(db: AsyncSession, name: str) -> Sequence[Vendor]:
+    """Поиск вендоров по name (частичное совпадение, без учета регистра)"""
+    query = select(Vendor).options(
+        selectinload(Vendor.vendor_class),
+        selectinload(Vendor.company),
+        selectinload(Vendor.creator)
+    ).where(Vendor.name.ilike(f"%{name}%"))
+
+    result = await db.execute(query)
+    return result.scalars().all()
 
 async def get_vendors_list(
         db: AsyncSession,

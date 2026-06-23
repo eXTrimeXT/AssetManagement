@@ -25,11 +25,10 @@ class VendorUpdate(BaseModel):
 class VendorResponse(VendorBase):
     vendor_id: int
     created_at: datetime
-    created_by: int
+    created_by: Optional[int] = None
 
     # Вложенные объекты для удобного отображения
     vendor_class: VendorClassShortResponse
-    # company: Optional[CompanyShortResponse] = None
     company: Optional[CompanyResponse] = None
     creator: Optional[UserShortResponse] = None
 

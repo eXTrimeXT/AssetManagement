@@ -121,3 +121,9 @@ async def get_assets_by_software_id(db: AsyncSession, software_id: int) -> Seque
         .where(Asset.deleted_at.is_(None))
     )
     return result.scalars().all()
+
+async def search_software_by_office_type(db: AsyncSession, office_type: str) -> Sequence[Any]:
+    """Поиск ПО по office_type (частичное совпадение, без учета регистра)"""
+    query = select(Software).where(Software.office_type.ilike(f"%{office_type}%"))
+    result = await db.execute(query)
+    return result.scalars().all()

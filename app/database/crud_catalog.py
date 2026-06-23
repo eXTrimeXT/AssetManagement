@@ -167,6 +167,21 @@ async def get_asset_models(db: AsyncSession, class_id: Optional[int] = None, ski
     result = await db.execute(query)
     return result.scalars().all()
 
+async def search_asset_models_by_name(db: AsyncSession, model_name: str) -> Sequence[Any]:
+    """Поиск моделей по model_name (частичное совпадение, без учета регистра)"""
+    query = select(AssetModel).options(
+        selectinload(AssetModel.asset_class).options(
+            selectinload(AssetClass.asset_type),
+            selectinload(AssetClass.creator),
+            selectinload(AssetClass.updater)
+        ),
+        selectinload(AssetModel.creator),
+        selectinload(AssetModel.updater)
+    ).where(AssetModel.model_name.ilike(f"%{model_name}%"))
+
+    result = await db.execute(query)
+    return result.scalars().all()
+
 async def update_asset_model(db: AsyncSession, model_id: int, data: AssetModelUpdate) -> Optional[AssetModel]:
     obj = await get_asset_model_by_id(db, model_id)
     if not obj: return None

@@ -15,15 +15,14 @@ class User(Base):
 
     # Идентификаторы
     user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_tab_id = Column(String(50), unique=True, index=True)    # Табельный номер
+    user_tab_id = Column(String(50), unique=True, index=True)   # Табельный номер
 
     # Имена
-    owner = Column(String(150), nullable=False, index=True)                     # ФИО на русском
-    user_en_name = Column(String(150), nullable=True)                           # ФИО на английском
+    owner = Column(String(150), nullable=True, index=True)      # ФИО на русском
+    user_en_name = Column(String(150), nullable=True)           # ФИО на английском
 
     # Должность и отдел
-    user_position = Column(String(100))                          # Должность
-    # department = Column(String(100), index=True)                 # Отдел
+    user_position = Column(String(100))                         # Должность
     # Ссылка на департамент
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
 

@@ -6,12 +6,12 @@ from typing import Optional, Dict
 class UserBase(BaseModel):
     """Базовая схема пользователя"""
     user_tab_id: Optional[str] = None
-    owner: str
+    owner: Optional[str] = None
     user_en_name: Optional[str] = None
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
     user_position: Optional[str] = None
     department_id: Optional[int] = None
-    email: EmailStr
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
 
 class UserResponse(UserBase):
@@ -26,9 +26,9 @@ class UserShortResponse(BaseModel):
     """Краткая схема для списков (без назначений)"""
     user_id: int
     user_tab_id: Optional[str] = None
-    owner: str
+    owner: Optional[str] = None
     user_position: Optional[str] = None
     department_id: Optional[int] = None
-    email: EmailStr
+    email: Optional[EmailStr] = None
 
     model_config = ConfigDict(from_attributes=True)

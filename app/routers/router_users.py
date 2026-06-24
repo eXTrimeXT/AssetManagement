@@ -42,9 +42,9 @@ async def create_user_endpoint(
         raise HTTPException(status_code=403, detail=f"Нет доступа на создание пользователей")
 
     # Проверка на дубликат email
-    if await check_email_exists(db, user_in.email):
-        logger.warning("Email уже зарегистрирован")
-        raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+    # if await check_email_exists(db, user_in.email):
+    #     logger.warning("Email уже зарегистрирован")
+    #     raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
 
     # Проверка на дубликат табельного номера
     if user_in.user_tab_id:
@@ -123,10 +123,10 @@ async def update_user_endpoint(
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     # Проверка Email
-    if user_data.email and user_data.email != current_user.email:
-        if await check_email_exists(db, user_data.email, exclude_id=user_id):
-            logger.warning("Email уже зарегистрирован")
-            raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+    # if user_data.email and user_data.email != current_user.email:
+    #     if await check_email_exists(db, user_data.email, exclude_id=user_id):
+    #         logger.warning("Email уже зарегистрирован")
+    #         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
 
     # Проверка Табельного номера
     if user_data.user_tab_id and user_data.user_tab_id != current_user.user_tab_id:

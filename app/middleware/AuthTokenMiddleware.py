@@ -24,6 +24,8 @@ EXCLUDED_PATHS = {
     "/api/login",
     "/api/logout",
     "/docs",
+    "/api/android-data",
+    "/api/pc-data",
     "/redoc",
     "/openapi.json",
     "/",

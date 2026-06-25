@@ -46,9 +46,9 @@ class AssetCatalogShortResponse(AssetCatalogBase):
     # Android данные (полный объект)
     android_data_obj: Optional[AndroidDataResponse] = Field(default=None, alias="android_data")
     # Владелец актива (Пользователь)
-    owner: Optional[UserShortResponse] = Field(default=None, alias="owner")
+    owner: Optional[UserResponse] = Field(default=None, alias="owner")
     # Создатель записи в каталоге (Пользователь)
-    creator: Optional[UserShortResponse] = Field(default=None, alias="creator")
+    creator: Optional[UserResponse] = Field(default=None, alias="creator")
 
     model_config = ConfigDict(
         from_attributes=True,

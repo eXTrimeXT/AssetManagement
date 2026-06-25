@@ -42,13 +42,13 @@ class AssetCatalogShortResponse(AssetCatalogBase):
     created_at: datetime
 
     # Актив (полный объект со всеми связями: тип, локация, юзеры, вендоры, ПО)
-    asset: Optional[AssetShortResponse] = Field(default=None, alias="asset")
+    asset: Optional[AssetResponse] = Field(default=None, alias="asset")
     # Android данные (полный объект)
     android_data_obj: Optional[AndroidDataResponse] = Field(default=None, alias="android_data")
     # Владелец актива (Пользователь)
-    owner: Optional[UserResponse] = Field(default=None, alias="owner")
+    owner: Optional[UserShortResponse] = Field(default=None, alias="owner")
     # Создатель записи в каталоге (Пользователь)
-    creator: Optional[UserResponse] = Field(default=None, alias="creator")
+    creator: Optional[UserShortResponse] = Field(default=None, alias="creator")
 
     model_config = ConfigDict(
         from_attributes=True,

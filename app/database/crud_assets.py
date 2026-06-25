@@ -469,6 +469,8 @@ async def get_active_asset_position(db: AsyncSession, asset_id: int) -> Optional
 
 async def search_assets(
         db: AsyncSession,
+        skip: int = 0,
+        limit: int = 50,
         name: Optional[str] = None,
         type_id: Optional[int] = None,
         class_id: Optional[int] = None,
@@ -546,6 +548,9 @@ async def search_assets(
                 )
             )
         )
+
+    # Пагинация
+    query = query.offset(skip).limit(limit)
 
     result = await db.execute(query)
     return result.scalars().all()

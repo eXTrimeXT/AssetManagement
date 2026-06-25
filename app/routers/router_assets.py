@@ -151,8 +151,10 @@ async def create_asset_for_mu_endpoint(
 
     return asset
 
-@router_assets.get("/search", response_model=List[AssetShortResponse])
-async def search_assets_endpoint(
+@router_assets.get("/", response_model=List[AssetShortResponse])
+async def get_and_search_assets_endpoint(
+        skip: int = 0,
+        limit: int = 50,
         name: Optional[str] = Query(None),
         type_id: Optional[int] = Query(None),
         class_id: Optional[int] = Query(None),
@@ -162,21 +164,25 @@ async def search_assets_endpoint(
         type_asset_en_name: Optional[str] = Query(None),
         type_asset_name: Optional[str] = Query(None),
         db: AsyncSession = Depends(get_db),
-        current_user = Depends(require_authorized_user)
+        current_user = Depends(require_authorized_user),
+        items = Depends(FilteredByAccessWithParams(
+            get_assets_list,
+            "model.asset_class.asset_type.en_name",
+            "read"
+        ))
 ):
     """
     Поиск активов по множеству опциональных параметров.
     Все параметры комбинируются через AND.
     """
-    # Проверка что хотя бы один параметр передан
+    # Если ни один параметр не передан, то возвращаем весь список с доступом по правам!
     if not any([name, type_id, class_id, model_id, model_name, class_name, type_asset_en_name, type_asset_name]):
-        raise HTTPException(
-            status_code=400,
-            detail="Укажите хотя бы один параметр для поиска"
-        )
+        return items
 
     items = await search_assets(
         db=db,
+        skip=skip,
+        limit=limit,
         name=name,
         type_id=type_id,
         class_id=class_id,
@@ -340,15 +346,15 @@ async def add_assets_from_sap(
     }
 
 
-@router_assets.get("/", response_model=List[AssetShortResponse])
-async def get_assets_endpoint(
-        items = Depends(FilteredByAccessWithParams(
-            get_assets_list,
-            "model.asset_class.asset_type.en_name",
-            "read"
-        ))
-):
-    return items
+# @router_assets.get("/", response_model=List[AssetShortResponse])
+# async def get_assets_endpoint(
+#         items = Depends(FilteredByAccessWithParams(
+#             get_assets_list,
+#             "model.asset_class.asset_type.en_name",
+#             "read"
+#         ))
+# ):
+#     return items
 
 
 @router_assets.get("/{asset_id}", response_model=AssetResponse)

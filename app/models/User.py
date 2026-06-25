@@ -1,10 +1,13 @@
 from typing import Optional, Dict
 
+from pydantic import computed_field
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models.Base import Base
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, ForeignKey
 from datetime import datetime
+
+from app.models.Base import Base
+from app.models.Department import Department
+
 
 class User(Base):
     """
@@ -48,3 +51,27 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.user_id}, tab_id={self.user_tab_id}, owner={self.owner})>"
+
+    @computed_field
+    @property
+    def department_abbreviation(self) -> Optional[str]:
+        """Извлекает аббревиатуру департамента"""
+        if self.department:
+            return self.department.abbreviation
+        return None
+
+    @computed_field
+    @property
+    def division_abbreviation(self) -> Optional[str]:
+        """Извлекает аббревиатуру отдела"""
+        if self.division:
+            return self.division.abbreviation
+        return None
+
+    @computed_field
+    @property
+    def group_abbreviation(self) -> Optional[str]:
+        """Извлекает аббревиатуру группы"""
+        if self.group:
+            return self.group.abbreviation
+        return None

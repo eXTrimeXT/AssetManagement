@@ -3,6 +3,7 @@ from typing import List, Optional, Any, Sequence, Dict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.User import User
 from app.schemas.users.UserCreate import UserCreate
@@ -39,12 +40,24 @@ async def check_tab_id_exists(db: AsyncSession, tab_id: str, exclude_id: Optiona
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
     """ Получает пользователя по ID """
-    result = await db.execute(select(User).where(User.user_id == user_id))
+    result = await db.execute(
+        select(User).options(
+            selectinload(User.department),
+            selectinload(User.division),
+            selectinload(User.group)
+        ).where(User.user_id == user_id)
+    )
     return result.scalar_one_or_none()
 
 async def get_user_by_tab_id(db: AsyncSession, user_tab_id: str) -> Optional[User]:
     """ Получает пользователя по TAB_ID """
-    result = await db.execute(select(User).where(User.user_tab_id == user_tab_id))
+    result = await db.execute(
+        select(User).options(
+            selectinload(User.department),
+            selectinload(User.division),
+            selectinload(User.group)
+        ).where(User.user_tab_id == user_tab_id)
+    )
     return result.scalar_one_or_none()
 
 # CRUD ОПЕРАЦИИ

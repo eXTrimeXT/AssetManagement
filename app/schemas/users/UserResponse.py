@@ -11,17 +11,23 @@ class UserBase(BaseModel):
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
     user_position: Optional[str] = None
 
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+
     department_id: Optional[int] = None
     division_id: Optional[int] = None
     group_id: Optional[int] = None
 
-    email: Optional[EmailStr] = None
-    phone: Optional[str] = None
 
 class UserResponse(UserBase):
     """Схема ответа с полным набором полей"""
+    department_abbreviation: Optional[str] = None
+    division_abbreviation: Optional[str] = None
+    group_abbreviation: Optional[str] = None
+
     user_id: int
     is_active: bool
+
     created_at: datetime
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

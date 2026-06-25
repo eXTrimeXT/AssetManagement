@@ -23,8 +23,11 @@ class User(Base):
 
     # Должность и отдел
     user_position = Column(String(100))                         # Должность
-    # Ссылка на департамент
+
+    # Департамент <- Отдел <- Группа
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+    division_id = Column(Integer, ForeignKey("divisions.id"), nullable=True, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=True, index=True)
 
     # Права пользователя из токена (UserDataJWT)
     permissions: Mapped[Optional[Dict[str, str]]] = mapped_column(JSON, default=dict, nullable=True)
@@ -40,6 +43,8 @@ class User(Base):
 
     # Связь
     department: Mapped[Optional["Department"]] = relationship("Department", back_populates="users")
+    division: Mapped[Optional["Division"]] = relationship("Division", back_populates="users")
+    group: Mapped[Optional["Group"]] = relationship("Group", back_populates="users")
 
     def __repr__(self):
         return f"<User(id={self.user_id}, tab_id={self.user_tab_id}, owner={self.owner})>"

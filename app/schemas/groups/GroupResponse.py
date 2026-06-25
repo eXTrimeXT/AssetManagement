@@ -1,18 +1,17 @@
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel
 
-class GroupResponse(BaseModel):
-    id: int
-    name: str
-    abbreviation: str
-    division_id: int
 
-    class Config:
-        from_attributes = True
+class GroupDivisionDepartmentIdsResponse(BaseModel):
+    group_id: Optional[int] = None
+    group_name: Optional[str] = None
+    group_abbreviation: Optional[str] = None
 
-class GroupShortResponse(BaseModel):
-    id: int
-    name: str
-    abbreviation: str
+    division_id: Optional[int] = None
+    division_name: Optional[str] = None
+    division_abbreviation: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    department_id: Optional[int] = None
+    department_name: Optional[str] = None
+    department_abbreviation: Optional[str] = None
+

@@ -21,6 +21,7 @@ class Division(Base):
         back_populates="division",
         lazy="select"
     )
+    users: Mapped[List["User"]] = relationship("User", back_populates="division", lazy="select")
 
     def __repr__(self):
         return f"<Division(id={self.id}, name='{self.name}', abbreviation='{self.abbreviation}')>"

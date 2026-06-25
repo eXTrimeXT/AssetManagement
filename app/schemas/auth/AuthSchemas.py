@@ -10,6 +10,7 @@ class UserInfoResponse(BaseModel):
     email: Optional[str]
     fullname: Optional[str]
     distinguished_name: Optional[str]
+    department: Optional[str]
     groups: List[str]
     permissions: Dict[str, Dict[str, bool]]  # {"computer": {"read": true, "write": false}, ...}
     last_ip: Optional[str]

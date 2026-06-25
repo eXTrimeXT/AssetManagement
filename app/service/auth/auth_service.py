@@ -12,6 +12,7 @@ from app.models.User import User
 from app.database.crud_users import get_user_by_tab_id
 from app.database.connection import get_db
 from app.service.redis.redis_client import redis_client
+from app.schemas import departments
 
 logger = logging.getLogger(__name__)
 

@@ -8,6 +8,8 @@ class UserUpdate(BaseModel):
     user_en_name: Optional[str] = None
     user_position: Optional[str] = None
     department_id: Optional[int] = None
+    division_id: Optional[int] = None
+    group_id: Optional[int] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     is_active: Optional[bool] = None

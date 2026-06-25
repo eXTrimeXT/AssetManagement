@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, Mapped
 from app.models.Base import Base
@@ -15,6 +17,7 @@ class Group(Base):
 
     # Связь
     division: Mapped["Division"] = relationship("Division", back_populates="groups")
+    users: Mapped[List["User"]] = relationship("User", back_populates="group", lazy="select")
 
     def __repr__(self):
         return f"<Group(id={self.id}, name='{self.name}', abbreviation='{self.abbreviation}')>"

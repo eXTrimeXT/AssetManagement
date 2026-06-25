@@ -10,7 +10,11 @@ class UserBase(BaseModel):
     user_en_name: Optional[str] = None
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
     user_position: Optional[str] = None
+
     department_id: Optional[int] = None
+    division_id: Optional[int] = None
+    group_id: Optional[int] = None
+
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
 
@@ -29,6 +33,8 @@ class UserShortResponse(BaseModel):
     owner: Optional[str] = None
     user_position: Optional[str] = None
     department_id: Optional[int] = None
+    division_id: Optional[int] = None
+    group_id: Optional[int] = None
     email: Optional[EmailStr] = None
 
     model_config = ConfigDict(from_attributes=True)

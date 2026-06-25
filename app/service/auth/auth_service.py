@@ -13,6 +13,7 @@ from app.database.crud_users import get_user_by_tab_id
 from app.database.connection import get_db
 from app.service.redis.redis_client import redis_client
 from app.schemas import departments
+from app.database.crud_groups import get_hierarchy_by_group_params
 
 logger = logging.getLogger(__name__)
 
@@ -167,19 +168,65 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
         return False
 
 
+# async def create_or_update_user_from_token(
+#         db: AsyncSession,
+#         user_data: UserJWTData
+# ) -> User:
+#     existing_user = await get_user_by_tab_id(db, user_data.login)
+#
+#     if existing_user:
+#         existing_user.user_en_name = user_data.fullname
+#         existing_user.owner = user_data.fullname
+#         existing_user.email = user_data.email
+#         # === Сохраняем права ===
+#         existing_user.permissions = user_data.permissions
+#         existing_user.updated_at = datetime.utcnow()
+#         await db.commit()
+#         await db.refresh(existing_user)
+#         return existing_user
+#     else:
+#         new_user = User(
+#             user_tab_id=user_data.login,
+#             user_en_name=user_data.fullname,
+#             owner=user_data.fullname,
+#             email=user_data.email,
+#             # department_id=user_data.department_id,
+#             permissions=user_data.permissions,
+#             is_active=True,
+#             created_at=datetime.utcnow(),
+#             updated_at=datetime.utcnow()
+#         )
+#         db.add(new_user)
+#         await db.commit()
+#         await db.refresh(new_user)
+#         return new_user
+
+
 async def create_or_update_user_from_token(
         db: AsyncSession,
         user_data: UserJWTData
 ) -> User:
-    existing_user = await get_user_by_tab_id(db, user_data.login)
+    # === Получаем иерархию по аббревиатуре отдела ===
+    group_id = None
+    division_id = None
+    department_id = None
+    if user_data.department:
+        hierarchy = await get_hierarchy_by_group_params(db, abbreviation=user_data.department)
+        if hierarchy:
+            first = hierarchy[0]
+            group_id = first.get("group_id")
+            division_id = first.get("division_id")
+            department_id = first.get("department_id")
 
+    existing_user = await get_user_by_tab_id(db, user_data.login)
     if existing_user:
         existing_user.user_en_name = user_data.fullname
         existing_user.owner = user_data.fullname
         existing_user.email = user_data.email
-        # existing_user.department_id = user_data.department_id
-        # === Сохраняем права в новом формате ===
         existing_user.permissions = user_data.permissions
+        existing_user.group_id = group_id
+        existing_user.division_id = division_id
+        existing_user.department_id = department_id
         existing_user.updated_at = datetime.utcnow()
         await db.commit()
         await db.refresh(existing_user)
@@ -190,8 +237,10 @@ async def create_or_update_user_from_token(
             user_en_name=user_data.fullname,
             owner=user_data.fullname,
             email=user_data.email,
-            # department_id=user_data.department_id,
             permissions=user_data.permissions,
+            group_id=group_id,
+            division_id=division_id,
+            department_id=department_id,
             is_active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()

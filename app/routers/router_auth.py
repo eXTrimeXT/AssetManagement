@@ -1,4 +1,6 @@
 import logging
+from typing import Optional
+
 import jwt
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
@@ -18,6 +20,7 @@ from app.service.redis.redis_client import redis_client
 from app.database.crud_users import get_user_by_tab_id
 from app.models.User import User
 from app.service.auth.external_auth import external_login
+from app.database.crud_groups import get_hierarchy_by_group_params
 
 logger = logging.getLogger(__name__)
 
@@ -29,19 +32,105 @@ async def save_session_to_redis(login: str, token: str, ttl: int) -> None:
     await redis_client.set(session_key, json.dumps(session_data), ex=ttl)
 
 
-async def create_or_get_user(db, request, response, login):
-    # Создаём или получаем пользователя в БД
-    user = await get_user_by_tab_id(db, login)
+# async def create_or_get_user(db, request, response, login):
+#     # Создаём или получаем пользователя в БД
+#     user = await get_user_by_tab_id(db, login)
+#     now = datetime.utcnow()
+#
+#     if not user:
+#         user = User(
+#             user_id=user.user_id,
+#             user_tab_id=login,
+#             user_en_name=login,
+#             owner=login,
+#             email=f"{login}@hmmr.ru",
+#             permissions={},
+#             is_active=True,
+#             created_at=now,
+#             updated_at=now
+#         )
+#         db.add(user)
+#         await db.commit()
+#         await db.refresh(user)
+#     else:
+#         user.updated_at = now
+#         await db.commit()
+#
+#     # Генерируем JWT токен для root
+#     payload = {
+#         "iat": int(now.timestamp()),
+#         "exp": int((now + timedelta(hours=12)).timestamp()),
+#         "login": login,
+#         "last_ip": request.client.host if request.client else "127.0.0.1",
+#         "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
+#         "permissions": [],
+#         "user_data": {
+#             "email": f"{login}@hmmr.ru",
+#             "fullname": login,
+#             "distinguishedName": f"CN={login}",
+#             "groups": [login]
+#         }
+#     }
+#
+#     token = jwt.encode(
+#         payload,
+#         key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+#         algorithm="HS256" if JWT_SECRET_KEY else "none"
+#     )
+#
+#     # Сохраняем сессию в Redis
+#     ttl = 12 * 60 * 60  # 12 часов
+#     await save_session_to_redis(login, token, ttl)
+#
+#     # Устанавливаем куки
+#     response.set_cookie(
+#         key="session_token",
+#         value=token,
+#         httponly=True,
+#         samesite="lax",
+#         max_age=ttl,
+#         path="/"
+#     )
+#
+#     return UserInfoResponse(
+#         user_id=user.user_id,
+#         login=login,
+#         email=f"{login}@hmmr.ru",
+#         fullname=login,
+#         distinguished_name=f"CN={login}",
+#         groups=[login],
+#         permissions={},
+#         last_ip=payload["last_ip"],
+#         last_time=payload["last_time"],
+#         token=token
+#     )
+
+async def create_or_get_user(db, request, response, login, department: Optional[str] = None):
+    # === Получаем иерархию по аббревиатуре отдела ===
+    group_id = None
+    division_id = None
+    department_id = None
+    if department:
+        hierarchy = await get_hierarchy_by_group_params(db, abbreviation=department)
+        if hierarchy:
+            first = hierarchy[0]
+            group_id = first.get("group_id")
+            division_id = first.get("division_id")
+            department_id = first.get("department_id")
+
     now = datetime.utcnow()
+    user = await get_user_by_tab_id(db, login)
 
     if not user:
         user = User(
-            user_id=user.user_id,
             user_tab_id=login,
             user_en_name=login,
             owner=login,
             email=f"{login}@hmmr.ru",
             permissions={},
+            group_id=group_id,
+            division_id=division_id,
+            department_id=department_id,
             is_active=True,
             created_at=now,
             updated_at=now
@@ -50,10 +139,13 @@ async def create_or_get_user(db, request, response, login):
         await db.commit()
         await db.refresh(user)
     else:
+        user.group_id = group_id
+        user.division_id = division_id
+        user.department_id = department_id
         user.updated_at = now
         await db.commit()
 
-    # Генерируем JWT токен для root
+    # Генерируем JWT токен
     payload = {
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=12)).timestamp()),
@@ -75,11 +167,9 @@ async def create_or_get_user(db, request, response, login):
         algorithm="HS256" if JWT_SECRET_KEY else "none"
     )
 
-    # Сохраняем сессию в Redis
-    ttl = 12 * 60 * 60  # 12 часов
+    ttl = 12 * 60 * 60
     await save_session_to_redis(login, token, ttl)
 
-    # Устанавливаем куки
     response.set_cookie(
         key="session_token",
         value=token,
@@ -101,7 +191,6 @@ async def create_or_get_user(db, request, response, login):
         last_time=payload["last_time"],
         token=token
     )
-
 
 @router_auth.post("/login", response_model=UserInfoResponse)
 async def login_by_credentials(

@@ -82,35 +82,6 @@ async def get_hierarchy_by_group_params(
     return [_group_to_hierarchy_dict(g) for g in groups]
 
 
-async def get_groups_list(
-        db: AsyncSession,
-        skip: int = 0,
-        limit: int = 50,
-        name: Optional[str] = None,
-        abbreviation: Optional[str] = None,
-        division_id: Optional[int] = None
-) -> Sequence[dict]:
-    """
-    Получает список групп с фильтрами и возвращает в формате GroupDivisionDepartmentIdsResponse.
-    """
-    query = select(Group).options(
-        selectinload(Group.division).selectinload(Division.department)
-    )
-
-    if name:
-        query = query.where(Group.name.ilike(f"%{name}%"))
-    if abbreviation:
-        query = query.where(Group.abbreviation.ilike(f"%{abbreviation}%"))
-    if division_id:
-        query = query.where(Group.division_id == division_id)
-
-    query = query.offset(skip).limit(limit)
-    result = await db.execute(query)
-    groups = result.scalars().all()
-
-    return [_group_to_hierarchy_dict(g) for g in groups]
-
-
 async def update_group(
         db: AsyncSession,
         group_id: int,

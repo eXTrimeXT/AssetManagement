@@ -271,8 +271,8 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
         existing = await db.execute(
             select(AssetCatalog).where(AssetCatalog.asset_id == data.asset_id)
         )
-        if existing.scalar_one_or_none():
-            raise ValueError(f"Asset {data.asset_id} already in catalog")
+        # if existing.scalar_one_or_none():
+        #     raise ValueError(f"Asset {data.asset_id} already in catalog")
 
     # Проверка существования android_data по строковому serial_number
     if data.serial_number:

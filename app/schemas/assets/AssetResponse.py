@@ -4,7 +4,7 @@ from typing import Optional
 
 # Импорт всех необходимых вложенных схем
 from app.schemas.warehouses.WarehouseResponse import WarehouseResponse
-from app.schemas.users.UserResponse import UserResponse
+from app.schemas.users.UserResponse import UserResponse, UserShortResponse
 from app.schemas.software.SoftwareResponse import SoftwareResponse
 from app.schemas.vendors.VendorSchemas import VendorResponse
 from app.schemas.catalog.ModelSchemas import AssetModelResponse
@@ -64,8 +64,8 @@ class AssetResponse(AssetBase):
 
 
     # Пользователи
-    preparer: Optional[UserResponse] = Field(default=None)
-    checker: Optional[UserResponse] = Field(default=None)
+    preparer: Optional[UserShortResponse] = Field(default=None)
+    checker: Optional[UserShortResponse] = Field(default=None)
 
     # ПО
     software: Optional[SoftwareResponse] = Field(default=None)

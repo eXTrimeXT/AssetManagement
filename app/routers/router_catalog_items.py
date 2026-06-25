@@ -5,7 +5,8 @@ from typing import List
 from starlette.responses import Response
 
 from app.database.connection import get_db
-from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogResponse, AssetCatalogUpdate
+from app.schemas.catalog.CatalogSchemas import AssetCatalogCreate, AssetCatalogResponse, AssetCatalogUpdate, \
+    AssetCatalogShortResponse
 from app.database.crud_catalog import (
     add_to_catalog, get_catalog_list, get_catalog_item_by_id,
     delete_catalog_item, update_catalog_item,
@@ -91,7 +92,7 @@ async def add_catalog_item(
         raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
 
 
-@router_catalog_items.get("/", response_model=List[AssetCatalogResponse])
+@router_catalog_items.get("/", response_model=List[AssetCatalogShortResponse])
 async def list_catalog_items(
         items = Depends(FilteredByAccessWithParams(
             get_catalog_list,

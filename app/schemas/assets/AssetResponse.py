@@ -85,8 +85,11 @@ class AssetShortResponse(BaseModel):
     asset_status: str
     comment: Optional[str] = None
 
-    model_id: Optional[int]
+    model_id: Optional[int] = None
     model_name: Optional[str] = None
+
+    class_id: Optional[int] = None
+    class_name: Optional[str] = None
 
     type_asset_id: Optional[int] = None
     type_asset_en_name: Optional[str] = None

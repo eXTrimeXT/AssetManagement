@@ -17,8 +17,8 @@ from app.database.crud_assets import (
     create_asset, get_assets_list, get_asset_by_id, update_asset,
     deactivate_asset, activate_asset, hard_delete_asset,
     get_all_asset_children_recursive, check_duplicate_inventory_id,
-    check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted, search_assets_by_name,
-    create_asset_for_mu
+    check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted,
+    create_asset_for_mu, search_assets
 )
 from app.database.crud_catalog import get_asset_model_by_id, search_asset_models_by_name
 from app.database.crud_vendors import get_or_create_vendor_by_supplier_number
@@ -107,7 +107,7 @@ async def create_asset_for_mu_endpoint(
     # Поиск parent_id по parent_name, None если не найден
     parent_id = None
     if asset_data.parent_name:
-        parents = await search_assets_by_name(db, asset_data.parent_name)
+        parents = await search_assets(db, name=asset_data.parent_name)
         if parents:
             parent_id = parents[0].asset_id
 
@@ -153,17 +153,43 @@ async def create_asset_for_mu_endpoint(
 
 @router_assets.get("/search", response_model=List[AssetShortResponse])
 async def search_assets_endpoint(
-        name: str = Query(..., min_length=1),
+        name: Optional[str] = Query(None),
+        type_id: Optional[int] = Query(None),
+        class_id: Optional[int] = Query(None),
+        model_id: Optional[int] = Query(None),
+        model_name: Optional[str] = Query(None),
+        class_name: Optional[str] = Query(None),
+        type_asset_en_name: Optional[str] = Query(None),
+        type_asset_name: Optional[str] = Query(None),
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    """Поиск активов по name"""
-    items = await search_assets_by_name(db, name)
+    """
+    Поиск активов по множеству опциональных параметров.
+    Все параметры комбинируются через AND.
+    """
+    # Проверка что хотя бы один параметр передан
+    if not any([name, type_id, class_id, model_id, model_name, class_name, type_asset_en_name, type_asset_name]):
+        raise HTTPException(
+            status_code=400,
+            detail="Укажите хотя бы один параметр для поиска"
+        )
+
+    items = await search_assets(
+        db=db,
+        name=name,
+        type_id=type_id,
+        class_id=class_id,
+        model_id=model_id,
+        model_name=model_name,
+        class_name=class_name,
+        type_asset_en_name=type_asset_en_name,
+        type_asset_name=type_asset_name
+    )
 
     # Фильтрация по правам доступа
     items_permissions = []
     for item in items:
-        logger.info(f"{item=}")
         try:
             if item.model_id is None:
                 items_permissions.append(item)

@@ -126,6 +126,20 @@ class Asset(Base):
             return self.model.asset_class.asset_type.name
         return None
 
+    @property
+    def class_id(self) -> Optional[int]:
+        if self.model and self.model.asset_class:
+            # Берем ID типа (проверь точное имя поля в твоей модели AssetType: type_id, asset_type_id или id)
+            return getattr(self.model.asset_class, 'class_id', None)
+        return None
+
+    @property
+    def class_name(self) -> Optional[str]:
+        """Извлекает en_name типа актива через цепочку: model -> class -> type"""
+        if self.model and self.model.asset_class:
+            return self.model.asset_class.class_name
+        return None
+
     @computed_field
     @property
     def model_name(self) -> Optional[str]:

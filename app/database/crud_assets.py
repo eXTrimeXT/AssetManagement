@@ -14,6 +14,7 @@ from app.schemas.assets.AssetCreate import AssetCreate
 from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
 from app.models.AssetPosition import AssetPosition
+from app.models.AssetType import AssetType
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -466,8 +467,23 @@ async def get_active_asset_position(db: AsyncSession, asset_id: int) -> Optional
 ##############  ////  Для карты активов  ////  ##############
 
 
-async def search_assets_by_name(db: AsyncSession, name: str) -> Sequence[Asset]:
-    """Поиск активов по name (частичное совпадение, без учета регистра)"""
+async def search_assets(
+        db: AsyncSession,
+        name: Optional[str] = None,
+        type_id: Optional[int] = None,
+        class_id: Optional[int] = None,
+        model_id: Optional[int] = None,
+        model_name: Optional[str] = None,
+        class_name: Optional[str] = None,
+        type_asset_en_name: Optional[str] = None,
+        type_asset_name: Optional[str] = None
+) -> Sequence[Asset]:
+    """
+    Поиск активов по множеству опциональных параметров.
+    Все параметры комбинируются через AND.
+    Текстовые параметры ищутся через ILIKE (частичное совпадение, без учета регистра).
+    ID параметры ищутся через точное совпадение.
+    """
     query = select(Asset).options(
         selectinload(Asset.model).selectinload(AssetModel.asset_class).selectinload(AssetClass.asset_type),
         selectinload(Asset.parent),
@@ -475,10 +491,61 @@ async def search_assets_by_name(db: AsyncSession, name: str) -> Sequence[Asset]:
         selectinload(Asset.warehouse_obj),
         selectinload(Asset.manufacturer),
         selectinload(Asset.vendor)
-    ).where(
-        Asset.name.ilike(f"%{name}%"),
-        Asset.deleted_at.is_(None)
-    )
+    ).where(Asset.deleted_at.is_(None))
+
+    # Фильтр по name актива
+    if name:
+        query = query.where(Asset.name.ilike(f"%{name}%"))
+
+    # Фильтр по model_id (точное совпадение)
+    if model_id is not None:
+        query = query.where(Asset.model_id == model_id)
+
+    # Фильтр по model_name (частичное совпадение)
+    if model_name:
+        query = query.where(Asset.model.has(AssetModel.model_name.ilike(f"%{model_name}%")))
+
+    # Фильтр по class_id (точное совпадение)
+    if class_id is not None:
+        query = query.where(
+            Asset.model.has(AssetModel.asset_class.has(AssetClass.class_id == class_id))
+        )
+
+    # Фильтр по class_name (частичное совпадение)
+    if class_name:
+        query = query.where(
+            Asset.model.has(AssetModel.asset_class.has(AssetClass.class_name.ilike(f"%{class_name}%")))
+        )
+
+    # Фильтр по type_id (точное совпадение)
+    if type_id is not None:
+        query = query.where(
+            Asset.model.has(
+                AssetModel.asset_class.has(
+                    AssetClass.asset_type.has(AssetType.asset_type_id == type_id)
+                )
+            )
+        )
+
+    # Фильтр по type_asset_en_name (частичное совпадение)
+    if type_asset_en_name:
+        query = query.where(
+            Asset.model.has(
+                AssetModel.asset_class.has(
+                    AssetClass.asset_type.has(AssetType.en_name.ilike(f"%{type_asset_en_name}%"))
+                )
+            )
+        )
+
+    # Фильтр по type_asset_name (частичное совпадение)
+    if type_asset_name:
+        query = query.where(
+            Asset.model.has(
+                AssetModel.asset_class.has(
+                    AssetClass.asset_type.has(AssetType.name.ilike(f"%{type_asset_name}%"))
+                )
+            )
+        )
 
     result = await db.execute(query)
     return result.scalars().all()

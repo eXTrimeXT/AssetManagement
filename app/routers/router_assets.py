@@ -163,8 +163,11 @@ async def search_assets_endpoint(
     # Фильтрация по правам доступа
     items_permissions = []
     for item in items:
+        logger.info(f"{item=}")
         try:
-            if item.model and item.model.asset_class and item.model.asset_class.asset_type:
+            if item.model_id is None:
+                items_permissions.append(item)
+            elif item.model and item.model.asset_class and item.model.asset_class.asset_type:
                 if has_read_permission(current_user, item.model.asset_class.asset_type.en_name):
                     items_permissions.append(item)
         except Exception:

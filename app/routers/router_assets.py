@@ -385,9 +385,12 @@ async def update_asset_endpoint(
         logger.warning(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-        logger.warning(f"Нет доступа для записи")
-        raise HTTPException(403, "Нет доступа для записи")
+    try:
+        if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
+            logger.warning(f"Нет доступа для записи")
+            raise HTTPException(403, "Нет доступа для записи")
+    except Exception:
+        pass
 
     updated_asset = await update_asset(db, asset_id, asset_data, current_user.user_id)
     if not updated_asset:

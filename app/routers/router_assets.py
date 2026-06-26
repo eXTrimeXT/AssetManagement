@@ -40,31 +40,31 @@ async def create_asset_endpoint(
         db: AsyncSession = Depends(get_db)
 ):
     # 1. Получаем модель с загруженными связями
-    model = await get_asset_model_by_id(db, asset_in.model_id)
-    if not model:
-        logger.warning("Модель актива не найдена")
-        raise HTTPException(status_code=400, detail="Модель актива не найдена")
-
-    # 2. Извлекаем en_name типа актива через цепочку: model -> class -> type
-    asset_type_en_name = None
-    if model.asset_class and model.asset_class.asset_type:
-        asset_type_en_name = model.asset_class.asset_type.en_name
-
-    # 3. Проверка write на тип актива (используем en_name, а не ID!)
-    if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
-        logger.error(f"Нет доступа на запись к типу '{asset_type_en_name}'")
-        raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
-
-    # 4. Остальные проверки
-    if await check_duplicate_inventory_id(db, asset_in.inventory_id):
-        logger.warning(f"Инвентарный номер уже существует")
-        raise HTTPException(status_code=400, detail="Инвентарный номер уже существует")
-    if await check_duplicate_serial_number(db, asset_in.serial_number):
-        logger.warning(f"Серийный номер уже существует")
-        raise HTTPException(status_code=400, detail="Серийный номер уже существует")
-    if asset_in.parent_id and not await check_parent_exists(db, asset_in.parent_id):
-        logger.warning(f"Родительский актив не найден")
-        raise HTTPException(status_code=400, detail="Родительский актив не найден")
+    # model = await get_asset_model_by_id(db, asset_in.model_id)
+    # if not model:
+    #     logger.warning("Модель актива не найдена")
+    #     raise HTTPException(status_code=400, detail="Модель актива не найдена")
+    #
+    # # 2. Извлекаем en_name типа актива через цепочку: model -> class -> type
+    # asset_type_en_name = None
+    # if model.asset_class and model.asset_class.asset_type:
+    #     asset_type_en_name = model.asset_class.asset_type.en_name
+    #
+    # # 3. Проверка write на тип актива (используем en_name, а не ID!)
+    # if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
+    #     logger.error(f"Нет доступа на запись к типу '{asset_type_en_name}'")
+    #     raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
+    #
+    # # 4. Остальные проверки
+    # if await check_duplicate_inventory_id(db, asset_in.inventory_id):
+    #     logger.warning(f"Инвентарный номер уже существует")
+    #     raise HTTPException(status_code=400, detail="Инвентарный номер уже существует")
+    # if await check_duplicate_serial_number(db, asset_in.serial_number):
+    #     logger.warning(f"Серийный номер уже существует")
+    #     raise HTTPException(status_code=400, detail="Серийный номер уже существует")
+    # if asset_in.parent_id and not await check_parent_exists(db, asset_in.parent_id):
+    #     logger.warning(f"Родительский актив не найден")
+    #     raise HTTPException(status_code=400, detail="Родительский актив не найден")
 
     # Добавить проверку по пользователям !!! Иначе error 500
 
@@ -256,7 +256,7 @@ async def get_assets_from_sap(
     }
 
 
-@router_assets.post("/add", status_code=status.HTTP_201_CREATED)
+@router_assets.post("/add-from-sap", status_code=status.HTTP_201_CREATED)
 async def add_assets_from_sap(
         limit: Optional[int] = Query(None, description="Количество записей"),
         offset: Optional[int] = Query(None, description="Смещение"),

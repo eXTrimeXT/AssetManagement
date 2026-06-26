@@ -175,60 +175,83 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     )
     return result.scalar_one_or_none()
 
-async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate, current_user_id: Optional[int] = None) -> Optional[Asset]:
-    """
-    Обновляет поля актива и записывает историю изменений.
-    """
-    # Получаем актив
-    asset = await get_active_asset(db, asset_id)
+# async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate, current_user_id: Optional[int] = None) -> Optional[Asset]:
+#     """
+#     Обновляет поля актива и записывает историю изменений.
+#     """
+#     # Получаем актив
+#     asset = await get_active_asset(db, asset_id)
+#     if not asset:
+#         return None
+#
+#     # Фиксируем старые значения ДО обновления
+#     old_values = {}
+#
+#     # Собираем только те поля, которые пришли в запросе на обновление (exclude_unset=True)
+#     update_data = asset_data.model_dump(exclude_unset=True)
+#
+#     for key in update_data.keys():
+#         if hasattr(asset, key):
+#             # Сохраняем старое значение
+#             old_val = getattr(asset, key)
+#             old_values[key] = old_val
+#
+#     # Применяем обновления
+#     for key, value in update_data.items():
+#         setattr(asset, key, value)
+#
+#     # Обновляем timestamp вручную, если он не обновляется автоматически onupdate
+#     asset.updated_at = datetime.utcnow()
+#
+#     await db.commit()
+#
+#     # Логируем операцию UPDATE
+#     if old_values: # Пишем лог только если что-то реально изменилось
+#         try:
+#             await create_operation_log(
+#                 db=db,
+#                 asset_id=asset_id,
+#                 operation_type="UPDATE",
+#                 performed_by=current_user_id,
+#                 old_values=old_values,
+#                 new_values=update_data,
+#                 comment="Обновление данных актива",
+#                 inventory_id_snapshot=asset.inventory_id,
+#                 name_snapshot=asset.name
+#             )
+#         except Exception as e:
+#             # Если логирование упало, мы не должны ломать основное обновление,
+#             # но в продакшене лучше залогировать ошибку в stderr/logger
+#             print(f"Error logging operation: {e}")
+#
+#     # Возвращаем обновленный актив с полными связями
+#     # Важно перегрузить его через get_asset_by_id, чтобы избежать MissingGreenlet при сериализации связей
+#     updated_asset_full = await get_asset_by_id(db, asset_id)
+#
+#     return updated_asset_full
+
+async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate, user_id: int):
+    result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
+    asset = result.scalars().first()
     if not asset:
         return None
 
-    # Фиксируем старые значения ДО обновления
-    old_values = {}
+    # Получаем список реальных колонок модели Asset
+    valid_columns = set(Asset.__table__.columns.keys())
 
-    # Собираем только те поля, которые пришли в запросе на обновление (exclude_unset=True)
-    update_data = asset_data.model_dump(exclude_unset=True)
+    # Берём только те поля, которые были реально изменены (exclude_unset=True)
+    # и которые существуют как колонки в модели
+    update_data = asset_data.model_dump(exclude_unset=True, exclude_none=True)
 
-    for key in update_data.keys():
-        if hasattr(asset, key):
-            # Сохраняем старое значение
-            old_val = getattr(asset, key)
-            old_values[key] = old_val
-
-    # Применяем обновления
     for key, value in update_data.items():
-        setattr(asset, key, value)
+        if key in valid_columns:
+            setattr(asset, key, value)
+        # Поля, которых нет в valid_columns (class_id, model_name и т.д.) — просто игнорируем
 
-    # Обновляем timestamp вручную, если он не обновляется автоматически onupdate
-    asset.updated_at = datetime.utcnow()
-
+    asset.updated_by = user_id  # если есть такое поле
     await db.commit()
-
-    # Логируем операцию UPDATE
-    if old_values: # Пишем лог только если что-то реально изменилось
-        try:
-            await create_operation_log(
-                db=db,
-                asset_id=asset_id,
-                operation_type="UPDATE",
-                performed_by=current_user_id,
-                old_values=old_values,
-                new_values=update_data,
-                comment="Обновление данных актива",
-                inventory_id_snapshot=asset.inventory_id,
-                name_snapshot=asset.name
-            )
-        except Exception as e:
-            # Если логирование упало, мы не должны ломать основное обновление,
-            # но в продакшене лучше залогировать ошибку в stderr/logger
-            print(f"Error logging operation: {e}")
-
-    # Возвращаем обновленный актив с полными связями
-    # Важно перегрузить его через get_asset_by_id, чтобы избежать MissingGreenlet при сериализации связей
-    updated_asset_full = await get_asset_by_id(db, asset_id)
-
-    return updated_asset_full
+    await db.refresh(asset)
+    return asset
 
 async def deactivate_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> Optional[Asset]:
     asset = await get_active_asset(db, asset_id)

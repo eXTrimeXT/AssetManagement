@@ -7,6 +7,7 @@ class UserUpdate(BaseModel):
     owner: Optional[str] = None
     user_en_name: Optional[str] = None
     user_position: Optional[str] = None
+    comment: Optional[str] = None
     department_id: Optional[int] = None
     division_id: Optional[int] = None
     group_id: Optional[int] = None

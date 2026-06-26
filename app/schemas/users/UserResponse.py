@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     user_en_name: Optional[str] = None
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
     user_position: Optional[str] = None
+    comment: Optional[str] = None
 
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
@@ -38,6 +39,7 @@ class UserShortResponse(BaseModel):
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_position: Optional[str] = None
+    comment: Optional[str] = None
     department_id: Optional[int] = None
     division_id: Optional[int] = None
     group_id: Optional[int] = None

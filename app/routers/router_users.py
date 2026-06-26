@@ -21,7 +21,6 @@ from app.database.crud_users import (
     deactivate_user,
     activate_user,
     hard_delete_user,
-    check_email_exists,
     check_tab_id_exists, update_user_permissions
 )
 from app.service.auth.auth_service import require_authorized_user
@@ -40,11 +39,6 @@ async def create_user_endpoint(
     if not has_write_permission(current_user, "users"):
         logger.warning(f"Нет доступа на создание пользователей")
         raise HTTPException(status_code=403, detail=f"Нет доступа на создание пользователей")
-
-    # Проверка на дубликат email
-    # if await check_email_exists(db, user_in.email):
-    #     logger.warning("Email уже зарегистрирован")
-    #     raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
 
     # Проверка на дубликат табельного номера
     if user_in.user_tab_id:

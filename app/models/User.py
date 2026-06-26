@@ -25,7 +25,8 @@ class User(Base):
     user_en_name = Column(String(150), nullable=True)           # ФИО на английском
 
     # Должность и отдел
-    user_position = Column(String(100))                         # Должность
+    user_position = Column(String(100), nullable=True)          # Должность
+    comment = Column(String(300), nullable=True)                # Комментарий
 
     # Департамент <- Отдел <- Группа
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)

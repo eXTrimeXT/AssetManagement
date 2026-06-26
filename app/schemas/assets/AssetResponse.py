@@ -91,7 +91,7 @@ class AssetShortResponse(BaseModel):
     class_id: Optional[int] = None
     class_name: Optional[str] = None
 
-    type_asset_id: Optional[int] = None
+    asset_type_id: Optional[int] = None
     type_asset_en_name: Optional[str] = None
     type_asset_name: Optional[str] = None
 

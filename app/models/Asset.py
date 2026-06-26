@@ -104,12 +104,10 @@ class Asset(Base):
     # === Вычисляемые поля на основе связей ===
     @computed_field
     @property
-    def type_asset_id(self) -> Optional[int]:
+    def asset_type_id(self) -> Optional[int]:
         if self.model and self.model.asset_class and self.model.asset_class.asset_type:
             # Берем ID типа (проверь точное имя поля в твоей модели AssetType: type_id, asset_type_id или id)
-            return getattr(self.model.asset_class.asset_type, 'type_id', None) or \
-                getattr(self.model.asset_class.asset_type, 'asset_type_id', None) or \
-                getattr(self.model.asset_class.asset_type, 'id', None)
+            return getattr(self.model.asset_class.asset_type, 'asset_type_id', None)
         return None
 
     @property

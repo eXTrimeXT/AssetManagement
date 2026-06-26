@@ -44,6 +44,7 @@ async def update_android_data(db: AsyncSession, serial_number: str, data: Androi
     db_record = result.scalars().first()
 
     if db_record:
+        db_record.request_time = data.request_time
         db_record.device = data.device.model_dump()
         db_record.system = data.system.model_dump()
         db_record.hardware = data.hardware.model_dump()

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 router_groups = APIRouter(prefix="/groups", tags=["Groups"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_groups.post("/", response_model=GroupDivisionDepartmentIdsResponse, status_code=status.HTTP_201_CREATED)
+@router_groups.post("/", response_model=GroupDivisionDepartmentIdsResponse, status_code=200)
 async def create_group_endpoint(
         group_in: GroupCreate,
         db: AsyncSession = Depends(get_db)
@@ -54,7 +54,7 @@ async def update_group_endpoint(
     return updated_group
 
 
-@router_groups.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_groups.delete("/{group_id}", status_code=200)
 async def delete_group_endpoint(
         group_id: int,
         db: AsyncSession = Depends(get_db)

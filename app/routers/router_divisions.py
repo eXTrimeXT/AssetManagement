@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router_divisions = APIRouter(prefix="/divisions", tags=["Divisions"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_divisions.post("/", response_model=DivisionResponse, status_code=status.HTTP_201_CREATED)
+@router_divisions.post("/", response_model=DivisionResponse, status_code=200)
 async def create_division_endpoint(
         division_in: DivisionCreate,
         db: AsyncSession = Depends(get_db)
@@ -88,7 +88,7 @@ async def update_division_endpoint(
         )
 
 
-@router_divisions.delete("/{division_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_divisions.delete("/{division_id}", status_code=200)
 async def delete_division_endpoint(
         division_id: int,
         db: AsyncSession = Depends(get_db)

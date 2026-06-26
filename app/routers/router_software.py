@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 router_software = APIRouter(prefix="/software", tags=["Software"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_software.post("/", response_model=SoftwareResponse, status_code=status.HTTP_201_CREATED)
+@router_software.post("/", response_model=SoftwareResponse, status_code=200)
 async def create_software_endpoint(
         software_in: SoftwareCreate,
         db: AsyncSession = Depends(get_db)
@@ -74,7 +74,7 @@ async def update_software_endpoint(software_id: int, software_data: SoftwareUpda
         raise HTTPException(status_code=404, detail="Запись о ПО не найдена")
     return updated_software
 
-@router_software.delete("/{software_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_software.delete("/{software_id}", status_code=200)
 async def delete_software_endpoint(software_id: int, db: AsyncSession = Depends(get_db)):
     """Удалить ПО. Запрещено, если к нему привязаны активы."""
 

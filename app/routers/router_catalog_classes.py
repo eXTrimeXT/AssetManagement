@@ -20,7 +20,7 @@ def _get_type_en_name_from_id(db, type_id):
     # Для async сессии используем отдельный вызов в роутере или передаём en_name
     return None
 
-@router_catalog_classes.post("/classes", response_model=AssetClassResponse, status_code=status.HTTP_201_CREATED)
+@router_catalog_classes.post("/classes", response_model=AssetClassResponse, status_code=200)
 async def create_class(data: AssetClassCreate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     # Проверяем write на тип, к которому привязываем класс
     type_obj = await get_asset_type_by_id(db, data.class_type_id)
@@ -59,7 +59,7 @@ async def patch_class(class_id: int, data: AssetClassUpdate, db: AsyncSession = 
             raise HTTPException(403, f"Нет доступа на запись к типу '{new_type.en_name}'")
     return await update_asset_class(db, class_id, data)
 
-@router_catalog_classes.delete("/classes/{class_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_catalog_classes.delete("/classes/{class_id}", status_code=200)
 async def delete_class(class_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_class_by_id(db, class_id)
     if not obj:

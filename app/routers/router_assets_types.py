@@ -22,7 +22,7 @@ router_assets_types = APIRouter(
     dependencies=[Depends(require_authorized_user)]
 )
 
-@router_assets_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)
+@router_assets_types.post("/", response_model=AssetTypeResponse, status_code=200)
 async def create(
         data: AssetTypeCreate,
         db: AsyncSession = Depends(get_db),
@@ -98,7 +98,7 @@ async def patch(asset_type_id: int, data: AssetTypeUpdate, db: AsyncSession = De
         raise HTTPException(403, "Нет доступа для записи")
     return await update_asset_type(db, obj, data)
 
-@router_assets_types.delete("/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_assets_types.delete("/{asset_type_id}", status_code=200)
 async def delete(asset_type_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_type_by_id(db, asset_type_id)
     if not obj:

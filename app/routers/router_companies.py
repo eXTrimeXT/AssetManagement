@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 router_companies = APIRouter(prefix="/companies", tags=["Companies"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_companies.post("/", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
+@router_companies.post("/", response_model=CompanyResponse, status_code=200)
 async def create_company_endpoint(
         data: CompanyCreate,
         db: AsyncSession = Depends(get_db)
@@ -60,7 +60,7 @@ async def get_company_endpoint(
     return obj
 
 
-@router_companies.patch("/{company_id}", response_model=CompanyResponse)
+@router_companies.patch("/{company_id}", response_model=CompanyResponse, status_code=200)
 async def update_company_endpoint(
         company_id: int,
         data: CompanyUpdate,
@@ -81,7 +81,7 @@ async def update_company_endpoint(
     return updated_obj
 
 
-@router_companies.delete("/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_companies.delete("/{company_id}", status_code=200)
 async def delete_company_endpoint(
         company_id: int,
         db: AsyncSession = Depends(get_db)

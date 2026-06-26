@@ -116,12 +116,6 @@ async def update_user_endpoint(
         logger.warning("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Проверка Email
-    # if user_data.email and user_data.email != current_user.email:
-    #     if await check_email_exists(db, user_data.email, exclude_id=user_id):
-    #         logger.warning("Email уже зарегистрирован")
-    #         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
-
     # Проверка Табельного номера
     if user_data.user_tab_id and user_data.user_tab_id != current_user.user_tab_id:
         if await check_tab_id_exists(db, user_data.user_tab_id, exclude_id=user_id):

@@ -14,7 +14,7 @@ from app.schemas.asset_position.AssetPosition import (
 router_asset_position = APIRouter(prefix="/asset-positions", tags=["Asset Positions"])
 
 
-@router_asset_position.post("/", response_model=AssetPositionResponse, status_code=201)
+@router_asset_position.post("/", response_model=AssetPositionResponse, status_code=200)
 async def create_asset_position(
         data: AssetPositionCreate,
         db: AsyncSession = Depends(get_db)
@@ -126,7 +126,7 @@ async def update_asset_position(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router_asset_position.delete("/{position_id}", status_code=204)
+@router_asset_position.delete("/{position_id}", status_code=200)
 async def delete_asset_position(
         position_id: int,
         db: AsyncSession = Depends(get_db)

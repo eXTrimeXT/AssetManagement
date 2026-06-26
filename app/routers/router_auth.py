@@ -192,7 +192,7 @@ async def create_or_get_user(db, request, response, login, department: Optional[
         token=token
     )
 
-@router_auth.post("/login", response_model=UserInfoResponse)
+@router_auth.post("/login", response_model=UserInfoResponse, status_code=200)
 async def login_by_credentials(
         credentials: LoginRequest,
         request: Request,
@@ -274,7 +274,7 @@ async def login_by_credentials(
         logger.error(f"Внутренняя ошибка: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
-@router_auth.post("/auth_token", response_model=UserInfoResponse)
+@router_auth.post("/auth_token", response_model=UserInfoResponse, status_code=200)
 async def auth_token(
         request: TokenRequest,
         response: Response,

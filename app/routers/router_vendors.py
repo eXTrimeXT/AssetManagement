@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router_vendors = APIRouter(prefix="/vendors", tags=["Vendors & Suppliers"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_vendors.post("/", response_model=VendorResponse, status_code=status.HTTP_201_CREATED)
+@router_vendors.post("/", response_model=VendorResponse, status_code=200)
 async def create_vendor_endpoint(
         data: VendorCreate,
         db: AsyncSession = Depends(get_db)
@@ -81,7 +81,7 @@ async def update_vendor_endpoint(
     return updated_obj
 
 
-@router_vendors.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_vendors.delete("/{vendor_id}", status_code=200)
 async def delete_vendor_endpoint(
         vendor_id: int,
         db: AsyncSession = Depends(get_db)

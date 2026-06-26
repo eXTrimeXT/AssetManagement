@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
+@router_assets.post("/", response_model=AssetResponse, status_code=200)
 async def create_asset_endpoint(
         asset_in: AssetCreate,
         current_user = Depends(require_authorized_user),
@@ -255,7 +255,7 @@ async def get_assets_from_sap(
     }
 
 
-@router_assets.post("/add-from-sap", status_code=status.HTTP_201_CREATED)
+@router_assets.post("/add-from-sap", status_code=200)
 async def add_assets_from_sap(
         limit: Optional[int] = Query(None, description="Количество записей"),
         offset: Optional[int] = Query(None, description="Смещение"),
@@ -385,7 +385,7 @@ async def update_asset_endpoint(
         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
     return updated_asset
 
-@router_assets.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_assets.delete("/{asset_id}", status_code=200)
 async def hard_delete_asset_endpoint(
         asset_id: int,
         current_user = Depends(require_authorized_user),
@@ -409,7 +409,7 @@ async def hard_delete_asset_endpoint(
         logger.error(f"Ошибка при удалении актива")
         raise HTTPException(status_code=500, detail="Ошибка при удалении актива")
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(status_code=200)
 
 
 @router_assets.get("/{asset_id}/children", response_model=List[AssetShortResponse])

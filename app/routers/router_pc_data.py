@@ -7,7 +7,7 @@ from app.middleware.LoggingMiddleware import logger
 
 router_pc_data = APIRouter(prefix="/pc-data", tags=["pc_data"])
 
-@router_pc_data.post("/", response_model=PCDataResponse, status_code=201)
+@router_pc_data.post("/", response_model=PCDataResponse, status_code=200)
 async def endpoint_create_pc_data(pc_data: PCDataCreate, db: AsyncSession = Depends(get_db)):
     return await create_or_update_pc_data(db, pc_data)
 
@@ -31,7 +31,7 @@ async def endpoint_update_pc_data(username: str, pc_data: PCDataCreate, db: Asyn
         raise HTTPException(status_code=404, detail="Данные о ПК не найдены")
     return db_pc
 
-@router_pc_data.delete("/{username}", status_code=204)
+@router_pc_data.delete("/{username}", status_code=200)
 async def endpoint_delete_pc_data(username: str, db: AsyncSession = Depends(get_db)):
     db_pc = await delete_pc_data(db, username)
     if db_pc is None:

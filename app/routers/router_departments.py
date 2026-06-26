@@ -28,7 +28,7 @@ router_departments = APIRouter(
 )
 
 
-@router_departments.post("/", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
+@router_departments.post("/", response_model=DepartmentResponse, status_code=200)
 async def create_department_endpoint(
         department_in: DepartmentCreate,
         db: AsyncSession = Depends(get_db)
@@ -95,7 +95,7 @@ async def get_department_endpoint(
     )
 
 
-@router_departments.patch("/{department_id}", response_model=DepartmentResponse)
+@router_departments.patch("/{department_id}", response_model=DepartmentResponse, status_code=200)
 async def update_department_endpoint(
         department_id: int,
         department_data: DepartmentUpdate,
@@ -115,7 +115,7 @@ async def update_department_endpoint(
         )
 
 
-@router_departments.delete("/{department_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_departments.delete("/{department_id}", status_code=200)
 async def delete_department_endpoint(
         department_id: int,
         db: AsyncSession = Depends(get_db)

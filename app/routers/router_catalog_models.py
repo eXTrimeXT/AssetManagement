@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 router_catalog_models = APIRouter(prefix="/catalog/models", tags=["Asset Catalog Models"], dependencies=[Depends(require_authorized_user)])
 
-@router_catalog_models.post("/", response_model=AssetModelResponse, status_code=status.HTTP_201_CREATED)
+@router_catalog_models.post("/", response_model=AssetModelResponse, status_code=200)
 async def create_model(data: AssetModelCreate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     cls_obj = await get_asset_class_by_id(db, data.class_id)
     if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
@@ -35,7 +35,7 @@ async def search_models_endpoint(
     """Поиск моделей по model_name"""
     return await search_asset_models_by_name(db, model_name)
 
-@router_catalog_models.get("/{model_id}", response_model=AssetModelResponse)
+@router_catalog_models.get("/{model_id}", response_model=AssetModelResponse, status_code=200)
 async def get_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:
@@ -46,7 +46,7 @@ async def get_model(model_id: int, db: AsyncSession = Depends(get_db), current_u
         raise HTTPException(404, "Нет доступа для чтения")
     return obj
 
-@router_catalog_models.patch("/{model_id}", response_model=AssetModelResponse)
+@router_catalog_models.patch("/{model_id}", response_model=AssetModelResponse, status_code=200)
 async def patch_model(model_id: int, data: AssetModelUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:
@@ -60,7 +60,7 @@ async def patch_model(model_id: int, data: AssetModelUpdate, db: AsyncSession = 
             raise HTTPException(403, f"Нет доступа на запись к типуe '{cls_obj.asset_type.en_name}'")
     return await update_asset_model(db, model_id, data)
 
-@router_catalog_models.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_catalog_models.delete("/{model_id}", status_code=200)
 async def delete_model(model_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:

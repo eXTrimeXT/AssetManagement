@@ -13,7 +13,7 @@ from app.middleware.LoggingMiddleware import logger
 
 router_android_data = APIRouter(prefix="/android-data", tags=["android_data"])
 
-@router_android_data.post("/", response_model=AndroidDataResponse, status_code=201)
+@router_android_data.post("/", response_model=AndroidDataResponse, status_code=200)
 async def endpoint_create_android_data(data: AndroidDataCreate, db: AsyncSession = Depends(get_db)):
     return await create_or_update_android_data(db, data)
 
@@ -37,7 +37,7 @@ async def endpoint_update_android_data(serial_number: str, data: AndroidDataCrea
         raise HTTPException(status_code=404, detail="Данные Android не найдены")
     return db_record
 
-@router_android_data.delete("/{serial_number}", status_code=204)
+@router_android_data.delete("/{serial_number}", status_code=200)
 async def endpoint_delete_android_data(serial_number: str, db: AsyncSession = Depends(get_db)):
     db_record = await delete_android_data(db, serial_number)
     if db_record is None:

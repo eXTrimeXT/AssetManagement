@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router_vendor_classes = APIRouter(prefix="/vendor-classes", tags=["Vendor Classes"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_vendor_classes.post("/", response_model=VendorClassResponse, status_code=status.HTTP_201_CREATED)
+@router_vendor_classes.post("/", response_model=VendorClassResponse, status_code=200)
 async def create_vendor_class_endpoint(
         data: VendorClassCreate,
         db: AsyncSession = Depends(get_db)
@@ -82,7 +82,7 @@ async def update_vendor_class_endpoint(
     return updated_obj
 
 
-@router_vendor_classes.delete("/{vendor_class_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_vendor_classes.delete("/{vendor_class_id}", status_code=200)
 async def delete_vendor_class_endpoint(
         vendor_class_id: int,
         db: AsyncSession = Depends(get_db)

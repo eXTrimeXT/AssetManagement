@@ -752,7 +752,7 @@ async def get_workshop_map(
 
     return HTMLResponse(content=html_content, status_code=200)
 
-@router_workshop.post("/", response_model=WorkshopResponse, status_code=201)
+@router_workshop.post("/", response_model=WorkshopResponse, status_code=200)
 async def create_workshop(
         data: WorkshopCreate,
         db: AsyncSession = Depends(get_db)
@@ -812,7 +812,7 @@ async def update_workshop(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router_workshop.delete("/{workshop_id}", status_code=204)
+@router_workshop.delete("/{workshop_id}", status_code=200)
 async def delete_workshop(
         workshop_id: int,
         db: AsyncSession = Depends(get_db)

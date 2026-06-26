@@ -53,7 +53,7 @@ def _get_catalog_asset_type_en_name(item) -> str | None:
 
 # === ЭНДПОИНТЫ ===
 
-@router_catalog_items.post("/", response_model=AssetCatalogResponse, status_code=status.HTTP_201_CREATED)
+@router_catalog_items.post("/", response_model=AssetCatalogResponse, status_code=200)
 async def add_catalog_item(
         data: AssetCatalogCreate,
         current_user: User = Depends(require_authorized_user),
@@ -131,7 +131,7 @@ async def get_catalog_item(
     return item
 
 
-@router_catalog_items.patch("/{catalog_id}", response_model=AssetCatalogResponse)
+@router_catalog_items.patch("/{catalog_id}", response_model=AssetCatalogResponse, status_code=200)
 async def patch_catalog_item(
         catalog_id: int,
         data: AssetCatalogUpdate,
@@ -159,7 +159,7 @@ async def patch_catalog_item(
     return res
 
 
-@router_catalog_items.delete("/{catalog_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_catalog_items.delete("/{catalog_id}", status_code=200)
 async def delete_catalog_item_endpoint(
         catalog_id: int,
         current_user: User = Depends(require_authorized_user),
@@ -184,4 +184,4 @@ async def delete_catalog_item_endpoint(
         logger.error("Ошибка удаления")
         raise HTTPException(status_code=404, detail="Ошибка удаления")
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(status_code=200)

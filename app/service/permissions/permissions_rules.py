@@ -58,11 +58,9 @@ def has_write_permission(user: User, group_name: str | None) -> bool:
         Пользователь write имеет доступ на запись, создание, удаление.
     """
     if check_root(user.user_tab_id):
-        # logger.warning("ROOT:WRITE")
         return True
 
     if check_write(user.user_tab_id):
-        # logger.warning("WRITE:WRITE")
         return True
 
     # Если у актива нет группы также разрешаем редактирование

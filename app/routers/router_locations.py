@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router_locations = APIRouter(prefix="/locations", tags=["Locations"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_locations.post("/", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)
+@router_locations.post("/", response_model=LocationResponse, status_code=200)
 async def create_location_endpoint(
         location_in: LocationCreate,
         db: AsyncSession = Depends(get_db)
@@ -63,7 +63,7 @@ async def update_location_endpoint(
     return updated_location
 
 
-@router_locations.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_locations.delete("/{location_id}", status_code=200)
 async def delete_location_endpoint(
         location_id: int,
         db: AsyncSession = Depends(get_db)

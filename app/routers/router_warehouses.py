@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router_warehouses = APIRouter(prefix="/warehouses", tags=["Warehouses"], dependencies=[Depends(require_authorized_user)])
 
 
-@router_warehouses.post("/", response_model=WarehouseResponse, status_code=status.HTTP_201_CREATED)
+@router_warehouses.post("/", response_model=WarehouseResponse, status_code=200)
 async def create_warehouse_endpoint(warehouse_in: WarehouseCreate, db: AsyncSession = Depends(get_db)):
     """Создать новый склад"""
     if await check_name_exists(db, warehouse_in.name):
@@ -79,7 +79,7 @@ async def update_warehouse_endpoint(warehouse_id: int, warehouse_data: Warehouse
         raise HTTPException(status_code=404, detail="Склад не найден")
     return updated_warehouse
 
-@router_warehouses.delete("/{warehouse_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_warehouses.delete("/{warehouse_id}", status_code=200)
 async def delete_warehouse_endpoint(warehouse_id: int, db: AsyncSession = Depends(get_db)):
     """Удалить склад"""
     success = await delete_warehouse(db, warehouse_id)

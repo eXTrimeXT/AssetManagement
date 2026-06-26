@@ -91,6 +91,7 @@ async def update_user_endpoint(
             logger.warning("Табельный номер уже существует")
             raise HTTPException(status_code=400, detail="Табельный номер уже существует")
 
+    user_data.comment = str(user_data.comment)
     updated_user = await update_user(db, user_id, user_data)
     if not updated_user:
         logger.error("Ошибка при обновлении")

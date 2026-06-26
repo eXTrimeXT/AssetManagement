@@ -7,8 +7,8 @@ class UserUpdate(BaseModel):
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_en_name: Optional[str] = None
-    user_position: Optional[Any] = None
-    comment: Optional[str] = None
+    user_position: Optional[str] = None
+    comment: Optional[Any] = None
     department_id: Optional[int] = None
     division_id: Optional[int] = None
     group_id: Optional[int] = None

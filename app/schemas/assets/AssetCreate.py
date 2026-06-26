@@ -5,7 +5,8 @@ from typing import Optional
 class AssetCreate(BaseModel):
     """Схема для создания нового актива"""
 
-    # Обязательные поля
+    # поля
+    asset_id: Optional[int] = None
     name: str = Field(..., min_length=1, max_length=150, description="Имя актива")
     inventory_id: str = Field(..., min_length=1, max_length=50, description="Инвентарный номер")
     serial_number: Optional[str] = Field(..., max_length=100, description="Серийный номер")

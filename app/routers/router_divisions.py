@@ -30,44 +30,84 @@ async def create_division_endpoint(
         )
 
 
-@router_divisions.get("/", response_model=List[DivisionShortResponse])
+# @router_divisions.get("/", response_model=List[DivisionShortResponse])
+# async def get_divisions_endpoint(
+#         skip: int = Query(0, ge=0),
+#         limit: int = Query(50, ge=1, le=100),
+#         name: Optional[str] = None,
+#         abbreviation: Optional[str] = None,
+#         department_id: Optional[int] = None,
+#         db: AsyncSession = Depends(get_db)
+# ):
+#     return await get_divisions_list(db, skip, limit, name, abbreviation, department_id)
+#
+#
+# @router_divisions.get("/{division_id}", response_model=DivisionWithGroupsResponse)
+# async def get_division_endpoint(
+#         division_id: int,
+#         db: AsyncSession = Depends(get_db)
+# ):
+#     division = await get_division_by_id(db, division_id)
+#     if not division:
+#         logger.warning("Отдел не найден")
+#         raise HTTPException(status_code=404, detail="Отдел не найден")
+#
+#     result = await db.execute(
+#         select(Group).where(Group.division_id == division_id)
+#     )
+#     groups = result.scalars().all()
+#
+#     return DivisionWithGroupsResponse(
+#         id=division.id,
+#         name=division.name,
+#         abbreviation=division.abbreviation,
+#         department_id=division.department_id,
+#         groups=[
+#             {"id": g.id, "name": g.name, "abbreviation": g.abbreviation}
+#             for g in groups
+#         ]
+#     )
+
+
+@router_divisions.get("/", response_model=Any)
 async def get_divisions_endpoint(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
         name: Optional[str] = None,
         abbreviation: Optional[str] = None,
         department_id: Optional[int] = None,
+        division_id: Optional[int] = None,
         db: AsyncSession = Depends(get_db)
 ):
-    return await get_divisions_list(db, skip, limit, name, abbreviation, department_id)
+    # Если передан division_id - возвращаем список из одного элемента с группами
+    if division_id is not None:
+        division = await get_division_by_id(db, division_id)
+        if not division:
+            logger.warning("Отдел не найден")
+            raise HTTPException(status_code=404, detail="Отдел не найден")
 
+        result = await db.execute(
+            select(Group).where(Group.division_id == division_id)
+        )
+        groups = result.scalars().all()
 
-@router_divisions.get("/{division_id}", response_model=DivisionWithGroupsResponse)
-async def get_division_endpoint(
-        division_id: int,
-        db: AsyncSession = Depends(get_db)
-):
-    division = await get_division_by_id(db, division_id)
-    if not division:
-        logger.warning("Отдел не найден")
-        raise HTTPException(status_code=404, detail="Отдел не найден")
-
-    result = await db.execute(
-        select(Group).where(Group.division_id == division_id)
-    )
-    groups = result.scalars().all()
-
-    return DivisionWithGroupsResponse(
-        id=division.id,
-        name=division.name,
-        abbreviation=division.abbreviation,
-        department_id=division.department_id,
-        groups=[
-            {"id": g.id, "name": g.name, "abbreviation": g.abbreviation}
-            for g in groups
+        return [
+            DivisionWithGroupsResponse(
+                id=division.id,
+                name=division.name,
+                abbreviation=division.abbreviation,
+                department_id=division.department_id,
+                groups=[
+                    {"id": g.id, "name": g.name, "abbreviation": g.abbreviation}
+                    for g in groups
+                ]
+            )
         ]
-    )
 
+    # Иначе - стандартная выдача списка с фильтрацией
+    divisions = await get_divisions_list(db, skip, limit, name, abbreviation, department_id)
+    # Явно валидируем объекты SQLAlchemy в Pydantic-схему для корректной сериализации
+    return [DivisionShortResponse.model_validate(d) for d in divisions]
 
 @router_divisions.patch("/{division_id}", response_model=DivisionResponse)
 async def update_division_endpoint(

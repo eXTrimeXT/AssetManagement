@@ -29,7 +29,7 @@ from app.service.permissions.permissions_rules import has_read_permission, has_w
 logger = logging.getLogger(__name__)
 router_users = APIRouter(prefix="/users", tags=["Users"], dependencies=[Depends(require_authorized_user)])
 
-@router_users.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router_users.post("/", response_model=UserResponse, status_code=200)
 async def create_user_endpoint(
         user_in: UserCreate,
         db: AsyncSession = Depends(get_db),
@@ -171,7 +171,7 @@ async def deactivate_user_endpoint(
 
     return await deactivate_user(db, user_id)
 
-@router_users.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_users.delete("/{user_id}", status_code=200)
 async def hard_delete_user_endpoint(
         user_id: int,
         db: AsyncSession = Depends(get_db),
@@ -199,7 +199,7 @@ async def hard_delete_user_endpoint(
         logger.error("Ошибка при удалении")
         raise HTTPException(status_code=500, detail="Ошибка при удалении")
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(status_code=200)
 
 @router_users.get("/me", response_model=UserResponse)
 async def get_current_user(current_user: User = Depends(require_authorized_user)):

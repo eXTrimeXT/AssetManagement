@@ -25,7 +25,6 @@ class AssetUpdate(BaseModel):
     parent_id: Optional[int] = None
     prepared_by: Optional[int] = Field(None)
     checked_by: Optional[int] = Field(None)
-    deleted_at: Optional[date] = None
     software_id: Optional[int] = None
     price: Optional[int] = Field(None, ge=0)
 
@@ -54,7 +53,7 @@ class AssetUpdate(BaseModel):
         return v
 
 
-    @field_validator('date_issue', 'date_purchasing', 'deleted_at', mode='before')
+    @field_validator('date_issue', 'date_purchasing', mode='before')
     @classmethod
     def parse_dates(cls, v):
         if v is None:

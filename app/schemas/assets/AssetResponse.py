@@ -48,7 +48,6 @@ class AssetResponse(AssetBase):
     Полная схема ответа с вложенными объектами.
     """
     asset_id: int
-    deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

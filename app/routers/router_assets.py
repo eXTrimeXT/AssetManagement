@@ -14,8 +14,7 @@ from app.schemas.asset_position.AssetPosition import AssetPositionResponse
 
 from app.database.connection import get_db
 from app.database.crud_assets import (
-    create_asset, get_assets_list, get_asset_by_id, update_asset,
-    deactivate_asset, activate_asset, hard_delete_asset,
+    create_asset, get_assets_list, get_asset_by_id, update_asset, hard_delete_asset,
     get_all_asset_children_recursive, check_duplicate_inventory_id,
     check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted,
     create_asset_for_mu, search_assets
@@ -75,7 +74,7 @@ async def create_asset_endpoint(
     return await get_asset_by_id(db, created_asset.asset_id)
 
 
-@router_assets.post("/mu/", response_model=AssetResponse)
+@router_assets.post("/create-for-mu/", response_model=AssetResponse)
 async def create_asset_for_mu_endpoint(
         asset_data: AssetCreateRequest,
         db: AsyncSession = Depends(get_db),
@@ -345,18 +344,6 @@ async def add_assets_from_sap(
         "total_received": len(materials)
     }
 
-
-# @router_assets.get("/", response_model=List[AssetShortResponse])
-# async def get_assets_endpoint(
-#         items = Depends(FilteredByAccessWithParams(
-#             get_assets_list,
-#             "model.asset_class.asset_type.en_name",
-#             "read"
-#         ))
-# ):
-#     return items
-
-
 @router_assets.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
     asset = await get_asset_by_id(db, asset_id)
@@ -398,41 +385,7 @@ async def update_asset_endpoint(
         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
     return updated_asset
 
-
-@router_assets.post("/{asset_id}/deactivate", response_model=AssetResponse)
-async def deactivate_asset_endpoint(
-        asset_id: int,
-        current_user = Depends(require_authorized_user),
-        db: AsyncSession = Depends(get_db)
-):
-    asset = await get_asset_by_id(db, asset_id)
-    if not asset:
-        logger.warning(f"Актив не найден")
-        raise HTTPException(404, detail="Актив не найден")
-    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-        logger.warning(f"Нет доступа для записи")
-        raise HTTPException(403, "Нет доступа для записи")
-    return await deactivate_asset(db, asset_id, current_user.user_id)
-
-
-@router_assets.post("/{asset_id}/activate", response_model=AssetResponse)
-async def activate_asset_endpoint(
-        asset_id: int,
-        current_user = Depends(require_authorized_user),
-        db: AsyncSession = Depends(get_db)
-):
-    activated = await activate_asset(db, asset_id, current_user.user_id)
-    if not activated:
-        logger.warning(f"Актив не найден")
-        raise HTTPException(status_code=404, detail="Актив не найден")
-
-    if not has_write_permission(current_user, activated.model.asset_class.asset_type.en_name):
-        logger.warning(f"Нет доступа для записи")
-        raise HTTPException(403, "Нет доступа для записи")
-    return activated
-
-
-@router_assets.delete("/{asset_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
+@router_assets.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def hard_delete_asset_endpoint(
         asset_id: int,
         current_user = Depends(require_authorized_user),
@@ -444,13 +397,12 @@ async def hard_delete_asset_endpoint(
         logger.warning(f"Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-    if asset.deleted_at is None:
-        logger.warning(f"Сначала деактивируйте актив.")
-        raise HTTPException(status_code=400, detail="Сначала деактивируйте актив.")
-
-    if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-        logger.warning(f"Нет доступа для записи")
-        raise HTTPException(403, "Нет доступа для записи")
+    try:
+        if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
+            logger.warning(f"Нет доступа для записи")
+            raise HTTPException(403, "Нет доступа для записи")
+    except Exception:
+        pass
 
     success = await hard_delete_asset(db, asset_id, current_user.user_id)
     if not success:

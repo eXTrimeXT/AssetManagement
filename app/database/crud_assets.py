@@ -31,7 +31,6 @@ async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
     result = await db.execute(
         select(Asset)
         .where(Asset.asset_id == asset_id)
-        .where(Asset.deleted_at.is_(None))
     )
     return result.scalar_one_or_none()
 
@@ -127,10 +126,6 @@ async def get_assets_list(
         selectinload(Asset.workshop),      # Чтобы не падало в роутерах каталога
     )
 
-    # Фильтр по удалению
-    if not deleted:
-        query = query.where(Asset.deleted_at.is_(None))
-
     # Фильтры
     if asset_status:
         query = query.where(Asset.asset_status == asset_status)
@@ -152,7 +147,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(
         select(Asset)
         .where(Asset.asset_id == asset_id)
-        .where(Asset.deleted_at.is_(None))
         .options(
             selectinload(Asset.model).selectinload(AssetModel.asset_class),    # Загрузка модели актива (relationship)
             selectinload(Asset.model).selectinload(AssetModel.creator),
@@ -253,72 +247,6 @@ async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate,
     await db.refresh(asset)
     return asset
 
-async def deactivate_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> Optional[Asset]:
-    asset = await get_active_asset(db, asset_id)
-    if not asset:
-        return None
-
-    asset.deleted_at = datetime.now()
-    asset.updated_at = datetime.now()
-
-    await db.commit()
-
-    # Логирование деактивации
-    try:
-        await create_operation_log(
-            db=db,
-            asset_id=asset_id,
-            operation_type="DEACTIVATE",
-            performed_by=current_user_id,
-            old_values={"deleted_at": None},
-            new_values={"deleted_at": asset.deleted_at.isoformat()},
-            comment="Актив деактивирован",
-            inventory_id_snapshot=asset.inventory_id,
-            name_snapshot=asset.name
-        )
-    except Exception as e:
-        print(f"Error logging deactivation: {e}")
-
-    await db.refresh(asset)
-    return asset
-
-async def activate_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> Optional[Asset]:
-    """
-    Восстановление актива (сброс deleted_at).
-    """
-    asset = await get_asset_with_deleted(db, asset_id)
-    if not asset:
-        return None
-
-    # Если уже активен, возвращаем None или можно выбросить ошибку,
-    # но логика проверки обычно в роутере. Здесь просто обновляем.
-    if asset.deleted_at is None:
-        return asset
-
-    # сохраняем верную дату перед изменением
-    old_date_deleted_at = asset.deleted_at
-    asset.deleted_at = None
-    asset.updated_at = datetime.now()
-
-    await db.commit()
-
-    # Логирование активации
-    try:
-        await create_operation_log(
-            db=db,
-            asset_id=asset_id,
-            operation_type="ACTIVATE",
-            performed_by=current_user_id,
-            old_values={"deleted_at": old_date_deleted_at.isoformat()},
-            new_values={"deleted_at": None, "updated_at": asset.updated_at},
-            comment="Актив активирован",
-            inventory_id_snapshot=asset.inventory_id,
-            name_snapshot=asset.name
-        )
-    except Exception as e:
-        print(f"Error logging activation: {e}")
-    await db.refresh(asset)
-    return asset
 
 async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> bool:
     """
@@ -409,24 +337,23 @@ async def get_all_asset_children_recursive(
     """
     # Проверяем существование родителя
     parent = await db.get(Asset, asset_id)
-    if not parent or parent.deleted_at:
+    if not parent:
         return []
 
     # CTE-запрос для получения всех детей (только активные)
     base_query = """
                  WITH RECURSIVE asset_tree AS (
                      -- Базовый случай: прямые дети
-                     SELECT asset_id, parent_id, deleted_at, 1 AS depth
+                     SELECT asset_id, parent_id, 1 AS depth
                      FROM assets
-                     WHERE parent_id = :root_id AND deleted_at IS NULL
+                     WHERE parent_id = :root_id IS NULL
 
                      UNION ALL
 
                      -- Рекурсия: дети детей
-                     SELECT a.asset_id, a.parent_id, a.deleted_at, at.depth + 1
+                     SELECT a.asset_id, a.parent_id, at.depth + 1
                      FROM assets a
                               INNER JOIN asset_tree at ON a.parent_id = at.asset_id
-                     WHERE a.deleted_at IS NULL \
                  """
 
     if max_depth:
@@ -516,7 +443,7 @@ async def search_assets(
         selectinload(Asset.warehouse_obj),
         selectinload(Asset.manufacturer),
         selectinload(Asset.vendor)
-    ).where(Asset.deleted_at.is_(None))
+    )
 
     # Фильтр по name актива
     if name:

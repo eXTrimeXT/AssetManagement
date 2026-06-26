@@ -51,10 +51,8 @@ class Asset(Base):
     prepared_by = Column(Integer, ForeignKey("users.user_id"))                   # Подготовил
     checked_by = Column(Integer, ForeignKey("users.user_id"))                    # Проверил
 
-    deleted_at = Column(DateTime, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
 
     preparer = relationship("User", foreign_keys=[prepared_by])
     checker = relationship("User", foreign_keys=[checked_by])

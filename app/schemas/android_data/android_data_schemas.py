@@ -12,7 +12,6 @@ class SystemInfo(BaseModel):
     language: str
     timezone: str
     uptime: str
-    request_time: str
 
 
 class HardwareInfo(BaseModel):

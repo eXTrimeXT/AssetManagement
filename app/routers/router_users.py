@@ -48,12 +48,15 @@ async def create_user_endpoint(
 
     return await create_user(db, user_in)
 
+
 @router_users.get("/", response_model=list[UserShortResponse])
 async def get_users_endpoint(
         skip: int = 0,
         limit: int = 50,
         department_id: Optional[int] = None,
         is_active: bool = True,
+        user_id: Optional[int] = None,
+        user_tab_id: Optional[str] = None,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
@@ -61,42 +64,8 @@ async def get_users_endpoint(
     if not has_read_permission(current_user, "users"):
         logger.warning(f"Просмотр пользователей запрещен")
         raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
-    return await get_users_list(db, skip, limit, department_id, is_active)
 
-
-@router_users.get("/id/{user_id}", response_model=UserResponse)
-async def get_user_by_id_endpoint(
-        user_id: int,
-        db: AsyncSession = Depends(get_db),
-        current_user = Depends(require_authorized_user)
-):
-    """Получить пользователя по ID"""
-    if not has_read_permission(current_user, "users"):
-        logger.warning(f"Просмотр пользователей запрещен")
-        raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        logger.warning("Пользователь не найден")
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-    return user
-
-@router_users.get("/tab_id/{user_tab_id}", response_model=UserResponse)
-async def get_user_by_tab_id_endpoint(
-        user_tab_id: str,
-        db: AsyncSession = Depends(get_db),
-        current_user = Depends(require_authorized_user)
-):
-    """Получить пользователя по TAB_ID"""
-    if not has_read_permission(current_user, "users"):
-        logger.warning(f"Просмотр пользователей запрещен")
-        raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
-
-    user = await get_user_by_tab_id(db, user_tab_id)
-    if not user:
-        logger.warning("Пользователь не найден")
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-    return user
+    return await get_users_list(db, skip, limit, department_id, is_active, user_id, user_tab_id)
 
 @router_users.patch("/{user_id}", response_model=UserResponse)
 async def update_user_endpoint(

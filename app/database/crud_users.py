@@ -69,18 +69,25 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     await db.refresh(db_user)
     return db_user
 
+
 async def get_users_list(
         db: AsyncSession,
         skip: int = 0,
         limit: int = 50,
         department_id: Optional[int] = None,
         is_active: bool = True,
+        user_id: Optional[int] = None,
+        user_tab_id: Optional[str] = None,
 ) -> Sequence[Any]:
     """Получает список пользователей с фильтрацией и пагинацией."""
     query = select(User).where(User.is_active == is_active)
 
     if department_id:
         query = query.where(User.department_id == department_id)
+    if user_id:
+        query = query.where(User.user_id == user_id)
+    if user_tab_id:
+        query = query.where(User.user_tab_id == user_tab_id)
 
     query = query.offset(skip).limit(limit)
 

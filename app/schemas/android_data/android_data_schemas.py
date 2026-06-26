@@ -41,6 +41,7 @@ class BatteryInfo(BaseModel):
 
 class AndroidDataCreate(BaseModel):
     serial_number: str
+    request_time: str
     device: DeviceInfo
     system: SystemInfo
     hardware: HardwareInfo

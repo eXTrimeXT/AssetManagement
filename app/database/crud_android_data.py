@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.AndroidData import AndroidData
 from app.schemas.android_data.android_data_schemas import AndroidDataCreate
 
@@ -21,6 +22,7 @@ async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreat
     else:
         db_record = AndroidData(
             serial_number=data.serial_number,
+            request_time=data.request_time,
             **payload
         )
         db.add(db_record)

@@ -4,7 +4,7 @@ from typing import Optional
 
 class AssetUpdate(BaseModel):
     """Схема для обновления актива (все поля опциональны)"""
-
+    asset_id: Optional[int] = None
     name: Optional[str] = Field(None, min_length=1, max_length=150)
     inventory_id: Optional[str] = Field(None, min_length=1, max_length=50)
     serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -13,7 +13,7 @@ class AssetUpdate(BaseModel):
     type_domain: Optional[str] = Field(None, max_length=100)
     affixed_inventory_id: Optional[bool] = None
     info_storage_location: Optional[str] = Field(None, max_length=200)
-    warehouse_id: Optional[int] = Field(None, description="ID склада из справочника Warehouse")
+    warehouse_id: Optional[int] = Field(None)
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     comment: Optional[str] = None
@@ -22,7 +22,7 @@ class AssetUpdate(BaseModel):
     checked_by: Optional[int] = Field(None)
     deleted_at: Optional[date] = None
     software_id: Optional[int] = None
-    price: Optional[int] = Field(None, ge=0, description="Стоимость приобретения")
+    price: Optional[int] = Field(None, ge=0)
 
     manufacturer_id: Optional[int] = Field(None, description="ID производителя")
     vendor_id: Optional[int] = Field(None, description="ID поставщика")

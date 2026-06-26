@@ -17,6 +17,7 @@ async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreat
     }
 
     if db_record:
+        db_record.request_time = data.request_time
         for k, v in payload.items():
             setattr(db_record, k, v)
     else:

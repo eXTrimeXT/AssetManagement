@@ -42,26 +42,8 @@ async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):
     await db.refresh(db_pc)
     return db_pc
 
-async def get_pc_data(db: AsyncSession, username: str):
-    """
-    Поиск: сначала по столбцу PCData.username,
-    если не найдено — по полю user->>'username' внутри JSONB.
-    """
-    # 1. Основной поиск по индексируемому столбцу
-    result = await db.execute(select(PCData).where(PCData.username == username))
-    db_pc = result.scalars().first()
-
-    # 2. Если не найдено — ищем внутри JSONB (простой вариант)
-    if db_pc is None:
-        result = await db.execute(
-            select(PCData).where(PCData.user['username'].astext == username)
-        )
-        db_pc = result.scalars().first()
-
-    return db_pc
-
-async def get_all_pc_data(db: AsyncSession, skip: int = 0, limit: int = 100):
-    result = await db.execute(select(PCData).offset(skip).limit(limit))
+async def get_all_pc_data(db: AsyncSession, username: str = None, skip: int = 0, limit: int = 100):
+    result = await db.execute(select(PCData).offset(skip).limit(limit).where(PCData.username.ilike(f"%{username}%")))
     return result.scalars().all()
 
 async def update_pc_data(db: AsyncSession, username: str, pc_data: PCDataCreate):

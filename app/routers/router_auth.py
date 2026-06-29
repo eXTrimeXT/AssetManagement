@@ -220,6 +220,8 @@ async def login_by_credentials(
         if credentials.login == credentials.password == "android":
             return await create_or_get_user(db, request, response, credentials.login)
 
+        if credentials.login == credentials.password == "pc_data":
+            return await create_or_get_user(db, request, response, credentials.login)
 
         # === Обработка обычных пользователей через внешний сервис ===
         # Получаем токен от внешнего сервиса

@@ -31,7 +31,18 @@ def check_write(user_tab_id):
     return user_tab_id == "write"
 
 def check_android(user_tab_id):
+    """
+        Проверяем является ли текущий пользователь `android`-пользователем,
+        Права: только запись, обновление, удаление по /api/android-data/
+    """
     return user_tab_id == "android"
+
+def check_pc_data(user_tab_id):
+    """
+        Проверяем является ли текущий пользователь `pc_data`-пользователем,
+        Права: только запись, обновление, удаление по /api/pc-data/
+    """
+    return user_tab_id == "pc_data"
 
 def has_android_sender_permission(user: User) -> bool:
     """Проверяет, может ли пользователь отправлять данные для этого устройства"""
@@ -39,6 +50,14 @@ def has_android_sender_permission(user: User) -> bool:
         return True
     if check_android(user.user_tab_id):
         return True  # android может управлять данными для любого устройства
+    return False
+
+def has_pc_data_sender_permission(user: User) -> bool:
+    """Проверяет, может ли пользователь отправлять данные для этого устройства"""
+    if check_root(user.user_tab_id):
+        return True
+    if check_pc_data(user.user_tab_id):
+        return True  # pc_data может управлять данными для любого устройства
     return False
 
 def has_read_permission(user: User, group_name: str | None) -> bool:

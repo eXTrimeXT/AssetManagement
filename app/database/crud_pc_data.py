@@ -43,7 +43,10 @@ async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):
     return db_pc
 
 async def get_all_pc_data(db: AsyncSession, username: str = None, skip: int = 0, limit: int = 100):
-    result = await db.execute(select(PCData).offset(skip).limit(limit).where(PCData.username.ilike(f"%{username}%")))
+    if username:
+        result = await db.execute(select(PCData).offset(skip).limit(limit).where(PCData.username.ilike(f"%{username}%")))
+    else:
+        result = await db.execute(select(PCData).offset(skip).limit(limit))
     return result.scalars().all()
 
 async def update_pc_data(db: AsyncSession, username: str, pc_data: PCDataCreate):

@@ -207,7 +207,7 @@ async def login_by_credentials(
     # Удаляем старую сессию перед новым входом
     response.delete_cookie(key="session_token", path="/")
     try:
-        # === Обработка root-пользователя ===
+        # === Обработка системных пользователей ===
         if credentials.login == credentials.password == "root":
             return await create_or_get_user(db, request, response, credentials.login)
 
@@ -215,6 +215,9 @@ async def login_by_credentials(
             return await create_or_get_user(db, request, response, credentials.login)
 
         if credentials.login == credentials.password == "write":
+            return await create_or_get_user(db, request, response, credentials.login)
+
+        if credentials.login == credentials.password == "android":
             return await create_or_get_user(db, request, response, credentials.login)
 
 

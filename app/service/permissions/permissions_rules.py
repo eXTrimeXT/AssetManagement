@@ -30,6 +30,17 @@ def check_write(user_tab_id):
     """
     return user_tab_id == "write"
 
+def check_android(user_tab_id):
+    return user_tab_id == "android"
+
+def has_android_sender_permission(user: User) -> bool:
+    """Проверяет, может ли пользователь отправлять данные для этого устройства"""
+    if check_root(user.user_tab_id):
+        return True
+    if check_android(user.user_tab_id):
+        return True  # android может управлять данными для любого устройства
+    return False
+
 def has_read_permission(user: User, group_name: str | None) -> bool:
     """
         Проверяет право `read` на группу.

@@ -714,17 +714,66 @@ Location (Адрес) ←── Company (Юрлицо)
 
 ### 8. **Пользователи и права**
 
-- **User** — пользователь системы
-    - `user_tab_id` — уникальный табельный номер
-    - `permissions` — JSON с правами доступа по типам активов:
-      ```json
-      {
-        "computer": {"read": true, "write": false},
-        "network_equipment": {"read": true, "write": true}
-      }
-      ```
-    - `department_id` → `Department` (отдел)
-- **Department**, **Division**, **Group** — организационная структура
+**Права**:
+```json
+"permissions": {
+    "computer": {
+        "read": false,
+        "write": false
+    },
+    "mes_equipment": {
+        "read": false,
+        "write": true
+    },
+    "supplies": {
+        "read": true,
+        "write": false
+    },
+    "power_adapter": {
+        "read": true,
+        "write": true
+    },
+    "data_collection_equipment": {
+        "read": true,
+        "write": true
+    },
+    "Accessories": {
+        "read": true,
+        "write": true
+    },
+    "network_equipment": {
+        "read": true,
+        "write": true
+    },
+    "printing_equipment": {
+        "read": true,
+        "write": true
+    },
+    "server_hardware": {
+        "read": true,
+        "write": true
+    },
+    "users": {
+        "read": true,
+        "write": true
+    },
+    "usersMU": {
+        "read": true,
+        "write": true
+    },
+    "AssetsMU": {
+        "read": true,
+        "write": true
+    }
+}
+```
+
+**Системные пользователи**:
+
+- **root** - имеет все права
+- **read** - имеет права только на чтение
+- **write** - имеет права только на запись
+- **android** - имеет права на роутер `/api/android-data/`  
 
 ### 9. **История операций**
 

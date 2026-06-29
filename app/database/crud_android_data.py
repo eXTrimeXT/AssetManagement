@@ -1,3 +1,5 @@
+from unittest import result
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,12 +34,11 @@ async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreat
     await db.refresh(db_record)
     return db_record
 
-async def get_android_data(db: AsyncSession, serial_number: str):
-    result = await db.execute(select(AndroidData).where(AndroidData.serial_number == serial_number))
-    return result.scalars().first()
-
-async def get_all_android_data(db: AsyncSession, skip: int = 0, limit: int = 100):
-    result = await db.execute(select(AndroidData).offset(skip).limit(limit))
+async def get_all_android_data(db: AsyncSession, serial_number: str, skip: int = 0, limit: int = 100):
+    if serial_number:
+        result = await db.execute(select(AndroidData).offset(skip).limit(limit).where(AndroidData.serial_number == serial_number))
+    else:
+        result = await db.execute(select(AndroidData).offset(skip).limit(limit))
     return result.scalars().all()
 
 async def update_android_data(db: AsyncSession, serial_number: str, data: AndroidDataCreate):

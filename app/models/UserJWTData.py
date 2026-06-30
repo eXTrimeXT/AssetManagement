@@ -2,9 +2,13 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List, Literal
 
 # {
-#     "user_tab_id": "gw07015370",
-#     "owner": "Timur Malyshev",
-#     "user_en_name": "Timur Malyshev",
+#     "user_id": 4,
+#     "login": "gw07015370",
+#     "email": "Timur.Malyshev@hmmr.ru",
+#     "fullname": "Timur Malyshev",
+#     "distinguished_name": "CN=Timur Malyshev,OU=SOFTWARE DEVELOPMENT GROUP (SDG),OU=INFORMATION SYSTEMS SUPPORT SECTION (ISSS),OU=Russian Digital Center (RDC),OU=Users,OU=HMMR,DC=local,DC=hmmr,DC=ru",
+#     "department": "SDG",
+#     "groups": [],
 #     "permissions": {
 #         "computer": {
 #             "read": false,
@@ -41,16 +45,28 @@ from typing import Optional, Dict, Any, List, Literal
 #         "server_hardware": {
 #             "read": true,
 #             "write": true
+#         },
+#         "users": {
+#             "read": true,
+#             "write": true
+#         },
+#         "usersMU": {
+#             "read": true,
+#             "write": true
+#         },
+#         "AssetsMU": {
+#             "read": true,
+#             "write": true
 #         }
 #     },
-#     "user_position": null,
-#     "department": "ISSS",
-#     "email": "Timur.Malyshev@hmmr.ru",
-#     "phone": null,
-#     "user_id": 1,
-#     "is_active": true,
-#     "created_at": "2026-05-15T06:27:36.390950",
-#     "updated_at": "2026-05-22T05:12:28.931741"
+#     "assets_admin": true,
+#     "last_ip": "172.18.0.2",
+#     "last_time": "11:44:33 30.06.2026",
+#     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODI4MjQyMTAsImV4cCI6MTc4Mjg2NzQxMCwibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjE3Mi4xOC4wLjIiLCJsYXN0X3RpbWUiOiIxMTo0NDozMyAzMC4wNi4yMDI2IiwiZGVwYXJ0bWVudCI6bnVsbCwicGVybWlzc2lvbnMiOlt7Im5hbWVfZ3JvdXAiOiJjb21wdXRlciIsInJlYWQiOmZhbHNlLCJ3cml0ZSI6ZmFsc2V9LHsibmFtZV9ncm91cCI6Im1lc19lcXVpcG1lbnQiLCJyZWFkIjpmYWxzZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJwb3dlcl9hZGFwdGVyIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImRhdGFfY29sbGVjdGlvbl9lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiQWNjZXNzb3JpZXMiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoibmV0d29ya19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoicHJpbnRpbmdfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InNlcnZlcl9oYXJkd2FyZSIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJ1c2VycyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJ1c2Vyc01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9XSwiYXNzZXRzX2FkbWluIjp0cnVlLCJ1c2VyX2RhdGEiOnsiZW1haWwiOiJUaW11ci5NYWx5c2hldkBobW1yLnJ1IiwiZnVsbG5hbWUiOiJUaW11ciBNYWx5c2hldiIsImRlcGFydG1lbnQiOiJTREciLCJkaXN0aW5ndWlzaGVkTmFtZSI6IkNOPVRpbXVyIE1hbHlzaGV2LE9VPVNPRlRXQVJFIERFVkVMT1BNRU5UIEdST1VQIChTREcpLE9VPUlORk9STUFUSU9OIFNZU1RFTVMgU1VQUE9SVCBTRUNUSU9OIChJU1NTKSxPVT1SdXNzaWFuIERpZ2l0YWwgQ2VudGVyIChSREMpLE9VPVVzZXJzLE9VPUhNTVIsREM9bG9jYWwsREM9aG1tcixEQz1ydSIsImdyb3VwcyI6W119fQ.8zHWPMtpsGqx8TtEkW2rtit4CqzXFaAFWEy8Nhd-p0w",
+#     "is_expired": false,
+#     "iat": 1782824210,
+#     "exp": 1782867410,
+#     "ttl": 12
 # }
 
 class UserJWTData:

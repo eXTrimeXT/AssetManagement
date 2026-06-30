@@ -1,7 +1,7 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 from starlette.responses import Response
 
 from app.database.connection import get_db
@@ -97,43 +97,84 @@ async def add_catalog_item(
         raise HTTPException(status_code=503, detail=f"Ошибка: {str(e)}")
 
 
-@router_catalog_items.get("/", response_model=List[AssetCatalogShortResponse])
-async def list_catalog_items(
-        items = Depends(FilteredByAccessWithParams(
-            get_catalog_list,
-            "asset.model.asset_class.asset_type.en_name",
-            "read"
-        ))
-):
-    """
-    Получить список записей каталога.
-    Возвращает только те, на которые у пользователя есть право `read`.
-    """
-    return items
+# @router_catalog_items.get("/", response_model=List[AssetCatalogShortResponse])
+# async def list_catalog_items(
+#         items = Depends(FilteredByAccessWithParams(
+#             get_catalog_list,
+#             "asset.model.asset_class.asset_type.en_name",
+#             "read"
+#         ))
+# ):
+#     """
+#     Получить список записей каталога.
+#     Возвращает только те, на которые у пользователя есть право `read`.
+#     """
+#     return items
 
 
-@router_catalog_items.get("/{catalog_id}", response_model=AssetCatalogResponse)
-async def get_catalog_item(
-        catalog_id: int,
+@router_catalog_items.get("/search", response_model=List[AssetCatalogShortResponse])
+async def search_catalog_items_endpoint(
+        skip: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=100),
+        catalog_id: Optional[int] = Query(None),
+        asset_id: Optional[int] = Query(None),
+        asset_name: Optional[str] = Query(None),
+        user_tab_id: Optional[str] = Query(None),
+        user_id: Optional[int] = Query(None),
+        creator_tab_id: Optional[str] = Query(None),
+        creator_id: Optional[int] = Query(None),
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(require_authorized_user)
 ):
     """
-    Получить запись каталога по ID.
-    Возвращает 404 если нет права `read`.
+    Поиск записей каталога по множеству опциональных параметров.
+    Все параметры комбинируются через AND.
+    Возвращает только те, на которые у пользователя есть право `read`.
     """
-    item = await get_catalog_item_by_id(db, catalog_id)
-    if not item:
-        logger.warning("Запись каталога не найдена")
-        raise HTTPException(404, detail="Запись каталога не найдена")
+    items = await get_catalog_list(
+        db=db,
+        skip=skip,
+        limit=limit,
+        catalog_id=catalog_id,
+        asset_id=asset_id,
+        asset_name=asset_name,
+        user_tab_id=user_tab_id,
+        user_id=user_id,
+        creator_tab_id=creator_tab_id,
+        creator_id=creator_id
+    )
 
-    # === Проверка права `read` на тип актива ===
-    en_name = _get_catalog_asset_type_en_name(item)
-    if not has_read_permission(current_user, en_name):
-        logger.warning("Нет доступа для чтения")
-        raise HTTPException(403, detail="Нет доступа для чтения")
+    # === Фильтрация по правам доступа ===
+    filtered_items = []
+    for item in items:
+        en_name = _get_catalog_asset_type_en_name(item)
+        if has_read_permission(current_user, en_name):
+            filtered_items.append(item)
 
-    return item
+    return filtered_items
+
+# @router_catalog_items.get("/{catalog_id}", response_model=AssetCatalogResponse)
+# async def get_catalog_item(
+#         catalog_id: int,
+#         db: AsyncSession = Depends(get_db),
+#         current_user: User = Depends(require_authorized_user)
+# ):
+#     """
+#     Получить запись каталога по ID.
+#     Возвращает 404 если нет права `read`.
+#     """
+#     item = await get_catalog_item_by_id(db, catalog_id)
+#     if not item:
+#         logger.warning("Запись каталога не найдена")
+#         raise HTTPException(404, detail="Запись каталога не найдена")
+#
+#     # === Проверка права `read` на тип актива ===
+#     en_name = _get_catalog_asset_type_en_name(item)
+#     if not has_read_permission(current_user, en_name):
+#         logger.warning("Нет доступа для чтения")
+#         raise HTTPException(403, detail="Нет доступа для чтения")
+#
+#     return item
 
 
 @router_catalog_items.patch("/{catalog_id}", response_model=AssetCatalogResponse, status_code=200)

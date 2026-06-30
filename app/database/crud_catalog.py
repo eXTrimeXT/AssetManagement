@@ -217,53 +217,6 @@ async def delete_asset_model(db: AsyncSession, model_id: int) -> bool:
     return True
 
 # === CATALOG CRUD ===
-# async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_id: Optional[int] = None) -> AssetCatalog:
-#     """
-#     Создает запись в каталоге и логирует операцию CREATE в одной транзакции.
-#     """
-#     # 1. Проверки
-#     asset = await db.get(Asset, data.asset_id)
-#     if not asset:
-#         raise ValueError("Asset not found")
-#     existing = await db.execute(select(AssetCatalog).where(AssetCatalog.asset_id == data.asset_id))
-#     if existing.scalar_one_or_none():
-#         raise ValueError(f"Asset {data.asset_id} already in catalog")
-#
-#     # 2. Создаем основной объект
-#     db_obj = AssetCatalog(**data.model_dump())
-#     db.add(db_obj)
-#
-#     # Получаем данные для снапшота заранее
-#     inv_id = asset.inventory_id
-#
-#     # 3. Создаем запись лога
-#     log_entry = CatalogOperation(
-#         catalog_id=db_obj.catalog_id,
-#         asset_inventory_id_snapshot=inv_id,
-#         owner_name_snapshot=None,
-#         operation_type="CREATE",
-#         performed_by=current_user_id,
-#         old_values=None,
-#         new_values=_serialize_for_json(data.model_dump()),
-#         comment="Запись добавлена в каталог",
-#         timestamp=datetime.utcnow()
-#     )
-#     db.add(log_entry)
-#
-#     # 4. Единый коммит для создания записи и лога
-#     try:
-#         await db.commit()
-#     except Exception as e:
-#         await db.rollback()
-#         raise e
-#
-#     # 5. Возвращаем полный объект с подгруженными связями для ответа API
-#     full_obj = await get_catalog_item_by_id(db, db_obj.catalog_id)
-#     if not full_obj:
-#         raise ValueError("Failed to retrieve created catalog item")
-#
-#     return full_obj
-
 async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_id: Optional[int] = None) -> AssetCatalog:
     """
     Создает запись в каталоге и логирует операцию CREATE в одной транзакции.
@@ -430,61 +383,149 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         print(f"Error deleting catalog item: {e}!")
         return False
 
-async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Any]:
-        """
-        Получает список записей каталога с загруженными связями для фильтрации по правам
-        и для корректной сериализации ответа.
-        """
-        query = select(AssetCatalog).options(
-            # === Цепочка для фильтрации по правам ===
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.model)
-            .selectinload(AssetModel.asset_class)
-            .selectinload(AssetClass.asset_type),
+# async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Any]:
+#         """
+#         Получает список записей каталога с загруженными связями для фильтрации по правам
+#         и для корректной сериализации ответа.
+#         """
+#         query = select(AssetCatalog).options(
+#             # === Цепочка для фильтрации по правам ===
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.model)
+#             .selectinload(AssetModel.asset_class)
+#             .selectinload(AssetClass.asset_type),
+#
+#             # === Связь с serial_number ===
+#             selectinload(AssetCatalog.android_data),
+#
+#             # === Связи для сериализации AssetResponse ===
+#             # asset.model.creator
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.model)
+#             .selectinload(AssetModel.creator),
+#
+#             # asset.preparer, asset.checker
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.preparer),
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.checker),
+#
+#             # asset.software.installer
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.software)
+#             .selectinload(Software.installer),
+#
+#             # asset.manufacturer.creator, asset.vendor.creator
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.manufacturer)
+#             .selectinload(Vendor.creator),
+#             selectinload(AssetCatalog.asset)
+#             .selectinload(Asset.vendor)
+#             .selectinload(Vendor.creator),
+#
+#             # === Связи для самой записи каталога ===
+#             selectinload(AssetCatalog.owner).options(
+#                 selectinload(User.department),
+#                 selectinload(User.division),
+#                 selectinload(User.group)
+#             ),
+#             selectinload(AssetCatalog.creator).options(
+#                 selectinload(User.department),
+#                 selectinload(User.division),
+#                 selectinload(User.group)
+#             ),
+#
+#             selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
+#         )
+#
+#         query = query.offset(skip).limit(limit)
+#         result = await db.execute(query)
+#         return result.scalars().all()
 
-            # === Связь с serial_number ===
-            selectinload(AssetCatalog.android_data),
+async def get_catalog_list(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 50,
+        catalog_id: Optional[int] = None,
+        asset_id: Optional[int] = None,
+        asset_name: Optional[str] = None,
+        user_tab_id: Optional[str] = None,
+        user_id: Optional[int] = None,
+        creator_tab_id: Optional[str] = None,
+        creator_id: Optional[int] = None
+) -> Sequence[Any]:
+    """
+    Получает список записей каталога с фильтрами.
+    Все параметры опциональные и комбинируются через AND.
+    """
+    query = select(AssetCatalog).options(
+        # === Цепочка для фильтрации по правам ===
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.model)
+        .selectinload(AssetModel.asset_class)
+        .selectinload(AssetClass.asset_type),
 
-            # === Связи для сериализации AssetResponse ===
-            # asset.model.creator
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.model)
-            .selectinload(AssetModel.creator),
+        # === Связь с serial_number ===
+        selectinload(AssetCatalog.android_data),
 
-            # asset.preparer, asset.checker
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.preparer),
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.checker),
+        # === Связи для сериализации AssetResponse ===
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.model)
+        .selectinload(AssetModel.creator),
 
-            # asset.software.installer
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.software)
-            .selectinload(Software.installer),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.preparer),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.checker),
 
-            # asset.manufacturer.creator, asset.vendor.creator
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.manufacturer)
-            .selectinload(Vendor.creator),
-            selectinload(AssetCatalog.asset)
-            .selectinload(Asset.vendor)
-            .selectinload(Vendor.creator),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.software)
+        .selectinload(Software.installer),
 
-            # === Связи для самой записи каталога ===
-            selectinload(AssetCatalog.owner).options(
-                selectinload(User.department),
-                selectinload(User.division),
-                selectinload(User.group)
-            ),
-            selectinload(AssetCatalog.creator).options(
-                selectinload(User.department),
-                selectinload(User.division),
-                selectinload(User.group)
-            ),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.manufacturer)
+        .selectinload(Vendor.creator),
+        selectinload(AssetCatalog.asset)
+        .selectinload(Asset.vendor)
+        .selectinload(Vendor.creator),
 
-            selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
+        # === Связи для самой записи каталога ===
+        selectinload(AssetCatalog.owner).options(
+            selectinload(User.department),
+            selectinload(User.division),
+            selectinload(User.group)
+        ),
+        selectinload(AssetCatalog.creator).options(
+            selectinload(User.department),
+            selectinload(User.division),
+            selectinload(User.group)
+        ),
+
+        selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
+    )
+
+    # === Фильтры ===
+    if catalog_id is not None:
+        query = query.where(AssetCatalog.catalog_id == catalog_id)
+    if asset_id is not None:
+        query = query.where(AssetCatalog.asset_id == asset_id)
+    if asset_name:
+        query = query.where(
+            AssetCatalog.asset.has(Asset.name.ilike(f"%{asset_name}%"))
         )
+    if user_tab_id:
+        query = query.where(
+            AssetCatalog.owner.has(User.user_tab_id.ilike(user_tab_id))
+        )
+    if user_id is not None:
+        query = query.where(AssetCatalog.owner_id == user_id)
+    if creator_tab_id:
+        query = query.where(
+            AssetCatalog.creator.has(User.user_tab_id.ilike(creator_tab_id))
+        )
+    if creator_id is not None:
+        query = query.where(AssetCatalog.created_by == creator_id)
 
-        query = query.offset(skip).limit(limit)
-        result = await db.execute(query)
-        return result.scalars().all()
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()

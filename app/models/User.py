@@ -33,6 +33,8 @@ class User(Base):
     division_id = Column(Integer, ForeignKey("divisions.id"), nullable=True, index=True)
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=True, index=True)
 
+    assets_admin = Column(Boolean, default=False, nullable=False)
+
     # Права пользователя из токена (UserDataJWT)
     permissions: Mapped[Optional[Dict[str, str]]] = mapped_column(JSON, default=dict, nullable=True)
 

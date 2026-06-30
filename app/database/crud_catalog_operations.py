@@ -45,7 +45,7 @@ async def create_catalog_operation_log(
         old_values=safe_old,
         new_values=safe_new,
         comment=comment,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now()
     )
     db.add(db_op)
     await db.commit()

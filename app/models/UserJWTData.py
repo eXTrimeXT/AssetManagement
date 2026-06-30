@@ -106,7 +106,7 @@ class UserJWTData:
     def is_expired(self) -> bool:
         if not self.exp:
             return True
-        return datetime.utcnow().timestamp() > self.exp
+        return datetime.now().timestamp() > self.exp
 
     def has_access(self, group: str, access_type: Literal["read", "write"]) -> bool:
         """Проверка доступа: group='computer', access_type='read' или 'write'"""

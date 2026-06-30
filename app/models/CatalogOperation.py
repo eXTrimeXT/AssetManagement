@@ -27,5 +27,5 @@ class CatalogOperation(Base):
     performed_by = Column(Integer, ForeignKey("users.user_id"), nullable=True)
     performer = relationship("User", foreign_keys=[performed_by], lazy="joined")
 
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
     comment = Column(String(255), nullable=True)

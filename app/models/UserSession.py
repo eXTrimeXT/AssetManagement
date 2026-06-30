@@ -11,5 +11,5 @@ class UserSession(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     login: Mapped[str] = mapped_column(String, unique=True, index=True)
     token: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     user_info: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

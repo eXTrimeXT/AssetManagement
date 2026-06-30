@@ -191,7 +191,7 @@ async def create_or_update_user_from_token(
         existing_user.group_id = group_id
         existing_user.division_id = division_id
         existing_user.department_id = department_id
-        existing_user.updated_at = datetime.utcnow()
+        existing_user.updated_at = datetime.now()
         await db.commit()
         await db.refresh(existing_user)
         return existing_user
@@ -206,8 +206,8 @@ async def create_or_update_user_from_token(
             division_id=division_id,
             department_id=department_id,
             is_active=True,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(),
+            updated_at=datetime.now()
         )
         db.add(new_user)
         await db.commit()

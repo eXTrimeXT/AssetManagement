@@ -22,7 +22,7 @@ class AssetCatalog(Base):
     owner_id = Column(Integer, ForeignKey("users.user_id"), index=True)
 
     # Аудит
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
     created_by = Column(Integer, ForeignKey("users.user_id"))
 
     # Связи

@@ -40,9 +40,8 @@ class AssetPosition(Base):
     is_active = Column(Boolean, default=True, index=True)   # Текущая позиция (для истории)
 
     # === Служебные поля ===
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     # === Связи ===
     asset: Mapped[Optional["Asset"]] = relationship(
         "Asset",

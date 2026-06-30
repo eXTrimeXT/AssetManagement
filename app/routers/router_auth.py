@@ -32,79 +32,6 @@ async def save_session_to_redis(login: str, token: str, ttl: int) -> None:
     await redis_client.set(session_key, json.dumps(session_data), ex=ttl)
 
 
-# async def create_or_get_user(db, request, response, login):
-#     # Создаём или получаем пользователя в БД
-#     user = await get_user_by_tab_id(db, login)
-#     now = datetime.utcnow()
-#
-#     if not user:
-#         user = User(
-#             user_id=user.user_id,
-#             user_tab_id=login,
-#             user_en_name=login,
-#             owner=login,
-#             email=f"{login}@hmmr.ru",
-#             permissions={},
-#             is_active=True,
-#             created_at=now,
-#             updated_at=now
-#         )
-#         db.add(user)
-#         await db.commit()
-#         await db.refresh(user)
-#     else:
-#         user.updated_at = now
-#         await db.commit()
-#
-#     # Генерируем JWT токен для root
-#     payload = {
-#         "iat": int(now.timestamp()),
-#         "exp": int((now + timedelta(hours=12)).timestamp()),
-#         "login": login,
-#         "last_ip": request.client.host if request.client else "127.0.0.1",
-#         "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
-#         "permissions": [],
-#         "user_data": {
-#             "email": f"{login}@hmmr.ru",
-#             "fullname": login,
-#             "distinguishedName": f"CN={login}",
-#             "groups": [login]
-#         }
-#     }
-#
-#     token = jwt.encode(
-#         payload,
-#         key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
-#         algorithm="HS256" if JWT_SECRET_KEY else "none"
-#     )
-#
-#     # Сохраняем сессию в Redis
-#     ttl = 12 * 60 * 60  # 12 часов
-#     await save_session_to_redis(login, token, ttl)
-#
-#     # Устанавливаем куки
-#     response.set_cookie(
-#         key="session_token",
-#         value=token,
-#         httponly=True,
-#         samesite="lax",
-#         max_age=ttl,
-#         path="/"
-#     )
-#
-#     return UserInfoResponse(
-#         user_id=user.user_id,
-#         login=login,
-#         email=f"{login}@hmmr.ru",
-#         fullname=login,
-#         distinguished_name=f"CN={login}",
-#         groups=[login],
-#         permissions={},
-#         last_ip=payload["last_ip"],
-#         last_time=payload["last_time"],
-#         token=token
-#     )
-
 async def create_or_get_user(db, request, response, login, department: Optional[str] = None):
     # === Получаем иерархию по аббревиатуре отдела ===
     group_id = None
@@ -118,7 +45,7 @@ async def create_or_get_user(db, request, response, login, department: Optional[
             division_id = first.get("division_id")
             department_id = first.get("department_id")
 
-    now = datetime.utcnow()
+    now = datetime.now()
     user = await get_user_by_tab_id(db, login)
 
     if not user:
@@ -248,7 +175,7 @@ async def login_by_credentials(
             }
         )
         exp = payload.get("exp")
-        ttl = int(exp - datetime.utcnow().timestamp()) if exp else 3600
+        ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
 
         await save_session_to_redis(user_data.login, token, ttl)
@@ -302,7 +229,7 @@ async def auth_token(
             options={"verify_signature": bool(JWT_SECRET_KEY), "verify_exp": False}
         )
         exp = payload.get("exp")
-        ttl = int(exp - datetime.utcnow().timestamp()) if exp else 3600
+        ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
 
         await save_session_to_redis(user_data.login, request.token, ttl)

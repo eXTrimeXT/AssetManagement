@@ -18,8 +18,8 @@ class AssetModel(Base):
     is_serial_required = Column(Boolean, default=True, nullable=False) # Обязателен ли серийный номер
 
     # Аудит
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # Кто создал/изменил
     created_by = Column(Integer, ForeignKey("users.user_id"))

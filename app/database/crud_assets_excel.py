@@ -284,7 +284,7 @@ async def import_assets_from_rows(
                     prepared_by=prep_id,
                     checked_by=check_id,
 
-                    # created_at и updated_at заполняются автоматически default=datetime.utcnow в модели
+                    # created_at и updated_at заполняются автоматически default=datetime.now в модели
                 )
                 db.add(new_asset)
 

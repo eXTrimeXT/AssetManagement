@@ -49,8 +49,8 @@ class Workshop(Base):
     is_active = Column(Boolean, default=True, index=True)   # Активен ли цех
 
     # === Служебные поля ===
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # === Связи ===
     assets: Mapped[list["Asset"]] = relationship(

@@ -19,8 +19,8 @@ class AssetClass(Base):
 
     description = mapped_column(Text, nullable=True)
 
-    created_at = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = mapped_column(DateTime, default=datetime.now, nullable=False)
+    updated_at = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     created_by = mapped_column(Integer, ForeignKey("users.user_id"), nullable=True)
     updated_by = mapped_column(Integer, ForeignKey("users.user_id"), nullable=True)

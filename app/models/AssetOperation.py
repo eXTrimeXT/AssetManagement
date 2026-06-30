@@ -33,7 +33,7 @@ class AssetOperation(Base):
     performer = relationship("User", foreign_keys=[performed_by], lazy="joined")
 
     # Время
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
 
     # Комментарий
     comment = Column(String(255), nullable=True)

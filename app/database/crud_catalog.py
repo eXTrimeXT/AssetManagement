@@ -116,7 +116,7 @@ async def update_asset_class(db: AsyncSession, class_id: int, data: AssetClassUp
     if not obj: return None
     update_data = data.model_dump(exclude_unset=True)
     for k, v in update_data.items(): setattr(obj, k, v)
-    obj.updated_at = datetime.utcnow()
+    obj.updated_at = datetime.now()
     await db.commit()
     await db.refresh(obj)
     await db.refresh(obj, attribute_names=["asset_type", "creator", "updater"])
@@ -187,7 +187,7 @@ async def update_asset_model(db: AsyncSession, model_id: int, data: AssetModelUp
     if not obj: return None
     update_data = data.model_dump(exclude_unset=True)
     for k, v in update_data.items(): setattr(obj, k, v)
-    obj.updated_at = datetime.utcnow()
+    obj.updated_at = datetime.now()
     await db.commit()
     return await get_asset_model_by_id(db, model_id)
 
@@ -305,7 +305,7 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
         old_values=None,
         new_values=_serialize_for_json(data.model_dump()),
         comment="Запись добавлена в каталог",
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now()
     )
     db.add(log_entry)
 
@@ -362,7 +362,7 @@ async def update_catalog_item(
         old_values=_serialize_for_json(old_values_dict),
         new_values=_serialize_for_json(update_data),
         comment="Обновление записи каталога",
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now()
     )
     db.add(log_entry)
 
@@ -405,7 +405,7 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         old_values=_serialize_for_json(detailed_old_values),
         new_values=None,
         comment=f"Запись каталога для актива {inv_id} удалена",
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now()
     )
 
     db.add(log_entry)

@@ -66,7 +66,7 @@ async def _auto_auth_logic(token: str) -> None:
         )
 
         exp = payload.get("exp")
-        ttl = int(exp - datetime.utcnow().timestamp()) if exp else 3600
+        ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
         logger.debug(f"Вычислен TTL сессии: {ttl} секунд")
 

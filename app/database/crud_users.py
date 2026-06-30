@@ -134,7 +134,7 @@ async def update_user_permissions(
     current_perms = user.permissions or {}
     # Глубокое слияние вместо поверхностного обновления
     user.permissions = _deep_merge(current_perms, new_permissions)
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now()
 
     await db.commit()
     await db.refresh(user)
@@ -153,7 +153,7 @@ async def deactivate_user(db: AsyncSession, user_id: int) -> Optional[User]:
         pass
 
     user.is_active = False
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now()
 
     await db.commit()
     await db.refresh(user)
@@ -169,7 +169,7 @@ async def activate_user(db: AsyncSession, user_id: int) -> Optional[User]:
         pass
 
     user.is_active = True
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now()
 
     await db.commit()
     await db.refresh(user)

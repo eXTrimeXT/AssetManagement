@@ -7,6 +7,7 @@ import re
 import traceback
 import structlog
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -111,7 +112,8 @@ class FileJSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         rel_path = _get_relative_path(record.pathname)
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+            "timestamp": datetime.now(ZoneInfo("Europe/Moscow")).isoformat(),
+            # "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             "level": record.levelname,
             "message": _strip_ansi(record.getMessage()),
             "logger": record.name,

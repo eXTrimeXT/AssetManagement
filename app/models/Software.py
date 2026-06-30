@@ -31,10 +31,10 @@ class Software(Base):
     who_installed = Column(Integer, ForeignKey("users.user_id"))    # Кто установил (ФИО)
 
     # === Служебные поля ===
-    installed_at = Column(DateTime, default=datetime.utcnow)        # Дата установки
+    installed_at = Column(DateTime, default=datetime.now)        # Дата установки
     comment = Column(Text)                                          # Комментарий
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # === Связь с активом (опционально) ===
     assets = relationship("Asset", back_populates="software", lazy="select")

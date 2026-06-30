@@ -29,7 +29,7 @@ class Vendor(Base):
     creator = relationship("User", foreign_keys=[created_by], lazy="joined")
 
     # Дата создания
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     def __repr__(self):
         return f"<Vendor(id={self.vendor_id}, name='{self.name}', class_id={self.vendor_class_id})>"

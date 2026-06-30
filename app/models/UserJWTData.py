@@ -127,4 +127,7 @@ class UserJWTData:
             "last_ip": self.last_ip,
             "last_time": self.last_time,
             "is_expired": self.is_expired,
+            "iat": self.iat,
+            "exp": self.exp,
+            "ttl": (self.exp-self.iat) / 3600
         }

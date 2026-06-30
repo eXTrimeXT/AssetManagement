@@ -16,6 +16,10 @@ class UserInfoResponse(BaseModel):
     last_ip: Optional[str]
     last_time: Optional[str]
     token: Optional[str] = None
+    is_expired: Optional[bool] = None
+    iat: Optional[int] = None
+    exp: Optional[int] = None
+    ttl: Optional[int] = None
 
 class LoginRequest(BaseModel):
     login: str

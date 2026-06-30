@@ -148,7 +148,7 @@ async def create_or_get_user(db, request, response, login, department: Optional[
     # Генерируем JWT токен
     payload = {
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(hours=12)).timestamp()),
+        "exp": int((now + timedelta(hours=222)).timestamp()),
         "login": login,
         "last_ip": request.client.host if request.client else "127.0.0.1",
         "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),

@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_en_name: Optional[str] = None
+    assets_admin: Optional[bool] = None
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
     user_position: Optional[str] = None
     comment: Optional[str] = None

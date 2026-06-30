@@ -114,6 +114,7 @@ async def create_or_get_user(db, request, response, login, department: Optional[
         distinguished_name=f"CN={login}",
         groups=[login],
         permissions={},
+        assets_admin=False,
         last_ip=payload["last_ip"],
         last_time=payload["last_time"],
         token=token

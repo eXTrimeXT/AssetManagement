@@ -70,26 +70,31 @@ async def add_catalog_item(
         raise HTTPException(400, detail="Необходимо указать asset_id или serial_number")
 
     # 2. Если указан asset_id — проверяем права на запись по типу актива
-    if data.asset_id:
-        asset = await get_asset_by_id(db, data.asset_id)
-        if not asset:
-            logger.warning("Актив не найден")
-            raise HTTPException(404, detail="Актив не найден")
+    try:
+        if data.asset_id:
 
-        asset_type_en_name = None
-        if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-            asset_type_en_name = asset.model.asset_class.asset_type.en_name
+            asset = await get_asset_by_id(db, data.asset_id)
+            if not asset:
+                logger.warning("Актив не найден")
+                raise HTTPException(404, detail="Актив не найден")
 
-        if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
-            logger.warning(f"Нет доступа на запись к типу '{asset_type_en_name}'")
-            raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
+            asset_type_en_name = None
+            if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
+                asset_type_en_name = asset.model.asset_class.asset_type.en_name
+
+            if asset_type_en_name and not has_write_permission(current_user, asset_type_en_name):
+                logger.warning(f"Нет доступа на запись к типу '{asset_type_en_name}'")
+                raise HTTPException(403, f"Нет доступа на запись к типу '{asset_type_en_name}'")
 
     # 3. Создаём запись в каталоге (crud сам проверит существование asset/android)
-    try:
+    # try:
         return await add_to_catalog(db, data, current_user_id=current_user.user_id)
     except ValueError as e:
         logger.error(f"Ошибка: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
+    except Exception as e:
+        logger.error(f"Ошибка: {str(e)}")
+        raise HTTPException(status_code=503, detail=f"Ошибка: {str(e)}")
 
 
 @router_catalog_items.get("/", response_model=List[AssetCatalogShortResponse])

@@ -17,6 +17,7 @@ from app.models.CatalogOperation import CatalogOperation
 from app.models.Software import Software
 from app.models.Vendor import Vendor
 from app.models.AndroidData import AndroidData
+from app.models.User import User
 
 
 # === HELPERS ===
@@ -72,8 +73,16 @@ async def get_catalog_item_by_id(db: AsyncSession, catalog_id: int) -> Optional[
         .selectinload(Vendor.creator),
 
         # === Связи для самой записи каталога ===
-        selectinload(AssetCatalog.owner),
-        selectinload(AssetCatalog.creator),
+        selectinload(AssetCatalog.owner).options(
+            selectinload(User.department),
+            selectinload(User.division),
+            selectinload(User.group)
+        ),
+        selectinload(AssetCatalog.creator).options(
+            selectinload(User.department),
+            selectinload(User.division),
+            selectinload(User.group)
+        ),
 
         selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
     )
@@ -462,8 +471,16 @@ async def get_catalog_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> 
             .selectinload(Vendor.creator),
 
             # === Связи для самой записи каталога ===
-            selectinload(AssetCatalog.owner),
-            selectinload(AssetCatalog.creator),
+            selectinload(AssetCatalog.owner).options(
+                selectinload(User.department),
+                selectinload(User.division),
+                selectinload(User.group)
+            ),
+            selectinload(AssetCatalog.creator).options(
+                selectinload(User.department),
+                selectinload(User.division),
+                selectinload(User.group)
+            ),
 
             selectinload(AssetCatalog.asset).selectinload(Asset.workshop)
         )

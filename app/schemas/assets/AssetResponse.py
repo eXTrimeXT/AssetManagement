@@ -12,10 +12,10 @@ from app.schemas.catalog.ModelSchemas import AssetModelResponse
 
 class AssetBase(BaseModel):
     """Базовые поля актива (простые типы)"""
-    name: str
-    inventory_id: str
-    serial_number: Optional[str]
-    asset_status: str
+    name: Optional[str] = None
+    inventory_id: Optional[str]= None
+    serial_number: Optional[str] = None
+    asset_status: str = None
     type_domain: Optional[str] = None
     affixed_inventory_id: Optional[bool] = None
     info_storage_location: Optional[str] = None
@@ -24,7 +24,7 @@ class AssetBase(BaseModel):
     comment: Optional[str] = None
 
     # ID связей
-    model_id: Optional[int]
+    model_id: Optional[int] = None
     warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None

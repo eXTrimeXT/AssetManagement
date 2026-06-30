@@ -88,31 +88,31 @@ async def require_authorized_user(
         db: AsyncSession = Depends(get_db)
 ) -> User:
     try:
-    #     token = await get_token_from_request(request)
-    #     user_data = get_user_from_token(token)
-    #
-    #     if user_data.is_expired:
-    #         logger.warning("Срок действия токена истек")
-    #         raise HTTPException(status_code=401, detail="Срок действия токена истек")
-    #
-    #     session = await get_session_from_redis(user_data.login)
-    #     if not session or session.get("token") != token:
-    #         logger.warning("Недействительный или просроченный сеанс")
-    #         raise HTTPException(status_code=401, detail="Недействительный или просроченный сеанс")
-    #
-    #     db_user = await get_user_by_tab_id(db, user_data.login)
-    #     if not db_user:
-    #         logger.info(f"Пользователь {user_data.login} не найден в БД. Автоматическое создание из токена.")
-    #         db_user = await create_or_update_user_from_token(db, user_data)
-    #         logger.info(f"Пользователь {user_data.login} успешно создан в БД")
-    #
-    #     if not db_user.is_active:
-    #         logger.warning("Учетная запись пользователя деактивирована")
-    #         raise HTTPException(status_code=403, detail="Учетная запись пользователя деактивирована")
+        token = await get_token_from_request(request)
+        user_data = get_user_from_token(token)
+
+        if user_data.is_expired:
+            logger.warning("Срок действия токена истек")
+            raise HTTPException(status_code=401, detail="Срок действия токена истек")
+
+        session = await get_session_from_redis(user_data.login)
+        if not session or session.get("token") != token:
+            logger.warning("Недействительный или просроченный сеанс")
+            raise HTTPException(status_code=401, detail="Недействительный или просроченный сеанс")
+
+        db_user = await get_user_by_tab_id(db, user_data.login)
+        if not db_user:
+            logger.info(f"Пользователь {user_data.login} не найден в БД. Автоматическое создание из токена.")
+            db_user = await create_or_update_user_from_token(db, user_data)
+            logger.info(f"Пользователь {user_data.login} успешно создан в БД")
+
+        if not db_user.is_active:
+            logger.warning("Учетная запись пользователя деактивирована")
+            raise HTTPException(status_code=403, detail="Учетная запись пользователя деактивирована")
 
         # Временно отключаем проверку по токену, возвращаем пользователя root
         # На время разработки
-        db_user = await get_user_by_tab_id(db, "root")
+        # db_user = await get_user_by_tab_id(db, "root")
         return db_user
 
     except TokenValidationError as e:

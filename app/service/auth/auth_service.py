@@ -190,6 +190,7 @@ async def create_or_update_user_from_token(
         existing_user.user_en_name = user_data.fullname
         existing_user.owner = user_data.fullname
         existing_user.email = user_data.email
+        existing_user.assets_admin = user_data.assets_admin
         existing_user.permissions = user_data.permissions
         existing_user.group_id = group_id
         existing_user.division_id = division_id

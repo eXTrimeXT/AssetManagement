@@ -17,7 +17,7 @@ from app.database.crud_assets import (
     create_asset, get_assets_list, get_asset_by_id, update_asset, hard_delete_asset,
     get_all_asset_children_recursive, check_duplicate_inventory_id,
     check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted,
-    create_asset_for_mu, search_assets
+    create_asset_for_mu, search_assets, update_asset_with_users
 )
 from app.database.crud_catalog import get_asset_model_by_id, search_asset_models_by_name
 from app.database.crud_vendors import get_or_create_vendor_by_supplier_number
@@ -26,6 +26,8 @@ from app.database.crud_asset_types import get_asset_type_by_name_or_en_name
 from app.database.crud_software import search_software_by_office_type
 from app.database.crud_vendors import search_vendors_by_name
 from app.database.crud_warehouses import search_warehouses_by_name
+from app.models.User import User
+from app.schemas.assets.AssetUpdateWithUsers import AssetUpdateWithUsers
 
 logger = logging.getLogger(__name__)
 
@@ -360,30 +362,68 @@ async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), 
     return asset
 
 
+# @router_assets.patch("/{asset_id}", response_model=AssetResponse)
+# async def update_asset_endpoint(
+#         asset_id: int,
+#         asset_data: AssetUpdate,
+#         current_user=Depends(require_authorized_user),
+#         db: AsyncSession = Depends(get_db)
+# ):
+#     asset = await get_asset_by_id(db, asset_id)
+#     if not asset:
+#         logger.warning(f"Актив не найден")
+#         raise HTTPException(status_code=404, detail="Актив не найден")
+#
+#     try:
+#         if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
+#             logger.warning(f"Нет доступа для записи")
+#             raise HTTPException(403, "Нет доступа для записи")
+#     except Exception:
+#         pass
+#
+#     updated_asset = await update_asset(db, asset_id, asset_data, current_user.user_id)
+#     if not updated_asset:
+#         logger.error(f"Ошибка при обновлении")
+#         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
+#     return updated_asset
+
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset_endpoint(
         asset_id: int,
-        asset_data: AssetUpdate,
-        current_user=Depends(require_authorized_user),
-        db: AsyncSession = Depends(get_db)
+        asset_data: AssetUpdateWithUsers,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(require_authorized_user)
 ):
-    asset = await get_asset_by_id(db, asset_id)
-    if not asset:
-        logger.warning(f"Актив не найден")
+    """
+    Обновляет актив и привязывает выбранных пользователей через asset_catalog.
+    """
+    # === Проверка прав доступа ===
+    existing_asset = await get_asset_by_id(db, asset_id)
+    if not existing_asset:
+        logger.warning("Актив не найден")
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-    try:
-        if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-            logger.warning(f"Нет доступа для записи")
-            raise HTTPException(403, "Нет доступа для записи")
-    except Exception:
-        pass
+    # Проверяем право write на тип актива
+    if existing_asset.model and existing_asset.model.asset_class and existing_asset.model.asset_class.asset_type:
+        en_name = existing_asset.model.asset_class.asset_type.en_name
+        if not has_write_permission(current_user, en_name):
+            logger.warning(f"Нет права write для типа актива '{en_name}'")
+            raise HTTPException(status_code=403, detail=f"Нет права write для типа актива '{en_name}'")
 
-    updated_asset = await update_asset(db, asset_id, asset_data, current_user.user_id)
+    # === Обновляем актив с пользователями ===
+    updated_asset = await update_asset_with_users(
+        db=db,
+        asset_id=asset_id,
+        asset_data=asset_data,
+        current_user_id=current_user.user_id
+    )
+
     if not updated_asset:
-        logger.error(f"Ошибка при обновлении")
-        raise HTTPException(status_code=404, detail="Ошибка при обновлении")
-    return updated_asset
+        logger.warning("Актив не найден")
+        raise HTTPException(status_code=404, detail="Актив не найдено")
+
+    # === Возвращаем обновлённый актив с загруженными связями ===
+    return await get_asset_by_id(db, asset_id)
 
 @router_assets.delete("/{asset_id}", status_code=200)
 async def hard_delete_asset_endpoint(

@@ -15,6 +15,7 @@ from app.schemas.assets.AssetUpdate import AssetUpdate
 from app.database.crud_operations import create_operation_log
 from app.models.AssetPosition import AssetPosition
 from app.models.AssetType import AssetType
+from app.models.AssetCatalog import AssetCatalog
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -247,6 +248,76 @@ async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate,
     await db.refresh(asset)
     return asset
 
+async def update_asset_with_users(
+        db: AsyncSession,
+        asset_id: int,
+        asset_data: AssetUpdateWithUsers,
+        current_user_id: Optional[int] = None
+) -> Optional[Asset]:
+    """
+    Обновляет актив и управляет привязкой пользователей через asset_catalog.
+    1. Обновляет поля актива
+    2. Удаляет старые записи asset_catalog для этого актива
+    3. Создаёт новые записи asset_catalog для выбранных пользователей
+    """
+    # === 1. Получаем актив ===
+    asset = await get_active_asset(db, asset_id)
+    if not asset:
+        return None
+
+    # === 2. Фиксируем старые значения для истории ===
+    old_values = {}
+    update_data = asset_data.model_dump(exclude_unset=True, exclude={"users"})
+
+    for key in update_data.keys():
+        if hasattr(asset, key):
+            old_val = getattr(asset, key)
+            old_values[key] = old_val
+
+    # === 3. Обновляем поля актива ===
+    valid_columns = set(Asset.__table__.columns.keys())
+    for key, value in update_data.items():
+        if key in valid_columns:
+            setattr(asset, key, value)
+
+    # === 4. Удаляем старые записи из asset_catalog ===
+    await db.execute(
+        delete(AssetCatalog).where(AssetCatalog.asset_id == asset_id)
+    )
+
+    # === 5. Создаём новые записи asset_catalog для выбранных пользователей ===
+    for user in asset_data.users:
+        if user.selected:
+            catalog_entry = AssetCatalog(
+                asset_id=asset_id,
+                owner_id=user.user_id,
+                created_by=current_user_id or user.user_id
+            )
+            db.add(catalog_entry)
+
+    # === 6. Коммитим транзакцию ===
+    try:
+        await db.commit()
+        await db.refresh(asset)
+
+        # === 7. Логируем операцию ===
+        if current_user_id:
+            await create_operation_log(
+                db=db,
+                entity_type="asset",
+                entity_id=asset_id,
+                action="update",
+                changed_by=current_user_id,
+                old_values=old_values,
+                new_values=update_data,
+                inventory_id_snapshot=asset.inventory_id,
+                name_snapshot=asset.name
+            )
+
+        return asset
+    except Exception as e:
+        await db.rollback()
+        raise
 
 async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> bool:
     """
@@ -404,7 +475,6 @@ async def get_asset_positions(db: AsyncSession, asset_id: int) -> Sequence[Any]:
     )
     return result.scalars().all()
 
-
 async def get_active_asset_position(db: AsyncSession, asset_id: int) -> Optional[AssetPosition]:
     """
     Получение текущей (активной) позиции актива.
@@ -415,7 +485,6 @@ async def get_active_asset_position(db: AsyncSession, asset_id: int) -> Optional
     )
     return result.scalar_one_or_none()
 ##############  ////  Для карты активов  ////  ##############
-
 
 async def search_assets(
         db: AsyncSession,

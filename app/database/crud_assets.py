@@ -16,6 +16,7 @@ from app.database.crud_operations import create_operation_log
 from app.models.AssetPosition import AssetPosition
 from app.models.AssetType import AssetType
 from app.models.AssetCatalog import AssetCatalog
+from app.schemas.assets.AssetUpdateWithUsers import AssetUpdateWithUsers
 
 """ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 async def get_active_asset(db: AsyncSession, asset_id: int) -> Any | None:
@@ -304,14 +305,13 @@ async def update_asset_with_users(
         if current_user_id:
             await create_operation_log(
                 db=db,
-                entity_type="asset",
-                entity_id=asset_id,
-                action="update",
-                changed_by=current_user_id,
+                asset_id=asset_id,
+                operation_type="update",
+                performed_by=current_user_id,
                 old_values=old_values,
                 new_values=update_data,
-                inventory_id_snapshot=asset.inventory_id,
-                name_snapshot=asset.name
+                inventory_id_snapshot=asset_data.inventory_id,
+                name_snapshot=asset_data.name
             )
 
         return asset

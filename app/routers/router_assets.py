@@ -1,4 +1,6 @@
 import logging
+from collections import defaultdict
+
 import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +21,7 @@ from app.database.crud_assets import (
     check_duplicate_serial_number, check_parent_exists, get_asset_with_deleted,
     create_asset_for_mu, search_assets, update_asset_with_users
 )
-from app.database.crud_catalog import get_asset_model_by_id, search_asset_models_by_name
+from app.database.crud_catalog import get_asset_model_by_id, search_asset_models_by_name, get_catalog_entries_by_asset_ids
 from app.database.crud_vendors import get_or_create_vendor_by_supplier_number
 from app.database import crud_assets
 from app.database.crud_asset_types import get_asset_type_by_name_or_en_name
@@ -27,7 +29,7 @@ from app.database.crud_software import search_software_by_office_type
 from app.database.crud_vendors import search_vendors_by_name
 from app.database.crud_warehouses import search_warehouses_by_name
 from app.models.User import User
-from app.schemas.assets.AssetUpdateWithUsers import AssetUpdateWithUsers
+from app.schemas.assets.AssetUpdateWithUsers import AssetUpdateWithUsers, UserInAssetUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +154,62 @@ async def create_asset_for_mu_endpoint(
 
     return asset
 
+# @router_assets.get("/", response_model=List[AssetShortResponse])
+# async def get_and_search_assets_endpoint(
+#         skip: int = 0,
+#         limit: int = 50,
+#         name: Optional[str] = Query(None),
+#         type_id: Optional[int] = Query(None),
+#         class_id: Optional[int] = Query(None),
+#         model_id: Optional[int] = Query(None),
+#         model_name: Optional[str] = Query(None),
+#         class_name: Optional[str] = Query(None),
+#         type_asset_en_name: Optional[str] = Query(None),
+#         type_asset_name: Optional[str] = Query(None),
+#         db: AsyncSession = Depends(get_db),
+#         current_user = Depends(require_authorized_user),
+#         items = Depends(FilteredByAccessWithParams(
+#             get_assets_list,
+#             "model.asset_class.asset_type.en_name",
+#             "read"
+#         ))
+# ):
+#     """
+#     Поиск активов по множеству опциональных параметров.
+#     Все параметры комбинируются через AND.
+#     """
+#     # Если ни один параметр не передан, то возвращаем весь список с доступом по правам!
+#     if not any([name, type_id, class_id, model_id, model_name, class_name, type_asset_en_name, type_asset_name]):
+#         return items
+#
+#     items = await search_assets(
+#         db=db,
+#         skip=skip,
+#         limit=limit,
+#         name=name,
+#         type_id=type_id,
+#         class_id=class_id,
+#         model_id=model_id,
+#         model_name=model_name,
+#         class_name=class_name,
+#         type_asset_en_name=type_asset_en_name,
+#         type_asset_name=type_asset_name
+#     )
+#
+#     # Фильтрация по правам доступа
+#     items_permissions = []
+#     for item in items:
+#         try:
+#             if item.model_id is None:
+#                 items_permissions.append(item)
+#             elif item.model and item.model.asset_class and item.model.asset_class.asset_type:
+#                 if has_read_permission(current_user, item.model.asset_class.asset_type.en_name):
+#                     items_permissions.append(item)
+#         except Exception:
+#             continue
+#
+#     return items_permissions
+
 @router_assets.get("/", response_model=List[AssetShortResponse])
 async def get_and_search_assets_endpoint(
         skip: int = 0,
@@ -175,38 +233,74 @@ async def get_and_search_assets_endpoint(
     """
     Поиск активов по множеству опциональных параметров.
     Все параметры комбинируются через AND.
+    Для каждого актива подтягивает список пользователей из asset_catalog.
     """
     # Если ни один параметр не передан, то возвращаем весь список с доступом по правам!
     if not any([name, type_id, class_id, model_id, model_name, class_name, type_asset_en_name, type_asset_name]):
-        return items
+        filtered_items = items
+    else:
+        filtered_items = await search_assets(
+            db=db,
+            skip=skip,
+            limit=limit,
+            name=name,
+            type_id=type_id,
+            class_id=class_id,
+            model_id=model_id,
+            model_name=model_name,
+            class_name=class_name,
+            type_asset_en_name=type_asset_en_name,
+            type_asset_name=type_asset_name
+        )
 
-    items = await search_assets(
-        db=db,
-        skip=skip,
-        limit=limit,
-        name=name,
-        type_id=type_id,
-        class_id=class_id,
-        model_id=model_id,
-        model_name=model_name,
-        class_name=class_name,
-        type_asset_en_name=type_asset_en_name,
-        type_asset_name=type_asset_name
-    )
+        # Фильтрация по правам доступа
+        filtered_items = []
+        for item in filtered_items:
+            try:
+                if item.model_id is None:
+                    filtered_items.append(item)
+                elif item.model and item.model.asset_class and item.model.asset_class.asset_type:
+                    if has_read_permission(current_user, item.model.asset_class.asset_type.en_name):
+                        filtered_items.append(item)
+            except Exception:
+                continue
 
-    # Фильтрация по правам доступа
-    items_permissions = []
-    for item in items:
-        try:
-            if item.model_id is None:
-                items_permissions.append(item)
-            elif item.model and item.model.asset_class and item.model.asset_class.asset_type:
-                if has_read_permission(current_user, item.model.asset_class.asset_type.en_name):
-                    items_permissions.append(item)
-        except Exception:
-            continue
+    # === Получаем пользователей из каталога для всех активов ===
+    asset_ids = [item.asset_id for item in filtered_items if item.asset_id]
 
-    return items_permissions
+    catalog_entries = await get_catalog_entries_by_asset_ids(db, asset_ids)
+
+    # Группируем записи каталога по asset_id
+    catalog_by_asset = defaultdict(list)
+    for entry in catalog_entries:
+        catalog_by_asset[entry.asset_id].append(entry)
+
+    # === Формируем ответ с пользователями ===
+    response_items = []
+    for item in filtered_items:
+        # Получаем пользователей для этого актива
+        users = []
+        for entry in catalog_by_asset.get(item.asset_id, []):
+            if entry.owner:
+                users.append(UserInAssetUpdate(
+                    user_id=entry.owner.user_id,
+                    user_tab_id=entry.owner.user_tab_id,
+                    owner=entry.owner.owner,
+                    user_position=entry.owner.user_position,
+                    comment=None,  # comment не хранится в User
+                    department_id=entry.owner.department_id,
+                    division_id=entry.owner.division_id,
+                    group_id=entry.owner.group_id,
+                    email=entry.owner.email,
+                    selected=True  # Всегда True для отображения
+                ))
+
+        # Создаём объект ответа
+        response_item = AssetShortResponse.model_validate(item)
+        response_item.users = users
+        response_items.append(response_item)
+
+    return response_items
 
 @router_assets.get("/get-from-sap")
 async def get_assets_from_sap(

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional, Sequence, Any
+from typing import Optional, Sequence, Any, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
@@ -527,5 +527,24 @@ async def get_catalog_list(
         query = query.where(AssetCatalog.created_by == creator_id)
 
     query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+async def get_catalog_entries_by_asset_ids(
+        db: AsyncSession,
+        asset_ids: List[int]
+) -> Sequence[AssetCatalog]:
+    """
+    Получает все записи каталога для списка asset_id с загруженными owner (User).
+    Используется для отображения списка пользователей в ответе актива.
+    """
+    if not asset_ids:
+        return []
+
+    query = select(AssetCatalog).options(
+        selectinload(AssetCatalog.owner)
+    ).where(AssetCatalog.asset_id.in_(asset_ids))
+
     result = await db.execute(query)
     return result.scalars().all()

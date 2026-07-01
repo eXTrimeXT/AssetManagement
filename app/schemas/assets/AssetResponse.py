@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 
 # Импорт всех необходимых вложенных схем
 from app.schemas.warehouses.WarehouseResponse import WarehouseResponse
@@ -8,6 +8,7 @@ from app.schemas.users.UserResponse import UserResponse, UserShortResponse
 from app.schemas.software.SoftwareResponse import SoftwareResponse
 from app.schemas.vendors.VendorSchemas import VendorResponse
 from app.schemas.catalog.ModelSchemas import AssetModelResponse
+from app.schemas.assets.AssetUpdateWithUsers import UserInAssetUpdate
 
 
 class AssetBase(BaseModel):
@@ -108,5 +109,7 @@ class AssetShortResponse(BaseModel):
 
     vendor_id: Optional[int] = None
     vendor_name: Optional[str] = None
+
+    users: List[UserInAssetUpdate] = None
 
     model_config = ConfigDict(from_attributes=True)

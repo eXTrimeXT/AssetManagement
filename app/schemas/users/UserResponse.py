@@ -45,5 +45,6 @@ class UserShortResponse(BaseModel):
     division_id: Optional[int] = None
     group_id: Optional[int] = None
     email: Optional[EmailStr] = None
+    permissions: Optional[Dict[str, Dict[str, bool]]] = {}
 
     model_config = ConfigDict(from_attributes=True)

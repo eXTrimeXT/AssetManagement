@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Any, Sequence, Dict
 
@@ -8,6 +9,8 @@ from sqlalchemy.orm import selectinload
 from app.models.User import User
 from app.schemas.users.UserCreate import UserCreate
 from app.schemas.users.UserUpdate import UserUpdate
+from app.schemas.assets.AssetResponse import AssetShortResponse
+from app.database.crud_catalog import get_catalog_entries_by_user_ids
 
 
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ПРОВЕРКИ
@@ -70,6 +73,30 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     return db_user
 
 
+# async def get_users_list(
+#         db: AsyncSession,
+#         skip: int = 0,
+#         limit: int = 50,
+#         department_id: Optional[int] = None,
+#         is_active: bool = True,
+#         user_id: Optional[int] = None,
+#         user_tab_id: Optional[str] = None,
+# ) -> Sequence[Any]:
+#     """Получает список пользователей с фильтрацией и пагинацией."""
+#     query = select(User).where(User.is_active == is_active)
+#
+#     if department_id:
+#         query = query.where(User.department_id == department_id)
+#     if user_id:
+#         query = query.where(User.user_id == user_id)
+#     if user_tab_id:
+#         query = query.where(User.user_tab_id == user_tab_id)
+#
+#     query = query.offset(skip).limit(limit)
+#
+#     result = await db.execute(query)
+#     return result.scalars().all()
+
 async def get_users_list(
         db: AsyncSession,
         skip: int = 0,
@@ -78,10 +105,13 @@ async def get_users_list(
         is_active: bool = True,
         user_id: Optional[int] = None,
         user_tab_id: Optional[str] = None,
-) -> Sequence[Any]:
-    """Получает список пользователей с фильтрацией и пагинацией."""
+) -> List[dict]:
+    """
+    Получает список пользователей с фильтрацией и пагинацией.
+    Для каждого пользователя подтягивает список его активов из asset_catalog.
+    Возвращает список словарей с полем 'assets'.
+    """
     query = select(User).where(User.is_active == is_active)
-
     if department_id:
         query = query.where(User.department_id == department_id)
     if user_id:
@@ -92,7 +122,43 @@ async def get_users_list(
     query = query.offset(skip).limit(limit)
 
     result = await db.execute(query)
-    return result.scalars().all()
+    users = result.scalars().all()
+
+    if not users:
+        return []
+
+    # === Получаем активы пользователей из каталога одним запросом ===
+    user_ids = [u.user_id for u in users]
+    catalog_entries = await get_catalog_entries_by_user_ids(db, user_ids)
+
+    # Группируем записи каталога по owner_id
+    assets_by_user = defaultdict(list)
+    for entry in catalog_entries:
+        if entry.asset:
+            assets_by_user[entry.owner_id].append(entry.asset)
+
+    # === Формируем ответ с активами ===
+    response_users = []
+    for user in users:
+        user_dict = {
+            "user_id": user.user_id,
+            "user_tab_id": user.user_tab_id,
+            "owner": user.owner,
+            "user_position": user.user_position,
+            "comment": getattr(user, 'comment', None),
+            "department_id": user.department_id,
+            "division_id": user.division_id,
+            "group_id": user.group_id,
+            "email": user.email,
+            "permissions": user.permissions,
+            "assets": [
+                AssetShortResponse.model_validate(asset).model_dump()
+                for asset in assets_by_user.get(user.user_id, [])
+            ]
+        }
+        response_users.append(user_dict)
+
+    return response_users
 
 async def update_user(db: AsyncSession, user_id: int, user_data: UserUpdate) -> Optional[User]:
     """ Обновляет данные пользователя """

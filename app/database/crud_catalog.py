@@ -548,3 +548,28 @@ async def get_catalog_entries_by_asset_ids(
 
     result = await db.execute(query)
     return result.scalars().all()
+
+async def get_catalog_entries_by_user_ids(
+        db: AsyncSession,
+        user_ids: List[int]
+) -> Sequence[AssetCatalog]:
+    """
+    Получает все записи каталога для списка user_id (как owner_id)
+    с загруженными связями актива для корректной сериализации AssetShortResponse.
+    """
+    if not user_ids:
+        return []
+
+    query = select(AssetCatalog).options(
+        selectinload(AssetCatalog.asset).selectinload(Asset.model)
+        .selectinload(AssetModel.asset_class)
+        .selectinload(AssetClass.asset_type),
+        selectinload(AssetCatalog.asset).selectinload(Asset.parent),
+        selectinload(AssetCatalog.asset).selectinload(Asset.software),
+        selectinload(AssetCatalog.asset).selectinload(Asset.warehouse_obj),
+        selectinload(AssetCatalog.asset).selectinload(Asset.manufacturer),
+        selectinload(AssetCatalog.asset).selectinload(Asset.vendor),
+        ).where(AssetCatalog.owner_id.in_(user_ids))
+
+    result = await db.execute(query)
+    return result.scalars().all()

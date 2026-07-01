@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, List
+
+from app.schemas.assets.AssetResponse import AssetShortResponse
 
 
 class UserBase(BaseModel):
@@ -46,5 +48,7 @@ class UserShortResponse(BaseModel):
     group_id: Optional[int] = None
     email: Optional[EmailStr] = None
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
+
+    assets: List[AssetShortResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

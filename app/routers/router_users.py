@@ -48,7 +48,6 @@ async def create_user_endpoint(
 
     return await create_user(db, user_in)
 
-
 @router_users.get("/", response_model=list[UserShortResponse])
 async def get_users_endpoint(
         skip: int = 0,
@@ -60,11 +59,10 @@ async def get_users_endpoint(
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    """Получить список пользователей с фильтрацией"""
+    """Получить список пользователей с фильтрацией. Для каждого пользователя — список его активов."""
     if not has_read_permission(current_user, "users"):
         logger.warning(f"Просмотр пользователей запрещен")
         raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
-
     return await get_users_list(db, skip, limit, department_id, is_active, user_id, user_tab_id)
 
 @router_users.patch("/{user_id}", response_model=UserResponse)

@@ -25,8 +25,6 @@ class UserResponse(UserBase):
     department_abbreviation: Optional[str] = None
     division_abbreviation: Optional[str] = None
     group_abbreviation: Optional[str] = None
-
-    user_id: int
     is_active: bool
 
     created_at: datetime
@@ -71,7 +69,6 @@ class AssetForUserResponse(BaseModel):
 
 class UserShortResponse(BaseModel):
     """Краткая схема для списков (без назначений)"""
-    user_id: int
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_position: Optional[str] = None

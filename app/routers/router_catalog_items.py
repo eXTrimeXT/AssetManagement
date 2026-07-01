@@ -96,22 +96,6 @@ async def add_catalog_item(
         logger.error(f"Ошибка: {str(e)}")
         raise HTTPException(status_code=503, detail=f"Ошибка: {str(e)}")
 
-
-# @router_catalog_items.get("/", response_model=List[AssetCatalogShortResponse])
-# async def list_catalog_items(
-#         items = Depends(FilteredByAccessWithParams(
-#             get_catalog_list,
-#             "asset.model.asset_class.asset_type.en_name",
-#             "read"
-#         ))
-# ):
-#     """
-#     Получить список записей каталога.
-#     Возвращает только те, на которые у пользователя есть право `read`.
-#     """
-#     return items
-
-
 @router_catalog_items.get("/search", response_model=List[AssetCatalogShortResponse])
 async def search_catalog_items_endpoint(
         skip: int = Query(0, ge=0),
@@ -152,30 +136,6 @@ async def search_catalog_items_endpoint(
             filtered_items.append(item)
 
     return filtered_items
-
-# @router_catalog_items.get("/{catalog_id}", response_model=AssetCatalogResponse)
-# async def get_catalog_item(
-#         catalog_id: int,
-#         db: AsyncSession = Depends(get_db),
-#         current_user: User = Depends(require_authorized_user)
-# ):
-#     """
-#     Получить запись каталога по ID.
-#     Возвращает 404 если нет права `read`.
-#     """
-#     item = await get_catalog_item_by_id(db, catalog_id)
-#     if not item:
-#         logger.warning("Запись каталога не найдена")
-#         raise HTTPException(404, detail="Запись каталога не найдена")
-#
-#     # === Проверка права `read` на тип актива ===
-#     en_name = _get_catalog_asset_type_en_name(item)
-#     if not has_read_permission(current_user, en_name):
-#         logger.warning("Нет доступа для чтения")
-#         raise HTTPException(403, detail="Нет доступа для чтения")
-#
-#     return item
-
 
 @router_catalog_items.patch("/{catalog_id}", response_model=AssetCatalogResponse, status_code=200)
 async def patch_catalog_item(
@@ -231,3 +191,18 @@ async def delete_catalog_item_endpoint(
         raise HTTPException(status_code=404, detail="Ошибка удаления")
 
     return Response(status_code=200)
+
+
+# curl 'http://10.168.143.7:8800/api/assets/11' \
+#      -X 'PATCH' \
+#         -H 'Accept: application/json' \
+#            -H 'Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7' \
+#               -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODI4ODUyNTAsImV4cCI6MTc4MjkyODQ1MCwibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjEwLjE2OC4xNTQuNDIiLCJsYXN0X3RpbWUiOiIwNTozMjozOCAwMS4wNy4yMDI2IiwiZGVwYXJ0bWVudCI6bnVsbCwicGVybWlzc2lvbnMiOlt7Im5hbWVfZ3JvdXAiOiJjb21wdXRlciIsInJlYWQiOmZhbHNlLCJ3cml0ZSI6ZmFsc2V9LHsibmFtZV9ncm91cCI6Im1lc19lcXVpcG1lbnQiLCJyZWFkIjpmYWxzZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJwb3dlcl9hZGFwdGVyIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImRhdGFfY29sbGVjdGlvbl9lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiQWNjZXNzb3JpZXMiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoibmV0d29ya19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoicHJpbnRpbmdfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InNlcnZlcl9oYXJkd2FyZSIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJ1c2VycyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJ1c2Vyc01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9XSwiYXNzZXRzX2FkbWluIjp0cnVlLCJ1c2VyX2RhdGEiOnsiZW1haWwiOiJUaW11ci5NYWx5c2hldkBobW1yLnJ1IiwiZnVsbG5hbWUiOiJUaW11ciBNYWx5c2hldiIsImRlcGFydG1lbnQiOiJTREciLCJkaXN0aW5ndWlzaGVkTmFtZSI6IkNOPVRpbXVyIE1hbHlzaGV2LE9VPVNPRlRXQVJFIERFVkVMT1BNRU5UIEdST1VQIChTREcpLE9VPUlORk9STUFUSU9OIFNZU1RFTVMgU1VQUE9SVCBTRUNUSU9OIChJU1NTKSxPVT1SdXNzaWFuIERpZ2l0YWwgQ2VudGVyIChSREMpLE9VPVVzZXJzLE9VPUhNTVIsREM9bG9jYWwsREM9aG1tcixEQz1ydSIsImdyb3VwcyI6W119fQ.9eh_hEer6OWrl4CkHB-VGCMyoVmBDoHg-SGDEKuGCOw' \
+#                  -H 'Connection: keep-alive' \
+#                     -H 'Content-Type: application/json' \
+#                        -H 'DNT: 1' \
+#                           -H 'Origin: http://gps-test.hmmr.ru' \
+#                              -H 'Referer: http://gps-test.hmmr.ru/' \
+#                                 -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36' \
+#                                    --data-raw '{"asset_id":11,"name":"Каска желтая","inventory_id":"110000004681","serial_number":null,"asset_status":"Приемка","comment":"описание желтой каски55","model_id":null,"model_name":null,"class_id":null,"class_name":null,"asset_type_id":null,"type_asset_en_name":null,"type_asset_name":null,"warehouse_id":null,"warehouse_name":null,"parent_id":null,"parent_name":null,"software_id":null,"software_office_type":null,"manufacturer_id":null,"manufacturer_name":null,"vendor_id":1,"vendor_name":"Производитель названий","users":[{"user_id":21,"user_tab_id":null,"owner":"test comment","user_position":null,"comment":"3456365","department_id":null,"division_id":null,"group_id":null,"email":null,"selected":true},{"user_id":4,"user_tab_id":"gw07015370","owner":"Timur Malyshev","user_position":null,"comment":"test534654","department_id":3,"division_id":9,"group_id":13,"email":"Timur.Malyshev@hmmr.ru","selected":true}]}' \
+#                                               --insecure

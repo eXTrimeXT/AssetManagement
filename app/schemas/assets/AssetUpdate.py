@@ -2,11 +2,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import date
 from typing import Optional
 
-# app/schemas/assets/AssetUpdate.py
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from datetime import date
-from typing import Optional
-
 class AssetUpdate(BaseModel):
     """Схема для обновления актива (все поля опциональны)"""
     asset_id: Optional[int] = None

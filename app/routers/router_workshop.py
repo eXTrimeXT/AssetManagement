@@ -51,7 +51,7 @@ async def get_all_workshops_map(
         .join(Asset, AssetPosition.asset_id == Asset.asset_id)
         .where(
             AssetPosition.is_active == True,
-            Asset.deleted_at.is_(None)
+            # Asset.deleted_at.is_(None)
         )
     )
     positions_data = positions_result.fetchall()

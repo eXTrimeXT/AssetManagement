@@ -13,7 +13,7 @@ class AssetModelBase(BaseModel):
     is_serial_required: bool = True
 
 class AssetModelCreate(AssetModelBase):
-    created_by: int
+    created_by: Optional[str] = None
 
 class AssetModelUpdate(BaseModel):
     model_name: Optional[str] = None
@@ -21,7 +21,7 @@ class AssetModelUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     is_serial_required: Optional[bool] = None
-    updated_by: Optional[int] = None
+    updated_by: Optional[str] = None
 
 class AssetModelResponse(AssetModelBase):
     model_id: int

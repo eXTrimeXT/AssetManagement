@@ -88,7 +88,8 @@ async def add_catalog_item(
 
     # 3. Создаём запись в каталоге (crud сам проверит существование asset/android)
     # try:
-        return await add_to_catalog(db, data, current_user_id=current_user.user_id)
+        data.created_by = current_user.user_tab_id
+        return await add_to_catalog(db, data, current_user_tab_id=current_user.user_tab_id)
     except ValueError as e:
         logger.error(f"Ошибка: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Ошибка: {str(e)}")
@@ -104,7 +105,7 @@ async def search_catalog_items_endpoint(
         asset_id: Optional[int] = Query(None),
         asset_name: Optional[str] = Query(None),
         user_tab_id: Optional[str] = Query(None),
-        user_id: Optional[int] = Query(None),
+        # user_id: Optional[int] = Query(None),
         creator_tab_id: Optional[str] = Query(None),
         creator_id: Optional[int] = Query(None),
         db: AsyncSession = Depends(get_db),
@@ -123,7 +124,7 @@ async def search_catalog_items_endpoint(
         asset_id=asset_id,
         asset_name=asset_name,
         user_tab_id=user_tab_id,
-        user_id=user_id,
+        # user_id=user_id,
         creator_tab_id=creator_tab_id,
         creator_id=creator_id
     )
@@ -158,7 +159,7 @@ async def patch_catalog_item(
         logger.warning(f"Нет доступа на запись к типу '{en_name}'")
         raise HTTPException(403, f"Нет доступа на запись к типу '{en_name}'")
 
-    res = await update_catalog_item(db, catalog_id, data, current_user_id=current_user.user_id)
+    res = await update_catalog_item(db, catalog_id, data, current_user_tab_id=current_user.user_tab_id)
     if not res:
         logger.error(f"Ошибка обновления")
         raise HTTPException(404, detail="Ошибка обновления")
@@ -185,7 +186,7 @@ async def delete_catalog_item_endpoint(
         logger.warning(f"Нет доступа на запись к типу '{en_name}'")
         raise HTTPException(403, f"Нет доступа на запись к типу '{en_name}'")
 
-    success = await delete_catalog_item(db, catalog_id, current_user.user_id)
+    success = await delete_catalog_item(db, catalog_id, current_user.user_tab_id)
     if not success:
         logger.error("Ошибка удаления")
         raise HTTPException(status_code=404, detail="Ошибка удаления")

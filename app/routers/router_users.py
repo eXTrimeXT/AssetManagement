@@ -15,7 +15,7 @@ from app.models.User import User
 from app.database.crud_users import (
     create_user,
     get_users_list,
-    get_user_by_id,
+    # get_user_by_id,
     get_user_by_tab_id,
     update_user,
     deactivate_user,
@@ -54,7 +54,7 @@ async def get_users_endpoint(
         limit: int = 50,
         department_id: Optional[int] = None,
         is_active: bool = True,
-        user_id: Optional[int] = None,
+        # user_id: Optional[int] = None,
         user_tab_id: Optional[str] = None,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
@@ -63,11 +63,11 @@ async def get_users_endpoint(
     if not has_read_permission(current_user, "users"):
         logger.warning(f"Просмотр пользователей запрещен")
         raise HTTPException(status_code=403, detail=f"Просмотр пользователей запрещен")
-    return await get_users_list(db, skip, limit, department_id, is_active, user_id, user_tab_id)
+    return await get_users_list(db, skip, limit, department_id, is_active, user_tab_id)
 
-@router_users.patch("/{user_id}", response_model=UserResponse)
+@router_users.patch("/{user_tab_id}", response_model=UserResponse)
 async def update_user_endpoint(
-        user_id: int,
+        user_tab_id: str,
         user_data: UserUpdate,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
@@ -78,28 +78,28 @@ async def update_user_endpoint(
         raise HTTPException(status_code=403, detail=f"Нет доступа на редактирование пользователей")
 
     # Предварительные проверки перед обновлением
-    current_user = await get_user_by_id(db, user_id)
+    current_user = await get_user_by_tab_id(db, user_tab_id)
     if not current_user:
         logger.warning("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     # Проверка Табельного номера
     if user_data.user_tab_id and user_data.user_tab_id != current_user.user_tab_id:
-        if await check_tab_id_exists(db, user_data.user_tab_id, exclude_id=user_id):
+        if await check_tab_id_exists(db, tab_id=user_data.user_tab_id, exclude_tab_id=user_tab_id):
             logger.warning("Табельный номер уже существует")
             raise HTTPException(status_code=400, detail="Табельный номер уже существует")
 
     user_data.comment = str(user_data.comment)
-    updated_user = await update_user(db, user_id, user_data)
+    updated_user = await update_user(db, user_tab_id, user_data)
     if not updated_user:
         logger.error("Ошибка при обновлении")
         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
 
     return updated_user
 
-@router_users.patch("/{user_id}/permissions", response_model=UserResponse)
+@router_users.patch("/{user_tab_id}/permissions", response_model=UserResponse)
 async def update_user_permissions_endpoint(
-        user_id: int,
+        user_tab_id: str,
         perm_data: PermissionsUpdate,
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(require_authorized_user)
@@ -120,15 +120,15 @@ async def update_user_permissions_endpoint(
         logger.warning("Нет доступа на редактирование прав пользователей")
         raise HTTPException(status_code=403, detail="Нет доступа на редактирование прав пользователей")
 
-    updated_user = await update_user_permissions(db, user_id, perm_data.permissions)
+    updated_user = await update_user_permissions(db, user_tab_id, perm_data.permissions)
     if not updated_user:
         logger.warning("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     return updated_user
 
-@router_users.post("/{user_id}/activate", response_model=UserResponse)
+@router_users.post("/{user_tab_id}/activate", response_model=UserResponse)
 async def activate_user_endpoint(
-        user_id: int,
+        user_tab_id: str,
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(require_authorized_user)
 ):
@@ -137,7 +137,7 @@ async def activate_user_endpoint(
         logger.warning("Нет доступа на активацию пользователей")
         raise HTTPException(status_code=403, detail="Нет доступа на активацию пользователей")
 
-    user = await get_user_by_id(db, user_id)
+    user = await get_user_by_tab_id(db, user_tab_id)
     if not user:
         logger.warning("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -146,11 +146,11 @@ async def activate_user_endpoint(
         logger.warning("Пользователь уже активен")
         raise HTTPException(status_code=400, detail="Пользователь уже активен")
 
-    return await activate_user(db, user_id)
+    return await activate_user(db, user_tab_id)
 
-@router_users.post("/{user_id}/deactivate", response_model=UserResponse)
+@router_users.post("/{user_tab_id}/deactivate", response_model=UserResponse)
 async def deactivate_user_endpoint(
-        user_id: int,
+        user_tab_id: str,
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(require_authorized_user)
 ):
@@ -159,7 +159,7 @@ async def deactivate_user_endpoint(
         logger.warning("Нет доступа на деактивацию пользователей")
         raise HTTPException(status_code=403, detail="Нет доступа на деактивацию пользователей")
 
-    user = await get_user_by_id(db, user_id)
+    user = await get_user_by_tab_id(db, user_tab_id)
     if not user:
         logger.warning("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -168,11 +168,11 @@ async def deactivate_user_endpoint(
         logger.warning("Пользователь уже деактивирован")
         raise HTTPException(status_code=400, detail="Пользователь уже деактивирован")
 
-    return await deactivate_user(db, user_id)
+    return await deactivate_user(db, user_tab_id)
 
-@router_users.delete("/{user_id}", status_code=200)
+@router_users.delete("/{user_tab_id}", status_code=200)
 async def hard_delete_user_endpoint(
-        user_id: int,
+        user_tab_id: str,
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(require_authorized_user)
 ):
@@ -181,7 +181,7 @@ async def hard_delete_user_endpoint(
         logger.warning("Нет доступа на удаление пользователей")
         raise HTTPException(status_code=403, detail="Нет доступа на удаление пользователей")
 
-    user = await get_user_by_id(db, user_id)
+    user = await get_user_by_tab_id(db, user_tab_id)
     if not user:
         logger.warning("Пользователь не найден")
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -193,7 +193,7 @@ async def hard_delete_user_endpoint(
             detail="Нельзя удалить активного пользователя. Сначала деактивируйте его."
         )
 
-    success = await hard_delete_user(db, user_id)
+    success = await hard_delete_user(db, user_tab_id)
     if not success:
         logger.error("Ошибка при удалении")
         raise HTTPException(status_code=500, detail="Ошибка при удалении")

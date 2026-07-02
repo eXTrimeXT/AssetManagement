@@ -82,7 +82,7 @@ async def get_asset_model(db: AsyncSession, model_id: int) -> bool:
 
 
 """ CRUD ОПЕРАЦИИ """
-async def create_asset(db: AsyncSession, asset_in: AssetCreate, current_user_id: Optional[int] = None) -> Asset:
+async def create_asset(db: AsyncSession, asset_in: AssetCreate, current_user_tab_id: Optional[str]) -> Asset:
     """
     Создает новый актив в базе данных.
     """
@@ -95,7 +95,8 @@ async def create_asset(db: AsyncSession, asset_in: AssetCreate, current_user_id:
         db=db,
         asset_id=db_asset.asset_id,
         operation_type="CREATE",
-        performed_by=current_user_id,
+        # performed_by=current_user_tab_id,
+        performed_by=current_user_tab_id,
         new_values=asset_in.model_dump(),
         comment="Актив создан",
         inventory_id_snapshot=db_asset.inventory_id,
@@ -226,7 +227,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
 #
 #     return updated_asset_full
 
-async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate, user_id: int):
+async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate, user_tab_id: str):
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
     asset = result.scalars().first()
     if not asset:
@@ -244,7 +245,7 @@ async def update_asset(db: AsyncSession, asset_id: int, asset_data: AssetUpdate,
             setattr(asset, key, value)
         # Поля, которых нет в valid_columns (class_id, model_name и т.д.) — просто игнорируем
 
-    asset.updated_by = user_id  # если есть такое поле
+    asset.updated_by = user_tab_id  # если есть такое поле
     await db.commit()
     await db.refresh(asset)
     return asset
@@ -253,7 +254,7 @@ async def update_asset_with_users(
         db: AsyncSession,
         asset_id: int,
         asset_data: AssetUpdateWithUsers,
-        current_user_id: Optional[int] = None
+        current_user_tab_id: Optional[str] = None
 ) -> Optional[Asset]:
     """
     Обновляет актив и управляет привязкой пользователей через asset_catalog.
@@ -291,8 +292,10 @@ async def update_asset_with_users(
         if user.selected:
             catalog_entry = AssetCatalog(
                 asset_id=asset_id,
-                owner_id=user.user_id,
-                created_by=current_user_id or user.user_id
+                # owner_id=user.user_id,
+                owner_id=user.user_tab_id,
+                # created_by=current_user_id or user.user_id
+                created_by=current_user_tab_id or user.user_tab_id
             )
             db.add(catalog_entry)
 
@@ -302,12 +305,13 @@ async def update_asset_with_users(
         await db.refresh(asset)
 
         # === 7. Логируем операцию ===
-        if current_user_id:
+        # if current_user_id:
+        if current_user_tab_id:
             await create_operation_log(
                 db=db,
                 asset_id=asset_id,
                 operation_type="update",
-                performed_by=current_user_id,
+                performed_by=current_user_tab_id,
                 old_values=old_values,
                 new_values=update_data,
                 inventory_id_snapshot=asset_data.inventory_id,
@@ -319,7 +323,7 @@ async def update_asset_with_users(
         await db.rollback()
         raise
 
-async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Optional[int] = None) -> bool:
+async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_tab_id: Optional[str] = None) -> bool:
     """
     Жесткое удаление актива и всех его детей рекурсивно с полным логированием.
     """
@@ -377,7 +381,8 @@ async def hard_delete_asset(db: AsyncSession, asset_id: int, current_user_id: Op
                 db=db,
                 asset_id=aid, # ID может стать невалидным после удаления, но мы сохранили snapshot
                 operation_type="DELETE",
-                performed_by=current_user_id,
+                # performed_by=current_user_id,
+                performed_by=current_user_tab_id,
                 old_values=info,
                 new_values=None,
                 comment="Hard Delete",

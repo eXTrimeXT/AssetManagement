@@ -17,7 +17,7 @@ class Warehouse(Base):
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
     # Ответственный за склад (ссылка на пользователя)
-    prepared_by = Column(Integer, ForeignKey("users.user_id"), index=True)
+    prepared_by = Column(String(50), ForeignKey("users.user_tab_id"), index=True)
 
     # Обратные связи
     location = relationship("Location", back_populates="warehouses", lazy="joined")

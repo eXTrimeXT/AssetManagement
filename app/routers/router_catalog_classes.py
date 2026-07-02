@@ -22,11 +22,12 @@ def _get_type_en_name_from_id(db, type_id):
 
 @router_catalog_classes.post("/classes", response_model=AssetClassResponse, status_code=200)
 async def create_class(data: AssetClassCreate, db: AsyncSession = Depends(get_db), current_user = Depends(require_authorized_user)):
+    data.created_by = current_user.user_tab_id
     # Проверяем write на тип, к которому привязываем класс
-    type_obj = await get_asset_type_by_id(db, data.class_type_id)
-    if type_obj and not has_write_permission(current_user, type_obj.en_name):
-        logger.warning(f"Нет доступа на запись к типу '{type_obj.en_name}'")
-        raise HTTPException(403, f"Нет доступа на запись к типу '{type_obj.en_name}'")
+    # type_obj = await get_asset_type_by_id(db, data.class_type_id)
+    # if type_obj and not has_write_permission(current_user, type_obj.en_name):
+    #     logger.warning(f"Нет доступа на запись к типу '{type_obj.en_name}'")
+    #     raise HTTPException(403, f"Нет доступа на запись к типу '{type_obj.en_name}'")
     return await create_asset_class(db, data)
 
 @router_catalog_classes.get("/classes", response_model=List[AssetClassResponse])
@@ -50,13 +51,14 @@ async def patch_class(class_id: int, data: AssetClassUpdate, db: AsyncSession = 
     if not obj:
         logger.warning(f"Класс не найден")
         raise HTTPException(404, "Класс не найден")
+    data.updated_by = current_user.user_tab_id
     # Если меняется тип, проверяем write на новый тип
-    target_type_id = data.class_type_id if data.class_type_id else obj.class_type_id
-    if target_type_id:
-        new_type = await get_asset_type_by_id(db, target_type_id)
-        if new_type and not has_write_permission(current_user, new_type.en_name):
-            logger.warning(f"Нет доступа на запись к типу '{new_type.en_name}'")
-            raise HTTPException(403, f"Нет доступа на запись к типу '{new_type.en_name}'")
+    # target_type_id = data.class_type_id if data.class_type_id else obj.class_type_id
+    # if target_type_id:
+    #     new_type = await get_asset_type_by_id(db, target_type_id)
+    #     if new_type and not has_write_permission(current_user, new_type.en_name):
+    #         logger.warning(f"Нет доступа на запись к типу '{new_type.en_name}'")
+    #         raise HTTPException(403, f"Нет доступа на запись к типу '{new_type.en_name}'")
     return await update_asset_class(db, class_id, data)
 
 @router_catalog_classes.delete("/classes/{class_id}", status_code=200)
@@ -68,4 +70,5 @@ async def delete_class(class_id: int, db: AsyncSession = Depends(get_db), curren
     if not has_write_permission(current_user, obj.asset_type.en_name):
         logger.warning(f"Нет доступа для записи")
         raise HTTPException(403, "Нет доступа для записи")
+
     await delete_asset_class(db, class_id)

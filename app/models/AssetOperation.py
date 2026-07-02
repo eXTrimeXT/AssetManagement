@@ -29,7 +29,7 @@ class AssetOperation(Base):
     new_values = Column(JSON, nullable=True)
 
     # Кто выполнил
-    performed_by = Column(Integer, ForeignKey("users.user_id"), nullable=True)
+    performed_by = Column(String(50), ForeignKey("users.user_tab_id"), nullable=True)
     performer = relationship("User", foreign_keys=[performed_by], lazy="joined")
 
     # Время

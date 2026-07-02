@@ -35,8 +35,8 @@ class AssetCreate(BaseModel):
     price: Optional[int] = Field(None, ge=0, description="Стоимость приобретения")
 
     # Служебные
-    prepared_by: Optional[int] = Field(None)
-    checked_by: Optional[int] = Field(None)
+    prepared_by: Optional[str] = None
+    checked_by: Optional[str] = None
 
 
     model_config = ConfigDict(
@@ -53,8 +53,8 @@ class AssetCreate(BaseModel):
             "parent_id": None,
             "manufacturer_id": 1,
             "vendor_id": 1,
-            "prepared_by": 1,
-            "checked_by": 1,
+            "prepared_by": "gw",
+            "checked_by": "gw",
             "software_id": None
         }
     })
@@ -74,5 +74,4 @@ class AssetCreateRequest(BaseModel):
     manufacturer_name: Optional[str] = None
     vendor_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

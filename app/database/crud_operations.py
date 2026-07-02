@@ -19,7 +19,7 @@ async def create_operation_log(
         db: AsyncSession,
         asset_id: Optional[int],          # Теперь может быть None, если мы логируем что-то без привязки, но для активов будет ID
         operation_type: str,
-        performed_by: Optional[int] = None,
+        performed_by: Optional[str] = None,
         old_values: Optional[Dict[str, Any]] = None,
         new_values: Optional[Dict[str, Any]] = None,
         comment: Optional[str] = None,

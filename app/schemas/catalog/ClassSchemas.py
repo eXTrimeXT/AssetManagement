@@ -12,13 +12,13 @@ class AssetClassBase(BaseModel):
     description: Optional[str] = None
 
 class AssetClassCreate(AssetClassBase):
-    created_by: int # ID пользователя, создавшего запись
+    created_by: Optional[str] = None # табельник пользователя, создавшего запись
 
 class AssetClassUpdate(BaseModel):
     class_name: Optional[str] = Field(None, min_length=2, max_length=100)
     class_type_id: Optional[int] = None
     description: Optional[str] = None
-    updated_by: Optional[int] = None
+    updated_by: Optional[str] = None
 
 class AssetClassResponse(AssetClassBase):
     class_id: int

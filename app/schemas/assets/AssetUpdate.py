@@ -18,8 +18,8 @@ class AssetUpdate(BaseModel):
     date_purchasing: Optional[date] = None
     comment: Optional[str] = None
     parent_id: Optional[int] = None
-    prepared_by: Optional[int] = Field(None)
-    checked_by: Optional[int] = Field(None)
+    prepared_by: Optional[str] = None
+    checked_by: Optional[str] = None
     software_id: Optional[int] = None
     price: Optional[int] = Field(None, ge=0)
 

@@ -19,11 +19,13 @@ class AssetCatalog(Base):
     serial_number = Column(String, ForeignKey("android_data.serial_number"), unique=False, nullable=True, index=True)
 
     # Владелец (дублируем или синхронизируем с текущим статусом актива, но здесь исторический владелец записи в каталоге)
-    owner_id = Column(Integer, ForeignKey("users.user_id"), index=True)
+    # owner_id = Column(Integer, ForeignKey("users.user_id"), index=True)
+    owner_id = Column(String(50), ForeignKey("users.user_tab_id"), index=True)
 
     # Аудит
     created_at = Column(DateTime, default=datetime.now, nullable=False)
-    created_by = Column(Integer, ForeignKey("users.user_id"))
+    # created_by = Column(Integer, ForeignKey("users.user_id"))
+    created_by = Column(String(50), ForeignKey("users.user_tab_id"))
 
     # Связи
     asset = relationship("Asset", backref="catalog_entry", uselist=False) # Обратная связь один к одному

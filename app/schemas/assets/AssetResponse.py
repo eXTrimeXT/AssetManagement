@@ -29,8 +29,8 @@ class AssetBase(BaseModel):
     warehouse_id: Optional[int] = None
     parent_id: Optional[int] = None
     software_id: Optional[int] = None
-    prepared_by: Optional[int] = None
-    checked_by: Optional[int] = None
+    prepared_by: Optional[str] = None
+    checked_by: Optional[str] = None
     manufacturer_id: Optional[int] = None
     vendor_id: Optional[int] = None
 
@@ -64,8 +64,8 @@ class AssetResponse(AssetBase):
 
 
     # Пользователи
-    preparer: Optional[UserShortResponse] = Field(default=None)
-    checker: Optional[UserShortResponse] = Field(default=None)
+    preparer: Optional[UserShortResponse] = None
+    checker: Optional[UserShortResponse] = None
 
     # ПО
     software: Optional[SoftwareResponse] = Field(default=None)

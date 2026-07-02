@@ -107,7 +107,7 @@ async def create_or_get_user(db, request, response, login, department: Optional[
     )
 
     return UserInfoResponse(
-        user_id=user.user_id,
+        # user_id=user.user_id,
         login=login,
         email=f"{login}@hmmr.ru",
         fullname=login,
@@ -193,7 +193,8 @@ async def login_by_credentials(
         logger.info("Авторизация успешна")
         result = user_data.to_dict()
         result["token"] = token
-        result["user_id"] = db_user.user_id
+        # result["user_id"] = db_user.user_id
+        result["user_tab_id"] = db_user.user_tab_id
         logger.info("Авторизация успешна")
         return result
 
@@ -248,7 +249,8 @@ async def auth_token(
         logger.info("Авторизация успешна")
         result = user_data.to_dict()
         result["token"] = request.token  # добавлено
-        result["user_id"] = db_user.user_id
+        # result["user_id"] = db_user.user_id
+        result["user_tab_id"] = db_user.user_tab_id
         logger.info("Авторизация успешна")
         return result
 

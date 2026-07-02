@@ -22,8 +22,8 @@ class AssetModel(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # Кто создал/изменил
-    created_by = Column(Integer, ForeignKey("users.user_id"))
-    updated_by = Column(Integer, ForeignKey("users.user_id"))
+    created_by = Column(String(50), ForeignKey("users.user_tab_id"))
+    updated_by = Column(String(50), ForeignKey("users.user_tab_id"))
 
     # Связи
     asset_class = relationship("AssetClass", back_populates="models", lazy="joined")  # <-- lazy="joined" для немедленной загрузки

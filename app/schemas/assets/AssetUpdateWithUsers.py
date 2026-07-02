@@ -5,7 +5,7 @@ from datetime import date
 
 class UserInAssetUpdate(BaseModel):
     """Схема пользователя для обновления актива"""
-    user_id: int
+    # user_id: int
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_position: Optional[str] = None
@@ -20,14 +20,11 @@ class UserInAssetUpdate(BaseModel):
 class AssetUpdateWithUsers(BaseModel):
     """Схема для обновления актива с привязкой пользователей"""
 
-    # Обязательные поля
-    asset_id: int
-    name: str = Field(..., min_length=1, max_length=150)
-    inventory_id: str = Field(..., min_length=1, max_length=50)
-    serial_number: Optional[str] = Field(None, max_length=100)
-    asset_status: str = Field(default="Приемка", max_length=50)
-
-    # Опциональные поля
+    asset_id: Optional[int] = None
+    name: Optional[str] = None
+    inventory_id: Optional[str] = None
+    serial_number: Optional[str] = None
+    asset_status: Optional[str] = None
     comment: Optional[str] = None
     model_id: Optional[int] = None
     parent_id: Optional[int] = None

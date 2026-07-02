@@ -9,14 +9,14 @@ from app.schemas.android_data.android_data_schemas import AndroidDataResponse
 class AssetCatalogBase(BaseModel):
     asset_id: Optional[int] = None
     serial_number: Optional[str] = None
-    owner_id: Optional[int] = None
+    owner_id: Optional[str] = None
 
 class AssetCatalogCreate(AssetCatalogBase):
-    created_by: int
+    created_by: Optional[str] = None
 
 class AssetCatalogUpdate(BaseModel):
     asset_id: Optional[int] = None
-    owner_id: Optional[int] = None
+    owner_id: Optional[str] = None
     serial_number: Optional[str] = None
 
 class AssetCatalogResponse(AssetCatalogBase):

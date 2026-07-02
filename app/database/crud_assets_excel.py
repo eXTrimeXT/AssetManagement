@@ -202,14 +202,14 @@ async def import_assets_from_rows(
             if prep_name:
                 u_res = await db.execute(select(User).where(User.owner == str(prep_name)))
                 u_obj = u_res.scalar_one_or_none()
-                if u_obj: prep_id = u_obj.user_id
+                # if u_obj: prep_id = u_obj.user_id
 
             check_id = None
             check_name = row_data.get('checked_by_name')
             if check_name:
                 u_res = await db.execute(select(User).where(User.owner == str(check_name)))
                 u_obj = u_res.scalar_one_or_none()
-                if u_obj: check_id = u_obj.user_id
+                # if u_obj: check_id = u_obj.user_id
 
             # 7. Поиск Родителя (по инвентарному номеру)
             parent_id = None

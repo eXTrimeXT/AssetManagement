@@ -6,7 +6,7 @@ from app.models.Vendor import Vendor
 from app.schemas.vendors.VendorSchemas import VendorCreate, VendorUpdate
 
 
-async def get_or_create_vendor_by_supplier_number(db: AsyncSession, supplier_number: str, current_user_id) -> int:
+async def get_or_create_vendor_by_supplier_number(db: AsyncSession, supplier_number: str, current_user_tab_id) -> int:
     """
     Ищет вендора по supplier_number. Если не находит — создаёт нового с vendor_class_id=1.
     Возвращает vendor_id.
@@ -20,7 +20,8 @@ async def get_or_create_vendor_by_supplier_number(db: AsyncSession, supplier_num
         new_vendor = Vendor(
             vendor_class_id=1,  # как указано 'поставщик'
             name=supplier_number,  # минимальное имя, можно изменить
-            created_by=current_user_id
+            # created_by=current_user_id
+            created_by=current_user_tab_id
         )
         db.add(new_vendor)
         await db.commit()

@@ -96,7 +96,7 @@ async def create_asset_class(db: AsyncSession, data: AssetClassCreate) -> AssetC
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
-    await db.refresh(db_obj, attribute_names=["asset_type", "creator", "updater"])
+    # await db.refresh(db_obj, attribute_names=["asset_type", "creator", "updater"])
     return db_obj
 
 async def get_asset_class_by_id(db: AsyncSession, class_id: int) -> Optional[AssetClass]:
@@ -217,7 +217,7 @@ async def delete_asset_model(db: AsyncSession, model_id: int) -> bool:
     return True
 
 # === CATALOG CRUD ===
-async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_id: Optional[int] = None) -> AssetCatalog:
+async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_user_tab_id: Optional[str] = None) -> AssetCatalog:
     """
     Создает запись в каталоге и логирует операцию CREATE в одной транзакции.
     """
@@ -263,7 +263,7 @@ async def add_to_catalog(db: AsyncSession, data: AssetCatalogCreate, current_use
         asset_inventory_id_snapshot=inv_id,
         owner_name_snapshot=None,
         operation_type="CREATE",
-        performed_by=current_user_id,
+        performed_by=current_user_tab_id,
         old_values=None,
         new_values=_serialize_for_json(data.model_dump()),
         comment="Запись добавлена в каталог",
@@ -289,7 +289,7 @@ async def update_catalog_item(
         db: AsyncSession,
         catalog_id: int,
         data: AssetCatalogUpdate,
-        current_user_id: Optional[int] = None
+        current_user_tab_id: Optional[str] = None
 ) -> Optional[AssetCatalog]:
     """
     Обновляет запись каталога и логирует операцию UPDATE в одной транзакции.
@@ -320,7 +320,7 @@ async def update_catalog_item(
         asset_inventory_id_snapshot=old_inv,
         owner_name_snapshot=old_owner_name,
         operation_type="UPDATE",
-        performed_by=current_user_id,
+        performed_by=current_user_tab_id,
         old_values=_serialize_for_json(old_values_dict),
         new_values=_serialize_for_json(update_data),
         comment="Обновление записи каталога",
@@ -338,7 +338,7 @@ async def update_catalog_item(
     # 6. Возвращаем полный обновленный объект
     return await get_catalog_item_by_id(db, catalog_id)
 
-async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id: Optional[int] = None) -> bool:
+async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_tab_id: Optional[str] = None) -> bool:
     """
     Удаляет запись каталога с логированием.
     """
@@ -363,7 +363,7 @@ async def delete_catalog_item(db: AsyncSession, catalog_id: int, current_user_id
         asset_inventory_id_snapshot=inv_id,
         owner_name_snapshot=owner_name,
         operation_type="DELETE",
-        performed_by=current_user_id,
+        performed_by=current_user_tab_id,
         old_values=_serialize_for_json(detailed_old_values),
         new_values=None,
         comment=f"Запись каталога для актива {inv_id} удалена",
@@ -450,7 +450,7 @@ async def get_catalog_list(
         asset_id: Optional[int] = None,
         asset_name: Optional[str] = None,
         user_tab_id: Optional[str] = None,
-        user_id: Optional[int] = None,
+        # user_id: Optional[int] = None,
         creator_tab_id: Optional[str] = None,
         creator_id: Optional[int] = None
 ) -> Sequence[Any]:
@@ -517,8 +517,8 @@ async def get_catalog_list(
         query = query.where(
             AssetCatalog.owner.has(User.user_tab_id.ilike(user_tab_id))
         )
-    if user_id is not None:
-        query = query.where(AssetCatalog.owner_id == user_id)
+    # if user_id is not None:
+    #     query = query.where(AssetCatalog.owner_id == user_id)
     if creator_tab_id:
         query = query.where(
             AssetCatalog.creator.has(User.user_tab_id.ilike(creator_tab_id))
@@ -551,13 +551,13 @@ async def get_catalog_entries_by_asset_ids(
 
 async def get_catalog_entries_by_user_ids(
         db: AsyncSession,
-        user_ids: List[int]
+        user_tab_ids: List[str]
 ) -> Sequence[AssetCatalog]:
     """
     Получает все записи каталога для списка user_id (как owner_id)
     с загруженными связями актива для корректной сериализации AssetShortResponse.
     """
-    if not user_ids:
+    if not user_tab_ids:
         return []
 
     query = select(AssetCatalog).options(
@@ -569,7 +569,7 @@ async def get_catalog_entries_by_user_ids(
         selectinload(AssetCatalog.asset).selectinload(Asset.warehouse_obj),
         selectinload(AssetCatalog.asset).selectinload(Asset.manufacturer),
         selectinload(AssetCatalog.asset).selectinload(Asset.vendor),
-        ).where(AssetCatalog.owner_id.in_(user_ids))
+        ).where(AssetCatalog.owner_id.in_(user_tab_ids))
 
     result = await db.execute(query)
     return result.scalars().all()

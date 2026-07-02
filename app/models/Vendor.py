@@ -25,7 +25,7 @@ class Vendor(Base):
     company = relationship("Company", back_populates="vendors", lazy="joined")
 
     # Кто создал запись
-    created_by = Column(Integer, ForeignKey("users.user_id"), nullable=True)
+    created_by = Column(String(50), ForeignKey("users.user_tab_id"), nullable=True)
     creator = relationship("User", foreign_keys=[created_by], lazy="joined")
 
     # Дата создания

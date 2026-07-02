@@ -28,7 +28,7 @@ class Software(Base):
     admin_permission = Column(Boolean, default=False)               # Админ права
 
     # === Установка ===
-    who_installed = Column(Integer, ForeignKey("users.user_id"))    # Кто установил (ФИО)
+    who_installed = Column(String(50), ForeignKey("users.user_tab_id"))    # Кто установил (ФИО)
 
     # === Служебные поля ===
     installed_at = Column(DateTime, default=datetime.now)        # Дата установки

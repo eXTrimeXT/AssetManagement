@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, Dict, Any
 
 
@@ -12,7 +12,7 @@ class UserUpdate(BaseModel):
     department_id: Optional[int] = None
     division_id: Optional[int] = None
     group_id: Optional[int] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     is_active: Optional[bool] = None
 

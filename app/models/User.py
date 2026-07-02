@@ -17,8 +17,10 @@ class User(Base):
     __tablename__ = "users"
 
     # Идентификаторы
-    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_tab_id = Column(String(50), unique=True, index=True)   # Табельный номер
+    # user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_tab_id = Column(String(50), primary_key=True, unique=True, index=True)   # Табельный номер
+    # user_tab_id = Column(String(50), unique=True, index=True)   # Табельный номер
+    # user_tab_id = Column(String(50), primary_key=True, unique=True, index=True)   # Табельный номер
 
     # Имена
     owner = Column(String(150), nullable=True, index=True)      # ФИО на русском
@@ -53,7 +55,8 @@ class User(Base):
     group: Mapped[Optional["Group"]] = relationship("Group", back_populates="users")
 
     def __repr__(self):
-        return f"<User(id={self.user_id}, tab_id={self.user_tab_id}, owner={self.owner})>"
+        # return f"<User(id={self.user_id}, tab_id={self.user_tab_id}, owner={self.owner})>"
+        return f"<User(tab_id={self.user_tab_id}, owner={self.owner})>"
 
     @computed_field
     @property

@@ -22,8 +22,8 @@ class AssetClass(Base):
     created_at = mapped_column(DateTime, default=datetime.now, nullable=False)
     updated_at = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    created_by = mapped_column(Integer, ForeignKey("users.user_id"), nullable=True)
-    updated_by = mapped_column(Integer, ForeignKey("users.user_id"), nullable=True)
+    created_by = mapped_column(String(50), ForeignKey("users.user_tab_id"), nullable=True)
+    updated_by = mapped_column(String(50), ForeignKey("users.user_tab_id"), nullable=True)
 
     # === ОТНОШЕНИЯ ===
     asset_type = relationship("AssetType", foreign_keys=[class_type_id], lazy="joined")

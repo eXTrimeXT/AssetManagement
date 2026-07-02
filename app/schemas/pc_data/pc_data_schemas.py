@@ -8,7 +8,7 @@ class User(BaseModel):
     userpath: str
     sid: str
 
-class Network(BaseModel):  # НОВАЯ СХЕМА
+class Network(BaseModel):
     line_speed_mbps: str
     ipv6_link_local: str
     ipv4_address: str
@@ -68,5 +68,6 @@ class PCDataCreate(BaseModel):
 
 class PCDataResponse(PCDataCreate):
     id: int
-    user_id: Optional[int] = None
+    # user_id: Optional[int] = None
+    user_tab_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)

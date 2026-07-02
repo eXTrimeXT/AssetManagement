@@ -19,6 +19,7 @@ async def create_model(data: AssetModelCreate, db: AsyncSession = Depends(get_db
     if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
         logger.warning(f"Нет доступа на запись к типу '{cls_obj.asset_type.en_name}'")
         raise HTTPException(403, f"Нет доступа на запись к типу '{cls_obj.asset_type.en_name}'")
+    data.created_by = current_user.user_tab_id
     return await create_asset_model(db, data)
 
 @router_catalog_models.get("/", response_model=List[AssetModelResponse])
@@ -58,6 +59,8 @@ async def patch_model(model_id: int, data: AssetModelUpdate, db: AsyncSession = 
         if cls_obj and not has_write_permission(current_user, cls_obj.asset_type.en_name):
             logger.warning(f"Нет доступа на запись к типуe '{cls_obj.asset_type.en_name}'")
             raise HTTPException(403, f"Нет доступа на запись к типуe '{cls_obj.asset_type.en_name}'")
+
+    data.updated_by = current_user.user_tab_id
     return await update_asset_model(db, model_id, data)
 
 @router_catalog_models.delete("/{model_id}", status_code=200)

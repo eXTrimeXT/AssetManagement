@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, Dict, List
 
@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     user_position: Optional[str] = None
     comment: Optional[str] = None
 
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
 
     department_id: Optional[int] = None
@@ -26,7 +26,9 @@ class UserResponse(UserBase):
     division_abbreviation: Optional[str] = None
     group_abbreviation: Optional[str] = None
 
-    user_id: int
+    # user_id: int
+    user_tab_id: Optional[str] = None
+
     is_active: bool
 
     created_at: datetime
@@ -71,7 +73,7 @@ class AssetForUserResponse(BaseModel):
 
 class UserShortResponse(BaseModel):
     """Краткая схема для списков (без назначений)"""
-    user_id: int
+    # user_id: int
     user_tab_id: Optional[str] = None
     owner: Optional[str] = None
     user_position: Optional[str] = None
@@ -79,7 +81,7 @@ class UserShortResponse(BaseModel):
     department_id: Optional[int] = None
     division_id: Optional[int] = None
     group_id: Optional[int] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     permissions: Optional[Dict[str, Dict[str, bool]]] = {}
 
     assets: List[AssetForUserResponse] = []

@@ -48,8 +48,8 @@ class Asset(Base):
     vendor = relationship("Vendor", foreign_keys=[vendor_id], lazy="joined")
 
     # === Служебные поля ===
-    prepared_by = Column(Integer, ForeignKey("users.user_id"))                   # Подготовил
-    checked_by = Column(Integer, ForeignKey("users.user_id"))                    # Проверил
+    prepared_by = Column(String(50), ForeignKey("users.user_tab_id"))                   # Подготовил
+    checked_by = Column(String(50), ForeignKey("users.user_tab_id"))                    # Проверил
 
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

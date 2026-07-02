@@ -7,7 +7,7 @@ class PCData(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True)
+    user_id = Column(String(50), ForeignKey("users.user_tab_id"), nullable=True)
     user = Column(JSONB, nullable=False)
     network = Column(JSONB, nullable=False)
     os = Column(JSONB, nullable=False)

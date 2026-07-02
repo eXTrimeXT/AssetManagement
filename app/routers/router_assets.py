@@ -72,7 +72,8 @@ async def create_asset_endpoint(
     # Добавить проверку по пользователям !!! Иначе error 500
 
     # 5. Создаём актив
-    created_asset = await create_asset(db, asset_in, current_user_id=current_user.user_id)
+    # created_asset = await create_asset(db, asset_in, current_user_id=current_user.user_id)
+    created_asset = await create_asset(db, asset_in, current_user_tab_id=current_user.user_tab_id)
 
     # 6. Перезагружаем актив с полными связями для корректной сериализации
     return await get_asset_by_id(db, created_asset.asset_id)
@@ -151,64 +152,7 @@ async def create_asset_for_mu_endpoint(
         manufacturer_id=manufacturer_id,
         vendor_id=vendor_id
     )
-
     return asset
-
-# @router_assets.get("/", response_model=List[AssetShortResponse])
-# async def get_and_search_assets_endpoint(
-#         skip: int = 0,
-#         limit: int = 50,
-#         name: Optional[str] = Query(None),
-#         type_id: Optional[int] = Query(None),
-#         class_id: Optional[int] = Query(None),
-#         model_id: Optional[int] = Query(None),
-#         model_name: Optional[str] = Query(None),
-#         class_name: Optional[str] = Query(None),
-#         type_asset_en_name: Optional[str] = Query(None),
-#         type_asset_name: Optional[str] = Query(None),
-#         db: AsyncSession = Depends(get_db),
-#         current_user = Depends(require_authorized_user),
-#         items = Depends(FilteredByAccessWithParams(
-#             get_assets_list,
-#             "model.asset_class.asset_type.en_name",
-#             "read"
-#         ))
-# ):
-#     """
-#     Поиск активов по множеству опциональных параметров.
-#     Все параметры комбинируются через AND.
-#     """
-#     # Если ни один параметр не передан, то возвращаем весь список с доступом по правам!
-#     if not any([name, type_id, class_id, model_id, model_name, class_name, type_asset_en_name, type_asset_name]):
-#         return items
-#
-#     items = await search_assets(
-#         db=db,
-#         skip=skip,
-#         limit=limit,
-#         name=name,
-#         type_id=type_id,
-#         class_id=class_id,
-#         model_id=model_id,
-#         model_name=model_name,
-#         class_name=class_name,
-#         type_asset_en_name=type_asset_en_name,
-#         type_asset_name=type_asset_name
-#     )
-#
-#     # Фильтрация по правам доступа
-#     items_permissions = []
-#     for item in items:
-#         try:
-#             if item.model_id is None:
-#                 items_permissions.append(item)
-#             elif item.model and item.model.asset_class and item.model.asset_class.asset_type:
-#                 if has_read_permission(current_user, item.model.asset_class.asset_type.en_name):
-#                     items_permissions.append(item)
-#         except Exception:
-#             continue
-#
-#     return items_permissions
 
 @router_assets.get("/", response_model=List[AssetShortResponse])
 async def get_and_search_assets_endpoint(
@@ -283,7 +227,7 @@ async def get_and_search_assets_endpoint(
         for entry in catalog_by_asset.get(item.asset_id, []):
             if entry.owner:
                 users.append(UserInAssetUpdate(
-                    user_id=entry.owner.user_id,
+                    # user_id=entry.owner.user_id,
                     user_tab_id=entry.owner.user_tab_id,
                     owner=entry.owner.owner,
                     user_position=entry.owner.user_position,
@@ -423,14 +367,15 @@ async def add_assets_from_sap(
         }
 
         if supplier_number:  # Если supplier_number есть — ищем/создаем вендора
-            vendor_id = await get_or_create_vendor_by_supplier_number(db, supplier_number, current_user.user_id)
+            vendor_id = await get_or_create_vendor_by_supplier_number(db, supplier_number, current_user.user_tab_id)
+            # vendor_id = await get_or_create_vendor_by_supplier_number(db, supplier_number, current_user.user_id)
             asset_kwargs["vendor_id"] = vendor_id
         # Если supplier_number == "" — просто не добавляем vendor_id в kwargs
         # =================================
 
         asset_in = AssetCreate(**asset_kwargs)
 
-        await create_asset(db, asset_in, current_user_id=current_user.user_id)
+        await create_asset(db, asset_in, current_user_tab_id=current_user.user_tab_id)
         created_count += 1
 
     return {
@@ -454,32 +399,6 @@ async def get_asset_endpoint(asset_id: int, db: AsyncSession = Depends(get_db), 
     except:
         logger.warning("model_id = NULL")
     return asset
-
-
-# @router_assets.patch("/{asset_id}", response_model=AssetResponse)
-# async def update_asset_endpoint(
-#         asset_id: int,
-#         asset_data: AssetUpdate,
-#         current_user=Depends(require_authorized_user),
-#         db: AsyncSession = Depends(get_db)
-# ):
-#     asset = await get_asset_by_id(db, asset_id)
-#     if not asset:
-#         logger.warning(f"Актив не найден")
-#         raise HTTPException(status_code=404, detail="Актив не найден")
-#
-#     try:
-#         if not has_write_permission(current_user, asset.model.asset_class.asset_type.en_name):
-#             logger.warning(f"Нет доступа для записи")
-#             raise HTTPException(403, "Нет доступа для записи")
-#     except Exception:
-#         pass
-#
-#     updated_asset = await update_asset(db, asset_id, asset_data, current_user.user_id)
-#     if not updated_asset:
-#         logger.error(f"Ошибка при обновлении")
-#         raise HTTPException(status_code=404, detail="Ошибка при обновлении")
-#     return updated_asset
 
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset_endpoint(
@@ -509,7 +428,8 @@ async def update_asset_endpoint(
         db=db,
         asset_id=asset_id,
         asset_data=asset_data,
-        current_user_id=current_user.user_id
+        current_user_tab_id=current_user.user_tab_id
+        # current_user_id=current_user.user_id
     )
 
     if not updated_asset:
@@ -538,7 +458,8 @@ async def hard_delete_asset_endpoint(
     except Exception:
         pass
 
-    success = await hard_delete_asset(db, asset_id, current_user.user_id)
+    # success = await hard_delete_asset(db, asset_id, current_user.user_id)
+    success = await hard_delete_asset(db, asset_id, current_user.user_tab_id)
     if not success:
         logger.error(f"Ошибка при удалении актива")
         raise HTTPException(status_code=500, detail="Ошибка при удалении актива")

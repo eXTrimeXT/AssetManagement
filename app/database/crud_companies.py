@@ -6,65 +6,59 @@ from app.models.Company import Company
 from app.schemas.companies.CompanySchemas import CompanyCreate, CompanyUpdate
 
 
-async def check_company_name_exists(db: AsyncSession, name: str, exclude_id: Optional[int] = None) -> bool:
-    """Проверяет уникальность названия компании"""
-    query = select(Company).where(Company.company_name == name)
-    if exclude_id:
-        query = query.where(Company.company_id != exclude_id)
-    result = await db.execute(query)
-    return result.scalar_one_or_none() is not None
-
-
-async def create_company(db: AsyncSession, data: CompanyCreate) -> Company:
-    """Создает новую компанию"""
-    db_obj = Company(**data.model_dump())
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
-    # Подгружаем локацию для ответа
-    await db.refresh(db_obj, attribute_names=["location_obj"])
-    return db_obj
-
-
 async def get_company_by_id(db: AsyncSession, company_id: int) -> Optional[Company]:
-    """Получает компанию по ID с подгрузкой локации"""
     result = await db.execute(
         select(Company)
+        .options(
+            selectinload(Company.location_obj),
+            selectinload(Company.creator)
+        )
         .where(Company.company_id == company_id)
-        .options(selectinload(Company.location_obj))
     )
     return result.scalar_one_or_none()
 
 
-async def get_companies_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[Company]:
-    """Получает список компаний"""
-    query = select(Company).options(selectinload(Company.location_obj)).offset(skip).limit(limit)
+async def create_company(db: AsyncSession, company_in: CompanyCreate, employee_id: str) -> Company:
+    db_company = Company(**company_in.model_dump(), created_by=employee_id)
+    db.add(db_company)
+    await db.commit()
+    # Перезагружаем с связями
+    return await get_company_by_id(db, db_company.company_id)
+
+
+async def update_company(db: AsyncSession, company_id: int, company_data: CompanyUpdate) -> Optional[Company]:
+    company = await get_company_by_id(db, company_id)
+    if not company:
+        return None
+    update_data = company_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(company, key, value)
+    await db.commit()
+    return await get_company_by_id(db, company_id)
+
+
+async def get_companies_list(
+        db: AsyncSession,
+        skip: int = 0,
+        limit: int = 50,
+        name: Optional[str] = None
+) -> Sequence[Company]:
+    """Получить список компаний с фильтрами"""
+    query = select(Company).options(
+        selectinload(Company.location_obj),
+        selectinload(Company.creator)
+    )
+    if name:
+        query = query.where(Company.company_name.ilike(f"%{name}%"))
+    query = query.offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
 
-
-async def update_company(db: AsyncSession, company_id: int, data: CompanyUpdate) -> Optional[Company]:
-    """Обновляет данные компании"""
-    obj = await get_company_by_id(db, company_id)
-    if not obj:
-        return None
-
-    update_data = data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(obj, key, value)
-
-    await db.commit()
-    await db.refresh(obj)
-    await db.refresh(obj, attribute_names=["location_obj"])
-    return obj
-
-
 async def delete_company(db: AsyncSession, company_id: int) -> bool:
-    """Удаляет компанию"""
-    obj = await get_company_by_id(db, company_id)
-    if not obj:
+    """Удалить компанию"""
+    company = await get_company_by_id(db, company_id)
+    if not company:
         return False
-
-    await db.delete(obj)
+    await db.delete(company)
     await db.commit()
     return True

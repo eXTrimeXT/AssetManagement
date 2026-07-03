@@ -1,31 +1,30 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship, Mapped
-from typing import Optional
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from datetime import datetime
 from app.models.Base import Base
 
 
 class Company(Base):
-    """
-    Таблица компаний (юридических лиц).
-    Хранит общую информацию о контрагентах.
-    """
+    """Модель компании"""
     __tablename__ = "companies"
 
     company_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    company_name = Column(String(255), nullable=False, index=True)  # Название компании
-    gen_director = Column(String(150))  # Генеральный директор (ФИО)
-    phone_number = Column(String(50))   # Телефон компании
+    company_name = Column(String(255), unique=True, nullable=False, index=True)
+    gen_director = Column(String(150))
+    phone_number = Column(String(50))
 
-    # Ссылка на локацию (адрес компании) - опционально
-    location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
-    location_obj: Mapped[Optional["Location"]] = relationship(
-        "Location",
-        back_populates="companies",
-        lazy="joined" # Подгружаем локацию сразу при запросе актива
-    )
+    # Связь с локацией
+    location_id = Column(Integer, ForeignKey("locations.location_id"), index=True, nullable=True)
 
-    # Обратная связь с таблицей вендоров/поставщиков
-    vendors = relationship("Vendor", back_populates="company", lazy="selectin")
+    # Аудит
+    created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    # Relationships
+    location_obj = relationship("Location", foreign_keys=[location_id])
+    creator = relationship("Employee", foreign_keys=[created_by])
+    vendors = relationship("Vendor", back_populates="company")
 
     def __repr__(self):
-        return f"<Company(id={self.company_id}, name='{self.company_name}')>"
+        return f"<Company(id={self.company_id}, name={self.company_name})>"

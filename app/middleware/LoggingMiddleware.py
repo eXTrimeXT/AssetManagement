@@ -12,7 +12,8 @@ from pathlib import Path
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
-from app.service.auth.auth_service import extract_login_from_request
+
+from app.services.auth.auth_service import extract_login_from_request
 
 # === КОНФИГУРАЦИЯ ===
 PROJECT_ROOT = Path("/app")

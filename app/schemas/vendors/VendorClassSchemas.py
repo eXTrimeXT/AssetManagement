@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class VendorClassBase(BaseModel):
-    name: str = Field(..., min_length=2, max_length=100, description="Название класса (например: Производитель, Поставщик)")
+    name: Optional[str] = None
 
 
 class VendorClassCreate(VendorClassBase):
@@ -12,18 +12,20 @@ class VendorClassCreate(VendorClassBase):
 
 
 class VendorClassUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    name: Optional[str] = None
 
 
 class VendorClassResponse(VendorClassBase):
-    vendor_class_id: int
+    class_id: int
     created_at: datetime
+    created_by: str
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class VendorClassShortResponse(BaseModel):
-    vendor_class_id: int
+    class_id: int
     name: str
+    created_by: str
 
     model_config = ConfigDict(from_attributes=True)

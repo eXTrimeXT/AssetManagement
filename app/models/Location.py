@@ -1,36 +1,26 @@
-from typing import List
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from datetime import datetime
 from app.models.Base import Base
 
+
 class Location(Base):
-    """
-    Модель локации (местоположения).
-    Хранит иерархическую структуру адресов: Страна -> Город -> Адрес -> Помещение -> Этаж.
-    """
+    """Модель локации (местоположения)"""
     __tablename__ = "locations"
 
     location_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    country = Column(String(100))
+    city = Column(String(100))
+    address = Column(String(255))
+    room = Column(String(50))
+    floor = Column(String(10))
 
-    country = Column(String(100), index=True, default="Страна")
-    city = Column(String(100), index=True, default="Город")
-    address = Column(String(255), default="Улица и номер дома")
-    room = Column(String(50), default="Номер помещения/кабинета")
-    floor = Column(String(10), default="Этаж")
+    created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    # Связь с компаниями (одна локация может быть у нескольких компаний)
-    companies: Mapped[List["Company"]] = relationship(
-        "Company",
-        back_populates="location_obj",
-        lazy="select"
-    )
-
-    # Связь со складами (одна локация может иметь много складов)
-    warehouses: Mapped[List["Warehouse"]] = relationship(
-        "Warehouse",
-        back_populates="location",
-        lazy="select"
-    )
+    creator = relationship("Employee", foreign_keys=[created_by])
 
     def __repr__(self):
-        return f"<Location(id={self.location_id}, city={self.city}, address={self.address})>"
+        return f"<Location(id={self.location_id}, name={self.name})>"

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 Если переменной нет, используется значение по умолчанию для локального запуска.
 Формат: postgresql+asyncpg://<user>:<password>@<host>:<port>/<dbname>
 """
-DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets")
+DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets_db2")
 
 """
 Создаем асинхронный движок SQLAlchemy.

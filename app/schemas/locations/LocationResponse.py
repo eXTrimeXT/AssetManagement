@@ -4,6 +4,8 @@ from typing import Optional
 class LocationResponse(BaseModel):
     """Полная схема ответа"""
     location_id: int
+    name: str
+    location_id: int
     country: str
     city: str
     address: str
@@ -14,6 +16,8 @@ class LocationResponse(BaseModel):
 
 class LocationShortResponse(BaseModel):
     """Краткая схема для списков"""
+    location_id: int
+    name: str
     location_id: int
     city: str
     address: str

@@ -52,6 +52,9 @@ services:
       - REDIS_PORT=$REDIS_PORT
       - SESSION_PREFIX=$SESSION_PREFIX
       - SESSION_TTL=$SESSION_TTL
+      - ZUP_BASE_URL=ZUP_BASE_URL
+      - ZUP_LOGIN=$ZUP_LOGIN
+      - ZUP_PASSWORD=$ZUP_PASSWORD
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs

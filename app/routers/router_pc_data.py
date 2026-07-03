@@ -6,9 +6,9 @@ from app.database.connection import get_db
 from app.schemas.pc_data.pc_data_schemas import PCDataCreate, PCDataResponse
 from app.database.crud_pc_data import create_or_update_pc_data, get_all_pc_data, update_pc_data, delete_pc_data
 from app.middleware.LoggingMiddleware import logger
-from app.service.auth.auth_service import require_authorized_user
-from app.service.permissions.permissions_rules import has_pc_data_sender_permission
-from app.models.User import User
+# from app.services.auth.auth_service import require_authorized_user
+# from app.services.permissions.permissions_rules import has_pc_data_sender_permission
+# from app.models.User import User
 
 router_pc_data = APIRouter(prefix="/pc-data", tags=["pc_data"])
 
@@ -16,10 +16,10 @@ router_pc_data = APIRouter(prefix="/pc-data", tags=["pc_data"])
 async def endpoint_create_pc_data(
         pc_data: PCDataCreate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(require_authorized_user)
+        # current_user: User = Depends(require_authorized_user)
 ):
-    if not has_pc_data_sender_permission(current_user):
-        raise HTTPException(status_code=403, detail="Доступ запрещен!")
+    # if not has_pc_data_sender_permission(current_user):
+    #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
     return await create_or_update_pc_data(db, pc_data)
 
 @router_pc_data.get("/", response_model=list[PCDataResponse])
@@ -36,10 +36,10 @@ async def endpoint_update_pc_data(
         username: str,
         pc_data: PCDataCreate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(require_authorized_user)
+        # current_user: User = Depends(require_authorized_user)
 ):
-    if not has_pc_data_sender_permission(current_user):
-        raise HTTPException(status_code=403, detail="Доступ запрещен!")
+    # if not has_pc_data_sender_permission(current_user):
+    #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
 
     db_pc = await update_pc_data(db, username, pc_data)
     if db_pc is None:
@@ -51,10 +51,10 @@ async def endpoint_update_pc_data(
 async def endpoint_delete_pc_data(
         username: str,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(require_authorized_user)
+        # current_user: User = Depends(require_authorized_user)
 ):
-    if not has_pc_data_sender_permission(current_user):
-        raise HTTPException(status_code=403, detail="Доступ запрещен!")
+    # if not has_pc_data_sender_permission(current_user):
+    #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
 
     db_pc = await delete_pc_data(db, username)
     if db_pc is None:

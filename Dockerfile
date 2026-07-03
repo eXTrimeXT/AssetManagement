@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14.3-slim
 WORKDIR /app
 
 # Устанавливаем системные зависимости (для psycopg2 или других библиотек, если понадобятся)
@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc && \
 # Копируем зависимости
 COPY packages /packages
 COPY requirements.txt .
-RUN pip install --no-cache-dir /package/Booktype-1.5-py2.7.egg
+RUN pip install --no-cache-dir /packages/Booktype-1.5-py2.7.egg
 
 # Если не доступен Docker на сервере
 #RUN pip install --no-cache-dir --no-index --find-links=/packages -r requirements.txt

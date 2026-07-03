@@ -1,12 +1,6 @@
 services:
-  # Для просмотра таблиц через веб-интерфейс (для разработки)
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - "7080:8080"
-
   # Сервис PostgreSQL
+
   postgres:
     image: postgres:17-alpine
     restart: always
@@ -20,18 +14,13 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data # Сохранение данных БД
 
-  # Сервис для сохранения сессии пользователей
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "8379:8379"
-    command: redis-server --port 8379 --appendonly yes  # <-- заставляем Redis слушать 8379
-    healthcheck:
-      test: ["CMD", "redis-cli", "-p", "8379", "ping"]  # <-- healthcheck тоже на 8379
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
+  # Для просмотра таблиц через веб-интерфейс (для разработки)
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "7080:8080"
 
   # Сервис приложения FastAPI
   app:
@@ -58,6 +47,18 @@ services:
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs
+
+  # Сервис для сохранения сессии пользователей
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "8379:8379"
+    command: redis-server --port 8379 --appendonly yes  # <-- заставляем Redis слушать 8379
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "8379", "ping"]  # <-- healthcheck тоже на 8379
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:

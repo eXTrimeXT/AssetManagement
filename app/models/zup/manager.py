@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey, event
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base
@@ -11,7 +11,7 @@ class Manager(Base):
     id = Column(String(100), primary_key=True, index=True)  # UUID связи
 
     guid_employee = Column(String(100), ForeignKey("zup_employees.guid"), nullable=False, index=True)
-    guid_manager = Column(String(100), ForeignKey("zup_employees.guid"), nullable=False, index=True)
+    guid_manager = Column(String(100), ForeignKey("zup_employees.guid"), nullable=True, index=True)
 
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -22,3 +22,11 @@ class Manager(Base):
 
     def __repr__(self):
         return f"<Manager(employee={self.guid_employee}, manager={self.guid_manager})>"
+
+# === Обработчик для преобразования пустых строк в None ===
+@event.listens_for(Manager, 'before_insert')
+@event.listens_for(Manager, 'before_update')
+def normalize_empty_strings(mapper, connection, target):
+    """Преобразует пустые строки в None для FK полей"""
+    if target.guid_manager == "":
+        target.guid_manager = None

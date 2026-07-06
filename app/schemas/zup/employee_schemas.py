@@ -76,6 +76,7 @@ class EmployeeShortResponse(BaseModel):
     full_name_en: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    position_guid: Optional[str] = None
     department_guid: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

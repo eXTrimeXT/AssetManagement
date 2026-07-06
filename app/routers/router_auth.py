@@ -319,6 +319,7 @@ from app.services.redis.redis_client import redis_client
 from app.models.zup.employee import Employee
 from app.services.auth.external_auth import external_login
 from app.database.zup import get_employee_by_login_or_email
+from app.services.auth.auth_service import require_authorized_user
 
 logger = logging.getLogger(__name__)
 router_auth = APIRouter(tags=["auth"])
@@ -594,10 +595,60 @@ async def auth_token(
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 
+# @router_auth.post("/logout")
+# async def logout(
+#         response: Response,
+# ):
+#     """Удаляет сессию из Redis и очищает куки"""
+#     response.delete_cookie(key="session_token", path="/")
+#     return {"status": "logged out"}
 @router_auth.post("/logout")
 async def logout(
+        request: Request,
         response: Response,
 ):
-    """Удаляет сессию из Redis и очищает куки"""
-    response.delete_cookie(key="session_token", path="/")
-    return {"status": "logged out"}
+    """
+    Удаляет сессию из Redis по ключу session:{login} и очищает куки.
+    """
+    try:
+        # 1. Получаем токен из запроса (заголовок или куки)
+        token = None
+        login = None
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+        else:
+            token = request.cookies.get("session_token")
+            if token:
+                token = token.strip()
+
+        if token:
+            # 2. Декодируем токен для получения login
+            payload = jwt.decode(
+                token,
+                key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+                algorithms=["HS256"],
+                options={
+                    "verify_signature": bool(JWT_SECRET_KEY),
+                    "verify_exp": False,
+                    "verify_iat": False
+                }
+            )
+            login = payload.get("login")
+
+            if login:
+                # 3. Удаляем сессию из Redis по ключу session:{login}
+                session_key = f"session:{login}"
+                await redis_client.delete(session_key)
+                logger.info(f"Сессия удалена из Redis: {session_key}")
+
+        # 4. Удаляем куку
+        response.delete_cookie(key="session_token", path="/")
+
+        return {"status": f"logged out in {login}"}
+
+    except Exception as e:
+        logger.error(f"Ошибка при logout: {str(e)}")
+        # Всё равно очищаем куку
+        response.delete_cookie(key="session_token", path="/")
+        return {"status": "logged out"}

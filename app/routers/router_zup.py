@@ -146,15 +146,15 @@ async def get_employee(
     return employee
 
 
-@router_zup.get("/positions", response_model=List[PositionResponse], summary="Получить список должностей")
-async def get_positions(
-        skip: int = Query(0, ge=0),
-        limit: int = Query(50, ge=1, le=100),
-        db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
-):
-    """Получить список должностей"""
-    return await get_positions_list(db, skip, limit)
+# @router_zup.get("/positions", response_model=List[PositionResponse], summary="Получить список должностей")
+# async def get_positions(
+#         skip: int = Query(0, ge=0),
+#         limit: int = Query(50, ge=1, le=100),
+#         db: AsyncSession = Depends(get_db),
+#         # current_user=Depends(require_authorized_user)
+# ):
+#     """Получить список должностей"""
+#     return await get_positions_list(db, skip, limit)
 
 
 @router_zup.get("/departments", response_model=List[DepartmentResponse], summary="Получить список подразделений")
@@ -179,22 +179,22 @@ async def get_managers(
     return await get_managers_list(db, skip, limit)
 
 
-@router_zup.get("/assignments", response_model=List[AssignmentResponse], summary="Получить список назначений")
-async def get_assignments(
-        skip: int = Query(0, ge=0),
-        limit: int = Query(50, ge=1, le=100),
-        db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
-):
-    """Получить историю кадровых назначений"""
-    return await get_assignments_list(db, skip, limit)
+# @router_zup.get("/assignments", response_model=List[AssignmentResponse], summary="Получить список назначений")
+# async def get_assignments(
+#         skip: int = Query(0, ge=0),
+#         limit: int = Query(50, ge=1, le=100),
+#         db: AsyncSession = Depends(get_db),
+#         # current_user=Depends(require_authorized_user)
+# ):
+#     """Получить историю кадровых назначений"""
+#     return await get_assignments_list(db, skip, limit)
 
 
-@router_zup.get("/reports", response_model=ReportResponse, summary="Получить отчёт по присутствию")
-async def get_reports(
-        db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
-):
-    """Получить сводный отчёт по присутствию сотрудников"""
-    reports = await get_reports_list(db)
-    return {"attendance_data": reports}
+# @router_zup.get("/reports", response_model=ReportResponse, summary="Получить отчёт по присутствию")
+# async def get_reports(
+#         db: AsyncSession = Depends(get_db),
+#         # current_user=Depends(require_authorized_user)
+# ):
+#     """Получить сводный отчёт по присутствию сотрудников"""
+#     reports = await get_reports_list(db)
+#     return {"attendance_data": reports}

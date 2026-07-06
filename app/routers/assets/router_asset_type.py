@@ -12,7 +12,7 @@ from app.services.auth.auth_service import require_authorized_user
 from app.services.auth.permission_checker import check_permission
 
 logger = logging.getLogger(__name__)
-router_asset_types = APIRouter(prefix="/asset-types", tags=["Asset Types"])
+router_asset_types = APIRouter(prefix="/assets-types", tags=["Asset Types"])
 
 
 @router_asset_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)

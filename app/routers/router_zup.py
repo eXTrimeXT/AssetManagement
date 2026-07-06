@@ -1,9 +1,11 @@
 import logging
+import math
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeBase
+from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeBase, PaginatedResponse, EmployeeShortResponse
 from app.schemas.zup.position_schemas import PositionResponse
 from app.schemas.zup.department_schemas import DepartmentResponse
 from app.schemas.zup.manager_schemas import ManagerResponse
@@ -16,7 +18,8 @@ from app.database.zup.crud_zup_managers import get_managers_list
 from app.database.zup.crud_zup_assignments import get_assignments_list
 from app.database.zup.crud_zup_reports import get_reports_list
 from app.services.zup.zup_integration import sync_all_data
-# from app.services.auth.auth_service import require_authorized_user
+from app.services.auth.auth_service import require_authorized_user
+
 
 logger = logging.getLogger(__name__)
 router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
@@ -43,37 +46,92 @@ async def sync_zup_data(
         raise HTTPException(status_code=500, detail=f"Ошибка синхронизации: {str(e)}")
 
 
-@router_zup.get("/employees", response_model=List[EmployeeBase], summary="Получить список сотрудников")
+# @router_zup.get("/employees", response_model=List[EmployeeBase], summary="Получить список сотрудников")
+# async def get_employees(
+#         skip: int = Query(0, ge=0),
+#         limit: int = Query(50, ge=1, le=100),
+#         employee_id: Optional[str] = Query(None, description="Табельный номер"),
+#         last_name: Optional[str] = Query(None, description="Фамилия (рус)"),
+#         first_name: Optional[str] = Query(None, description="Имя (рус)"),
+#         last_name_en: Optional[str] = Query(None, description="Фамилия (англ)"),
+#         first_name_en: Optional[str] = Query(None, description="Имя (англ)"),
+#         department_guid: Optional[str] = Query(None, description="GUID подразделения"),
+#         position_guid: Optional[str] = Query(None, description="GUID должности"),
+#         is_active: Optional[bool] = Query(None, description="Только действующие сотрудники"),
+#         db: AsyncSession = Depends(get_db),
+#         # current_user=Depends(require_authorized_user)
+# ):
+#     """Получить список сотрудников с фильтрацией"""
+#     employees = await get_employees_list(
+#         db=db,
+#         skip=skip,
+#         limit=limit,
+#         employee_id=employee_id,
+#         last_name=last_name,
+#         first_name=first_name,
+#         last_name_en=last_name_en,
+#         first_name_en=first_name_en,
+#         department_guid=department_guid,
+#         position_guid=position_guid,
+#         is_active=is_active
+#     )
+#     return employees
+
+
+@router_zup.get(
+    "/employees",
+    response_model=PaginatedResponse[EmployeeShortResponse],
+    summary="Получить список сотрудников (с пагинацией)"
+)
 async def get_employees(
-        skip: int = Query(0, ge=0),
-        limit: int = Query(50, ge=1, le=100),
+        page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
+        page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
         employee_id: Optional[str] = Query(None, description="Табельный номер"),
         last_name: Optional[str] = Query(None, description="Фамилия (рус)"),
         first_name: Optional[str] = Query(None, description="Имя (рус)"),
+        middle_name: Optional[str] = Query(None, description="Отчество (рус)"),
         last_name_en: Optional[str] = Query(None, description="Фамилия (англ)"),
         first_name_en: Optional[str] = Query(None, description="Имя (англ)"),
+        middle_name_en: Optional[str] = Query(None, description="Отчество (англ)"),
         department_guid: Optional[str] = Query(None, description="GUID подразделения"),
         position_guid: Optional[str] = Query(None, description="GUID должности"),
         is_active: Optional[bool] = Query(None, description="Только действующие сотрудники"),
         db: AsyncSession = Depends(get_db),
         # current_user=Depends(require_authorized_user)
 ):
-    """Получить список сотрудников с фильтрацией"""
-    employees = await get_employees_list(
+    """
+    Получить страницу сотрудников с фильтрацией.
+
+    - **page**: номер страницы (начинается с 1)
+    - **page_size**: количество записей на странице (по умолчанию 50)
+    """
+    employees, total = await get_employees_list(
         db=db,
-        skip=skip,
-        limit=limit,
+        page=page,
+        page_size=page_size,
         employee_id=employee_id,
         last_name=last_name,
         first_name=first_name,
+        middle_name=middle_name,
         last_name_en=last_name_en,
         first_name_en=first_name_en,
+        middle_name_en=middle_name_en,
         department_guid=department_guid,
         position_guid=position_guid,
         is_active=is_active
     )
-    return employees
 
+    total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+    return PaginatedResponse(
+        items=list(employees),
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_previous=page > 1
+    )
 
 @router_zup.get("/employees/{guid}", response_model=EmployeeResponse, summary="Получить сотрудника по GUID")
 async def get_employee(

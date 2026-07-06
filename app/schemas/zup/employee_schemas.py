@@ -1,6 +1,6 @@
+from typing import Optional, TypeVar, Generic, List
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from datetime import date, datetime
-from typing import Optional
 
 
 class EmployeeBase(BaseModel):
@@ -78,3 +78,16 @@ class EmployeeShortResponse(BaseModel):
     phone: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+T = TypeVar('T')
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Универсальная схема пагинированного ответа"""
+    items: List[T]
+    total: int = Field(..., description="Общее количество записей")
+    page: int = Field(..., description="Текущая страница (начинается с 1)")
+    page_size: int = Field(..., description="Размер страницы")
+    total_pages: int = Field(..., description="Общее количество страниц")
+    has_next: bool = Field(..., description="Есть ли следующая страница")
+    has_previous: bool = Field(..., description="Есть ли предыдущая страница")

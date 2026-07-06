@@ -86,6 +86,7 @@ project/
 ```python
 pip download pandas-stubs==3.0.3.260530 --dest=/packages/ --no-deps
 pip download psycopg2==2.9.12 --dest=/packages/ --no-deps
+pip download pycryptodome==3.23.0 --dest=/packages/ --no-deps
 ```
 
 ## Запуск через Docker 

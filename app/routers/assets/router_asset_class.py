@@ -52,7 +52,7 @@ async def get_asset_classes(
         class_name: Optional[str] = Query(None),
         asset_type_id: Optional[int] = Query(None),
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Получить список классов активов.
@@ -85,7 +85,7 @@ async def get_asset_class(
         class_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_class_by_id(db, class_id)
     if not obj:
@@ -136,7 +136,7 @@ async def delete_asset_class_endpoint(
         class_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_class_by_id(db, class_id)
     if not obj:

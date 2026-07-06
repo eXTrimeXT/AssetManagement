@@ -59,7 +59,7 @@ async def get_asset_assignments(
         active_only: bool = Query(False, description="Только активные назначения"),
         request: Request = None,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Получить все назначения актива (историю и текущие).
@@ -86,7 +86,7 @@ async def get_employee_assignments(
         employee_id: str,
         active_only: bool = Query(False, description="Только активные назначения"),
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Получить все назначения сотрудника (все его активы).
@@ -99,7 +99,7 @@ async def close_assignment_endpoint(
         assignment_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Закрыть активное назначение (установить end_date = сегодня).
@@ -128,7 +128,7 @@ async def delete_assignment_endpoint(
         assignment_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Удалить назначение (только неактивные, у которых end_date != NULL).

@@ -55,7 +55,7 @@ async def get_asset_models(
         model_name: Optional[str] = Query(None),
         class_id: Optional[int] = Query(None),
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Получить список моделей активов.
@@ -88,7 +88,7 @@ async def get_asset_model(
         model_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:
@@ -139,7 +139,7 @@ async def delete_asset_model_endpoint(
         model_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:

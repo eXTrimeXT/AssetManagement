@@ -45,7 +45,7 @@ async def get_asset_types(
         name: Optional[str] = Query(None),
         en_name: Optional[str] = Query(None),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Получить список типов активов.
@@ -56,14 +56,14 @@ async def get_asset_types(
 
     # Фильтруем по правам read
     accessible_types = []
-    # for asset_type in all_types:
-    #     Проверяем право read на конкретный тип (en_name = ключ в permissions)
-        # has_perm = await check_permission(request, asset_type.en_name, "read")
-        # if has_perm:
-        #     accessible_types.append(asset_type)
-    #
-    # return accessible_types
-    return all_types
+    for asset_type in all_types:
+        # Проверяем право read на конкретный тип (en_name = ключ в permissions)
+        has_perm = await check_permission(request, asset_type.en_name, "read")
+        if has_perm:
+            accessible_types.append(asset_type)
+
+    return accessible_types
+    # return all_types
 
 
 @router_asset_types.get("/{asset_type_id}", response_model=AssetTypeResponse)

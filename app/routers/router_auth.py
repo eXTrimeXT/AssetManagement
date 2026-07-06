@@ -531,23 +531,15 @@ async def auth_token(
         response: Response,
         db: AsyncSession = Depends(get_db),
 ):
-    """
-    Авторизация по токену.
-    Токен НЕ изменяется — используется оригинальный токен.
-    """
-    # Удаляем старую сессию перед новым входом
     response.delete_cookie(key="session_token", path="/")
-
     try:
         user_data: UserJWTData = get_user_from_token(request.token)
         if user_data.is_expired:
-            logger.warning("Срок действия токена истек")
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
-        # Проверяем, есть ли сотрудник в БД
         employee = await create_or_update_user_from_token(db, user_data)
 
-        # === ВАЖНО: Токен НЕ изменяется! ===
+        # === НЕ перекодируем токен! ===
         payload = jwt.decode(
             request.token,
             key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
@@ -559,18 +551,16 @@ async def auth_token(
         ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
 
-        # === СОХРАНЯЕМ ПРАВА И employee_id В REDIS ===
-        # Токен сохраняется как есть
+        # Сохраняем ОРИГИНАЛЬНЫЙ токен в Redis
         permissions = user_data.permissions or {}
         await save_session_to_redis(
             user_data.login,
-            request.token,  # ← ОРИГИНАЛЬНЫЙ токен, без изменений!
+            request.token,  # ← ОРИГИНАЛЬНЫЙ токен
             ttl,
             permissions,
-            employee.employee_id  # ← employee_id только в Redis
+            employee.employee_id
         )
 
-        # Устанавливаем HTTP-only куки с ОРИГИНАЛЬНЫМ токеном
         response.set_cookie(
             key="session_token",
             value=request.token,  # ← ОРИГИНАЛЬНЫЙ токен
@@ -595,13 +585,6 @@ async def auth_token(
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
 
-# @router_auth.post("/logout")
-# async def logout(
-#         response: Response,
-# ):
-#     """Удаляет сессию из Redis и очищает куки"""
-#     response.delete_cookie(key="session_token", path="/")
-#     return {"status": "logged out"}
 @router_auth.post("/logout")
 async def logout(
         request: Request,

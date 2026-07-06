@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 # Импорт класса логирования в middleware
 from app.middleware.LoggingMiddleware import LoggingMiddleware
 # Middleware для автоматической авторизации
-# from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
+from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
 
 # Импорт роутеров
 # Redis
@@ -84,7 +84,7 @@ app.add_middleware(
 )
 
 app.add_middleware(LoggingMiddleware)
-# app.add_middleware(AuthTokenMiddleware)
+app.add_middleware(AuthTokenMiddleware)
 
 # --- Подключение API Маршрутов ---
 app.include_router(router_redis, prefix="/api")             # Only DEV: check redis storage

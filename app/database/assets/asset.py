@@ -30,6 +30,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
                 )
             ),
             selectinload(Asset.parent),
+            selectinload(Asset.location),
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.creator),
@@ -49,7 +50,8 @@ async def get_assets_list(
         serial_number: Optional[str] = None,
         asset_status: Optional[str] = None,
         model_id: Optional[int] = None,
-        parent_id: Optional[int] = None
+        parent_id: Optional[int] = None,
+        location_id: Optional[int] = None,
 ) -> Sequence[Asset]:
     """Получение списка активов с фильтрацией"""
     query = select(Asset).options(
@@ -58,7 +60,8 @@ async def get_assets_list(
                 selectinload(AssetClass.asset_type)
             )
         ),
-        selectinload(Asset.parent)
+        selectinload(Asset.parent),
+        selectinload(Asset.location),
     )
 
     if name:
@@ -73,6 +76,8 @@ async def get_assets_list(
         query = query.where(Asset.model_id == model_id)
     if parent_id is not None:
         query = query.where(Asset.parent_id == parent_id)
+    if location_id is not None:
+        query = query.where(Asset.location_id == location_id)
 
     query = query.offset(skip).limit(limit)
     result = await db.execute(query)

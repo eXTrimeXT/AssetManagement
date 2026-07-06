@@ -1,8 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
-from app.schemas.users.UserResponse import UserShortResponse
-from app.schemas.companies.CompanySchemas import CompanyShortResponse, CompanyResponse
+from app.schemas.companies.CompanySchemas import CompanyResponse
 from app.schemas.vendors.VendorClassSchemas import VendorClassShortResponse
 
 class VendorBase(BaseModel):

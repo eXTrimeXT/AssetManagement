@@ -21,6 +21,7 @@ class Location(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     creator = relationship("Employee", foreign_keys=[created_by])
+    assets = relationship("Asset", back_populates="location")
 
     def __repr__(self):
         return f"<Location(id={self.location_id}, name={self.name})>"

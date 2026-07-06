@@ -6,9 +6,7 @@ from app.database.connection import get_db
 from app.database.crud_companies import (
     get_company_by_id, get_companies_list, create_company, update_company, delete_company
 )
-from app.schemas.companies.CompanySchemas import (
-    CompanyCreate, CompanyUpdate, CompanyResponse, CompanyShortResponse
-)
+from app.schemas.companies.CompanySchemas import CompanyCreate, CompanyUpdate, CompanyResponse
 from app.services.auth.auth_service import require_authorized_user
 
 logger = logging.getLogger(__name__)

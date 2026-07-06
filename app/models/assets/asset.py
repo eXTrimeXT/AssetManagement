@@ -23,6 +23,7 @@ class Asset(Base):
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
+    location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
     # Ответственные (ссылаются на zup_employees)
     prepared_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
@@ -42,6 +43,8 @@ class Asset(Base):
         backref=backref("children", lazy="selectin", cascade="all, delete-orphan"),
         lazy="selectin"
     )
+
+    location = relationship("Location", back_populates="assets")
 
     assignments = relationship(
         "AssetAssignment",

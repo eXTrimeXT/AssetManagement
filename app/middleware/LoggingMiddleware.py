@@ -13,7 +13,7 @@ from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-from app.services.auth.auth_service import extract_login_from_request
+from app.services.auth.auth_service import extract_user_info_from_request
 
 # === КОНФИГУРАЦИЯ ===
 PROJECT_ROOT = Path("/app")
@@ -84,7 +84,7 @@ class ConsoleFormatter(logging.Formatter):
         ]
 
         ctx = {}
-        for key in ["request_id", "client_ip", "user_login", "duration_ms", "query_params", "request_body",
+        for key in ["request_id", "client_ip", "user_login", "employee_id", "duration_ms", "query_params", "request_body",
                     "error_type", "error_message", "permission_check"]:
             val = getattr(record, key, None)
             if val is not None:
@@ -128,7 +128,7 @@ class FileJSONFormatter(logging.Formatter):
         }
 
         for key in [
-            "request_id", "client_ip", "user_login", "route", "url",
+            "request_id", "client_ip", "user_login", "employee_id", "route", "url",
             "duration_ms", "status_code", "error_type", "error_message",
             "query_params", "request_body", "permission_check"
         ]:
@@ -195,7 +195,12 @@ logger = logging.getLogger("app.middleware")
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = str(uuid.uuid4())
-        user_login = await extract_login_from_request(request)
+        # user_login = await extract_login_from_request(request)
+
+        user_info = await extract_user_info_from_request(request)
+        user_login = user_info.get("login") or "anonymous"
+        employee_id = user_info.get("employee_id") or "-"
+
         client_ip = request.client.host if request.client else None
         route_path = request.url.path
         method = request.method
@@ -215,6 +220,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             request_id=request_id,
             client_ip=client_ip,
             user_login=user_login,
+            employee_id=employee_id,
             route=route_path,
             method=method,
             query_params=dict(request.query_params) if request.query_params else None,
@@ -239,6 +245,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "client_ip": client_ip,
                     "user_login": user_login,
+                    "employee_id": employee_id,
                     "url": str(request.url),
                     "duration_ms": round(process_time * 1000, 2),
                     "query_params": dict(request.query_params) if request.query_params else None,
@@ -260,6 +267,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "client_ip": client_ip,
                     "user_login": user_login,
+                    "employee_id": employee_id,
                     "url": str(request.url),
                     "duration_ms": round(process_time * 1000, 2),
                     "error_type": "HTTPException",
@@ -280,6 +288,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "request_id": request_id,
                     "client_ip": client_ip,
                     "user_login": user_login,
+                    "employee_id": employee_id,
                     "url": str(request.url),
                     "duration_ms": round(process_time * 1000, 2),
                     "error_type": type(e).__name__,

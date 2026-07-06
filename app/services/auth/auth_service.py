@@ -42,70 +42,6 @@ async def get_token_from_request(request: Request) -> str:
     raise HTTPException(status_code=401, detail="Токен не предоставлен")
 
 
-# async def require_authorized_user(
-#         request: Request,
-#         db: AsyncSession = Depends(get_db)
-# ) -> Employee:
-#     """
-#     Проверяет авторизацию и возвращает сотрудника из ZUP.
-#     Права пользователя сохраняются в Redis и доступны через get_user_permissions_from_redis.
-#     """
-#     try:
-#         token = await get_token_from_request(request)
-#         user_data = get_user_from_token(token)
-#
-#         if user_data.is_expired:
-#             logger.warning("Срок действия токена истек")
-#             raise HTTPException(status_code=401, detail="Срок действия токена истек")
-#
-#         session = await get_session_from_redis(user_data.login)
-#         if not session or session.get("token") != token:
-#             logger.warning("Недействительный или просроченный сеанс")
-#             raise HTTPException(status_code=401, detail="Недействительный или просроченный сеанс")
-#
-#         # === Поиск сотрудника по email или login ===
-#         employee = await get_employee_by_login_or_email(
-#             db,
-#             login=user_data.login,
-#             email=user_data.email
-#         )
-#
-#         if not employee:
-#             logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхронизации из 1С...")
-#             try:
-#                 await sync_all_data(db)
-#                 # Повторный поиск после синхронизации
-#                 employee = await get_employee_by_login_or_email(
-#                     db,
-#                     login=user_data.login,
-#                     email=user_data.email
-#                 )
-#             except Exception as e:
-#                 logger.error(f"Ошибка синхронизации из 1С: {e}")
-#                 raise HTTPException(
-#                     status_code=404,
-#                     detail=f"Сотрудник {user_data.login} не найден и синхронизация не удалась"
-#                 )
-#
-#         if not employee:
-#             logger.warning(f"Сотрудник с email {user_data.email} не найден после синхронизации")
-#             raise HTTPException(
-#                 status_code=404,
-#                 detail=f"Сотрудник с email {user_data.email} не найден в системе"
-#             )
-#
-#         # Проверяем, действующий ли сотрудник
-#         if employee.dismissal_date:
-#             logger.warning(f"Сотрудник {user_data.login} уволен")
-#             raise HTTPException(status_code=403, detail="Учетная запись сотрудника деактивирована")
-#
-#         return employee
-#
-#     except TokenValidationError as e:
-#         logger.warning(f"Недопустимый токен: {str(e)}")
-#         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
-
-
 async def require_authorized_user(
         request: Request,
         db: AsyncSession = Depends(get_db)
@@ -266,3 +202,70 @@ async def extract_login_from_request(request: Request) -> Optional[str]:
         # Любая ошибка → возвращаем None, чтобы не ломать запрос
         logger.error(f"Ошибка: {str(e)}")
         return None
+
+
+async def extract_employee_id_from_request(request: Request) -> Optional[str]:
+    """
+    Извлекает employee_id из Redis-сессии по login из токена.
+    Возвращает employee_id или None, если не удалось получить.
+    Не выбрасывает исключения — для безопасного использования в мидлваре.
+    """
+    try:
+        # 1. Получаем login из токена
+        login = await extract_login_from_request(request)
+        if not login:
+            return None
+
+        # 2. Получаем employee_id из Redis-сессии
+        session = await get_session_from_redis(login)
+        if session:
+            return session.get("employee_id")
+
+        return None
+    except Exception as e:
+        logger.error(f"Ошибка извлечения employee_id: {str(e)}")
+        return None
+
+
+async def extract_user_info_from_request(request: Request) -> dict:
+    """
+    Извлекает login и employee_id из токена (заголовок или куки).
+    Возвращает dict с login и employee_id.
+    Не выбрасывает исключения — для безопасного использования в мидлваре.
+    """
+    try:
+        # 1. Пробуем взять токен из заголовка Authorization
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+        else:
+            # 2. Пробуем взять из куки
+            token = request.cookies.get("session_token")
+            if not token:
+                return {"login": None, "employee_id": None}
+
+        # Декодируем токен БЕЗ строгой проверки (только для логирования)
+        payload = jwt.decode(
+            token,
+            key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+            algorithms=["HS256"],
+            options={
+                "verify_signature": bool(JWT_SECRET_KEY),
+                "verify_exp": False,  # не блокируем логирование, если токен просрочен
+                "verify_iat": False
+            }
+        )
+
+        login = payload.get("login")
+        employee_id = payload.get("employee_id")
+
+        # Если employee_id нет в токене — пробуем получить из Redis (fallback для старых токенов)
+        if not employee_id and login:
+            session = await get_session_from_redis(login)
+            if session:
+                employee_id = session.get("employee_id")
+
+        return {"login": login, "employee_id": employee_id}
+    except Exception as e:
+        logger.error(f"Ошибка извлечения user_info: {str(e)}")
+        return {"login": None, "employee_id": None}

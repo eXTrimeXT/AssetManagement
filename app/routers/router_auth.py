@@ -119,6 +119,7 @@ async def login_by_credentials(
                 "iat": int(now.timestamp()),
                 "exp": int((now + timedelta(hours=12)).timestamp()),
                 "login": credentials.login,
+                "employee_id": credentials.login,
                 "last_ip": request.client.host if request.client else "127.0.0.1",
                 "last_time": now.strftime("%H:%M:%S %d.%m.%Y"),
                 "permissions": permissions,
@@ -183,6 +184,9 @@ async def login_by_credentials(
                 "verify_iat": False
             }
         )
+
+        payload["employee_id"] = employee.employee_id
+
         exp = payload.get("exp")
         ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
@@ -242,18 +246,28 @@ async def auth_token(
             algorithms=["HS256"],
             options={"verify_signature": bool(JWT_SECRET_KEY), "verify_exp": False}
         )
+
+        payload["employee_id"] = employee.employee_id
+
         exp = payload.get("exp")
         ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
 
+        # ПЕРЕКОДИРУЕМ ТОКЕН
+        new_token = jwt.encode(
+            payload,
+            key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
+            algorithm="HS256" if JWT_SECRET_KEY else "none"
+        )
+
         # === СОХРАНЯЕМ ПРАВА В REDIS ===
         permissions = user_data.permissions or {}
-        await save_session_to_redis(user_data.login, request.token, ttl, permissions)
+        await save_session_to_redis(user_data.login, new_token, ttl, permissions)
 
         # Устанавливаем HTTP-only куки
         response.set_cookie(
             key="session_token",
-            value=request.token,
+            value=new_token,
             httponly=True,
             samesite="lax",
             max_age=ttl,
@@ -262,7 +276,7 @@ async def auth_token(
 
         logger.info("Авторизация успешна")
         result = user_data.to_dict()
-        result["token"] = request.token
+        result["token"] = new_token
         result["employee_id"] = employee.employee_id
         logger.info("Авторизация успешна")
         return result

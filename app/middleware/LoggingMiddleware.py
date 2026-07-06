@@ -198,8 +198,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # user_login = await extract_login_from_request(request)
 
         user_info = await extract_user_info_from_request(request)
-        user_login = user_info.get("login") or "anonymous"
-        employee_id = user_info.get("employee_id") or "-"
+        user_login = user_info.get("login") or "None"
+        employee_id = user_info.get("employee_id") or "None"
 
         client_ip = request.client.host if request.client else None
         route_path = request.url.path

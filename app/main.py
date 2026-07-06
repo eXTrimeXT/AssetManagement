@@ -24,24 +24,17 @@ from app.routers.router_android_data import router_android_data
 from app.routers.router_zup import router_zup                           # Интеграция с 1С
 from app.routers.router_auth import router_auth                         # Роутер авторизации пользователей
 
-
 from app.routers.router_locations import router_locations               # не зависим
 from app.routers.router_companies import router_companies               # зависим от локации
 from app.routers.router_vendor_classes import router_vendor_classes     # не зависим
 from app.routers.router_vendors import router_vendors                   # зависим от vendor_classes, компании
 
-# from app.routers.router_assets_types import router_assets_types         # тип не зависим
-# from app.routers.router_catalog_classes import router_catalog_classes   # класс зависит от типа
-# from app.routers.router_catalog_models import router_catalog_models     # модель зависим от класса
-# from app.routers.router_assets import router_assets                     # зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
-# from app.routers.router_catalog_items import router_catalog_items       # каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
-
 from app.routers.assets import (
-    router_asset_types,
-    router_asset_classes,
-    router_asset_models,
-    router_assets,
-    router_asset_assignments
+    router_asset_types,         # тип не зависим
+    router_asset_classes,       # класс зависит от типа
+    router_asset_models,        # модель зависим от класса
+    router_assets,              # зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
+    router_asset_assignments    # каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
 )
 
 
@@ -98,11 +91,11 @@ app.include_router(router_companies, prefix="/api")         # Companies
 app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
 app.include_router(router_vendors, prefix="/api")           # Vendors
 
-app.include_router(router_asset_types, prefix="/api")
-app.include_router(router_asset_classes, prefix="/api")
-app.include_router(router_asset_models, prefix="/api")
-app.include_router(router_assets, prefix="/api")
-app.include_router(router_asset_assignments, prefix="/api")
+app.include_router(router_asset_types, prefix="/api")       # Asset Types
+app.include_router(router_asset_classes, prefix="/api")     # Asset Classes
+app.include_router(router_asset_models, prefix="/api")      # Asset Models
+app.include_router(router_assets, prefix="/api")            # Assets
+app.include_router(router_asset_assignments, prefix="/api") # Asset Catalog
 
 
 router_root = APIRouter(tags=["/"])

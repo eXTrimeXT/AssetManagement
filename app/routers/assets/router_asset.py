@@ -63,7 +63,7 @@ async def get_assets(
         parent_id: Optional[int] = Query(None),
         request: Request = None,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Получить список активов.
@@ -98,7 +98,7 @@ async def get_asset(
         asset_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -148,7 +148,7 @@ async def delete_asset_endpoint(
         asset_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -174,7 +174,7 @@ async def get_asset_children_endpoint(
         asset_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Получение всех детей актива через parent_id"""
     parent = await get_asset_by_id(db, asset_id)

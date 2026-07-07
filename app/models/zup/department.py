@@ -31,12 +31,6 @@ class ZupDepartment(Base):
         lazy="selectin",
         backref="children"
     )
-    # Self-referencing relationship для parent
-    # parent = relationship(
-    #     "ZupDepartment",
-    #     remote_side=[guid],
-    #     lazy="selectin",
-    # )
     employees = relationship(
         "Employee",
         foreign_keys="Employee.department_guid",

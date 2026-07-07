@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeBase, PaginatedResponse, EmployeeShortResponse
+from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeBase, EmployeeShortResponse
 from app.schemas.zup.position_schemas import PositionResponse
 from app.schemas.zup.department_schemas import DepartmentResponse
 from app.schemas.zup.manager_schemas import ManagerResponse
@@ -19,7 +19,7 @@ from app.database.zup.crud_zup_assignments import get_assignments_list
 from app.database.zup.crud_zup_reports import get_reports_list
 from app.services.zup.zup_integration import sync_all_data
 from app.services.auth.auth_service import require_authorized_user
-
+from app.schemas.PaginationResponse import PaginatedResponse
 
 logger = logging.getLogger(__name__)
 router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
@@ -97,7 +97,7 @@ async def get_employees(
         position_guid: Optional[str] = Query(None, description="GUID должности"),
         is_active: Optional[bool] = Query(None, description="Только действующие сотрудники"),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Получить страницу сотрудников с фильтрацией.

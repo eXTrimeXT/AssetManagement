@@ -82,9 +82,9 @@ class EmployeeShortResponse(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
 
-    # group: Optional[GroupResponse] = None
+    workplace: Optional[GroupResponse] = None
     # division: Optional[DivisionResponse] = None
-    department: Optional[DepartmentResponse] = None
+    # department: Optional[DepartmentResponse] = None
 
     position: Optional[PositionResponse] = None
 

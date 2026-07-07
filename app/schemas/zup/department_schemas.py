@@ -27,11 +27,17 @@ class DepartmentUpdate(BaseModel):
 
 
 # Схема для Группы
-class GroupResponse(DepartmentBase):
+class GroupResponse(BaseModel):
+    name: str = Field(..., max_length=200)
+    name_en: Optional[str] = Field(None, max_length=200)
+    short_name: Optional[str] = Field(None, max_length=100)
     model_config = ConfigDict(from_attributes=True)
 
 # Схема для Отдела
-class DivisionResponse(DepartmentBase):
+class DivisionResponse(BaseModel):
+    name: str = Field(..., max_length=200)
+    name_en: Optional[str] = Field(None, max_length=200)
+    short_name: Optional[str] = Field(None, max_length=100)
     model_config = ConfigDict(from_attributes=True)
 
 # Схема для Департамента

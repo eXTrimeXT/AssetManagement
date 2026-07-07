@@ -403,6 +403,7 @@ async def get_employees_list(
         department = division.parent if division else None  # 3-й уровень (департамент)
 
         emp.group = group
+        emp.workplace = group
         emp.division = division
         emp.department = department
 

@@ -9,8 +9,8 @@ class Position(Base):
     __tablename__ = "zup_positions"
 
     guid = Column(String(36), primary_key=True, index=True)
-    name = Column(String(200), nullable=False, index=True)
-    name_en = Column(String(200))
+    name = Column(String(1000), nullable=False, index=True)
+    name_en = Column(String(1000))
 
     creation_date = Column(Date)
     expiration_date = Column(Date, nullable=True)  # Пустая строка = активна

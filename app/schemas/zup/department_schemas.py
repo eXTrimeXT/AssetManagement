@@ -33,6 +33,21 @@ class DepartmentResponse(DepartmentBase):
     hierarchy_path: Optional[List[str]] = None
 
     # Вложенный parent — тот же DepartmentResponse (без рекурсии дальше)
-    parent: Optional["DepartmentResponse"] = None
+    parent: Optional["DepartmentParentResponse"] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class DepartmentParentResponse(BaseModel):
+    """Схема для parent департамента (без вложенного parent)"""
+    guid: str
+    name: str
+    name_en: Optional[str] = None
+    short_name: Optional[str] = None
+    creation_date: Optional[date] = None
+    closure_date: Optional[date] = None
+    parent_guid: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)

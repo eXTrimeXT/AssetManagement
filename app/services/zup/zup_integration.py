@@ -47,7 +47,7 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
     """Универсальный метод для синхронизации всех данных из 1С"""
     stats = {
         "departments": 0,
-        # "positions": 0,
+        "positions": 0,
         "employees": 0,
         "managers": 0,
         # "assignments": 0,

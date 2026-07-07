@@ -3,6 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.zup.employee import Employee
+from app.models.zup.department import ZupDepartment
 from app.schemas.zup.employee_schemas import EmployeeCreate, EmployeeUpdate
 
 
@@ -249,10 +250,6 @@ async def get_employees_count(
 #
 #     return employees, total
 
-from sqlalchemy.orm import selectinload
-from app.models.zup.department import ZupDepartment
-
-# ...
 
 async def get_employees_list(
         db: AsyncSession,
@@ -283,12 +280,16 @@ async def get_employees_list(
     # 2. Вычисляем offset
     skip = (page - 1) * page_size
 
-    # 3. Получаем страницу с подгрузкой department и его parent
+    # 3. Получаем страницу с загрузкой department и цепочки parent (3 уровня)
     query = (
         select(Employee)
         .options(
             selectinload(Employee.department).options(
-                selectinload(ZupDepartment.parent)
+                selectinload(ZupDepartment.parent).options(
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent)
+                    )
+                )
             )
         )
     )

@@ -35,5 +35,8 @@ class DivisionResponse(DepartmentBase):
     model_config = ConfigDict(from_attributes=True)
 
 # Схема для Департамента
-class DepartmentResponse(DepartmentBase):
+class DepartmentResponse(BaseModel):
+    name: str = Field(..., max_length=200)
+    name_en: Optional[str] = Field(None, max_length=200)
+    short_name: Optional[str] = Field(None, max_length=100)
     model_config = ConfigDict(from_attributes=True)

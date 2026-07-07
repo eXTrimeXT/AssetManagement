@@ -15,7 +15,7 @@ from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
 
 # Импорт роутеров
 # Redis
-from app.services.redis.redis_client import router_redis
+# from app.services.redis.redis_client import router_redis
 
 # Роутеры для данных о ПК и андроид устройств
 from app.routers.router_pc_data import router_pc_data
@@ -80,7 +80,6 @@ app.add_middleware(LoggingMiddleware)
 app.add_middleware(AuthTokenMiddleware)
 
 # --- Подключение API Маршрутов ---
-app.include_router(router_redis, prefix="/api")             # Only DEV: check redis storage
 app.include_router(router_auth, prefix="/api")              # Роутер авторизации
 app.include_router(router_pc_data, prefix="/api")           # PC DATA
 app.include_router(router_android_data, prefix="/api")      # Android DATA

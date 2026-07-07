@@ -22,9 +22,8 @@ class PositionUpdate(BaseModel):
     expiration_date: Optional[date] = None
 
 
-class PositionResponse(PositionBase):
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    is_active: bool = True
+class PositionResponse(BaseModel):
+    name: str = Field(..., max_length=200)
+    name_en: Optional[str] = Field(None, max_length=200)
 
     model_config = ConfigDict(from_attributes=True)

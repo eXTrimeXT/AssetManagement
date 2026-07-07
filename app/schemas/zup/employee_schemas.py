@@ -2,6 +2,9 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from datetime import date, datetime
 
+# from app.schemas.zup import DepartmentResponse
+from app.schemas.zup.department_schemas import DepartmentResponse
+
 
 class EmployeeBase(BaseModel):
     """Базовая схема сотрудника"""
@@ -77,6 +80,9 @@ class EmployeeShortResponse(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     position_guid: Optional[str] = None
-    department_guid: Optional[str] = None
+    # department_guid: Optional[str] = None
+    # Вместо department_guid — вложенный объект департамента
+    department: Optional[DepartmentResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
+

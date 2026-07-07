@@ -49,12 +49,15 @@ class Employee(Base):
         foreign_keys=[position_guid],
         back_populates="employees"
     )
-    department = relationship(
-        "ZupDepartment",
-        primaryjoin="Employee.department_guid == ZupDepartment.guid",
-        foreign_keys=[department_guid],
-        back_populates="employees"
-    )
+    # department = relationship(
+    #     "ZupDepartment",
+    #     primaryjoin="Employee.department_guid == ZupDepartment.guid",
+    #     foreign_keys=[department_guid],
+    #     back_populates="employees"
+    # )
+    # Relationship к департаменту
+    department = relationship("ZupDepartment", lazy="selectin")
+
     managers_as_employee = relationship(
         "Manager",
         foreign_keys="Manager.guid_employee",

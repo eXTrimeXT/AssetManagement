@@ -184,6 +184,76 @@ async def get_employees_count(
     return result.scalar() or 0
 
 
+# async def get_employees_list(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         employee_id: Optional[str] = None,
+#         last_name: Optional[str] = None,
+#         first_name: Optional[str] = None,
+#         middle_name: Optional[str] = None,
+#         last_name_en: Optional[str] = None,
+#         first_name_en: Optional[str] = None,
+#         middle_name_en: Optional[str] = None,
+#         department_guid: Optional[str] = None,
+#         position_guid: Optional[str] = None,
+#         is_active: Optional[bool] = None
+# ) -> Tuple[Sequence[Employee], int]:
+#     """
+#     Получить страницу сотрудников с фильтрацией.
+#     Возвращает кортеж: (список сотрудников, общее количество).
+#     """
+#     # 1. Получаем общее количество
+#     total = await get_employees_count(
+#         db, employee_id, last_name, first_name, middle_name,
+#         last_name_en, first_name_en, middle_name_en,
+#         department_guid, position_guid, is_active
+#     )
+#
+#     # 2. Вычисляем offset
+#     skip = (page - 1) * page_size
+#
+#     # 3. Получаем страницу
+#     query = select(Employee)
+#
+#     if employee_id:
+#         query = query.where(Employee.employee_id == employee_id)
+#     if last_name:
+#         query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
+#     if first_name:
+#         query = query.where(Employee.first_name.ilike(f"%{first_name}%"))
+#     if middle_name:
+#         query = query.where(Employee.middle_name.ilike(f"%{middle_name}%"))
+#     if last_name_en:
+#         query = query.where(Employee.last_name_en.ilike(f"%{last_name_en}%"))
+#     if first_name_en:
+#         query = query.where(Employee.first_name_en.ilike(f"%{first_name_en}%"))
+#     if middle_name_en:
+#         query = query.where(Employee.middle_name_en.ilike(f"%{middle_name_en}%"))
+#     if department_guid:
+#         query = query.where(Employee.department_guid == department_guid)
+#     if position_guid:
+#         query = query.where(Employee.position_guid == position_guid)
+#     if is_active is not None:
+#         if is_active:
+#             query = query.where(Employee.dismissal_date.is_(None))
+#         else:
+#             query = query.where(Employee.dismissal_date.isnot(None))
+#
+#     # Сортировка для стабильной пагинации
+#     query = query.order_by(Employee.employee_id)
+#     query = query.offset(skip).limit(page_size)
+#
+#     result = await db.execute(query)
+#     employees = result.scalars().all()
+#
+#     return employees, total
+
+from sqlalchemy.orm import selectinload
+from app.models.zup.department import ZupDepartment
+
+# ...
+
 async def get_employees_list(
         db: AsyncSession,
         page: int = 1,
@@ -213,8 +283,15 @@ async def get_employees_list(
     # 2. Вычисляем offset
     skip = (page - 1) * page_size
 
-    # 3. Получаем страницу
-    query = select(Employee)
+    # 3. Получаем страницу с подгрузкой department и его parent
+    query = (
+        select(Employee)
+        .options(
+            selectinload(Employee.department).options(
+                selectinload(ZupDepartment.parent)
+            )
+        )
+    )
 
     if employee_id:
         query = query.where(Employee.employee_id == employee_id)

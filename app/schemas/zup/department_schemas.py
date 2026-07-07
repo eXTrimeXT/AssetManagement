@@ -32,4 +32,7 @@ class DepartmentResponse(DepartmentBase):
     is_active: bool = True
     hierarchy_path: Optional[List[str]] = None
 
+    # Вложенный parent — тот же DepartmentResponse (без рекурсии дальше)
+    parent: Optional["DepartmentResponse"] = None
+
     model_config = ConfigDict(from_attributes=True)

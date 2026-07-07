@@ -12,8 +12,8 @@ class Position(Base):
     name = Column(String(200), nullable=False, index=True)
     name_en = Column(String(200))
 
-    creation_date = Column(String(10))
-    expiration_date = Column(String(10), nullable=True)  # Пустая строка = активна
+    creation_date = Column(Date)
+    expiration_date = Column(Date, nullable=True)  # Пустая строка = активна
 
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

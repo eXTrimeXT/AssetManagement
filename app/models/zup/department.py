@@ -35,7 +35,7 @@ class ZupDepartment(Base):
         "Employee",
         foreign_keys="Employee.department_guid",
         primaryjoin="Employee.department_guid == ZupDepartment.guid",
-        back_populates="department"
+        back_populates="group"
     )
     assignments = relationship("Assignment", back_populates="department")
 

@@ -3,6 +3,8 @@ from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from datetime import date, datetime
 
 from app.schemas.zup.department_schemas import DepartmentResponse
+from app.schemas.zup.department_schemas import DivisionResponse
+from app.schemas.zup.department_schemas import GroupResponse
 from app.schemas.zup.position_schemas import PositionResponse
 
 
@@ -79,10 +81,11 @@ class EmployeeShortResponse(BaseModel):
     full_name_en: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
-    # position_guid: Optional[str] = None
-    # department_guid: Optional[str] = None
-    # Вместо department_guid — вложенный объект департамента
+
+    group: Optional[GroupResponse] = None
+    division: Optional[DivisionResponse] = None
     department: Optional[DepartmentResponse] = None
+
     position: Optional[PositionResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

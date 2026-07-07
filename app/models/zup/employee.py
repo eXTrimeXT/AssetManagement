@@ -49,7 +49,7 @@ class Employee(Base):
         foreign_keys=[position_guid],
         back_populates="employees"
     )
-    department = relationship(
+    group = relationship(
         "ZupDepartment",
         primaryjoin="Employee.department_guid == ZupDepartment.guid",
         foreign_keys=[department_guid],

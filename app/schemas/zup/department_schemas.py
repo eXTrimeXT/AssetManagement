@@ -26,28 +26,14 @@ class DepartmentUpdate(BaseModel):
     parent_guid: Optional[str] = Field(None, max_length=36)
 
 
-class DepartmentResponse(DepartmentBase):
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    is_active: bool = True
-    hierarchy_path: Optional[List[str]] = None
-
-    # Вложенный parent — тот же DepartmentResponse (без рекурсии дальше)
-    parent: Optional["DepartmentParentResponse"] = None
-
+# Схема для Группы
+class GroupResponse(DepartmentBase):
     model_config = ConfigDict(from_attributes=True)
 
-class DepartmentParentResponse(BaseModel):
-    """Схема для parent департамента (без вложенного parent)"""
-    guid: str
-    name: str
-    name_en: Optional[str] = None
-    short_name: Optional[str] = None
-    creation_date: Optional[date] = None
-    closure_date: Optional[date] = None
-    parent_guid: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    is_active: bool = True
+# Схема для Отдела
+class DivisionResponse(DepartmentBase):
+    model_config = ConfigDict(from_attributes=True)
 
+# Схема для Департамента
+class DepartmentResponse(DepartmentBase):
     model_config = ConfigDict(from_attributes=True)

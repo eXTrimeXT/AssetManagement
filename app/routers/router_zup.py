@@ -7,7 +7,7 @@ from typing import List, Optional
 from app.database.connection import get_db
 from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeShortResponse
 from app.schemas.zup.position_schemas import PositionResponse
-from app.schemas.zup.department_schemas import DepartmentResponse
+from app.schemas.zup.department_schemas import GroupResponse
 from app.schemas.zup.manager_schemas import ManagerResponse
 from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid
 from app.database.zup.crud_zup_positions import get_positions_list
@@ -120,7 +120,7 @@ async def get_positions(
     return await get_positions_list(db, skip, limit)
 
 
-@router_zup.get("/departments", response_model=List[DepartmentResponse], summary="Получить список подразделений")
+@router_zup.get("/departments", response_model=List[GroupResponse], summary="Получить список подразделений")
 async def get_departments(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),

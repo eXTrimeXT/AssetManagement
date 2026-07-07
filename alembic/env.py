@@ -15,9 +15,23 @@ from app.models.assets.asset_model import AssetModel
 from app.models.assets.asset_class import AssetClass
 from app.models.assets.asset_type import AssetType
 from app.models.assets.asset_assignment import AssetAssignment
-from app.models.Location import Location
+
+from app.models.zup.assignment import Assignment
+from app.models.zup.department import ZupDepartment
 from app.models.zup.employee import Employee
-# ... добавь сюда остальные модели, если они есть
+from app.models.zup.manager import Manager
+from app.models.zup.position import Position
+from app.models.zup.report import Report
+
+from app.models.AndroidData import AndroidData
+from app.models.Company import Company
+from app.models.Location import Location
+from app.models.PCData import PCData
+from app.models.UserJWTData import UserJWTData
+from app.models.UserSession import UserSession
+from app.models.VendorClass import VendorClass
+from app.models.Vendor import Vendor
+
 
 # Загружаем .env (если используешь python-dotenv)
 try:

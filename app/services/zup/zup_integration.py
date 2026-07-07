@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.zup.crud_zup_employees import upsert_employee
 from app.database.zup.crud_zup_departments import upsert_department
 from app.database.zup.crud_zup_managers import upsert_manager
+from app.database.zup.crud_zup_positions import upsert_position
 
 logger = logging.getLogger(__name__)
 
@@ -70,41 +71,41 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
             stats["departments"] += 1
 
         # 2. Синхронизация должностей
-        # logger.info("Синхронизация должностей...")
-        # positions_data = await fetch_from_zup("positions")
-        # for pos in positions_data:
-        #     await upsert_position(db, {
-        #         "guid": pos["GUID"],
-        #         "name": pos["name"],
-        #         "name_en": pos.get("name_EN"),
-        #         "creation_date": parse_date(pos.get("creationDate")),
-        #         "expiration_date": parse_date(pos.get("expirationDate"))
-        #     })
-        #     stats["positions"] += 1
+        logger.info("Синхронизация должностей...")
+        positions_data = await fetch_from_zup("positions")
+        for pos in positions_data:
+            await upsert_position(db, {
+                "guid": pos["GUID"],
+                "name": pos["name"],
+                "name_en": pos.get("name_EN"),
+                "creation_date": parse_date(pos.get("creationDate")),
+                "expiration_date": parse_date(pos.get("expirationDate"))
+            })
+            stats["positions"] += 1
 
         # 3. Синхронизация сотрудников
         logger.info("Синхронизация сотрудников...")
-        # employees_data = await fetch_from_zup("employees")
-        # for emp in employees_data:
-        #     await upsert_employee(db, {
-        #         "guid": emp["GUID"],
-        #         "guid_person": emp.get("GUID_Person"),
-        #         "employee_id": emp["employeeId"],
-        #         "last_name": emp.get("lastName"),
-        #         "first_name": emp.get("firstName"),
-        #         "middle_name": emp.get("middleName"),
-        #         "last_name_en": emp.get("lastName_EN"),
-        #         "first_name_en": emp.get("firstName_EN"),
-        #         "middle_name_en": emp.get("middleName_EN"),
-        #         "birth_date": parse_date(emp.get("birthDate")),
-        #         "employment_date": parse_date(emp.get("employmentDate")),
-        #         "dismissal_date": parse_date(emp.get("dismissalDate")),
-        #         "phone": emp.get("phone"),
-        #         "email": emp.get("email"),
-        #         "position_guid": emp.get("position"),
-        #         "department_guid": emp.get("department")
-        #     })
-        #     stats["employees"] += 1
+        employees_data = await fetch_from_zup("employees")
+        for emp in employees_data:
+            await upsert_employee(db, {
+                "guid": emp["GUID"],
+                "guid_person": emp.get("GUID_Person"),
+                "employee_id": emp["employeeId"],
+                "last_name": emp.get("lastName"),
+                "first_name": emp.get("firstName"),
+                "middle_name": emp.get("middleName"),
+                "last_name_en": emp.get("lastName_EN"),
+                "first_name_en": emp.get("firstName_EN"),
+                "middle_name_en": emp.get("middleName_EN"),
+                "birth_date": parse_date(emp.get("birthDate")),
+                "employment_date": parse_date(emp.get("employmentDate")),
+                "dismissal_date": parse_date(emp.get("dismissalDate")),
+                "phone": emp.get("phone"),
+                "email": emp.get("email"),
+                "position_guid": emp.get("position"),
+                "department_guid": emp.get("department")
+            })
+            stats["employees"] += 1
 
         employees_data = await fetch_from_zup("employees")
         for emp in employees_data:

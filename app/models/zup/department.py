@@ -23,20 +23,20 @@ class ZupDepartment(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # === ЯВНО УКАЗАННЫЕ RELATIONSHIPS ===
-    # parent = relationship(
-    #     "ZupDepartment",
-    #     primaryjoin="ZupDepartment.parent_guid == remote(ZupDepartment.guid)",
-    #     foreign_keys=[parent_guid],
-    #     remote_side="ZupDepartment.guid",
-    #     lazy="selectin",
-    #     backref="children"
-    # )
-    # Self-referencing relationship для parent
     parent = relationship(
         "ZupDepartment",
-        remote_side=[guid],
+        primaryjoin="ZupDepartment.parent_guid == remote(ZupDepartment.guid)",
+        foreign_keys=[parent_guid],
+        remote_side="ZupDepartment.guid",
         lazy="selectin",
+        backref="children"
     )
+    # Self-referencing relationship для parent
+    # parent = relationship(
+    #     "ZupDepartment",
+    #     remote_side=[guid],
+    #     lazy="selectin",
+    # )
     employees = relationship(
         "Employee",
         foreign_keys="Employee.department_guid",

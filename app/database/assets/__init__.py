@@ -12,7 +12,7 @@ from app.database.assets.asset_model import (
 )
 from app.database.assets.asset import (
     create_asset, get_asset_by_id, get_assets_list, update_asset, delete_asset,
-    get_asset_children, get_asset_children_with_permissions
+    get_asset_children
 )
 
 __all__ = [
@@ -24,5 +24,5 @@ __all__ = [
     "update_asset_model", "delete_asset_model",
     "create_asset", "get_asset_by_id", "get_assets_list",
     "update_asset", "delete_asset",
-    "get_asset_children", "get_asset_children_with_permissions"
+    "get_asset_children",
 ]

@@ -56,16 +56,22 @@ async def create_asset_endpoint(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    en_name = await get_asset_type_en_name(db, data.model_id, data.asset_type_id)
-    if en_name:
-        has_perm = await check_permission(request, en_name, "write")
-        if not has_perm:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Нет права 'write' на тип актива '{en_name}'"
-            )
-    else:
-        raise HTTPException(status_code=400, detail="Не удалось определить тип актива")
+    # Если asset_type_id не указан, но есть model_id — берём из модели
+    if data.asset_type_id is None and data.model_id is not None:
+        model = await get_asset_model_by_id(db, data.model_id)
+        if model and model.asset_type_id:
+            data.asset_type_id = model.asset_type_id
+
+    # Проверка прав
+    if data.asset_type_id:
+        asset_type = await get_asset_type_by_id(db, data.asset_type_id)
+        if asset_type:
+            has_perm = await check_permission(request, asset_type.en_name, "write")
+            if not has_perm:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Нет права 'write' на тип актива '{asset_type.en_name}'"
+                )
 
     return await create_asset(db, data, current_user.employee_id)
 

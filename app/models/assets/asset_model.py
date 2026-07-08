@@ -11,7 +11,7 @@ class AssetModel(Base):
     name = Column(String(150), nullable=False, index=True)
     description = Column(Text)
 
-    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
+    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True, nullable=True)
 
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
     updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))

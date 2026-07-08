@@ -20,14 +20,14 @@ class Asset(Base):
     date_issue = Column(Date)
     date_purchasing = Column(Date)
 
-    # Связи
+    # Прямые ссылки на связанные таблицы
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
+    class_id = Column(Integer, ForeignKey("asset_classes.class_id"), index=True)  # ← НОВОЕ
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
-
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
-    # Ответственные (ссылаются на zup_employees)
+    # Ответственные
     prepared_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
     checked_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
 
@@ -37,24 +37,23 @@ class Asset(Base):
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    # Relationships
-    model = relationship("AssetModel", back_populates="assets")
-    asset_type = relationship("AssetType", back_populates="assets")
-
+    # Relationships — прямые связи
+    model = relationship("AssetModel", foreign_keys=[model_id])
+    asset_class = relationship("AssetClass", foreign_keys=[class_id])  # ← НОВОЕ
+    asset_type = relationship("AssetType", foreign_keys=[asset_type_id])
     parent = relationship(
         "Asset",
         remote_side=[asset_id],
         backref=backref("children", lazy="selectin", cascade="all, delete-orphan"),
         lazy="selectin"
     )
-
     location = relationship("Location", back_populates="assets")
 
     assignments = relationship(
         "AssetAssignment",
         back_populates="asset",
         cascade="all, delete-orphan",
-        lazy="selectin"  # Автоматическая подгрузка
+        lazy="selectin"
     )
 
     preparer = relationship("Employee", foreign_keys=[prepared_by])

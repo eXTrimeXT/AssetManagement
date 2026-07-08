@@ -16,7 +16,7 @@ from app.services.auth.auth_service import (
     require_authorized_user,
     get_token_from_request,
     get_user_from_token,
-    get_user_permissions_from_redis
+    # get_user_permissions_from_redis
 )
 from app.services.auth.permission_checker import check_permission
 from app.schemas.PaginationResponse import PaginatedResponse
@@ -122,7 +122,8 @@ async def get_assets(
     # Получаем права пользователя из Redis один раз
     token = await get_token_from_request(request)
     user_data = get_user_from_token(token)
-    permissions = await get_user_permissions_from_redis(user_data.login) or {}
+    # permissions = await get_user_permissions_from_redis(user_data.login) or {}
+    permissions = user_data.permissions
 
     # Собираем список разрешённых типов активов (en_name), на которые есть read
     allowed_type_en_names: List[str] = [

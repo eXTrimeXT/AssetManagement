@@ -26,7 +26,6 @@ from app.models.Company import Company
 from app.models.Location import Location
 from app.models.PCData import PCData
 from app.models.UserJWTData import UserJWTData
-from app.models.UserSession import UserSession
 from app.models.VendorClass import VendorClass
 from app.models.Vendor import Vendor
 

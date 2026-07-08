@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from typing import Optional, List
 from app.services.auth.auth_service import (
-    get_user_permissions_from_redis,
+    get_user_permissions_from_token,
     get_token_from_request,
     get_user_from_token
 )
@@ -9,14 +9,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 async def check_permission(
         request: Request,
         resource: str,
         action: str
 ) -> bool:
     """
-    Проверяет наличие права на конкретный ресурс из Redis.
+    Проверяет наличие права на конкретный ресурс из JWT-токена.
 
     Args:
         request: HTTP запрос
@@ -28,13 +27,12 @@ async def check_permission(
     """
     try:
         token = await get_token_from_request(request)
-        user_data = get_user_from_token(token)
 
-        # Получаем права из Redis
-        permissions = await get_user_permissions_from_redis(user_data.login)
+        # Получаем права из токена
+        permissions = get_user_permissions_from_token(token)
 
         if not permissions:
-            logger.warning(f"Права не найдены в Redis для пользователя {user_data.login}")
+            logger.warning("Права не найдены в токене")
             return False
 
         # Проверяем наличие права на конкретный ресурс
@@ -42,6 +40,7 @@ async def check_permission(
         has_permission = resource_perms.get(action, False)
 
         if not has_permission:
+            user_data = get_user_from_token(token)
             logger.debug(f"Пользователь {user_data.login} не имеет права {action} на {resource}")
 
         return has_permission
@@ -50,20 +49,17 @@ async def check_permission(
         logger.error(f"Ошибка проверки прав: {e}")
         return False
 
-
 async def check_any_permission(
         request: Request,
         action: str
 ) -> bool:
     """
-    Проверяет наличие права на ЛЮБОЙ тип актива из Redis.
+    Проверяет наличие права на ЛЮБОЙ тип актива из JWT-токена.
     Исключает 'users' из проверки.
     """
     try:
         token = await get_token_from_request(request)
-        user_data = get_user_from_token(token)
-
-        permissions = await get_user_permissions_from_redis(user_data.login)
+        permissions = get_user_permissions_from_token(token)
 
         if not permissions:
             return False
@@ -81,11 +77,9 @@ async def check_any_permission(
         logger.error(f"Ошибка проверки прав: {e}")
         return False
 
-
 def require_permission(resource: str = None, action: str = "read"):
     """
     Зависимость для проверки права на ресурс.
-
     Если resource не указан — проверяет наличие права на ЛЮБОЙ тип актива.
     """
     async def dependency(request: Request):
@@ -111,7 +105,6 @@ def require_permission(resource: str = None, action: str = "read"):
 
     return dependency
 
-
 def require_any_permission(action: str, resources: List[str] = None):
     """
     Проверяет наличие права на ЛЮБОЙ из указанных ресурсов.
@@ -119,8 +112,7 @@ def require_any_permission(action: str, resources: List[str] = None):
     async def dependency(request: Request):
         token = await get_token_from_request(request)
         user_data = get_user_from_token(token)
-
-        permissions = await get_user_permissions_from_redis(user_data.login)
+        permissions = get_user_permissions_from_token(token)
 
         if not permissions:
             raise HTTPException(status_code=403, detail="Права не найдены")
@@ -142,15 +134,12 @@ def require_any_permission(action: str, resources: List[str] = None):
 
     return dependency
 
-
 async def get_accessible_asset_types(request: Request) -> List[str]:
     """
     Возвращает список типов активов, на которые у пользователя есть право read.
     """
     token = await get_token_from_request(request)
-    user_data = get_user_from_token(token)
-
-    permissions = await get_user_permissions_from_redis(user_data.login)
+    permissions = get_user_permissions_from_token(token)
 
     if not permissions:
         return []

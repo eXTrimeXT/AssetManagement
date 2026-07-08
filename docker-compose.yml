@@ -24,21 +24,17 @@ services:
 
   # Сервис приложения FastAPI
   app:
-#    image: python:3.14.3-slim
     build: .
     restart: always
     ports:
       - "8800:8800"
     depends_on:
       - postgres
-      - redis
     environment:
       # при локальном запуске используем @localhost (see ./app/database/connection.py)
-      - TZ=Europe/Moscow
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}${DB_HOST}:5432/${DB_NAME}
+      - TZ=Europe/Moscow
       - JWT_SECRET_KEY=$JWT_SECRET_KEY
-      - REDIS_HOST=$REDIS_HOST
-      - REDIS_PORT=$REDIS_PORT
       - SESSION_PREFIX=$SESSION_PREFIX
       - SESSION_TTL=$SESSION_TTL
       - ZUP_BASE_URL=$ZUP_BASE_URL
@@ -48,18 +44,5 @@ services:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs
 
-  # Сервис для сохранения сессии пользователей
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "8379:8379"
-    command: redis-server --port 8379 --appendonly yes  # <-- заставляем Redis слушать 8379
-    healthcheck:
-      test: ["CMD", "redis-cli", "-p", "8379", "ping"]  # <-- healthcheck тоже на 8379
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 volumes:
   pgdata:
-  redis_data:

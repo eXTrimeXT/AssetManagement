@@ -9,7 +9,7 @@ from app.database.assets.asset_model import (
 )
 from app.database.assets.asset_class import get_asset_class_by_id
 from app.schemas.assets.asset_model import AssetModelCreate, AssetModelUpdate, AssetModelResponse
-from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token, get_user_permissions_from_redis
+from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token # get_user_permissions_from_redis
 from app.services.auth.permission_checker import check_permission
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,8 @@ async def get_asset_models(
     # Получаем права пользователя из Redis один раз (оптимизация)
     token = await get_token_from_request(request)
     user_data = get_user_from_token(token)
-    permissions = await get_user_permissions_from_redis(user_data.login) or {}
+    # permissions = await get_user_permissions_from_redis(user_data.login) or {}
+    permissions = user_data.permissions
 
     # Фильтруем по правам read на тип актива
     accessible_models = []

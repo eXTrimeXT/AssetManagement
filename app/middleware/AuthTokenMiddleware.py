@@ -1,101 +1,25 @@
 import logging
-import json
-import jwt
-from datetime import datetime
-
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
-
 from app.services.auth.auth_service import (
     get_user_from_token,
     TokenValidationError,
     JWT_SECRET_KEY,
 )
-from app.services.redis.redis_client import redis_client
-from app.database.connection import async_session
-from app.routers.router_auth import create_or_update_user_from_token, save_session_to_redis
 
 logger = logging.getLogger(__name__)
 
-# Эндпоинты, которые не требуют автоматической авторизации
+# Эндпоинты, которые не требуют проверки токена
 EXCLUDED_PATHS = {
-    "/api/redis",
     "/api/auth_token",
     "/api/login",
     "/api/logout",
-    "/docs",
     "/api/android-data",
     "/api/pc-data",
-    "/redoc",
     "/openapi.json",
     "/",
 }
-
-
-async def _auto_auth_logic(token: str) -> None:
-    """
-    Логика автоматической авторизации (повторяет /api/auth_token).
-    Декодирует токен, создаёт/обновляет пользователя в БД,
-    сохраняет ПОЛНУЮ сессию (с permissions и employee_id) в Redis.
-    """
-    try:
-        logger.info(f"[_auto_auth_logic] Начало автоматической авторизации")
-        user_data = get_user_from_token(token)
-
-        if user_data.is_expired:
-            logger.warning(
-                f"[_auto_auth_logic] Токен просрочен для login={user_data.login}"
-            )
-            return
-
-        # === Создаём/обновляем пользователя в БД ===
-        logger.info(f"[_auto_auth_logic] Создание/обновление пользователя в БД: {user_data.login}")
-        async with async_session() as db:
-            employee = await create_or_update_user_from_token(db, user_data)
-            logger.info(f"[_auto_auth_logic] Сотрудник найден: employee_id={employee.employee_id}")
-
-        # === Декодируем токен для получения TTL ===
-        payload = jwt.decode(
-            token,
-            key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
-            algorithms=["HS256"],
-            options={
-                "verify_signature": bool(JWT_SECRET_KEY),
-                "verify_exp": False,
-                "verify_iat": False,
-            },
-        )
-
-        exp = payload.get("exp")
-        ttl = int(exp - datetime.now().timestamp()) if exp else 3600
-        ttl = max(ttl, 60)
-        logger.debug(f"[_auto_auth_logic] Вычислен TTL сессии: {ttl} секунд")
-
-        # === Сохраняем ПОЛНУЮ сессию в Redis ===
-        # Используем ту же функцию, что и в router_auth — для консистентности
-        permissions = user_data.permissions or {}
-        await save_session_to_redis(
-            login=user_data.login,
-            token=token,
-            ttl=ttl,
-            permissions=permissions,
-            employee_id=employee.employee_id
-        )
-
-        logger.info(
-            f"[_auto_auth_logic] Сессия сохранена в Redis: "
-            f"ключ=session:{user_data.login}, TTL={ttl}с, "
-            f"employee_id={employee.employee_id}, "
-            f"permissions_count={len(permissions)}"
-        )
-        logger.info(f"[_auto_auth_logic] Автоматическая авторизация выполнена для: {user_data.login}")
-
-    except TokenValidationError as e:
-        logger.warning(f"[_auto_auth_logic] Недопустимый токен: {str(e)}")
-    except Exception as e:
-        logger.error(f"[_auto_auth_logic] Внутренняя ошибка: {str(e)}", exc_info=True)
-
 
 class AuthTokenMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -135,73 +59,20 @@ class AuthTokenMiddleware(BaseHTTPMiddleware):
 
         logger.debug(f"[AuthTokenMiddleware] Токен получен из источника: {token_source}")
 
-        # === Проверка сессии в Redis ===
+        # === Проверка валидности токена ===
         try:
-            # Декодируем токен для получения login
-            payload = jwt.decode(
-                token,
-                key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
-                algorithms=["HS256"],
-                options={
-                    "verify_signature": bool(JWT_SECRET_KEY),
-                    "verify_exp": False,
-                    "verify_iat": False,
-                },
-            )
-            login = payload.get("login")
+            user_data = get_user_from_token(token)
 
-            if not login:
-                logger.warning("[AuthTokenMiddleware] В токене отсутствует поле 'login'")
+            if user_data.is_expired:
+                logger.warning(f"[AuthTokenMiddleware] Токен просрочен для login={user_data.login}")
                 return await call_next(request)
 
-            logger.debug(f"[AuthTokenMiddleware] Извлечён login из токена: {login}")
+            logger.debug(f"[AuthTokenMiddleware] Токен валиден для пользователя {user_data.login}")
 
-            session_key = f"session:{login}"
-            session_data_raw = await redis_client.get(session_key)
-
-            # === Случай 1: Сессии нет в Redis ===
-            if not session_data_raw:
-                logger.info(
-                    f"[AuthTokenMiddleware] Сессия не найдена в Redis для пользователя {login}. "
-                    f"Запускаем автоматическую авторизацию."
-                )
-                await _auto_auth_logic(token)
-
-            else:
-                # === Случай 2: Сессия есть — проверяем совпадение токенов ===
-                session_data = json.loads(session_data_raw)
-                redis_token = session_data.get("token")
-
-                if redis_token != token:
-                    logger.warning(
-                        f"[AuthTokenMiddleware] Токен в запросе НЕ СОВПАДАЕТ с токеном в Redis "
-                        f"для пользователя {login}. Выполняем выход и повторный вход с новым токеном."
-                    )
-                    # Удаляем старую сессию (выход)
-                    await redis_client.delete(session_key)
-                    logger.info(f"[AuthTokenMiddleware] Старая сессия удалена: {session_key}")
-
-                    # Выполняем автоматическую авторизацию с новым токеном (вход)
-                    await _auto_auth_logic(token)
-                    logger.info(f"[AuthTokenMiddleware] Новая сессия создана для пользователя {login}")
-                else:
-                    logger.debug(
-                        f"[AuthTokenMiddleware] Сессия найдена и токены совпадают для пользователя {login}"
-                    )
-
-                    # === ДОПОЛНИТЕЛЬНО: проверяем наличие permissions в сессии ===
-                    # Если permissions нет (старая сессия) — обновляем её
-                    if "permissions" not in session_data:
-                        logger.warning(
-                            f"[AuthTokenMiddleware] В сессии пользователя {login} отсутствуют permissions. "
-                            f"Обновляем сессию."
-                        )
-                        await _auto_auth_logic(token)
-
-        except jwt.PyJWTError as e:
-            logger.warning(f"[AuthTokenMiddleware] Ошибка декодирования JWT: {str(e)}")
+        except TokenValidationError as e:
+            logger.warning(f"[AuthTokenMiddleware] Недопустимый токен: {str(e)}")
         except Exception as e:
-            logger.error(f"[AuthTokenMiddleware] Ошибка проверки сессии: {str(e)}", exc_info=True)
+            logger.error(f"[AuthTokenMiddleware] Ошибка проверки токена: {str(e)}", exc_info=True)
 
         logger.debug(f"[AuthTokenMiddleware] Запрос {method} {path} передан дальше")
         return await call_next(request)

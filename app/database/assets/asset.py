@@ -6,6 +6,7 @@ from app.models.assets.asset import Asset
 # from app.models.assets.asset_model import AssetModel
 from app.schemas.assets.asset import AssetCreate, AssetUpdate
 from app.models.assets import AssetType
+from app.models.assets.asset_assignment import AssetAssignment
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -26,7 +27,9 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             # ),
             selectinload(Asset.parent).options(selectinload(Asset.assignments),),
             selectinload(Asset.location),
-            selectinload(Asset.assignments),
+            selectinload(Asset.assignments).options(
+                selectinload(AssetAssignment.employee)
+            ),
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.creator),
@@ -121,7 +124,9 @@ async def get_assets_list(
         #     selectinload(AssetModel.asset_type)
         # ),
         selectinload(Asset.parent).options(selectinload(Asset.assignments)),
-        selectinload(Asset.assignments),
+        selectinload(Asset.assignments).options(
+            selectinload(AssetAssignment.employee)
+        ),
         selectinload(Asset.location),
     )
 

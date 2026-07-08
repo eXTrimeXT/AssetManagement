@@ -10,18 +10,10 @@ from app.schemas.zup.department_schemas import (
 from app.schemas.zup.manager_schemas import (
     ManagerCreate, ManagerResponse
 )
-from app.schemas.zup.assignment_schemas import (
-    AssignmentCreate, AssignmentResponse
-)
-from app.schemas.zup.report_schemas import (
-    ReportResponse, AttendanceData
-)
 
 __all__ = [
     "EmployeeCreate", "EmployeeUpdate", "EmployeeResponse", "EmployeeShortResponse",
     "PositionCreate", "PositionUpdate", "PositionResponse",
     "DepartmentCreate", "DepartmentUpdate", "GroupResponse",
     "ManagerCreate", "ManagerResponse",
-    "AssignmentCreate", "AssignmentResponse",
-    "ReportResponse", "AttendanceData"
 ]

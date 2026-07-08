@@ -43,6 +43,35 @@ def parse_date(date_str: str):
         return None
 
 
+async def sync_employee_data(db: AsyncSession) -> Dict[str, int]:
+    stats = {
+        "employees": 0,
+    }
+
+    logger.info("Синхронизация сотрудников...")
+    employees_data = await fetch_from_zup("employees")
+    for emp in employees_data:
+        await upsert_employee(db, {
+            "guid": emp["GUID"],
+            "guid_person": emp.get("GUID_Person"),
+            "employee_id": emp["employeeId"],
+            "last_name": emp.get("lastName"),
+            "first_name": emp.get("firstName"),
+            "middle_name": emp.get("middleName"),
+            "last_name_en": emp.get("lastName_EN"),
+            "first_name_en": emp.get("firstName_EN"),
+            "middle_name_en": emp.get("middleName_EN"),
+            "birth_date": parse_date(emp.get("birthDate")),
+            "employment_date": parse_date(emp.get("employmentDate")),
+            "dismissal_date": parse_date(emp.get("dismissalDate")),
+            "phone": emp.get("phone"),
+            "email": emp.get("email"),
+            "position_guid": emp.get("position"),
+            "department_guid": emp.get("department")
+        })
+        stats["employees"] += 1
+    return stats
+
 async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
     """Универсальный метод для синхронизации всех данных из 1С"""
     stats = {
@@ -50,8 +79,6 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
         "positions": 0,
         "employees": 0,
         "managers": 0,
-        # "assignments": 0,
-        # "reports": 0
     }
 
     try:
@@ -144,31 +171,6 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
                 "guid_manager": mgr["GUID_Manager"]
             })
             stats["managers"] += 1
-
-        # 5. Синхронизация назначений
-        # logger.info("Синхронизация назначений...")
-        # assignments_data = await fetch_from_zup("assignments")
-        # for idx, assign in enumerate(assignments_data):
-        #     await upsert_assignment(db, {
-        #         "id": f"{assign['employee']}_{assign['startDate']}_{idx}",
-        #         "start_date": parse_date(assign["startDate"]),
-        #         "end_date": parse_date(assign.get("endDate")),
-        #         "employee_guid": assign["employee"],
-        #         "department_guid": assign["department"],
-        #         "position_guid": assign["position"],
-        #         "fte": float(assign.get("fte", "1").replace(",", "."))
-        #     })
-        #     stats["assignments"] += 1
-
-        # 6. Синхронизация отчётов
-        # logger.info("Синхронизация отчётов...")
-        # report_data = await fetch_from_zup("report")
-        # attendance_data = [
-        #     AttendanceData(**item)
-        #     for item in report_data.get("attendanceData", [])
-        # ]
-        # await create_report(db, attendance_data)
-        # stats["reports"] = len(attendance_data)
 
         logger.info(f"Синхронизация завершена: {stats}")
         return stats

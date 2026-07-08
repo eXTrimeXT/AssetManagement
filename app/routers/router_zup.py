@@ -13,7 +13,7 @@ from app.database.zup.crud_zup_employees import get_employees_list, get_employee
 from app.database.zup.crud_zup_positions import get_positions_list
 from app.database.zup.crud_zup_departments import get_departments_list
 from app.database.zup.crud_zup_managers import get_managers_list
-from app.services.zup.zup_integration import sync_all_data
+from app.services.zup.zup_integration import sync_all_data, sync_employee_data
 from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
 
@@ -40,6 +40,27 @@ async def sync_zup_data(
     except Exception as e:
         logger.error(f"Ошибка синхронизации: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка синхронизации: {str(e)}")
+
+@router_zup.post("/sync-employee", summary="Синхронизировать все данные сотрудников из 1С-ЗУП")
+async def sync_zup_employee_data(
+        db: AsyncSession = Depends(get_db),
+        # current_user=Depends(require_authorized_user)
+):
+    """
+    Универсальный эндпоинт для заполнения/обновления всех таблиц из 1С-ЗУП.
+    Синхронизирует: подразделения, должности, сотрудников, руководителей, назначения, отчёты.
+    """
+    try:
+        stats = await sync_employee_data(db)
+        return {
+            "success": True,
+            "message": "Синхронизация завершена успешно",
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Ошибка синхронизации: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка синхронизации: {str(e)}")
+
 
 @router_zup.get(
     "/employees",

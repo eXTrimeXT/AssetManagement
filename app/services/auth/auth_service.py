@@ -119,7 +119,7 @@ async def require_authorized_user(
 ) -> Employee:
     """
     Проверяет авторизацию и возвращает сотрудника из ZUP.
-    Все данные берутся из JWT-токена (без Redis).
+    Все данные берутся из JWT-токена.
     """
     try:
         token = await get_token_from_request(request)

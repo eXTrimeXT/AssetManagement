@@ -22,6 +22,8 @@ class Asset(Base):
 
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
+    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
+
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
@@ -37,6 +39,8 @@ class Asset(Base):
 
     # Relationships
     model = relationship("AssetModel", back_populates="assets")
+    asset_type = relationship("AssetType", back_populates="assets")
+
     parent = relationship(
         "Asset",
         remote_side=[asset_id],

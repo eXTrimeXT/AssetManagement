@@ -42,51 +42,8 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     return result.scalar_one_or_none()
 
 
-# async def get_assets_list(
-#         db: AsyncSession,
-#         skip: int = 0,
-#         limit: int = 50,
-#         name: Optional[str] = None,
-#         inventory_id: Optional[str] = None,
-#         serial_number: Optional[str] = None,
-#         asset_status: Optional[str] = None,
-#         model_id: Optional[int] = None,
-#         parent_id: Optional[int] = None,
-#         location_id: Optional[int] = None,
-# ) -> Sequence[Asset]:
-#     """Получение списка активов с фильтрацией"""
-#     query = select(Asset).options(
-#         selectinload(Asset.model).options(
-#             selectinload(AssetModel.asset_class).options(
-#                 selectinload(AssetClass.asset_type)
-#             )
-#         ),
-#         selectinload(Asset.parent),
-#         selectinload(Asset.location),
-#     )
-#
-#     if name:
-#         query = query.where(Asset.name.ilike(f"%{name}%"))
-#     if inventory_id:
-#         query = query.where(Asset.inventory_id == inventory_id)
-#     if serial_number:
-#         query = query.where(Asset.serial_number == serial_number)
-#     if asset_status:
-#         query = query.where(Asset.asset_status == asset_status)
-#     if model_id is not None:
-#         query = query.where(Asset.model_id == model_id)
-#     if parent_id is not None:
-#         query = query.where(Asset.parent_id == parent_id)
-#     if location_id is not None:
-#         query = query.where(Asset.location_id == location_id)
-#
-#     query = query.offset(skip).limit(limit)
-#     result = await db.execute(query)
-#     return result.scalars().all()
-
-
 def _apply_assets_filters(query, name, inventory_id, serial_number, asset_status,
-                          model_id, parent_id, location_id, allowed_type_en_names):
+                          model_id, asset_type_id, parent_id, location_id, allowed_type_en_names):
     """Применить фильтры к запросу"""
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
@@ -98,6 +55,8 @@ def _apply_assets_filters(query, name, inventory_id, serial_number, asset_status
         query = query.where(Asset.asset_status == asset_status)
     if model_id is not None:
         query = query.where(Asset.model_id == model_id)
+    if asset_type_id is not None:
+        query = query.where(Asset.asset_type_id == asset_type_id)
     if parent_id is not None:
         query = query.where(Asset.parent_id == parent_id)
     if location_id is not None:
@@ -120,6 +79,7 @@ async def get_assets_count(
         serial_number: Optional[str] = None,
         asset_status: Optional[str] = None,
         model_id: Optional[int] = None,
+        asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         location_id: Optional[int] = None,
         allowed_type_en_names: Optional[List[str]] = None,
@@ -132,7 +92,7 @@ async def get_assets_count(
     query = select(func.count(Asset.asset_id)).select_from(Asset)
     query = _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
-        model_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
     )
     result = await db.execute(query)
     return result.scalar_one()
@@ -147,6 +107,7 @@ async def get_assets_list(
         serial_number: Optional[str] = None,
         asset_status: Optional[str] = None,
         model_id: Optional[int] = None,
+        asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         location_id: Optional[int] = None,
         allowed_type_en_names: Optional[List[str]] = None,
@@ -162,7 +123,7 @@ async def get_assets_list(
     # 1. Получаем общее количество
     total = await get_assets_count(
         db, name, inventory_id, serial_number, asset_status,
-        model_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
     )
 
     # 2. Вычисляем offset
@@ -181,7 +142,7 @@ async def get_assets_list(
 
     query = _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
-        model_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
     )
 
     # Сортировка для стабильной пагинации

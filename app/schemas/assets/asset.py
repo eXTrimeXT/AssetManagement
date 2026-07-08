@@ -15,6 +15,7 @@ class AssetBase(BaseModel):
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     model_id: Optional[int] = None
+    asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
     prepared_by: Optional[str] = None
@@ -49,19 +50,18 @@ class AssetResponse(AssetBase):
     model: Optional[AssetModelResponse] = None
     location: Optional[LocationResponse] = None
 
-    current_users: Optional[List[AssetAssignmentShortResponse]] = []  # Активные пользователи
+    # current_users: Optional[List[AssetAssignmentShortResponse]] = []  # Активные пользователи
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class AssetShortResponse(BaseModel):
+class AssetShortResponse(AssetBase):
     asset_id: int
-    name: str
-    inventory_id: str
-    serial_number: Optional[str] = None
-    asset_status: str
-    model_id: Optional[int] = None
-    parent_id: Optional[int] = None
-    location_id: Optional[int] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    model: Optional[AssetModelResponse] = None
+    location: Optional[LocationResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

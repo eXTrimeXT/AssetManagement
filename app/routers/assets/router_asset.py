@@ -53,52 +53,9 @@ async def create_asset_endpoint(
 
     return await create_asset(db, data, current_user.employee_id)
 
-
-# @router_assets.get("/", response_model=List[AssetShortResponse])
-# async def get_assets(
-#         skip: int = Query(0, ge=0),
-#         limit: int = Query(50, ge=1, le=100),
-#         name: Optional[str] = Query(None),
-#         inventory_id: Optional[str] = Query(None),
-#         serial_number: Optional[str] = Query(None),
-#         asset_status: Optional[str] = Query(None),
-#         model_id: Optional[int] = Query(None),
-#         parent_id: Optional[int] = Query(None),
-#         request: Request = None,
-#         db: AsyncSession = Depends(get_db),
-#         current_user=Depends(require_authorized_user)
-# ):
-#     """
-#     Получить список активов.
-#     Фильтруем по правам пользователя (только те типы, на которые есть read).
-#     """
-#     all_assets = await get_assets_list(
-#         db, skip, limit, name, inventory_id, serial_number,
-#         asset_status, model_id, parent_id
-#     )
-#
-#     # Получаем права пользователя из Redis один раз
-#     token = await get_token_from_request(request)
-#     user_data = get_user_from_token(token)
-#     permissions = await get_user_permissions_from_redis(user_data.login) or {}
-#
-#     # Фильтруем по правам read на тип актива
-#     accessible_assets = []
-#     for asset in all_assets:
-#         if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-#             en_name = asset.model.asset_class.asset_type.en_name
-#             resource_perms = permissions.get(en_name, {})
-#             if resource_perms.get("read", False):
-#                 active_users = await get_active_assignments_for_asset(db, asset.asset_id)
-#                 asset.current_users = active_users
-#                 accessible_assets.append(asset)
-#
-#     return accessible_assets
-
-
 @router_assets.get(
     "/",
-    response_model=PaginatedResponse[AssetShortResponse],
+    response_model=PaginatedResponse[AssetResponse],
     summary="Получить список активов (с пагинацией)"
 )
 async def get_assets(
@@ -109,6 +66,7 @@ async def get_assets(
         serial_number: Optional[str] = Query(None),
         asset_status: Optional[str] = Query(None),
         model_id: Optional[int] = Query(None),
+        asset_type_id: Optional[int] = Query(None),
         parent_id: Optional[int] = Query(None),
         location_id: Optional[int] = Query(None),
         request: Request = None,
@@ -140,9 +98,10 @@ async def get_assets(
         serial_number=serial_number,
         asset_status=asset_status,
         model_id=model_id,
+        asset_type_id=asset_type_id,
         parent_id=parent_id,
         location_id=location_id,
-        allowed_type_en_names=allowed_type_en_names,
+        # allowed_type_en_names=allowed_type_en_names,
     )
 
     # Подгружаем current_users для каждого актива
@@ -182,7 +141,6 @@ async def get_asset(
                 status_code=403,
                 detail=f"Нет права 'read' на тип актива '{en_name}'"
             )
-
     return obj
 
 

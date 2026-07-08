@@ -17,6 +17,7 @@ class AssetType(Base):
 
     creator = relationship("Employee", foreign_keys=[created_by])
     asset_classes = relationship("AssetClass", back_populates="asset_type", cascade="all, delete-orphan")
+    assets = relationship("Asset", back_populates="asset_type", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<AssetType(id={self.asset_type_id}, name={self.name})>"

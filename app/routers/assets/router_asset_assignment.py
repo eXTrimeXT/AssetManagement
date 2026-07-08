@@ -8,10 +8,10 @@ from app.database.assets.asset_assignment import (
     get_assignments_by_asset,
     get_assignments_by_employee,
     delete_assignment,
-    close_assignment
+    close_assignment,
+    get_assignment_by_id
 )
 from app.database.assets import get_asset_by_id
-from app.database.zup import get_assignment_by_id
 
 from app.schemas.assets.asset_assignment import (
     AssetAssignmentCreate,

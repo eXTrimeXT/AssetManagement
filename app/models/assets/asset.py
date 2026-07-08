@@ -1,10 +1,11 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import computed_field
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 from app.models.Base import Base
+from app.schemas.assets.asset_assignment import AssetUserResponse
 
 
 class Asset(Base):
@@ -69,6 +70,20 @@ class Asset(Base):
         if self.asset_type:
             return self.asset_type.name
         return None
+
+    @computed_field
+    @property
+    def users(self) -> List[AssetUserResponse]:
+        """Список активных пользователей, привязанных к активу"""
+        return [
+            AssetUserResponse(
+                employee_id=a.employee_id,
+                start_date=a.start_date,
+                end_date=a.end_date,
+            )
+            for a in self.assignments
+            if a.end_date is None  # Только активные привязки
+        ]
 
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name})>"

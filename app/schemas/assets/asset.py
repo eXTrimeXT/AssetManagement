@@ -3,8 +3,9 @@ from datetime import datetime, date
 from typing import Optional, List
 from app.schemas.assets.asset_model import AssetModelResponse
 from app.schemas.assets.asset_type import AssetTypeResponse
-from app.schemas.assets.asset_assignment import AssetAssignmentShortResponse
+from app.schemas.assets.asset_assignment import AssetUserResponse
 from app.schemas.locations.LocationResponse import LocationResponse
+from app.schemas.zup import EmployeeShortResponse
 
 
 class AssetBase(BaseModel):
@@ -57,6 +58,22 @@ class AssetResponse(AssetBase):
     parent: Optional["AssetResponse"] = None
 
     asset_type_name: Optional[str] = None
+
+    users: Optional[List[AssetUserResponse]] = None
+
+    # @computed_field
+    # @property
+    # def users(self) -> List[AssetUserResponse]:
+    #     """Список активных пользователей, привязанных к активу"""
+    #     return [
+    #         AssetUserResponse(
+    #             employee_id=a.employee_id,
+    #             start_date=a.start_date,
+    #             end_date=a.end_date,
+    #         )
+    #         for a in self.assignments
+    #         if a.end_date is None  # Только активные привязки
+    #     ]
 
     model_config = ConfigDict(from_attributes=True)
 

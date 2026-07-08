@@ -250,7 +250,6 @@ from app.database.assets.asset import (
     update_asset, delete_asset, get_asset_children
 )
 from app.database.assets.asset_type import get_asset_type_by_id
-from app.database.assets.asset_assignment import get_active_assignments_for_asset
 from app.schemas.assets.asset import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse
 from app.services.auth.auth_service import (
     require_authorized_user,
@@ -347,9 +346,9 @@ async def get_assets(
         allowed_type_en_names=allowed_type_en_names,
     )
 
-    for asset in assets:
-        active_users = await get_active_assignments_for_asset(db, asset.asset_id)
-        asset.current_users = active_users
+    # for asset in assets:
+    #     active_users = await get_active_assignments_for_asset(db, asset.asset_id)
+    #     asset.current_users = active_users
 
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 

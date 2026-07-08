@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import List
 from app.database.connection import get_db
 from app.database.assets.asset_assignment import (
     create_assignment,
@@ -11,8 +11,8 @@ from app.database.assets.asset_assignment import (
     close_assignment,
     get_assignment_by_id
 )
-from app.database.assets import get_asset_by_id
-
+from app.database.assets.asset import get_asset_by_id
+from app.database.assets.asset_type import get_asset_type_by_id
 from app.schemas.assets.asset_assignment import (
     AssetAssignmentCreate,
     AssetAssignmentResponse
@@ -24,9 +24,33 @@ logger = logging.getLogger(__name__)
 router_asset_assignments = APIRouter(prefix="/assets", tags=["Asset Assignments"])
 
 
-@router_asset_assignments.post("/{asset_id}/assignments", response_model=AssetAssignmentResponse, status_code=status.HTTP_201_CREATED)
+async def _check_asset_permission(
+        db: AsyncSession,
+        request: Request,
+        asset_type_id: int | None,
+        action: str
+) -> None:
+    """Проверка права на тип актива напрямую через asset_type_id."""
+    if asset_type_id is None:
+        return
+    asset_type = await get_asset_type_by_id(db, asset_type_id)
+    if not asset_type:
+        raise HTTPException(status_code=404, detail="Тип актива не найден")
+    has_perm = await check_permission(request, asset_type.en_name, action)
+    if not has_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права '{action}' на тип актива '{asset_type.en_name}'"
+        )
+
+
+@router_asset_assignments.post(
+    "/assignments",
+    response_model=AssetAssignmentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Привязать актив к сотруднику"
+)
 async def assign_asset_to_employee(
-        asset_id: int,
         data: AssetAssignmentCreate,
         request: Request,
         db: AsyncSession = Depends(get_db),
@@ -34,127 +58,118 @@ async def assign_asset_to_employee(
 ):
     """
     Назначить актив сотруднику.
-    Автоматически закрывает все предыдущие активные назначения этого сотрудника на этот актив.
+    asset_id передаётся в теле запроса.
+    Автоматически закрывает предыдущие активные назначения этого сотрудника на этот актив.
     """
-    # Проверяем право write на актив (через тип актива)
-    asset = await get_asset_by_id(db, asset_id)
+    asset = await get_asset_by_id(db, data.asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-    if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-        en_name = asset.model.asset_class.asset_type.en_name
-        has_perm = await check_permission(request, en_name, "write")
-        if not has_perm:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Нет права 'write' на тип актива '{en_name}'"
-            )
+    await _check_asset_permission(db, request, asset.asset_type_id, "write")
 
-    return await create_assignment(db, asset_id, data, current_user.employee_id)
+    return await create_assignment(db, data, current_user.employee_id)
 
 
-@router_asset_assignments.get("/{asset_id}/assignments", response_model=List[AssetAssignmentResponse])
+@router_asset_assignments.get(
+    "/assignments",
+    response_model=List[AssetAssignmentResponse],
+    summary="Получить все привязки (с фильтрами)"
+)
+async def get_all_assignments(
+        asset_id: int = Query(None, description="Фильтр по ID актива"),
+        employee_id: str = Query(None, description="Фильтр по табельному номеру"),
+        active_only: bool = Query(False, description="Только активные привязки"),
+        db: AsyncSession = Depends(get_db),
+):
+    """Получить привязки с фильтрацией по asset_id и/или employee_id."""
+    if asset_id is not None:
+        return await get_assignments_by_asset(db, asset_id, active_only)
+    if employee_id is not None:
+        return await get_assignments_by_employee(db, employee_id, active_only)
+
+    raise HTTPException(
+        status_code=400,
+        detail="Укажите хотя бы один фильтр: asset_id или employee_id"
+    )
+
+
+@router_asset_assignments.get(
+    "/{asset_id}/assignments",
+    response_model=List[AssetAssignmentResponse],
+    summary="Получить привязки конкретного актива"
+)
 async def get_asset_assignments(
         asset_id: int,
-        active_only: bool = Query(False, description="Только активные назначения"),
-        request: Request = None,
+        active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
 ):
-    """
-    Получить все назначения актива (историю и текущие).
-    """
-    # Проверяем право read на актив
-    asset = await get_asset_by_id(db, asset_id)
-    if not asset:
-        raise HTTPException(status_code=404, detail="Актив не найден")
-
-    if asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-        en_name = asset.model.asset_class.asset_type.en_name
-        has_perm = await check_permission(request, en_name, "read")
-        if not has_perm:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Нет права 'read' на тип актива '{en_name}'"
-            )
-
+    """Получить все привязки конкретного актива."""
     return await get_assignments_by_asset(db, asset_id, active_only)
 
 
-@router_asset_assignments.get("/employees/{employee_id}/assignments", response_model=List[AssetAssignmentResponse])
+@router_asset_assignments.get(
+    "/employees/{employee_id}/assignments",
+    response_model=List[AssetAssignmentResponse],
+    summary="Получить привязки конкретного сотрудника"
+)
 async def get_employee_assignments(
         employee_id: str,
-        active_only: bool = Query(False, description="Только активные назначения"),
+        active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
 ):
-    """
-    Получить все назначения сотрудника (все его активы).
-    """
+    """Получить все привязки конкретного сотрудника."""
     return await get_assignments_by_employee(db, employee_id, active_only)
 
 
-@router_asset_assignments.post("/assignments/{assignment_id}/close", response_model=AssetAssignmentResponse)
+@router_asset_assignments.post(
+    "/assignments/{assignment_id}/close",
+    response_model=AssetAssignmentResponse,
+    summary="Закрыть привязку"
+)
 async def close_assignment_endpoint(
         assignment_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
-    """
-    Закрыть активное назначение (установить end_date = сегодня).
-    """
+    """Закрыть активную привязку (установить end_date = сегодня)."""
     assignment = await get_assignment_by_id(db, assignment_id)
     if not assignment:
-        raise HTTPException(status_code=404, detail="Назначение не найдено")
+        raise HTTPException(status_code=404, detail="Привязка не найдена")
 
-    # Проверяем право write на актив
     asset = await get_asset_by_id(db, assignment.asset_id)
-    if asset and asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-        en_name = asset.model.asset_class.asset_type.en_name
-        has_perm = await check_permission(request, en_name, "write")
-        if not has_perm:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Нет права 'write' на тип актива '{en_name}'"
-            )
+    if asset:
+        await _check_asset_permission(db, request, asset.asset_type_id, "write")
 
-    closed = await close_assignment(db, assignment_id)
-    return closed
+    return await close_assignment(db, assignment_id)
 
 
-@router_asset_assignments.delete("/assignments/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_asset_assignments.delete(
+    "/assignments/{assignment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить привязку"
+)
 async def delete_assignment_endpoint(
         assignment_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
-    """
-    Удалить назначение (только неактивные, у которых end_date != NULL).
-    """
+    """Удалить привязку (только неактивные)."""
     assignment = await get_assignment_by_id(db, assignment_id)
     if not assignment:
-        raise HTTPException(status_code=404, detail="Назначение не найдено")
+        raise HTTPException(status_code=404, detail="Привязка не найдена")
 
-    # Нельзя удалить активное назначение
     if assignment.end_date is None:
         raise HTTPException(
             status_code=400,
-            detail="Нельзя удалить активное назначение. Сначала закройте его."
+            detail="Нельзя удалить активную привязку. Сначала закройте её."
         )
 
-    # Проверяем право write на актив
     asset = await get_asset_by_id(db, assignment.asset_id)
-    if asset and asset.model and asset.model.asset_class and asset.model.asset_class.asset_type:
-        en_name = asset.model.asset_class.asset_type.en_name
-        has_perm = await check_permission(request, en_name, "write")
-        if not has_perm:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Нет права 'write' на тип актива '{en_name}'"
-            )
+    if asset:
+        await _check_asset_permission(db, request, asset.asset_type_id, "write")
 
     success = await delete_assignment(db, assignment_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Назначение не найдено")
+        raise HTTPException(status_code=404, detail="Привязка не найдена")

@@ -24,8 +24,9 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             # selectinload(Asset.model).options(
             #     selectinload(AssetModel.asset_type)
             # ),
-            selectinload(Asset.parent),
+            selectinload(Asset.parent).options(selectinload(Asset.assignments),),
             selectinload(Asset.location),
+            selectinload(Asset.assignments),
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.creator),
@@ -119,7 +120,8 @@ async def get_assets_list(
         # selectinload(Asset.model).options(
         #     selectinload(AssetModel.asset_type)
         # ),
-        selectinload(Asset.parent),
+        selectinload(Asset.parent).options(selectinload(Asset.assignments)),
+        selectinload(Asset.assignments),
         selectinload(Asset.location),
     )
 

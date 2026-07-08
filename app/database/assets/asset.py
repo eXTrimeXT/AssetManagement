@@ -3,7 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.assets.asset import Asset
-from app.models.assets.asset_model import AssetModel
+# from app.models.assets.asset_model import AssetModel
 from app.schemas.assets.asset import AssetCreate, AssetUpdate
 from app.models.assets import AssetType
 
@@ -21,9 +21,9 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         select(Asset)
         .options(
             selectinload(Asset.asset_type),
-            selectinload(Asset.model).options(
-                selectinload(AssetModel.asset_type)
-            ),
+            # selectinload(Asset.model).options(
+            #     selectinload(AssetModel.asset_type)
+            # ),
             selectinload(Asset.parent),
             selectinload(Asset.location),
             selectinload(Asset.preparer),
@@ -116,9 +116,9 @@ async def get_assets_list(
 
     query = select(Asset).options(
         selectinload(Asset.asset_type),
-        selectinload(Asset.model).options(
-            selectinload(AssetModel.asset_type)
-        ),
+        # selectinload(Asset.model).options(
+        #     selectinload(AssetModel.asset_type)
+        # ),
         selectinload(Asset.parent),
         selectinload(Asset.location),
     )
@@ -166,9 +166,9 @@ async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
         select(Asset)
         .options(
             selectinload(Asset.asset_type),
-            selectinload(Asset.model).options(
-                selectinload(AssetModel.asset_type)
-            ),
+            # selectinload(Asset.model).options(
+            #     selectinload(AssetModel.asset_type)
+            # ),
             selectinload(Asset.parent)
         )
         .where(Asset.parent_id == asset_id)

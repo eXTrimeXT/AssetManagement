@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from datetime import datetime, date
 from typing import Optional, List
 from app.schemas.assets.asset_model import AssetModelResponse
@@ -16,6 +16,7 @@ class AssetBase(BaseModel):
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     model_id: Optional[int] = None
+    model_name: Optional[str] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
@@ -36,6 +37,7 @@ class AssetUpdate(BaseModel):
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     model_id: Optional[int] = None
+    model_name: Optional[str] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
@@ -49,18 +51,28 @@ class AssetResponse(AssetBase):
     updated_by: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    model: Optional[AssetModelResponse] = None
-    asset_type: Optional[AssetTypeResponse] = None
+    # model: Optional["AssetModelResponse"] = None
+    # asset_type: Optional[AssetTypeResponse] = None
     location: Optional[LocationResponse] = None
     parent: Optional["AssetResponse"] = None
+
+    asset_type_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class AssetShortResponse(AssetBase):
     asset_id: int
-    model: Optional[AssetModelResponse] = None
-    asset_type: Optional[AssetTypeResponse] = None
+    # model: Optional["AssetModelResponse"] = None
+    # asset_type: Optional[AssetTypeResponse] = None
+    asset_type_name: Optional[str] = None
+    # @computed_field
+    # @property
+    # def asset_type_name(self) -> Optional[str]:
+    #     if self.asset_type:
+    #         return self.asset_type.name
+    #     return None
+
     location: Optional[LocationResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

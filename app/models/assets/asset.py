@@ -1,3 +1,6 @@
+from typing import Optional
+
+from pydantic import computed_field
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
@@ -22,6 +25,7 @@ class Asset(Base):
 
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
+    model_name = Column(String(300), nullable=True)
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
@@ -58,6 +62,13 @@ class Asset(Base):
     checker = relationship("Employee", foreign_keys=[checked_by])
     creator = relationship("Employee", foreign_keys=[created_by])
     updater = relationship("Employee", foreign_keys=[updated_by])
+
+    @computed_field
+    @property
+    def asset_type_name(self) -> Optional[str]:
+        if self.asset_type:
+            return self.asset_type.name
+        return None
 
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name})>"

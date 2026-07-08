@@ -37,7 +37,6 @@ class ZupDepartment(Base):
         primaryjoin="Employee.department_guid == ZupDepartment.guid",
         back_populates="group"
     )
-    assignments = relationship("Assignment", back_populates="department")
 
     def __repr__(self):
         return f"<ZupDepartment(guid={self.guid}, name={self.name})>"

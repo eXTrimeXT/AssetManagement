@@ -65,7 +65,6 @@ class Employee(Base):
         foreign_keys="Manager.guid_manager",
         back_populates="manager"
     )
-    assignments = relationship("Assignment", back_populates="employee")
 
     def __repr__(self):
         return f"<Employee(id={self.employee_id}, name={self.last_name} {self.first_name})>"

@@ -35,18 +35,6 @@ from app.database.zup.crud_zup_managers import (
     upsert_manager
 )
 
-from app.database.zup.crud_zup_assignments import (
-    get_assignment_by_id,
-    create_assignment,
-    get_assignments_list,
-    upsert_assignment
-)
-
-from app.database.zup.crud_zup_reports import (
-    create_report,
-    get_reports_list
-)
-
 __all__ = [
     # Employees
     "get_employee_by_guid",
@@ -76,14 +64,4 @@ __all__ = [
     "create_manager",
     "get_managers_list",
     "upsert_manager",
-
-    # Assignments
-    "get_assignment_by_id",
-    "create_assignment",
-    "get_assignments_list",
-    "upsert_assignment",
-
-    # Reports
-    "create_report",
-    "get_reports_list"
 ]

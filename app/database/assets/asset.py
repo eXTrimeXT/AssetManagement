@@ -4,13 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.assets.asset import Asset
 from app.models.assets.asset_model import AssetModel
-from app.models.assets.asset_class import AssetClass
 from app.schemas.assets.asset import AssetCreate, AssetUpdate
 from app.models.assets import AssetType
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
-    """Создать новый актив"""
     db_obj = Asset(**data.model_dump(), created_by=employee_id, updated_by=employee_id)
     db.add(db_obj)
     await db.commit()
@@ -19,14 +17,13 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
 
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
-    """Получить актив по ID с загруженными связями"""
     result = await db.execute(
         select(Asset)
         .options(
-            # Прямые связи
-            selectinload(Asset.model),
-            selectinload(Asset.asset_class),  # ← НОВОЕ
             selectinload(Asset.asset_type),
+            selectinload(Asset.model).options(
+                selectinload(AssetModel.asset_type)
+            ),
             selectinload(Asset.parent),
             selectinload(Asset.location),
             selectinload(Asset.preparer),
@@ -41,9 +38,8 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
 
 def _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
-        model_id, class_id, asset_type_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
 ):
-    """Применить фильтры к запросу"""
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:
@@ -54,8 +50,6 @@ def _apply_assets_filters(
         query = query.where(Asset.asset_status == asset_status)
     if model_id is not None:
         query = query.where(Asset.model_id == model_id)
-    if class_id is not None:
-        query = query.where(Asset.class_id == class_id)
     if asset_type_id is not None:
         query = query.where(Asset.asset_type_id == asset_type_id)
     if parent_id is not None:
@@ -63,7 +57,6 @@ def _apply_assets_filters(
     if location_id is not None:
         query = query.where(Asset.location_id == location_id)
 
-    # Фильтрация по правам: прямой join к asset_types
     if allowed_type_en_names is not None:
         query = (
             query.outerjoin(Asset.asset_type)
@@ -80,20 +73,18 @@ async def get_assets_count(
         serial_number: Optional[str] = None,
         asset_status: Optional[str] = None,
         model_id: Optional[int] = None,
-        class_id: Optional[int] = None,
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         location_id: Optional[int] = None,
         allowed_type_en_names: Optional[List[str]] = None,
 ) -> int:
-    """Получить общее количество активов с учётом фильтров"""
     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
         return 0
 
     query = select(func.count(Asset.asset_id)).select_from(Asset)
     query = _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
-        model_id, class_id, asset_type_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
     )
     result = await db.execute(query)
     return result.scalar_one()
@@ -108,35 +99,33 @@ async def get_assets_list(
         serial_number: Optional[str] = None,
         asset_status: Optional[str] = None,
         model_id: Optional[int] = None,
-        class_id: Optional[int] = None,
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         location_id: Optional[int] = None,
         allowed_type_en_names: Optional[List[str]] = None,
 ) -> Tuple[Sequence[Asset], int]:
-    """Получить страницу активов с фильтрацией"""
     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
         return [], 0
 
     total = await get_assets_count(
         db, name, inventory_id, serial_number, asset_status,
-        model_id, class_id, asset_type_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
     )
 
     skip = (page - 1) * page_size
 
     query = select(Asset).options(
-        # Прямые связи
-        selectinload(Asset.model),
-        selectinload(Asset.asset_class),
         selectinload(Asset.asset_type),
+        selectinload(Asset.model).options(
+            selectinload(AssetModel.asset_type)
+        ),
         selectinload(Asset.parent),
         selectinload(Asset.location),
     )
 
     query = _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
-        model_id, class_id, asset_type_id, parent_id, location_id, allowed_type_en_names
+        model_id, asset_type_id, parent_id, location_id, allowed_type_en_names
     )
 
     query = query.order_by(Asset.asset_id)
@@ -149,7 +138,6 @@ async def get_assets_list(
 
 
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
-    """Обновить актив"""
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
         return None
@@ -164,7 +152,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
 
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
-    """Hard delete актива и всех его детей"""
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
         return False
@@ -175,13 +162,13 @@ async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
 
 
 async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
-    """Получение всех детей актива через parent_id"""
     result = await db.execute(
         select(Asset)
         .options(
-            selectinload(Asset.model),
-            selectinload(Asset.asset_class),
             selectinload(Asset.asset_type),
+            selectinload(Asset.model).options(
+                selectinload(AssetModel.asset_type)
+            ),
             selectinload(Asset.parent)
         )
         .where(Asset.parent_id == asset_id)

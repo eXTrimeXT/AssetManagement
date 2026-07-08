@@ -31,7 +31,6 @@ from app.routers.router_vendors import router_vendors                   # зав
 
 from app.routers.assets import (
     router_asset_types,         # тип не зависим
-    router_asset_classes,       # класс зависит от типа
     router_asset_models,        # модель зависим от класса
     router_assets,              # зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
     router_asset_assignments    # каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
@@ -91,7 +90,6 @@ app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
 app.include_router(router_vendors, prefix="/api")           # Vendors
 
 app.include_router(router_asset_types, prefix="/api")       # Asset Types
-app.include_router(router_asset_classes, prefix="/api")     # Asset Classes
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_asset_assignments, prefix="/api") # Asset Catalog

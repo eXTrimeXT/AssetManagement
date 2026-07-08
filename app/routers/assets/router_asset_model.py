@@ -7,10 +7,10 @@ from app.database.assets.asset_model import (
     create_asset_model, get_asset_model_by_id, get_asset_models_list,
     update_asset_model, delete_asset_model
 )
-from app.database.assets.asset_class import get_asset_class_by_id
 from app.schemas.assets.asset_model import AssetModelCreate, AssetModelUpdate, AssetModelResponse
 from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token # get_user_permissions_from_redis
 from app.services.auth.permission_checker import check_permission
+from app.database.assets import get_asset_type_by_id
 
 logger = logging.getLogger(__name__)
 router_asset_models = APIRouter(prefix="/asset-models", tags=["Asset Models"])
@@ -28,20 +28,16 @@ async def create_asset_model_endpoint(
     Проверяем право write на тип актива (через class_id → asset_type).
     """
     # Получаем класс для определения типа
-    asset_class = await get_asset_class_by_id(db, data.class_id)
-    if not asset_class:
+    asset_type = await get_asset_type_by_id(db, data.asset_type_id)
+    if not asset_type:
         raise HTTPException(status_code=404, detail="Класс актива не найден")
 
-    # Получаем тип через класс
-    if not asset_class.asset_type:
-        raise HTTPException(status_code=400, detail="У класса не указан тип актива")
-
     # Проверяем право write на тип
-    has_perm = await check_permission(request, asset_class.asset_type.en_name, "write")
+    has_perm = await check_permission(request, asset_type.en_name, "write")
     if not has_perm:
         raise HTTPException(
             status_code=403,
-            detail=f"Нет права 'write' на тип актива '{asset_class.asset_type.en_name}'"
+            detail=f"Нет права 'write' на тип актива '{asset_type.en_name}'"
         )
 
     return await create_asset_model(db, data, current_user.employee_id)
@@ -120,15 +116,15 @@ async def update_asset_model_endpoint(
         raise HTTPException(status_code=404, detail="Модель актива не найдена")
 
     # Определяем класс для проверки (новый или старый)
-    class_id = data.class_id if data.class_id else obj.class_id
-    asset_class = await get_asset_class_by_id(db, class_id)
+    asset_type_id = data.asset_type_id if data.asset_type_id else obj.asset_type_id
+    asset_type = await get_asset_type_by_id(db, asset_type_id)
 
-    if asset_class and asset_class.asset_type:
-        has_perm = await check_permission(request, asset_class.asset_type.en_name, "write")
+    if asset_type:
+        has_perm = await check_permission(request, asset_type.en_name, "write")
         if not has_perm:
             raise HTTPException(
                 status_code=403,
-                detail=f"Нет права 'write' на тип актива '{asset_class.asset_type.en_name}'"
+                detail=f"Нет права 'write' на тип актива '{asset_type.en_name}'"
             )
 
     updated = await update_asset_model(db, model_id, data, current_user.employee_id)

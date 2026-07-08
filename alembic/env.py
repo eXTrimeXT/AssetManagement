@@ -12,7 +12,6 @@ from app.models.Base import Base
 # ВАЖНО: импортируем все модели, чтобы Alembic их увидел
 from app.models.assets.asset import Asset
 from app.models.assets.asset_model import AssetModel
-from app.models.assets.asset_class import AssetClass
 from app.models.assets.asset_type import AssetType
 from app.models.assets.asset_assignment import AssetAssignment
 

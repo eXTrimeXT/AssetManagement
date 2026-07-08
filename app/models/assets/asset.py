@@ -20,9 +20,8 @@ class Asset(Base):
     date_issue = Column(Date)
     date_purchasing = Column(Date)
 
-    # Прямые ссылки на связанные таблицы
+    # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
-    class_id = Column(Integer, ForeignKey("asset_classes.class_id"), index=True)  # ← НОВОЕ
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
@@ -37,10 +36,9 @@ class Asset(Base):
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    # Relationships — прямые связи
-    model = relationship("AssetModel", foreign_keys=[model_id])
-    asset_class = relationship("AssetClass", foreign_keys=[class_id])  # ← НОВОЕ
-    asset_type = relationship("AssetType", foreign_keys=[asset_type_id])
+    # Relationships
+    model = relationship("AssetModel", back_populates="assets")
+    asset_type = relationship("AssetType", back_populates="assets")
     parent = relationship(
         "Asset",
         remote_side=[asset_id],

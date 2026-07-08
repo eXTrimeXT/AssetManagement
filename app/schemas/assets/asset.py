@@ -2,8 +2,9 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
 from typing import Optional, List
 from app.schemas.assets.asset_model import AssetModelResponse
+from app.schemas.assets.asset_type import AssetTypeResponse
+from app.schemas.assets.asset_assignment import AssetAssignmentShortResponse
 from app.schemas.locations.LocationResponse import LocationResponse
-from app.schemas.assets import AssetClassResponse, AssetTypeResponse
 
 
 class AssetBase(BaseModel):
@@ -15,7 +16,6 @@ class AssetBase(BaseModel):
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     model_id: Optional[int] = None
-    class_id: Optional[int] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
@@ -36,7 +36,6 @@ class AssetUpdate(BaseModel):
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
     model_id: Optional[int] = None
-    class_id: Optional[int] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
@@ -50,10 +49,7 @@ class AssetResponse(AssetBase):
     updated_by: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-
-    # Плоские объекты вместо вложенной структуры
     model: Optional[AssetModelResponse] = None
-    asset_class: Optional[AssetClassResponse] = None
     asset_type: Optional[AssetTypeResponse] = None
     location: Optional[LocationResponse] = None
     parent: Optional["AssetResponse"] = None
@@ -64,7 +60,6 @@ class AssetResponse(AssetBase):
 class AssetShortResponse(AssetBase):
     asset_id: int
     model: Optional[AssetModelResponse] = None
-    asset_class: Optional[AssetClassResponse] = None
     asset_type: Optional[AssetTypeResponse] = None
     location: Optional[LocationResponse] = None
 

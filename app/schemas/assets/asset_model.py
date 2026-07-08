@@ -1,13 +1,13 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
-from app.schemas.assets.asset_class import AssetClassResponse
+from app.schemas.assets.asset_type import AssetTypeResponse
 
 
 class AssetModelBase(BaseModel):
-    model_name: str
+    name: str
     description: Optional[str] = None
-    class_id: int
+    asset_type_id: Optional[int] = None
 
 
 class AssetModelCreate(AssetModelBase):
@@ -15,9 +15,9 @@ class AssetModelCreate(AssetModelBase):
 
 
 class AssetModelUpdate(BaseModel):
-    model_name: Optional[str] = None
+    name: Optional[str] = None
     description: Optional[str] = None
-    class_id: Optional[int] = None
+    asset_type_id: Optional[int] = None
 
 
 class AssetModelResponse(AssetModelBase):
@@ -26,6 +26,6 @@ class AssetModelResponse(AssetModelBase):
     updated_by: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    asset_class: Optional[AssetClassResponse] = None
+    asset_type: Optional[AssetTypeResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

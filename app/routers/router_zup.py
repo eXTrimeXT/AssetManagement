@@ -9,7 +9,7 @@ from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeShortResp
 from app.schemas.zup.position_schemas import PositionResponse
 from app.schemas.zup.department_schemas import GroupResponse
 from app.schemas.zup.manager_schemas import ManagerResponse
-from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid
+from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid, get_employee_by_id
 from app.database.zup.crud_zup_positions import get_positions_list
 from app.database.zup.crud_zup_departments import get_departments_list
 from app.database.zup.crud_zup_managers import get_managers_list
@@ -117,7 +117,7 @@ async def get_employees(
         has_previous=page > 1
     )
 
-@router_zup.get("/employees/{guid}", response_model=EmployeeResponse, summary="Получить сотрудника по GUID")
+@router_zup.get("/employees/guid/{guid}", response_model=EmployeeResponse, summary="Получить сотрудника по GUID")
 async def get_employee(
         guid: str,
         db: AsyncSession = Depends(get_db),
@@ -125,6 +125,18 @@ async def get_employee(
 ):
     """Получить полную информацию о сотруднике по GUID"""
     employee = await get_employee_by_guid(db, guid)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Сотрудник не найден")
+    return employee
+
+@router_zup.get("/employees/id/{id}", response_model=EmployeeResponse, summary="Получить сотрудника по ID")
+async def get_employee(
+        id: str,
+        db: AsyncSession = Depends(get_db),
+        # current_user=Depends(require_authorized_user)
+):
+    """Получить полную информацию о сотруднике по ID"""
+    employee = await get_employee_by_id(db, id)
     if not employee:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return employee

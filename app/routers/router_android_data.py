@@ -10,10 +10,9 @@ from app.database.crud_android_data import (
     update_android_data,
     delete_android_data
 )
-# from app.services.permissions.permissions_rules import has_android_sender_permission
-# from app.services.auth.auth_service import require_authorized_user
-# from app.models.User import User
 from app.middleware.LoggingMiddleware import logger
+from app.services.auth.auth_service import require_authorized_user
+from services.auth.permission_checker import check_permission
 
 router_android_data = APIRouter(prefix="/android-data", tags=["android_data"])
 
@@ -21,7 +20,7 @@ router_android_data = APIRouter(prefix="/android-data", tags=["android_data"])
 async def endpoint_create_android_data(
         data: AndroidDataCreate,
         db: AsyncSession = Depends(get_db),
-        # current_user: User = Depends(require_authorized_user)
+        current_user = Depends(require_authorized_user)
 ):
     # if not has_android_sender_permission(current_user):
     #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
@@ -32,7 +31,8 @@ async def endpoint_create_android_data(
 async def endpoint_read_all_android_data(
         serial_number: Optional[str] = Query(None),
         skip: int = 0, limit: int = 100,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
 ):
     return await get_all_android_data(db, serial_number, skip, limit)
 
@@ -41,7 +41,7 @@ async def endpoint_update_android_data(
         serial_number: str,
         data: AndroidDataCreate,
         db: AsyncSession = Depends(get_db),
-        # current_user: User = Depends(require_authorized_user)
+        current_user = Depends(require_authorized_user)
 ):
     # if not has_android_sender_permission(current_user):
     #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
@@ -56,7 +56,7 @@ async def endpoint_update_android_data(
 async def endpoint_delete_android_data(
         serial_number: str,
         db: AsyncSession = Depends(get_db),
-        # current_user: User = Depends(require_authorized_user)
+        current_user = Depends(require_authorized_user)
 ):
     # if not has_android_sender_permission(current_user):
     #     raise HTTPException(status_code=403, detail="Доступ запрещен!")

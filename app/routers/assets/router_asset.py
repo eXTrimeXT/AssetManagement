@@ -106,10 +106,6 @@ async def get_assets(
         allowed_type_en_names=allowed_type_en_names,
     )
 
-    # for asset in assets:
-    #     active_users = await get_active_assignments_for_asset(db, asset.asset_id)
-    #     asset.current_users = active_users
-
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
     return PaginatedResponse(
@@ -121,7 +117,6 @@ async def get_assets(
         has_next=page < total_pages,
         has_previous=page > 1,
     )
-
 
 @router_assets.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(
@@ -137,7 +132,6 @@ async def get_asset(
     # Проверка прав напрямую через asset_type_id
     await _check_asset_permission(db, request, obj.asset_type_id, "read")
     return obj
-
 
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset_endpoint(
@@ -158,7 +152,6 @@ async def update_asset_endpoint(
     updated = await update_asset(db, asset_id, data, current_user.employee_id)
     return updated
 
-
 @router_assets.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_asset_endpoint(
         asset_id: int,
@@ -176,7 +169,6 @@ async def delete_asset_endpoint(
     success = await delete_asset(db, asset_id)
     if not success:
         raise HTTPException(status_code=404, detail="Актив не найден")
-
 
 @router_assets.get("/{asset_id}/children", response_model=List[AssetShortResponse])
 async def get_asset_children_endpoint(

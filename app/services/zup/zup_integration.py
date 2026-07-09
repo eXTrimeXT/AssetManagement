@@ -31,7 +31,6 @@ async def fetch_from_zup(endpoint: str) -> List[Dict[str, Any]]:
         logger.error(f"Ошибка при запросе к 1С-ЗУП {endpoint}: {e}")
         raise
 
-
 def parse_date(date_str: str):
     """Парсить дату из формата DD.MM.YYYY"""
     if not date_str or date_str == "":
@@ -41,7 +40,6 @@ def parse_date(date_str: str):
         return datetime.strptime(date_str, "%d.%m.%Y").date()
     except Exception:
         return None
-
 
 async def sync_employee_data(db: AsyncSession) -> Dict[str, int]:
     stats = {

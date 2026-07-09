@@ -8,7 +8,7 @@ from app.database.assets.asset_model import (
     update_asset_model, delete_asset_model
 )
 from app.schemas.assets.asset_model import AssetModelCreate, AssetModelUpdate, AssetModelResponse
-from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token # get_user_permissions_from_redis
+from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token
 from app.services.auth.permission_checker import check_permission
 from app.database.assets import get_asset_type_by_id
 
@@ -42,7 +42,6 @@ async def create_asset_model_endpoint(
 
     return await create_asset_model(db, data, current_user.employee_id)
 
-
 @router_asset_models.get("/", response_model=List[AssetModelResponse])
 async def get_asset_models(
         request: Request,
@@ -51,7 +50,7 @@ async def get_asset_models(
         model_name: Optional[str] = Query(None),
         class_id: Optional[int] = Query(None),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Получить список моделей активов.
@@ -79,13 +78,12 @@ async def get_asset_models(
 
     return accessible_models
 
-
 @router_asset_models.get("/{model_id}", response_model=AssetModelResponse)
 async def get_asset_model(
         model_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:
@@ -99,9 +97,7 @@ async def get_asset_model(
                 status_code=403,
                 detail=f"Нет права 'read' на тип актива '{obj.asset_class.asset_type.en_name}'"
             )
-
     return obj
-
 
 @router_asset_models.patch("/{model_id}", response_model=AssetModelResponse)
 async def update_asset_model_endpoint(
@@ -130,13 +126,12 @@ async def update_asset_model_endpoint(
     updated = await update_asset_model(db, model_id, data, current_user.employee_id)
     return updated
 
-
 @router_asset_models.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_asset_model_endpoint(
         model_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_model_by_id(db, model_id)
     if not obj:

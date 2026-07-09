@@ -16,7 +16,6 @@ async def get_location_by_id(db: AsyncSession, location_id: int) -> Optional[Loc
     )
     return result.scalar_one_or_none()
 
-
 async def get_locations_list(
         db: AsyncSession,
         skip: int = 0,
@@ -39,15 +38,13 @@ async def get_locations_list(
     result = await db.execute(query)
     return result.scalars().all()
 
-
-async def create_location(db: AsyncSession, location_in: LocationCreate, employee_id: str) -> Location:
+async def create_location(db: AsyncSession, location_in: LocationCreate, employee_id: str) -> Location | None:
     """Создать новую локацию"""
     db_location = Location(**location_in.model_dump(), created_by=employee_id)
     db.add(db_location)
     await db.commit()
     # Перезагружаем с creator для корректной сериализации
     return await get_location_by_id(db, db_location.location_id)
-
 
 async def update_location(db: AsyncSession, location_id: int, location_data: LocationUpdate) -> Optional[Location]:
     """Обновить локацию"""
@@ -60,7 +57,6 @@ async def update_location(db: AsyncSession, location_id: int, location_data: Loc
     await db.commit()
     # Перезагружаем с creator
     return await get_location_by_id(db, location_id)
-
 
 async def delete_location(db: AsyncSession, location_id: int) -> bool:
     """Удалить локацию"""

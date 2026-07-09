@@ -1,5 +1,5 @@
-from fastapi import Depends, HTTPException, Request
-from typing import Optional, List
+from fastapi import HTTPException, Request
+from typing import List
 from app.services.auth.auth_service import (
     get_user_permissions_from_token,
     get_token_from_request,

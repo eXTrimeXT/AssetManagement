@@ -3,22 +3,18 @@ from datetime import datetime
 from typing import Optional
 from app.schemas.assets.asset_type import AssetTypeResponse
 
-
 class AssetModelBase(BaseModel):
     name: str
     description: Optional[str] = None
     asset_type_id: Optional[int] = None
 
-
 class AssetModelCreate(AssetModelBase):
     pass
-
 
 class AssetModelUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     asset_type_id: Optional[int] = None
-
 
 class AssetModelResponse(AssetModelBase):
     model_id: int

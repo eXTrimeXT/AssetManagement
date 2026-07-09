@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base
 
-
 class Location(Base):
     """Модель локации (местоположения)"""
     __tablename__ = "locations"

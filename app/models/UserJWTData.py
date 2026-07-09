@@ -112,7 +112,7 @@ class UserJWTData:
                                 "read": bool(perm.get("read", False)),
                                 "write": bool(perm.get("write", False))
                             }
-            except:
+            except Exception:
                 pass
 
         # Timestamps
@@ -147,5 +147,5 @@ class UserJWTData:
             "is_expired": self.is_expired,
             "iat": self.iat,
             "exp": self.exp,
-            "ttl": (self.exp-self.iat) / 3600
+            "ttl": (self.exp - self.iat) / 3600
         }

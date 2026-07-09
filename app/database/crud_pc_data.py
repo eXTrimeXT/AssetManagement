@@ -1,7 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.PCData import PCData
-# from app.models.User import User
 from app.schemas.pc_data.pc_data_schemas import PCDataCreate
 from app.middleware.LoggingMiddleware import logger
 

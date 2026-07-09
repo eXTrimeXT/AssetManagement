@@ -4,7 +4,6 @@ from typing import Optional, List
 from app.schemas.assets.asset_assignment import AssetUserResponse
 from app.schemas.locations.LocationResponse import LocationResponse
 
-
 class AssetBase(BaseModel):
     name: str
     inventory_id: str
@@ -45,10 +44,8 @@ class AssetUpdate(BaseModel):
     location_id: Optional[int] = None
     prepared_by: Optional[str] = None
     checked_by: Optional[str] = None
-
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
-
 
 class AssetResponse(AssetBase):
     asset_id: int
@@ -57,20 +54,16 @@ class AssetResponse(AssetBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     # model: Optional["AssetModelResponse"] = None
-    # asset_type: Optional[AssetTypeResponse] = None
     location: Optional[LocationResponse] = None
     parent: Optional["AssetResponse"] = None
     asset_type_name: Optional[str] = None
-
     users: Optional[List[AssetUserResponse]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
-
 class AssetShortResponse(AssetBase):
     asset_id: int
     # model: Optional["AssetModelResponse"] = None
-    # asset_type: Optional[AssetTypeResponse] = None
     asset_type_name: Optional[str] = None
     location: Optional[LocationResponse] = None
 

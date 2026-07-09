@@ -80,6 +80,7 @@ async def get_all_assignments(
         employee_id: str = Query(None, description="Фильтр по табельному номеру"),
         active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """Получить привязки с фильтрацией по asset_id и/или employee_id."""
     if asset_id is not None:
@@ -102,6 +103,7 @@ async def get_asset_assignments(
         asset_id: int,
         active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """Получить все привязки конкретного актива."""
     return await get_assignments_by_asset(db, asset_id, active_only)
@@ -116,6 +118,7 @@ async def get_employee_assignments(
         employee_id: str,
         active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """Получить все привязки конкретного сотрудника."""
     return await get_assignments_by_employee(db, employee_id, active_only)

@@ -10,13 +10,10 @@ from contextlib import asynccontextmanager
 # Middleware's
 # Импорт класса логирования в middleware
 from app.middleware.LoggingMiddleware import LoggingMiddleware
-# Middleware для автоматической авторизации
+# Middleware для проверки авторизации
 from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
 
 # Импорт роутеров
-# Redis
-# from app.services.redis.redis_client import router_redis
-
 # Роутеры для данных о ПК и андроид устройств
 from app.routers.router_pc_data import router_pc_data
 from app.routers.router_android_data import router_android_data

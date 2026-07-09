@@ -1,7 +1,7 @@
 import os
 import jwt
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.models.zup.employee import Employee
 from app.database.connection import get_db
 from app.database.zup.crud_zup_employees import get_employee_by_login_or_email
 from app.services.zup.zup_integration import sync_all_data
+from models.zup import Employee
 
 logger = logging.getLogger(__name__)
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")

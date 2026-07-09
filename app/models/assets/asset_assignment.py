@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.models.Base import Base
 
-
 class AssetAssignment(Base):
     """Связь актива с пользователем (история назначений)"""
     __tablename__ = "asset_assignments"

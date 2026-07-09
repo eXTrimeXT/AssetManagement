@@ -77,15 +77,10 @@ async def get_hierarchy_departments(
     if not chain:
         return None
 
-    # Находим society — последний элемент, у которого parent_guid == NULL_GUID
-    # society = None
-    # if chain and chain[-1].parent_guid == NULL_GUID:
-    #     society = chain.pop()  # Удаляем society из цепочки
-
-    def to_workplace(dept: Optional[ZupDepartment]) -> Optional[WorkplaceResponse]:
-        if not dept:
+    def to_workplace(department: Optional[ZupDepartment]) -> Optional[WorkplaceResponse]:
+        if not department:
             return None
-        return WorkplaceResponse.model_validate(dept)
+        return WorkplaceResponse.model_validate(department)
 
     return DepartmentDivisionGroupResponse(
         society=to_workplace(chain[-1]) if len(chain) >= 1 else None,

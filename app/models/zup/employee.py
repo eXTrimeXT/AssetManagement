@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base
 
-
 class Employee(Base):
     """Модель сотрудника из 1С-ЗУП"""
     __tablename__ = "zup_employees"

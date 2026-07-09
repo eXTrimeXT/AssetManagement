@@ -2,7 +2,6 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 
-
 class User(BaseModel):
     username: str
     userpath: str
@@ -68,6 +67,5 @@ class PCDataCreate(BaseModel):
 
 class PCDataResponse(PCDataCreate):
     id: int
-    # user_id: Optional[int] = None
     user_tab_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)

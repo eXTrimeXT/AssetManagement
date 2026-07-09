@@ -140,19 +140,6 @@ async def get_assets_list(
 
     return assets, total
 
-# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
-#     obj = await get_asset_by_id(db, asset_id)
-#     if not obj:
-#         return None
-#
-#     update_data = data.model_dump(exclude_unset=True)
-#     for key, value in update_data.items():
-#         setattr(obj, key, value)
-#     obj.updated_by = employee_id
-#
-#     await db.commit()
-#     return await get_asset_by_id(db, asset_id)
-
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:

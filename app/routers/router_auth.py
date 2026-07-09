@@ -15,7 +15,6 @@ from app.models.UserJWTData import UserJWTData
 from app.models.zup.employee import Employee
 from app.services.auth.external_auth import external_login
 from app.database.zup import get_employee_by_login_or_email
-from app.services.auth.auth_service import require_authorized_user
 
 logger = logging.getLogger(__name__)
 router_auth = APIRouter(tags=["auth"])

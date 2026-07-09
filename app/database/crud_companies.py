@@ -17,14 +17,12 @@ async def get_company_by_id(db: AsyncSession, company_id: int) -> Optional[Compa
     )
     return result.scalar_one_or_none()
 
-
-async def create_company(db: AsyncSession, company_in: CompanyCreate, employee_id: str) -> Company:
+async def create_company(db: AsyncSession, company_in: CompanyCreate, employee_id: str) -> Company | None:
     db_company = Company(**company_in.model_dump(), created_by=employee_id)
     db.add(db_company)
     await db.commit()
     # Перезагружаем с связями
     return await get_company_by_id(db, db_company.company_id)
-
 
 async def update_company(db: AsyncSession, company_id: int, company_data: CompanyUpdate) -> Optional[Company]:
     company = await get_company_by_id(db, company_id)
@@ -35,7 +33,6 @@ async def update_company(db: AsyncSession, company_id: int, company_data: Compan
         setattr(company, key, value)
     await db.commit()
     return await get_company_by_id(db, company_id)
-
 
 async def get_companies_list(
         db: AsyncSession,

@@ -1,12 +1,11 @@
 from typing import Optional, List
 
 from pydantic import computed_field
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 from app.models.Base import Base
 from app.schemas.assets.asset_assignment import AssetUserResponse
-
 
 class Asset(Base):
     __tablename__ = "assets"

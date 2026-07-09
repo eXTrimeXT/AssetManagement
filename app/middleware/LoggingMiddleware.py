@@ -15,7 +15,6 @@ from starlette.responses import Response
 
 from app.services.auth.auth_service import extract_login_from_request
 
-# from app.services.auth.auth_service import extract_user_info_from_request
 
 # === КОНФИГУРАЦИЯ ===
 PROJECT_ROOT = Path("/app")
@@ -107,7 +106,6 @@ class ConsoleFormatter(logging.Formatter):
                     filtered.append(f"{color}{clean}{self.COLORS['RESET']}")
             if filtered:
                 parts.append("\n" + "\n".join(filtered))
-
         return " ".join(parts)
 
 # === ФОРМАТТЕР ДЛЯ ФАЙЛА (JSON) ===
@@ -193,7 +191,6 @@ def setup_logging():
 setup_logging()
 logger = logging.getLogger("app.middleware")
 
-
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = str(uuid.uuid4())
@@ -211,8 +208,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             try:
                 body = await request.body()
                 raw_body = json.loads(body.decode("utf-8"))
-                request_body = _sanitize_data(raw_body)  # ← Маскируем перед логированием
-                request._body = body  # ← Оригинальное тело сохраняем для дальнейшего использования
+                request_body = _sanitize_data(raw_body)  # Маскируем перед логированием
+                request._body = body  # Оригинальное тело сохраняем для дальнейшего использования
             except Exception:
                 pass
 

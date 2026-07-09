@@ -7,8 +7,8 @@ from app.models.AndroidData import AndroidData
 from app.schemas.android_data.android_data_schemas import AndroidDataCreate
 
 async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreate):
-    result = await db.execute(select(AndroidData).where(AndroidData.serial_number == data.serial_number))
-    db_record = result.scalars().first()
+    record = await db.execute(select(AndroidData).where(AndroidData.serial_number == data.serial_number))
+    db_record = record.scalars().first()
 
     payload = {
         "device": data.device.model_dump(),

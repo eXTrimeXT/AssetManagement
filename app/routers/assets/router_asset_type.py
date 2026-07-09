@@ -14,7 +14,6 @@ from app.services.auth.permission_checker import check_permission
 logger = logging.getLogger(__name__)
 router_asset_types = APIRouter(prefix="/assets-types", tags=["Asset Types"])
 
-
 @router_asset_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset_type_endpoint(
         data: AssetTypeCreate,
@@ -61,9 +60,7 @@ async def get_asset_types(
         has_perm = await check_permission(request, asset_type.en_name, "read")
         if has_perm:
             accessible_types.append(asset_type)
-
     return accessible_types
-    # return all_types
 
 
 @router_asset_types.get("/{asset_type_id}", response_model=AssetTypeResponse)
@@ -71,20 +68,19 @@ async def get_asset_type(
         asset_type_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     obj = await get_asset_type_by_id(db, asset_type_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Тип актива не найден")
 
     # Проверяем право read на конкретный тип
-    # has_perm = await check_permission(request, obj.en_name, "read")
-    # if not has_perm:
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail=f"Нет права 'read' на тип актива '{obj.en_name}'"
-    #     )
-
+    has_perm = await check_permission(request, obj.en_name, "read")
+    if not has_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права 'read' на тип актива '{obj.en_name}'"
+        )
     return obj
 
 
@@ -94,7 +90,7 @@ async def update_asset_type_endpoint(
         data: AssetTypeUpdate,
         request: Request,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Обновить тип актива.
@@ -117,7 +113,6 @@ async def update_asset_type_endpoint(
 
     updated = await update_asset_type(db, asset_type_id, data)
     return updated
-
 
 @router_asset_types.delete("/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_asset_type_endpoint(

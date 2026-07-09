@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base
 
-
 class VendorClass(Base):
     """Модель класса поставщика"""
     __tablename__ = "vendor_classes"

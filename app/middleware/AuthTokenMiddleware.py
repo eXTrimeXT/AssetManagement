@@ -2,11 +2,7 @@ import logging
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
-from app.services.auth.auth_service import (
-    get_user_from_token,
-    TokenValidationError,
-    JWT_SECRET_KEY,
-)
+from app.services.auth.auth_service import get_user_from_token, TokenValidationError
 
 logger = logging.getLogger(__name__)
 

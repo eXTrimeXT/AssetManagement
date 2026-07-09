@@ -21,7 +21,7 @@ async def get_asset_models_list(db: AsyncSession, skip: int = 0, limit: int = 50
     return result.scalars().all()
 
 
-async def create_asset_model(db: AsyncSession, model_in: AssetModelCreate, employee_id: str) -> AssetModel:
+async def create_asset_model(db: AsyncSession, model_in: AssetModelCreate, employee_id: str) -> AssetModel | None:
     db_model = AssetModel(**model_in.model_dump(), created_by=employee_id, updated_by=employee_id)
     db.add(db_model)
     await db.commit()

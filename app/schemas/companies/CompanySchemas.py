@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from app.schemas.locations.LocationResponse import LocationResponse
 
-
 class CompanyBase(BaseModel):
     company_name: str = Field(..., min_length=2, max_length=255, description="Название компании")
     gen_director: Optional[str] = Field(None, max_length=150, description="Генеральный директор (ФИО)")

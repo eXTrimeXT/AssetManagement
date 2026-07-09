@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional, Sequence, List, Any, Tuple
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +16,6 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
     await db.commit()
     await db.refresh(db_obj)
     return await get_asset_by_id(db, db_obj.asset_id)
-
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(
@@ -38,7 +38,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .where(Asset.asset_id == asset_id)
     )
     return result.scalar_one_or_none()
-
 
 def _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
@@ -69,7 +68,6 @@ def _apply_assets_filters(
 
     return query
 
-
 async def get_assets_count(
         db: AsyncSession,
         name: Optional[str] = None,
@@ -92,7 +90,6 @@ async def get_assets_count(
     )
     result = await db.execute(query)
     return result.scalar_one()
-
 
 async def get_assets_list(
         db: AsyncSession,
@@ -143,20 +140,81 @@ async def get_assets_list(
 
     return assets, total
 
+# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
+#     obj = await get_asset_by_id(db, asset_id)
+#     if not obj:
+#         return None
+#
+#     update_data = data.model_dump(exclude_unset=True)
+#     for key, value in update_data.items():
+#         setattr(obj, key, value)
+#     obj.updated_by = employee_id
+#
+#     await db.commit()
+#     return await get_asset_by_id(db, asset_id)
 
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
         return None
 
-    update_data = data.model_dump(exclude_unset=True)
+    # Извлекаем users отдельно, чтобы не передавать в setattr
+    update_data = data.model_dump(exclude_unset=True, exclude={"users"})
+
+    # Обновляем поля актива
     for key, value in update_data.items():
         setattr(obj, key, value)
     obj.updated_by = employee_id
 
+    # Синхронизация привязок пользователей
+    if data.users is not None:
+        await _sync_asset_users(db, asset_id, data.users, employee_id)
+
     await db.commit()
     return await get_asset_by_id(db, asset_id)
 
+
+async def _sync_asset_users(
+        db: AsyncSession,
+        asset_id: int,
+        users: list,
+        assigned_by: str
+) -> None:
+    """
+    Синхронизация привязок пользователей к активу.
+    - selected=True: создать привязку (если не существует активная)
+    - selected=False: закрыть активную привязку (если существует)
+    """
+    for user_data in users:
+        employee_id = user_data.employee_id
+        selected = user_data.selected
+
+        # Проверяем, есть ли активная привязка для этого сотрудника
+        result = await db.execute(
+            select(AssetAssignment).where(
+                AssetAssignment.asset_id == asset_id,
+                AssetAssignment.employee_id == employee_id,
+                AssetAssignment.end_date.is_(None)
+            )
+        )
+        active_assignment = result.scalar_one_or_none()
+
+        if selected:
+            # Привязать пользователя
+            if not active_assignment:
+                # Создаем новую привязку
+                new_assignment = AssetAssignment(
+                    asset_id=asset_id,
+                    employee_id=employee_id,
+                    start_date=date.today(),
+                    end_date=None,
+                    assigned_by=assigned_by
+                )
+                db.add(new_assignment)
+        else:
+            # Отвязать пользователя
+            if active_assignment:
+                active_assignment.end_date = date.today()
 
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     obj = await get_asset_by_id(db, asset_id)
@@ -166,7 +224,6 @@ async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     await db.delete(obj)
     await db.commit()
     return True
-
 
 async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
     result = await db.execute(

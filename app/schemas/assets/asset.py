@@ -25,6 +25,11 @@ class AssetBase(BaseModel):
 class AssetCreate(AssetBase):
     pass
 
+# Схема для обновления привязок пользователей
+class AssetUserUpdate(BaseModel):
+    """Схема для привязки/отвязки пользователя от актива"""
+    employee_id: str
+    selected: bool
 
 class AssetUpdate(BaseModel):
     name: Optional[str] = None
@@ -41,6 +46,9 @@ class AssetUpdate(BaseModel):
     location_id: Optional[int] = None
     prepared_by: Optional[str] = None
     checked_by: Optional[str] = None
+
+    # Для синхронизации привязок пользователей
+    users: Optional[List[AssetUserUpdate]] = None
 
 
 class AssetResponse(AssetBase):

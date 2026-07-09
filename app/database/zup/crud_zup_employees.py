@@ -1,7 +1,7 @@
 from typing import Optional, Sequence, List, Tuple
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, aliased
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.schemas.zup.employee_schemas import EmployeeCreate, EmployeeUpdate
@@ -74,7 +74,8 @@ async def get_employees_count(
         middle_name_en: Optional[str] = None,
         department_guid: Optional[str] = None,
         position_guid: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        search_department: Optional[str] = None
 ) -> int:
     query = select(func.count(Employee.employee_id))
     if employee_id:
@@ -100,8 +101,137 @@ async def get_employees_count(
             query = query.where(Employee.dismissal_date.is_(None))
         else:
             query = query.where(Employee.dismissal_date.isnot(None))
+    if search_department:
+        query = _apply_department_search(query, search_department)
+
     result = await db.execute(query)
     return result.scalar() or 0
+
+
+# async def get_employees_list(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         employee_id: Optional[str] = None,
+#         last_name: Optional[str] = None,
+#         first_name: Optional[str] = None,
+#         middle_name: Optional[str] = None,
+#         last_name_en: Optional[str] = None,
+#         first_name_en: Optional[str] = None,
+#         middle_name_en: Optional[str] = None,
+#         department_guid: Optional[str] = None,
+#         position_guid: Optional[str] = None,
+#         is_active: Optional[bool] = None,
+#         search_department: Optional[str] = None
+# ) -> Tuple[Sequence[Employee], int]:
+#     """
+#     Получить страницу сотрудников с фильтрацией.
+#     Возвращает кортеж: (список сотрудников, общее количество).
+#
+#     После загрузки заполняет вычисляемые поля:
+#     - group (1-й уровень)
+#     - division (2-й уровень, parent от group)
+#     - department (3-й уровень, parent от division)
+#     """
+#     total = await get_employees_count(
+#         db, employee_id, last_name, first_name, middle_name,
+#         last_name_en, first_name_en, middle_name_en,
+#         department_guid, position_guid, is_active
+#     )
+#
+#     skip = (page - 1) * page_size
+#
+#     # Загружаем сотрудников с position и цепочкой parent (3 уровня)
+#     query = (
+#         select(Employee)
+#         .options(
+#             selectinload(Employee.position),
+#             selectinload(Employee.group).options(
+#                 selectinload(ZupDepartment.parent).options(
+#                     selectinload(ZupDepartment.parent)
+#                 )
+#             )
+#         )
+#     )
+#
+#     if employee_id:
+#         query = query.where(Employee.employee_id == employee_id)
+#     if last_name:
+#         query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
+#     if first_name:
+#         query = query.where(Employee.first_name.ilike(f"%{first_name}%"))
+#     if middle_name:
+#         query = query.where(Employee.middle_name.ilike(f"%{middle_name}%"))
+#     if last_name_en:
+#         query = query.where(Employee.last_name_en.ilike(f"%{last_name_en}%"))
+#     if first_name_en:
+#         query = query.where(Employee.first_name_en.ilike(f"%{first_name_en}%"))
+#     if middle_name_en:
+#         query = query.where(Employee.middle_name_en.ilike(f"%{middle_name_en}%"))
+#     if department_guid:
+#         query = query.where(Employee.department_guid == department_guid)
+#     if position_guid:
+#         query = query.where(Employee.position_guid == position_guid)
+#     if is_active is not None:
+#         if is_active:
+#             query = query.where(Employee.dismissal_date.is_(None))
+#         else:
+#             query = query.where(Employee.dismissal_date.isnot(None))
+#
+#     query = query.order_by(Employee.employee_id)
+#     query = query.offset(skip).limit(page_size)
+#
+#     result = await db.execute(query)
+#     employees = result.scalars().all()
+#
+#     # # Раскладываем иерархию по плоским полям
+#     # for emp in employees:
+#     #     group = emp.group  # 1-й уровень (группа)
+#     #     division = group.parent if group else None  # 2-й уровень (отдел)
+#     #     department = division.parent if division else None  # 3-й уровень (департамент)
+#     #
+#     #     emp.group = group
+#     #     emp.workplace = group
+#     #     emp.division = division
+#     #     emp.department = department
+#
+#     for emp in employees:
+#         ddgr: Optional[DepartmentDivisionGroupResponse] = await get_hierarchy_departments(db, emp.department_guid)
+#         emp.society = ddgr.society if ddgr.society else None
+#         emp.department = ddgr.department if ddgr.department else None
+#         emp.division = ddgr.division if ddgr.division else None
+#         emp.group = ddgr.group if ddgr.group else None
+#
+#     return employees, total
+
+def _apply_department_search(query, search_department: str):
+    """
+    Вспомогательная функция: делает JOIN на 4 уровня иерархии подразделений
+    и применяет поиск по name, name_en и short_name.
+    """
+    d1 = aliased(ZupDepartment, name="d1") # Группа
+    d2 = aliased(ZupDepartment, name="d2") # Отдел
+    d3 = aliased(ZupDepartment, name="d3") # Департамент
+    d4 = aliased(ZupDepartment, name="d4") # Общество
+
+    # Последовательно джойним родителя
+    query = query.join(d1, Employee.department_guid == d1.guid) \
+        .outerjoin(d2, d1.parent_guid == d2.guid) \
+        .outerjoin(d3, d2.parent_guid == d3.guid) \
+        .outerjoin(d4, d3.parent_guid == d4.guid)
+
+    search_term = f"%{search_department}%"
+
+    # Ищем совпадение хотя бы на одном из уровней
+    query = query.where(
+        or_(
+            d1.name.ilike(search_term), d1.name_en.ilike(search_term), d1.short_name.ilike(search_term),
+            d2.name.ilike(search_term), d2.name_en.ilike(search_term), d2.short_name.ilike(search_term),
+            d3.name.ilike(search_term), d3.name_en.ilike(search_term), d3.short_name.ilike(search_term),
+            d4.name.ilike(search_term), d4.name_en.ilike(search_term), d4.short_name.ilike(search_term),
+        )
+    )
+    return query
 
 
 async def get_employees_list(
@@ -117,33 +247,28 @@ async def get_employees_list(
         middle_name_en: Optional[str] = None,
         department_guid: Optional[str] = None,
         position_guid: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        search_department: Optional[str] = None
 ) -> Tuple[Sequence[Employee], int]:
-    """
-    Получить страницу сотрудников с фильтрацией.
-    Возвращает кортеж: (список сотрудников, общее количество).
 
-    После загрузки заполняет вычисляемые поля:
-    - group (1-й уровень)
-    - division (2-й уровень, parent от group)
-    - department (3-й уровень, parent от division)
-    """
     total = await get_employees_count(
         db, employee_id, last_name, first_name, middle_name,
         last_name_en, first_name_en, middle_name_en,
-        department_guid, position_guid, is_active
+        department_guid, position_guid, is_active, search_department
     )
 
     skip = (page - 1) * page_size
 
-    # Загружаем сотрудников с position и цепочкой parent (3 уровня)
+    # Подгружаем иерархию через selectinload (до 4 уровней)
     query = (
         select(Employee)
         .options(
             selectinload(Employee.position),
             selectinload(Employee.group).options(
                 selectinload(ZupDepartment.parent).options(
-                    selectinload(ZupDepartment.parent)
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent)
+                    )
                 )
             )
         )
@@ -172,33 +297,49 @@ async def get_employees_list(
             query = query.where(Employee.dismissal_date.is_(None))
         else:
             query = query.where(Employee.dismissal_date.isnot(None))
+    # Применяем поиск по подразделениям
+    if search_department:
+        query = _apply_department_search(query, search_department)
 
-    query = query.order_by(Employee.employee_id)
-    query = query.offset(skip).limit(page_size)
+    query = query.order_by(Employee.employee_id).offset(skip).limit(page_size)
 
     result = await db.execute(query)
-    employees = result.scalars().all()
+    employees = result.scalars().unique().all()
 
-    # # Раскладываем иерархию по плоским полям
-    # for emp in employees:
-    #     group = emp.group  # 1-й уровень (группа)
-    #     division = group.parent if group else None  # 2-й уровень (отдел)
-    #     department = division.parent if division else None  # 3-й уровень (департамент)
-    #
-    #     emp.group = group
-    #     emp.workplace = group
-    #     emp.division = division
-    #     emp.department = department
-
+    # Извлекаем иерархию из уже подгруженных объектов (без N+1 запросов!)
     for emp in employees:
-        ddgr: Optional[DepartmentDivisionGroupResponse] = await get_hierarchy_departments(db, emp.department_guid)
-        emp.society = ddgr.society if ddgr.society else None
-        emp.department = ddgr.department if ddgr.department else None
-        emp.division = ddgr.division if ddgr.division else None
-        emp.group = ddgr.group if ddgr.group else None
+        hierarchy_chain = []
+        current = emp.group  # Непосредственное подразделение сотрудника
+
+        # Безопасный обход иерархии без ленивой загрузки
+        while current is not None:
+            hierarchy_chain.append(current)
+
+            # Проверяем, достигли ли мы корня (нулевой parent_guid)
+            if not current.parent_guid or current.parent_guid == "00000000-0000-0000-0000-000000000000":
+                break
+
+            # Проверяем, загружен ли parent через SQLAlchemy Inspector
+            # Это предотвращает попытку ленивой загрузки
+            insp = inspect(current)
+            parent_attr = insp.attrs.get('parent')
+
+            if parent_attr is None or parent_attr.loaded_value is None:
+                # Parent не загружен - прекращаем обход
+                break
+
+            current = parent_attr.loaded_value
+
+        # Реверсируем цепочку: [0] — корень (Общество), [-1] — подразделение сотрудника
+        hierarchy_chain.reverse()
+
+        # Заполняем поля строго сверху вниз без пробелов
+        emp.society = hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None
+        emp.department = hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None
+        emp.division = hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None
+        emp.group = hierarchy_chain[3] if len(hierarchy_chain) >= 4 else None
 
     return employees, total
-
 
 async def upsert_employee(db: AsyncSession, employee_data: dict) -> Employee:
     employee = await get_employee_by_guid(db, employee_data["guid"])

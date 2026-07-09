@@ -5,6 +5,8 @@ from sqlalchemy.orm import selectinload
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.schemas.zup.employee_schemas import EmployeeCreate, EmployeeUpdate
+from app.database.zup.crud_zup_departments import get_hierarchy_departments
+from app.schemas.zup import DepartmentDivisionGroupResponse
 
 
 async def get_employee_by_guid(db: AsyncSession, guid: str) -> Optional[Employee]:
@@ -177,16 +179,23 @@ async def get_employees_list(
     result = await db.execute(query)
     employees = result.scalars().all()
 
-    # Раскладываем иерархию по плоским полям
-    for emp in employees:
-        group = emp.group  # 1-й уровень (группа)
-        division = group.parent if group else None  # 2-й уровень (отдел)
-        department = division.parent if division else None  # 3-й уровень (департамент)
+    # # Раскладываем иерархию по плоским полям
+    # for emp in employees:
+    #     group = emp.group  # 1-й уровень (группа)
+    #     division = group.parent if group else None  # 2-й уровень (отдел)
+    #     department = division.parent if division else None  # 3-й уровень (департамент)
+    #
+    #     emp.group = group
+    #     emp.workplace = group
+    #     emp.division = division
+    #     emp.department = department
 
-        emp.group = group
-        emp.workplace = group
-        emp.division = division
-        emp.department = department
+    for emp in employees:
+        ddgr: Optional[DepartmentDivisionGroupResponse] = await get_hierarchy_departments(db, emp.department_guid)
+        emp.society = ddgr.society if ddgr.society else None
+        emp.department = ddgr.department if ddgr.department else None
+        emp.division = ddgr.division if ddgr.division else None
+        emp.group = ddgr.group if ddgr.group else None
 
     return employees, total
 

@@ -5,7 +5,7 @@ from app.schemas.zup.position_schemas import (
     PositionCreate, PositionUpdate, PositionResponse
 )
 from app.schemas.zup.department_schemas import (
-    DepartmentCreate, DepartmentUpdate, GroupResponse
+    DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
 )
 from app.schemas.zup.manager_schemas import (
     ManagerCreate, ManagerResponse
@@ -14,6 +14,6 @@ from app.schemas.zup.manager_schemas import (
 __all__ = [
     "EmployeeCreate", "EmployeeUpdate", "EmployeeResponse", "EmployeeShortResponse",
     "PositionCreate", "PositionUpdate", "PositionResponse",
-    "DepartmentCreate", "DepartmentUpdate", "GroupResponse",
+    "DepartmentCreate", "DepartmentUpdate", "WorkplaceResponse", "DepartmentDivisionGroupResponse",
     "ManagerCreate", "ManagerResponse",
 ]

@@ -7,11 +7,11 @@ from typing import List, Optional
 from app.database.connection import get_db
 from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeShortResponse
 from app.schemas.zup.position_schemas import PositionResponse
-from app.schemas.zup.department_schemas import GroupResponse
+from app.schemas.zup.department_schemas import WorkplaceResponse, DepartmentDivisionGroupResponse
 from app.schemas.zup.manager_schemas import ManagerResponse
 from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid, get_employee_by_id
 from app.database.zup.crud_zup_positions import get_positions_list
-from app.database.zup.crud_zup_departments import get_departments_list
+from app.database.zup.crud_zup_departments import get_departments_list, get_hierarchy_departments
 from app.database.zup.crud_zup_managers import get_managers_list
 from app.services.zup.zup_integration import sync_all_data, sync_employee_data
 from app.services.auth.auth_service import require_authorized_user
@@ -24,7 +24,7 @@ router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
 @router_zup.post("/sync", summary="Синхронизировать все данные из 1С-ЗУП")
 async def sync_zup_data(
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Универсальный эндпоинт для заполнения/обновления всех таблиц из 1С-ЗУП.
@@ -44,7 +44,7 @@ async def sync_zup_data(
 @router_zup.post("/sync-employee", summary="Синхронизировать все данные сотрудников из 1С-ЗУП")
 async def sync_zup_employee_data(
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Универсальный эндпоинт для заполнения/обновления всех таблиц из 1С-ЗУП.
@@ -121,7 +121,7 @@ async def get_employees(
 async def get_employee(
         guid: str,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Получить полную информацию о сотруднике по GUID"""
     employee = await get_employee_by_guid(db, guid)
@@ -133,7 +133,7 @@ async def get_employee(
 async def get_employee(
         id: str,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Получить полную информацию о сотруднике по ID"""
     employee = await get_employee_by_id(db, id)
@@ -147,29 +147,53 @@ async def get_positions(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Получить список должностей"""
     return await get_positions_list(db, skip, limit)
 
 
-@router_zup.get("/departments", response_model=List[GroupResponse], summary="Получить список подразделений")
+@router_zup.get("/departments", response_model=List[WorkplaceResponse], summary="Получить список подразделений")
 async def get_departments(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Получить список подразделений с иерархией"""
     return await get_departments_list(db, skip, limit)
 
+
+@router_zup.get(
+    "/hierarchy-departments",
+    response_model=DepartmentDivisionGroupResponse,
+    summary="Получить иерархию подразделений по GUID"
+)
+async def get_hierarchy_departments_endpoint(
+        guid: str = Query(..., description="GUID подразделения (группы)"),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Получить плоскую иерархию подразделений от группы до общества.
+
+    Возвращает структуру:
+    - group: группа (исходный GUID)
+    - division: отдел (parent от группы)
+    - department: департамент (parent от отдела)
+    - society: общество (parent от департамента, у него parent_guid == 00000000-...)
+    """
+    result = await get_hierarchy_departments(db, guid)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Подразделение не найдено")
+    return result
 
 @router_zup.get("/managers", response_model=List[ManagerResponse], summary="Получить список связей руководитель-сотрудник")
 async def get_managers(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Получить список связей сотрудник-руководитель"""
     return await get_managers_list(db, skip, limit)

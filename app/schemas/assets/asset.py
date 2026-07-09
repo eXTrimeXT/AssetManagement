@@ -1,11 +1,8 @@
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
 from typing import Optional, List
-from app.schemas.assets.asset_model import AssetModelResponse
-from app.schemas.assets.asset_type import AssetTypeResponse
 from app.schemas.assets.asset_assignment import AssetUserResponse
 from app.schemas.locations.LocationResponse import LocationResponse
-from app.schemas.zup import EmployeeShortResponse
 
 
 class AssetBase(BaseModel):
@@ -56,24 +53,9 @@ class AssetResponse(AssetBase):
     # asset_type: Optional[AssetTypeResponse] = None
     location: Optional[LocationResponse] = None
     parent: Optional["AssetResponse"] = None
-
     asset_type_name: Optional[str] = None
 
     users: Optional[List[AssetUserResponse]] = None
-
-    # @computed_field
-    # @property
-    # def users(self) -> List[AssetUserResponse]:
-    #     """Список активных пользователей, привязанных к активу"""
-    #     return [
-    #         AssetUserResponse(
-    #             employee_id=a.employee_id,
-    #             start_date=a.start_date,
-    #             end_date=a.end_date,
-    #         )
-    #         for a in self.assignments
-    #         if a.end_date is None  # Только активные привязки
-    #     ]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,13 +65,6 @@ class AssetShortResponse(AssetBase):
     # model: Optional["AssetModelResponse"] = None
     # asset_type: Optional[AssetTypeResponse] = None
     asset_type_name: Optional[str] = None
-    # @computed_field
-    # @property
-    # def asset_type_name(self) -> Optional[str]:
-    #     if self.asset_type:
-    #         return self.asset_type.name
-    #     return None
-
     location: Optional[LocationResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

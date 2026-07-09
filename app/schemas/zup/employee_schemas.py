@@ -2,9 +2,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from datetime import date, datetime
 
-from app.schemas.zup.department_schemas import DepartmentResponse
-from app.schemas.zup.department_schemas import DivisionResponse
-from app.schemas.zup.department_schemas import GroupResponse
+from app.schemas.zup.department_schemas import WorkplaceResponse
 from app.schemas.zup.position_schemas import PositionResponse
 
 
@@ -82,9 +80,10 @@ class EmployeeShortResponse(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
 
-    workplace: Optional[GroupResponse] = None
-    # division: Optional[DivisionResponse] = None
-    # department: Optional[DepartmentResponse] = None
+    society: Optional[WorkplaceResponse] = None
+    department: Optional[WorkplaceResponse] = None
+    division: Optional[WorkplaceResponse] = None
+    group: Optional[WorkplaceResponse] = None
 
     position: Optional[PositionResponse] = None
 

@@ -12,7 +12,6 @@ from app.database.crud_android_data import (
 )
 from app.middleware.LoggingMiddleware import logger
 from app.services.auth.auth_service import require_authorized_user
-from services.auth.permission_checker import check_permission
 
 router_android_data = APIRouter(prefix="/android-data", tags=["android_data"])
 

@@ -182,39 +182,38 @@ async def _sync_asset_users(
 ) -> None:
     """
     Синхронизация привязок пользователей к активу.
-    - selected=True: создать привязку (если не существует активная)
-    - selected=False: закрыть активную привязку (если существует)
+    - Пользователи из массива users привязываются
+    - Все остальные активные привязки закрываются
     """
-    for user_data in users:
-        employee_id = user_data.employee_id
-        selected = user_data.selected
+    # Получаем список employee_id из запроса
+    requested_employee_ids = {user.employee_id for user in users}
 
-        # Проверяем, есть ли активная привязка для этого сотрудника
-        result = await db.execute(
-            select(AssetAssignment).where(
-                AssetAssignment.asset_id == asset_id,
-                AssetAssignment.employee_id == employee_id,
-                AssetAssignment.end_date.is_(None)
-            )
+    # Получаем все активные привязки для этого актива
+    result = await db.execute(
+        select(AssetAssignment).where(
+            AssetAssignment.asset_id == asset_id,
+            AssetAssignment.end_date.is_(None)
         )
-        active_assignment = result.scalar_one_or_none()
+    )
+    active_assignments = result.scalars().all()
+    active_employee_ids = {assignment.employee_id for assignment in active_assignments}
 
-        if selected:
-            # Привязать пользователя
-            if not active_assignment:
-                # Создаем новую привязку
-                new_assignment = AssetAssignment(
-                    asset_id=asset_id,
-                    employee_id=employee_id,
-                    start_date=date.today(),
-                    end_date=None,
-                    assigned_by=assigned_by
-                )
-                db.add(new_assignment)
-        else:
-            # Отвязать пользователя
-            if active_assignment:
-                active_assignment.end_date = date.today()
+    # Привязываем новых пользователей
+    for employee_id in requested_employee_ids:
+        if employee_id not in active_employee_ids:
+            new_assignment = AssetAssignment(
+                asset_id=asset_id,
+                employee_id=employee_id,
+                start_date=date.today(),
+                end_date=None,
+                assigned_by=assigned_by
+            )
+            db.add(new_assignment)
+
+    # Отвязываем пользователей, которых нет в запросе
+    for assignment in active_assignments:
+        if assignment.employee_id not in requested_employee_ids:
+            assignment.end_date = date.today()
 
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     obj = await get_asset_by_id(db, asset_id)

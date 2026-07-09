@@ -29,7 +29,6 @@ class AssetCreate(AssetBase):
 class AssetUserUpdate(BaseModel):
     """Схема для привязки/отвязки пользователя от актива"""
     employee_id: str
-    selected: bool
 
 class AssetUpdate(BaseModel):
     name: Optional[str] = None

@@ -26,6 +26,13 @@ class Asset(Base):
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
     model_name = Column(String(300), nullable=True)
+
+    # Временные текстовые поля
+    parent_name = Column(String(100), nullable=True)
+    manufacturer_name = Column(String(100), nullable=True)
+    vendor_name = Column(String(100), nullable=True)
+    os_name = Column(String(100), nullable=True)
+
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)

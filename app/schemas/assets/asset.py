@@ -20,6 +20,12 @@ class AssetBase(BaseModel):
     prepared_by: Optional[str] = None
     checked_by: Optional[str] = None
 
+    # Временные поля
+    parent_name: Optional[str] = None
+    manufacturer_name: Optional[str] = None
+    vendor_name: Optional[str] = None
+    os_name: Optional[str] = None
+
 
 class AssetCreate(AssetBase):
     pass
@@ -44,6 +50,13 @@ class AssetUpdate(BaseModel):
     location_id: Optional[int] = None
     prepared_by: Optional[str] = None
     checked_by: Optional[str] = None
+
+    # Временные поля
+    parent_name: Optional[str] = None
+    manufacturer_name: Optional[str] = None
+    vendor_name: Optional[str] = None
+    os_name: Optional[str] = None
+    
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
 

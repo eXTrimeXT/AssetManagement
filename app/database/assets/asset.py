@@ -33,7 +33,8 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.creator),
-            selectinload(Asset.updater)
+            selectinload(Asset.updater),
+            selectinload(Asset.parent)
         )
         .where(Asset.asset_id == asset_id)
     )

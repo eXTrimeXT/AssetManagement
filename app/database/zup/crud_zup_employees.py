@@ -16,28 +16,85 @@ async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Emp
     result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
     return result.scalar_one_or_none()
 
+# async def get_employee_by_login_or_email(
+#         db: AsyncSession,
+#         login: str,
+#         email: Optional[str] = None
+# ) -> Optional[Employee]:
+#     if email:
+#         result = await db.execute(select(Employee).where(Employee.email == email))
+#         employee = result.scalar_one_or_none()
+#         if employee:
+#             return employee
+#
+#     if login and len(login) > 4:
+#         login_suffix = login[4:]
+#         result = await db.execute(
+#             select(Employee).where(func.substring(Employee.employee_id, 5) == login_suffix)
+#         )
+#         employee = result.scalar_one_or_none()
+#         if employee:
+#             return employee
+#
+#     result = await db.execute(select(Employee).where(Employee.employee_id == login))
+#     return result.scalar_one_or_none()
+
+async def get_employee_by_active_directory_login(
+        db: AsyncSession,
+        login: str
+) -> Employee | None:
+    """
+    Ищет сотрудника по active_directory_login (логину из токена).
+    Это быстрый путь поиска, если сотрудник уже связан с AD логином.
+    """
+    result = await db.execute(
+        select(Employee).where(Employee.active_directory_login == login)
+    )
+    return result.scalar_one_or_none()
+
+async def get_employee_by_email(
+        db: AsyncSession,
+        email: str
+) -> Employee | None:
+    """
+    Ищет сотрудника по email.
+    """
+    result = await db.execute(
+        select(Employee).where(Employee.email == email)
+    )
+    return result.scalar_one_or_none()
+
 async def get_employee_by_login_or_email(
         db: AsyncSession,
         login: str,
-        email: Optional[str] = None
-) -> Optional[Employee]:
-    if email:
-        result = await db.execute(select(Employee).where(Employee.email == email))
-        employee = result.scalar_one_or_none()
-        if employee:
-            return employee
+        email: str
+) -> Employee | None:
+    """
+    Ищет сотрудника:
+    1. Сначала по active_directory_login (быстрый путь)
+    2. Если не найден - по email
+    """
+    # Сначала пытаемся найти по active_directory_login
+    employee = await get_employee_by_active_directory_login(db, login)
+    if employee:
+        return employee
 
-    if login and len(login) > 4:
-        login_suffix = login[4:]
-        result = await db.execute(
-            select(Employee).where(func.substring(Employee.employee_id, 5) == login_suffix)
-        )
-        employee = result.scalar_one_or_none()
-        if employee:
-            return employee
+    # Если не нашли - ищем по email
+    employee = await get_employee_by_email(db, email)
+    return employee
 
-    result = await db.execute(select(Employee).where(Employee.employee_id == login))
-    return result.scalar_one_or_none()
+async def update_employee_active_directory_login(
+        db: AsyncSession,
+        employee: Employee,
+        login: str
+) -> None:
+    """
+    Обновляет active_directory_login сотрудника.
+    Вызывается при первом входе, когда сотрудник найден по email.
+    """
+    if employee.active_directory_login != login:
+        employee.active_directory_login = login
+        await db.commit()
 
 async def create_employee(db: AsyncSession, employee_in: EmployeeCreate) -> Employee:
     db_employee = Employee(**employee_in.model_dump())

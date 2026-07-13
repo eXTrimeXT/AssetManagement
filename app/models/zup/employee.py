@@ -13,6 +13,8 @@ class Employee(Base):
 
     # Табельный номер (10 цифр минимум)
     employee_id = Column(String(20), unique=True, index=True, nullable=False)
+    # Active Directory Login
+    active_directory_login = Column(String(20), unique=True, index=True, nullable=True)
 
     # ФИО на русском
     last_name = Column(String(100), index=True)

@@ -13,6 +13,7 @@ from app.services.auth.auth_service import (
 from app.models.UserJWTData import UserJWTData
 from app.models.zup.employee import Employee
 from app.database.zup import get_employee_by_login_or_email
+from app.database.zup.crud_zup_employees import update_employee_active_directory_login
 from app.services.auth.system_users import SYSTEM_USERS, MockSystemEmployee
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,11 @@ async def get_employee_or_mock(
     if employee.dismissal_date:
         logger.warning(f"Сотрудник {user_data.login} уволен")
         raise HTTPException(status_code=403, detail="Учетная запись сотрудника деактивирована")
+
+    # === Обновляем active_directory_login если он пустой ===
+    if not employee.active_directory_login:
+        logger.info(f"Обновляем active_directory_login для {user_data.login}")
+        await update_employee_active_directory_login(db, employee, user_data.login)
 
     return employee
 

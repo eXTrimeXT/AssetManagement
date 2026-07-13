@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.UserJWTData import UserJWTData
 from app.models.zup.employee import Employee
 from app.database.connection import get_db
-from app.database.zup.crud_zup_employees import get_employee_by_login_or_email
+from app.database.zup.crud_zup_employees import get_employee_by_login_or_email, update_employee_active_directory_login, \
+    get_employee_by_email
+from app.database.zup.crud_zup_employees import get_employee_by_active_directory_login
 from app.services.zup.zup_integration import sync_all_data, sync_employee_data
 from app.services.auth.system_users import MockSystemEmployee, SYSTEM_USERS
 
@@ -114,14 +116,77 @@ def get_user_permissions_from_token(token: str) -> Optional[Dict[str, Dict[str, 
         logger.error(f"Ошибка получения permissions из токена: {e}")
         return None
 
+# async def require_authorized_user(
+#         request: Request,
+#         db: AsyncSession = Depends(get_db)
+# ) -> Employee:
+#     """
+#     Проверяет авторизацию и возвращает сотрудника.
+#     - Системные пользователи (root, read_only, etc.) возвращаются как MockSystemEmployee
+#     - Обычные пользователи ищутся в БД zup_employees
+#     """
+#     try:
+#         token = await get_token_from_request(request)
+#         user_data = get_user_from_token(token)
+#
+#         if user_data.is_expired:
+#             logger.warning("Срок действия токена истек")
+#             raise HTTPException(status_code=401, detail="Срок действия токена истек")
+#
+#         # === Системные пользователи (призраки) ===
+#         if user_data.login in SYSTEM_USERS:
+#             logger.debug(f"Системный пользователь: {user_data.login}")
+#             return MockSystemEmployee(user_data.login)
+#
+#         # === Обычные пользователи ===
+#         employee = await get_employee_by_login_or_email(
+#             db,
+#             login=user_data.login,
+#             email=user_data.email
+#         )
+#
+#         if not employee:
+#             logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхронизации из 1С...")
+#             try:
+#                 # await sync_all_data(db)
+#                 await sync_employee_data(db)
+#                 employee = await get_employee_by_login_or_email(
+#                     db,
+#                     login=user_data.login,
+#                     email=user_data.email
+#                 )
+#             except Exception as e:
+#                 logger.error(f"Ошибка синхронизации из 1С: {e}")
+#                 raise HTTPException(
+#                     status_code=404,
+#                     detail=f"Сотрудник {user_data.login} не найден и синхронизация не удалась"
+#                 )
+#
+#         if not employee:
+#             raise HTTPException(
+#                 status_code=404,
+#                 detail=f"Сотрудник {user_data.login} не найден в системе"
+#             )
+#
+#         if employee.dismissal_date:
+#             logger.warning(f"Сотрудник {user_data.login} уволен")
+#             raise HTTPException(status_code=403, detail="Учетная запись сотрудника деактивирована")
+#
+#         return employee
+#
+#     except TokenValidationError as e:
+#         logger.warning(f"Недопустимый токен: {str(e)}")
+#         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
+
+
 async def require_authorized_user(
         request: Request,
         db: AsyncSession = Depends(get_db)
 ) -> Employee:
     """
     Проверяет авторизацию и возвращает сотрудника.
-    - Системные пользователи (root, read_only, etc.) возвращаются как MockSystemEmployee
-    - Обычные пользователи ищутся в БД zup_employees
+    - Системные пользователи возвращаются как MockSystemEmployee
+    - Обычные пользователи ищутся по строгому алгоритму с синхронизацией
     """
     try:
         token = await get_token_from_request(request)
@@ -137,44 +202,62 @@ async def require_authorized_user(
             return MockSystemEmployee(user_data.login)
 
         # === Обычные пользователи ===
-        employee = await get_employee_by_login_or_email(
-            db,
-            login=user_data.login,
-            email=user_data.email
-        )
+        # Шаг 1: Ищем по active_directory_login
+        employee = await get_employee_by_active_directory_login(db, login=user_data.login)
 
+        # Шаг 2: Если не нашли, ищем по почте
         if not employee:
-            logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхронизации из 1С...")
+            employee = await get_employee_by_email(db, email=str(user_data.email))
+
+        # Шаг 3: Если всё ещё не нашли, выполняем синхронизацию
+        if not employee:
+            logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхronизации из 1С...")
             try:
-                # await sync_all_data(db)
-                await sync_employee_data(db)
-                employee = await get_employee_by_login_or_email(
-                    db,
-                    login=user_data.login,
-                    email=user_data.email
-                )
+                await sync_all_data(db)
             except Exception as e:
                 logger.error(f"Ошибка синхронизации из 1С: {e}")
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Сотрудник {user_data.login} не найден и синхронизация не удалась"
-                )
+                # Не прерываем выполнение сразу, даем шанс найти сотрудника,
+                # если синхронизация частично прошла или сотрудник уже был в БД
 
+            # Шаг 4: После обновления ищем еще раз по active_directory_login
+            employee = await get_employee_by_active_directory_login(db, login=user_data.login)
+
+            # Шаг 5: Если всё ещё не нашли, ищем еще раз по почте
+            if not employee:
+                employee = await get_employee_by_email(db, email=str(user_data.email))
+
+        # Шаг 6: Финальная проверка, нашли ли мы сотрудника
         if not employee:
             raise HTTPException(
                 status_code=404,
                 detail=f"Сотрудник {user_data.login} не найден в системе"
             )
 
+        # Шаг 7: Проверяем, не уволен ли сотрудник
         if employee.dismissal_date:
             logger.warning(f"Сотрудник {user_data.login} уволен")
             raise HTTPException(status_code=403, detail="Учетная запись сотрудника деактивирована")
+
+        # Шаг 8: Обновляем active_directory_login, если нашли по почте и поле пустое
+        if not employee.active_directory_login:
+            logger.info(f"Обновляем active_directory_login для {user_data.login}")
+            await update_employee_active_directory_login(db, employee, user_data.login)
 
         return employee
 
     except TokenValidationError as e:
         logger.warning(f"Недопустимый токен: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
+
+async def get_current_user_id(
+        current_user: Employee = Depends(require_authorized_user)
+) -> str:
+    """
+    Зависимость для получения employee_id текущего авторизованного сотрудника.
+    """
+    return current_user.employee_id
+
+# ... (функция extract_login_from_request остается без изменений) ...
 
 async def get_current_user_id(
         current_user: Employee = Depends(require_authorized_user)

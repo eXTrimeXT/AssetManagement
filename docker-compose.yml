@@ -9,11 +9,12 @@ services:
       - POSTGRES_PASSWORD=$DB_PASSWORD
       - POSTGRES_DB=$DB_NAME
       - POSTGRES_HOST=$DB_HOST
+      - TZ=Europe/Moscow
     ports:
       - "8432:5432" # Проброс порта для подключения извне (например, через DBeaver)
     volumes:
       - pgdata:/var/lib/postgresql/data   # Сохранение данных БД
-      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
 
   # Для просмотра таблиц через веб-интерфейс (для разработки)
@@ -34,7 +35,7 @@ services:
     environment:
       # при локальном запуске используем @localhost (see ./app/database/connection.py)
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}${DB_HOST}:5432/${DB_NAME}
-#      - TZ=Europe/Moscow
+      - TZ=Europe/Moscow
       - JWT_SECRET_KEY=$JWT_SECRET_KEY
       - SESSION_PREFIX=$SESSION_PREFIX
       - SESSION_TTL=$SESSION_TTL
@@ -44,7 +45,7 @@ services:
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs
-      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
 volumes:
   pgdata:

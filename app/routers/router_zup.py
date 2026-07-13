@@ -81,6 +81,7 @@ async def get_employees(
         position_guid: Optional[str] = Query(None, description="GUID должности"),
         is_active: Optional[bool] = Query(None, description="Только действующие сотрудники"),
         search_department: Optional[str] = Query(None, description="Поиск по названию или краткому названию подразделения (общество, департамент, отдел, группа)"),
+        search_position: Optional[str] = Query(None, description="Поиск по названию на англ. или рус. языке"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -104,7 +105,8 @@ async def get_employees(
         department_guid=department_guid,
         position_guid=position_guid,
         is_active=is_active,
-        search_department=search_department
+        search_department=search_department,
+        search_position=search_position
     )
 
     total_pages = math.ceil(total / page_size) if total > 0 else 0

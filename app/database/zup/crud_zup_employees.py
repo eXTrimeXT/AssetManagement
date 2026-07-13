@@ -4,7 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, aliased
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
+from app.models.zup.position import Position
 from app.schemas.zup.employee_schemas import EmployeeCreate, EmployeeUpdate
+
 
 async def get_employee_by_guid(db: AsyncSession, guid: str) -> Optional[Employee]:
     result = await db.execute(select(Employee).where(Employee.guid == guid))
@@ -67,7 +69,8 @@ async def get_employees_count(
         department_guid: Optional[str] = None,
         position_guid: Optional[str] = None,
         is_active: Optional[bool] = None,
-        search_department: Optional[str] = None
+        search_department: Optional[str] = None,
+        search_position: Optional[str] = None
 ) -> int:
     query = select(func.count(Employee.employee_id))
     if employee_id:
@@ -88,6 +91,8 @@ async def get_employees_count(
         query = query.where(Employee.department_guid == department_guid)
     if position_guid:
         query = query.where(Employee.position_guid == position_guid)
+    if search_position:
+        query = _apply_position_search(query, search_position)
     if is_active is not None:
         if is_active:
             query = query.where(Employee.dismissal_date.is_(None))
@@ -128,6 +133,28 @@ def _apply_department_search(query, search_department: str):
     )
     return query
 
+
+def _apply_position_search(query, search_position: str):
+    """
+    Вспомогательная функция: делает JOIN с таблицей должностей
+    и применяет поиск по name и name_en.
+    """
+    pos = aliased(Position, name="pos")
+
+    # JOIN с таблицей должностей
+    query = query.join(pos, Employee.position_guid == pos.guid)
+
+    search_term = f"%{search_position}%"
+
+    # Ищем совпадение в name или name_en
+    query = query.where(
+        or_(
+            pos.name.ilike(search_term),
+            pos.name_en.ilike(search_term),
+        )
+    )
+    return query
+
 async def get_employees_list(
         db: AsyncSession,
         page: int = 1,
@@ -142,13 +169,14 @@ async def get_employees_list(
         department_guid: Optional[str] = None,
         position_guid: Optional[str] = None,
         is_active: Optional[bool] = None,
-        search_department: Optional[str] = None
+        search_department: Optional[str] = None,
+        search_position: Optional[str] = None
 ) -> Tuple[Sequence[Employee], int]:
 
     total = await get_employees_count(
         db, employee_id, last_name, first_name, middle_name,
         last_name_en, first_name_en, middle_name_en,
-        department_guid, position_guid, is_active, search_department
+        department_guid, position_guid, is_active, search_department, search_position
     )
 
     skip = (page - 1) * page_size
@@ -186,6 +214,8 @@ async def get_employees_list(
         query = query.where(Employee.department_guid == department_guid)
     if position_guid:
         query = query.where(Employee.position_guid == position_guid)
+    if search_position:
+        query = _apply_position_search(query, search_position)
     if is_active is not None:
         if is_active:
             query = query.where(Employee.dismissal_date.is_(None))

@@ -10,6 +10,7 @@ from app.models.zup.employee import Employee
 from app.database.connection import get_db
 from app.database.zup.crud_zup_employees import get_employee_by_login_or_email
 from app.services.zup.zup_integration import sync_all_data
+from app.services.auth.system_users import MockSystemEmployee, SYSTEM_USERS
 
 logger = logging.getLogger(__name__)
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
@@ -118,8 +119,9 @@ async def require_authorized_user(
         db: AsyncSession = Depends(get_db)
 ) -> Employee:
     """
-    Проверяет авторизацию и возвращает сотрудника из ZUP.
-    Все данные берутся из JWT-токена.
+    Проверяет авторизацию и возвращает сотрудника.
+    - Системные пользователи (root, read_only, etc.) возвращаются как MockSystemEmployee
+    - Обычные пользователи ищутся в БД zup_employees
     """
     try:
         token = await get_token_from_request(request)
@@ -129,18 +131,12 @@ async def require_authorized_user(
             logger.warning("Срок действия токена истек")
             raise HTTPException(status_code=401, detail="Срок действия токена истек")
 
-        # === Системные пользователи ===
-        if user_data.login in ["root", "read", "write", "android", "pc_data"]:
-            class SystemEmployee:
-                def __init__(self, login):
-                    self.employee_id = login
-                    self.login = login
-                    self.email = f"{login}@system.local"
-                    self.dismissal_date = None
-            return SystemEmployee(user_data.login)
+        # === Системные пользователи (призраки) ===
+        if user_data.login in SYSTEM_USERS:
+            logger.debug(f"Системный пользователь: {user_data.login}")
+            return MockSystemEmployee(user_data.login)
 
         # === Обычные пользователи ===
-        # Ищем сотрудника в БД по login или email
         employee = await get_employee_by_login_or_email(
             db,
             login=user_data.login,
@@ -169,7 +165,6 @@ async def require_authorized_user(
                 detail=f"Сотрудник {user_data.login} не найден в системе"
             )
 
-        # Проверяем, действующий ли сотрудник
         if employee.dismissal_date:
             logger.warning(f"Сотрудник {user_data.login} уволен")
             raise HTTPException(status_code=403, detail="Учетная запись сотрудника деактивирована")
@@ -202,16 +197,7 @@ async def extract_login_from_request(request: Request) -> dict:
             if not token:
                 return {"login": None}
 
-        payload = jwt.decode(
-            token,
-            key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
-            algorithms=["HS256"],
-            options={
-                "verify_signature": bool(JWT_SECRET_KEY),
-                "verify_exp": False,
-                "verify_iat": False
-            }
-        )
+        payload = decode_token(token)
         login = payload.get("login")
         return {"login": login}
 

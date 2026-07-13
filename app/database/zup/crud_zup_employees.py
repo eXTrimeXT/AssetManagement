@@ -74,7 +74,8 @@ async def get_employees_count(
 ) -> int:
     query = select(func.count(Employee.employee_id))
     if employee_id:
-        query = query.where(Employee.employee_id == employee_id)
+        # query = query.where(Employee.employee_id == employee_id)
+        query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if last_name:
         query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
     if first_name:
@@ -197,7 +198,8 @@ async def get_employees_list(
     )
 
     if employee_id:
-        query = query.where(Employee.employee_id == employee_id)
+        # query = query.where(Employee.employee_id == employee_id)
+        query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if last_name:
         query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
     if first_name:

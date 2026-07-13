@@ -43,13 +43,18 @@ async def endpoint_read_all_android_data(
 
 @router_android_data.patch("/{serial_number}", response_model=AndroidDataResponse)
 async def endpoint_update_android_data(
+        request: Request,
         serial_number: str,
         data: AndroidDataCreate,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    # if not has_android_sender_permission(current_user):
-    #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
+    has_perm = await check_permission(request, "android_data", "write")
+    if not has_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права 'write' на тип актива 'android_data'"
+        )
 
     db_record = await update_android_data(db, serial_number, data)
     if db_record is None:
@@ -59,12 +64,17 @@ async def endpoint_update_android_data(
 
 @router_android_data.delete("/{serial_number}", status_code=200)
 async def endpoint_delete_android_data(
+        request: Request,
         serial_number: str,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    # if not has_android_sender_permission(current_user):
-    #     raise HTTPException(status_code=403, detail="Доступ запрещен!")
+    has_perm = await check_permission(request, "android_data", "write")
+    if not has_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права 'write' на тип актива 'android_data'"
+        )
 
     db_record = await delete_android_data(db, serial_number)
     if db_record is None:

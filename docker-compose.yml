@@ -14,7 +14,7 @@ services:
       - "8432:5432" # Проброс порта для подключения извне (например, через DBeaver)
     volumes:
       - pgdata:/var/lib/postgresql/data   # Сохранение данных БД
-#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
 
   # Для просмотра таблиц через веб-интерфейс (для разработки)
@@ -47,7 +47,7 @@ services:
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs
-#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
 volumes:
   pgdata:

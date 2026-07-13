@@ -21,6 +21,8 @@ services:
   adminer:
     image: adminer
     restart: always
+    environment:
+      - TZ=Europe/Moscow
     ports:
       - "7080:8080"
 

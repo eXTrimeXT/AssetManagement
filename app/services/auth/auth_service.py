@@ -9,7 +9,7 @@ from app.models.UserJWTData import UserJWTData
 from app.models.zup.employee import Employee
 from app.database.connection import get_db
 from app.database.zup.crud_zup_employees import get_employee_by_login_or_email
-from app.services.zup.zup_integration import sync_all_data
+from app.services.zup.zup_integration import sync_all_data, sync_employee_data
 from app.services.auth.system_users import MockSystemEmployee, SYSTEM_USERS
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,8 @@ async def require_authorized_user(
         if not employee:
             logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхронизации из 1С...")
             try:
-                await sync_all_data(db)
+                # await sync_all_data(db)
+                await sync_employee_data(db)
                 employee = await get_employee_by_login_or_email(
                     db,
                     login=user_data.login,

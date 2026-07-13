@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.PCData import PCData
@@ -32,6 +34,7 @@ async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):
             setattr(db_pc, k, v)
         # db_pc.user_id = user_id  # Обновляем связь (может быть None)
         # db_pc.user_tab_id = user_tab_id  # Обновляем связь (может быть None)
+        db_pc.updated_at = datetime.now(timezone.utc)
     else:
         db_pc = PCData(
             username=pc_data.user.username,

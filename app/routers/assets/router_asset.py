@@ -16,37 +16,12 @@ from app.services.auth.auth_service import (
     get_token_from_request,
     get_user_from_token,
 )
-from app.services.auth.permission_checker import check_permission
+from app.services.auth.permission_checker import check_permission, check_asset_permission
 from app.schemas.PaginationResponse import PaginatedResponse
+from app.models.assets import AssetType
 
 logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])
-
-
-# Вспомогательная функция — проверка прав по asset_type_id напрямую
-async def _check_asset_permission(
-        db: AsyncSession,
-        request: Request,
-        asset_type_id: Optional[int],
-        action: str  # "read" или "write"
-) -> None:
-    """
-    Проверяет право на тип актива напрямую через asset_type_id.
-    Бросает HTTPException(403) при отсутствии права.
-    """
-    if asset_type_id is None:
-        return  # Если тип не указан — не проверяем
-
-    asset_type = await get_asset_type_by_id(db, asset_type_id)
-    if not asset_type:
-        raise HTTPException(status_code=404, detail="Тип актива не найден")
-
-    has_perm = await check_permission(request, asset_type.en_name, action)
-    if not has_perm:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Нет права '{action}' на тип актива '{asset_type.en_name}'"
-        )
 
 
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
@@ -57,7 +32,7 @@ async def create_asset_endpoint(
         current_user=Depends(require_authorized_user)
 ):
     """Создать актив. Проверка права write на тип актива."""
-    await _check_asset_permission(db, request, data.asset_type_id, "write")
+    await check_asset_permission(db, request, data.asset_type_id, "write")
     return await create_asset(db, data, current_user.employee_id)
 
 
@@ -130,7 +105,7 @@ async def get_asset(
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     # Проверка прав напрямую через asset_type_id
-    await _check_asset_permission(db, request, obj.asset_type_id, "read")
+    await check_asset_permission(db, request, obj.asset_type_id, "read")
     return obj
 
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
@@ -147,8 +122,7 @@ async def update_asset_endpoint(
 
     # Итоговый asset_type_id после обновления
     final_asset_type_id = data.asset_type_id if data.asset_type_id is not None else obj.asset_type_id
-    await _check_asset_permission(db, request, final_asset_type_id, "write")
-
+    await check_asset_permission(db, request, final_asset_type_id, "write")
     updated = await update_asset(db, asset_id, data, current_user.employee_id)
     return updated
 
@@ -164,7 +138,7 @@ async def delete_asset_endpoint(
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     # Проверка прав напрямую через asset_type_id
-    await _check_asset_permission(db, request, obj.asset_type_id, "write")
+    await check_asset_permission(db, request, obj.asset_type_id, "write")
 
     success = await delete_asset(db, asset_id)
     if not success:
@@ -183,7 +157,7 @@ async def get_asset_children_endpoint(
         raise HTTPException(status_code=404, detail="Актив не найден")
 
     # Проверка прав напрямую через asset_type_id родителя
-    await _check_asset_permission(db, request, parent.asset_type_id, "read")
+    await check_asset_permission(db, request, parent.asset_type_id, "read")
 
     children = await get_asset_children(db, asset_id)
     return children

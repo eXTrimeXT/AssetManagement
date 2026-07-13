@@ -1,13 +1,37 @@
+import logging
 from fastapi import HTTPException, Request
 from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.auth.auth_service import (
     get_user_permissions_from_token,
     get_token_from_request,
     get_user_from_token
 )
-import logging
+
+from app.database.assets import get_asset_type_by_id
 
 logger = logging.getLogger(__name__)
+
+# Вспомогательная функция — проверка прав по asset_type_id напрямую
+async def check_asset_permission(
+        db: AsyncSession,
+        request: Request,
+        asset_type_id: int | None,
+        action: str
+) -> None:
+    """Проверка права на тип актива напрямую через asset_type_id."""
+    if asset_type_id is None:
+        return
+    asset_type = await get_asset_type_by_id(db, asset_type_id)
+    if not asset_type:
+        raise HTTPException(status_code=404, detail="Тип актива не найден")
+    has_perm = await check_permission(request, asset_type.en_name, action)
+    if not has_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права '{action}' на тип актива '{asset_type.en_name}'"
+        )
 
 async def check_permission(
         request: Request,

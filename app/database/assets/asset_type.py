@@ -1,4 +1,6 @@
 from typing import Optional, Sequence
+
+from django.db.models.expressions import result
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,7 +23,6 @@ async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> Optional
         .where(AssetType.asset_type_id == asset_type_id)
     )
     return result.scalar_one_or_none()
-
 
 async def get_asset_types_list(
         db: AsyncSession,

@@ -18,30 +18,10 @@ from app.schemas.assets.asset_assignment import (
     AssetAssignmentResponse
 )
 from app.services.auth.auth_service import require_authorized_user
-from app.services.auth.permission_checker import check_permission
+from app.services.auth.permission_checker import check_permission, check_asset_permission
 
 logger = logging.getLogger(__name__)
 router_asset_assignments = APIRouter(prefix="/assets", tags=["Asset Assignments"])
-
-
-async def _check_asset_permission(
-        db: AsyncSession,
-        request: Request,
-        asset_type_id: int | None,
-        action: str
-) -> None:
-    """Проверка права на тип актива напрямую через asset_type_id."""
-    if asset_type_id is None:
-        return
-    asset_type = await get_asset_type_by_id(db, asset_type_id)
-    if not asset_type:
-        raise HTTPException(status_code=404, detail="Тип актива не найден")
-    has_perm = await check_permission(request, asset_type.en_name, action)
-    if not has_perm:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Нет права '{action}' на тип актива '{asset_type.en_name}'"
-        )
 
 
 @router_asset_assignments.post(
@@ -65,7 +45,7 @@ async def assign_asset_to_employee(
     if not asset:
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-    await _check_asset_permission(db, request, asset.asset_type_id, "write")
+    await check_asset_permission(db, request, asset.asset_type_id, "write")
 
     return await create_assignment(db, data, current_user.employee_id)
 
@@ -142,7 +122,7 @@ async def close_assignment_endpoint(
 
     asset = await get_asset_by_id(db, assignment.asset_id)
     if asset:
-        await _check_asset_permission(db, request, asset.asset_type_id, "write")
+        await check_asset_permission(db, request, asset.asset_type_id, "write")
 
     return await close_assignment(db, assignment_id)
 
@@ -171,7 +151,7 @@ async def delete_assignment_endpoint(
 
     asset = await get_asset_by_id(db, assignment.asset_id)
     if asset:
-        await _check_asset_permission(db, request, asset.asset_type_id, "write")
+        await check_asset_permission(db, request, asset.asset_type_id, "write")
 
     success = await delete_assignment(db, assignment_id)
     if not success:

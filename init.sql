@@ -1,0 +1,1 @@
+ALTER SYSTEM SET timezone = 'Europe/Moscow';

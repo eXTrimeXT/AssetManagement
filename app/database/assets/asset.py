@@ -36,6 +36,11 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
+            # Явно загружаем пользователей текущего актива
+            selectinload(Asset.users),
+            # Явно загружаем родительский актив И его пользователей,
+            # чтобы Pydantic не пытался делать lazy-load при сериализации response.parent
+            selectinload(Asset.parent).selectinload(Asset.users),
         )
         .where(Asset.asset_id == asset_id)
     )

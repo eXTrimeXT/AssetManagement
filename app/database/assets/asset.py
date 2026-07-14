@@ -17,18 +17,55 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
     await db.refresh(db_obj)
     return await get_asset_by_id(db, db_obj.asset_id)
 
+# async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
+#     result = await db.execute(
+#         select(Asset)
+#         .options(
+#             selectinload(Asset.asset_type),
+#             selectinload(Asset.model),  # Добавлено для model_name и связанных полей
+#             selectinload(Asset.parent).options(
+#                 selectinload(Asset.asset_type),  # исправляет ошибку parent.asset_type_name
+#                 selectinload(Asset.location),
+#                 selectinload(Asset.model)
+#             ),
+#             selectinload(Asset.location),
+#             selectinload(Asset.assignments).options(
+#                 selectinload(AssetAssignment.employee)
+#             ),
+#             selectinload(Asset.preparer),
+#             selectinload(Asset.checker),
+#             selectinload(Asset.creator),
+#             selectinload(Asset.updater),
+#         )
+#         .where(Asset.asset_id == asset_id)
+#     )
+#     return result.scalar_one_or_none()
+
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select
+from app.models.assets.asset import Asset
+from app.models.assets.asset_assignment import AssetAssignment # Убедитесь, что это импортировано!
+
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(
         select(Asset)
+        .where(Asset.asset_id == asset_id)
         .options(
             selectinload(Asset.asset_type),
-            selectinload(Asset.model),  # Добавлено для model_name и связанных полей
+            selectinload(Asset.model),
             selectinload(Asset.parent).options(
-                selectinload(Asset.asset_type),  # исправляет ошибку parent.asset_type_name
+                selectinload(Asset.asset_type),
                 selectinload(Asset.location),
-                selectinload(Asset.model)
+                selectinload(Asset.model),
+                # Для родителя тоже нужно загрузить assignments, если он будет сериализоваться
+                selectinload(Asset.parent).options(
+                    selectinload(AssetAssignment.employee)
+                )
             ),
             selectinload(Asset.location),
+            # === КЛЮЧЕВОЙ МОМЕНТ ===
+            # Загружаем привязки и сотрудников внутри них.
+            # Этого достаточно, чтобы @computed_field def users() сработал без lazy-load.
             selectinload(Asset.assignments).options(
                 selectinload(AssetAssignment.employee)
             ),
@@ -36,13 +73,11 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
-            # Явно загружаем пользователей текущего актива
-            selectinload(Asset.users),
-            # Явно загружаем родительский актив И его пользователей,
-            # чтобы Pydantic не пытался делать lazy-load при сериализации response.parent
-            selectinload(Asset.parent).selectinload(Asset.users),
+
+            # === УДАЛИТЕ ЭТИ ДВЕ СТРОКИ, они вызывают ошибку ===
+            # selectinload(Asset.users),
+            # selectinload(Asset.parent).selectinload(Asset.users),
         )
-        .where(Asset.asset_id == asset_id)
     )
     return result.scalar_one_or_none()
 

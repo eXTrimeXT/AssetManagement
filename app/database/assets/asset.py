@@ -41,10 +41,6 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
 #     )
 #     return result.scalar_one_or_none()
 
-from sqlalchemy.orm import selectinload
-from sqlalchemy import select
-from app.models.assets.asset import Asset
-from app.models.assets.asset_assignment import AssetAssignment # Убедитесь, что это импортировано!
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(
@@ -53,30 +49,28 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .options(
             selectinload(Asset.asset_type),
             selectinload(Asset.model),
-            selectinload(Asset.parent).options(
-                selectinload(Asset.asset_type),
-                selectinload(Asset.location),
-                selectinload(Asset.model),
-                # Для родителя тоже нужно загрузить assignments, если он будет сериализоваться
-                selectinload(Asset.parent).options(
-                    selectinload(AssetAssignment.employee)
-                )
-            ),
             selectinload(Asset.location),
-            # === КЛЮЧЕВОЙ МОМЕНТ ===
-            # Загружаем привязки и сотрудников внутри них.
-            # Этого достаточно, чтобы @computed_field def users() сработал без lazy-load.
-            selectinload(Asset.assignments).options(
-                selectinload(AssetAssignment.employee)
-            ),
             selectinload(Asset.preparer),
             selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
 
-            # === УДАЛИТЕ ЭТИ ДВЕ СТРОКИ, они вызывают ошибку ===
-            # selectinload(Asset.users),
-            # selectinload(Asset.parent).selectinload(Asset.users),
+            # 1. Загружаем привязки и сотрудников для ТЕКУЩЕГО актива
+            selectinload(Asset.assignments).options(
+                selectinload(AssetAssignment.employee)
+            ),
+
+            # 2. Загружаем РОДИТЕЛЬСКИЙ актив и его связи
+            selectinload(Asset.parent).options(
+                selectinload(Asset.asset_type),
+                selectinload(Asset.location),
+                selectinload(Asset.model),
+                # Загружаем привязки и сотрудников для РОДИТЕЛЬСКОГО актива
+                # (внутри options для parent контекст снова становится Asset)
+                selectinload(Asset.assignments).options(
+                    selectinload(AssetAssignment.employee)
+                )
+            ),
         )
     )
     return result.scalar_one_or_none()

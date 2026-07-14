@@ -22,10 +22,12 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         select(Asset)
         .options(
             selectinload(Asset.asset_type),
-            # selectinload(Asset.model).options(
-            #     selectinload(AssetModel.asset_type)
-            # ),
-            selectinload(Asset.parent).options(selectinload(Asset.assignments),),
+            selectinload(Asset.model),  # Добавлено для model_name и связанных полей
+            selectinload(Asset.parent).options(
+                selectinload(Asset.asset_type),  # исправляет ошибку parent.asset_type_name
+                selectinload(Asset.location),
+                selectinload(Asset.model)
+            ),
             selectinload(Asset.location),
             selectinload(Asset.assignments).options(
                 selectinload(AssetAssignment.employee)
@@ -34,7 +36,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
-            selectinload(Asset.parent)
         )
         .where(Asset.asset_id == asset_id)
     )
@@ -118,9 +119,12 @@ async def get_assets_list(
 
     query = select(Asset).options(
         selectinload(Asset.asset_type),
-        # selectinload(Asset.model).options(
-        #     selectinload(AssetModel.asset_type)
-        # ),
+        selectinload(Asset.model),  # Добавлено
+        selectinload(Asset.parent).options(
+            selectinload(Asset.asset_type),  # Добавлено
+            selectinload(Asset.location),
+            selectinload(Asset.model)
+        ),
         selectinload(Asset.parent).options(selectinload(Asset.assignments)),
         selectinload(Asset.assignments).options(
             selectinload(AssetAssignment.employee)
@@ -160,7 +164,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     await db.commit()
     return await get_asset_by_id(db, asset_id)
-
 
 async def _sync_asset_users(
         db: AsyncSession,
@@ -224,4 +227,33 @@ async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
         )
         .where(Asset.parent_id == asset_id)
     )
+    return result.scalars().all()
+
+async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> Sequence[Asset]:
+    """Получить все текущие (активные) активы сотрудника."""
+    query = (
+        select(Asset)
+        .join(AssetAssignment, Asset.asset_id == AssetAssignment.asset_id)
+        .where(
+            AssetAssignment.employee_id == employee_id,
+            AssetAssignment.end_date.is_(None)
+        )
+        .options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.model),  # Добавлено
+            selectinload(Asset.parent).options(
+                selectinload(Asset.asset_type),  # Добавлено
+                selectinload(Asset.location),
+                selectinload(Asset.model)
+            ),
+            selectinload(Asset.location),
+            selectinload(Asset.assignments).options(selectinload(AssetAssignment.employee)),
+            selectinload(Asset.preparer),
+            selectinload(Asset.checker),
+            selectinload(Asset.creator),
+            selectinload(Asset.updater),
+        )
+        .distinct()
+    )
+    result = await db.execute(query)
     return result.scalars().all()

@@ -7,10 +7,7 @@ from app.schemas.pc_data.pc_data_schemas import PCDataCreate, PCDataResponse
 from app.database.crud_pc_data import create_or_update_pc_data, get_all_pc_data, update_pc_data, delete_pc_data
 from app.middleware.LoggingMiddleware import logger
 from app.services.auth.auth_service import require_authorized_user
-from app.services.auth.permission_checker import check_permission
-
-# from app.services.permissions.permissions_rules import has_pc_data_sender_permission
-# from app.models.User import User
+from app.services.auth.permission_checker import check_permission, require_any_permission
 
 router_pc_data = APIRouter(prefix="/pc-data", tags=["pc_data"])
 
@@ -31,12 +28,21 @@ async def endpoint_create_pc_data(
 
 @router_pc_data.get("/", response_model=list[PCDataResponse])
 async def endpoint_read_all_pc_data(
+        request: Request,
         username: Optional[str] = Query(None),
         skip: int = 0,
         limit: int = 100,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
+    has_perm = await check_permission(request, "computer", "read")
+    has_system_perm = await check_permission(request, "pc_data", "read")
+
+    if not has_perm and not has_system_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права 'read' на тип актива 'computer'"
+        )
     return await get_all_pc_data(db, username, skip, limit)
 
 @router_pc_data.patch("/{username}", response_model=PCDataResponse)

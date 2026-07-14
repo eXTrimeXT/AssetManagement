@@ -11,14 +11,16 @@ from app.database.assets.asset_assignment import (
     close_assignment,
     get_assignment_by_id
 )
-from app.database.assets.asset import get_asset_by_id
-from app.database.assets.asset_type import get_asset_type_by_id
+from app.database.assets.asset import get_asset_by_id, get_active_assets_by_employee
+from app.database.crud_pc_data import get_all_pc_data
 from app.schemas.assets.asset_assignment import (
     AssetAssignmentCreate,
     AssetAssignmentResponse
 )
 from app.services.auth.auth_service import require_authorized_user
-from app.services.auth.permission_checker import check_permission, check_asset_permission
+from app.services.auth.permission_checker import check_asset_permission, check_permission
+from app.schemas.assets.asset import AssetResponse
+from app.schemas.pc_data.pc_data_schemas import PCDataResponse
 
 logger = logging.getLogger(__name__)
 router_asset_assignments = APIRouter(prefix="/assets", tags=["Asset Assignments"])
@@ -156,3 +158,40 @@ async def delete_assignment_endpoint(
     success = await delete_assignment(db, assignment_id)
     if not success:
         raise HTTPException(status_code=404, detail="Привязка не найдена")
+
+@router_asset_assignments.get("/assignments/my-pc", response_model=list[PCDataResponse])
+async def endpoint_get_my_pc(
+        request: Request,
+        # username: Optional[str] = Query(None),
+        skip: int = 0,
+        limit: int = 100,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    has_perm = await check_permission(request, "computer", "read")
+    has_system_perm = await check_permission(request, "pc_data", "read")
+
+    if not has_perm and not has_system_perm:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права 'read' на тип актива 'computer'"
+        )
+    if current_user.active_directory_login is not None:
+        return await get_all_pc_data(db, current_user.active_directory_login, skip, limit)
+    raise HTTPException(
+        status_code=404,
+        detail=f"Ошибка данных пользователя, отсутствует active_directory_login!"
+    )
+
+
+@router_asset_assignments.get(
+    "/assignments/me",
+    response_model=List[AssetResponse],
+    summary="Получить все текущие активы текущего пользователя"
+)
+async def get_my_active_assets(
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """Получить все текущие (активные) активы авторизованного сотрудника."""
+    return await get_active_assets_by_employee(db, current_user.employee_id)

@@ -32,7 +32,6 @@ async def create_assignment(
     await db.refresh(db_assignment)
     return db_assignment
 
-
 async def close_active_assignments(
         db: AsyncSession,
         asset_id: int,
@@ -58,13 +57,11 @@ async def close_active_assignments(
         await db.commit()
     return closed_count
 
-
 async def get_assignment_by_id(db: AsyncSession, assignment_id: int) -> Optional[AssetAssignment]:
     result = await db.execute(
         select(AssetAssignment).where(AssetAssignment.id == assignment_id)
     )
     return result.scalar_one_or_none()
-
 
 async def get_assignments_by_asset(
         db: AsyncSession,
@@ -79,7 +76,6 @@ async def get_assignments_by_asset(
     result = await db.execute(query)
     return result.scalars().all()
 
-
 async def get_assignments_by_employee(
         db: AsyncSession,
         employee_id: str,
@@ -93,7 +89,6 @@ async def get_assignments_by_employee(
     result = await db.execute(query)
     return result.scalars().all()
 
-
 async def delete_assignment(db: AsyncSession, assignment_id: int) -> bool:
     """Удалить назначение (только неактивные)."""
     assignment = await get_assignment_by_id(db, assignment_id)
@@ -104,7 +99,6 @@ async def delete_assignment(db: AsyncSession, assignment_id: int) -> bool:
     await db.delete(assignment)
     await db.commit()
     return True
-
 
 async def close_assignment(db: AsyncSession, assignment_id: int) -> Optional[AssetAssignment]:
     """Закрыть активное назначение."""

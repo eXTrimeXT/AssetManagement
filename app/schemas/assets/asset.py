@@ -66,11 +66,12 @@ class AssetResponse(AssetBase):
     updated_by: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    asset_type_name: Optional[str] = None
     # model: Optional["AssetModelResponse"] = None
     location: Optional[LocationResponse] = None
-    parent: Optional["AssetResponse"] = None
-    asset_type_name: Optional[str] = None
     users: Optional[List[AssetUserResponse]] = None
+    
+    parent: Optional["AssetResponse"] = None
 
     model_config = ConfigDict(from_attributes=True)
 

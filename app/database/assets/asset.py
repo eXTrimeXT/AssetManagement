@@ -49,28 +49,23 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .options(
             selectinload(Asset.asset_type),
             selectinload(Asset.model),
-            selectinload(Asset.location),
-            selectinload(Asset.preparer),
-            selectinload(Asset.checker),
-            selectinload(Asset.creator),
-            selectinload(Asset.updater),
-
-            # 1. Загружаем привязки и сотрудников для ТЕКУЩЕГО актива
-            selectinload(Asset.assignments).options(
-                selectinload(AssetAssignment.employee)
-            ),
-
-            # 2. Загружаем РОДИТЕЛЬСКИЙ актив и его связи
             selectinload(Asset.parent).options(
                 selectinload(Asset.asset_type),
                 selectinload(Asset.location),
                 selectinload(Asset.model),
-                # Загружаем привязки и сотрудников для РОДИТЕЛЬСКОГО актива
-                # (внутри options для parent контекст снова становится Asset)
+                # === Загружаем assignments И employee для родителя ===
                 selectinload(Asset.assignments).options(
                     selectinload(AssetAssignment.employee)
                 )
             ),
+            selectinload(Asset.location),
+            selectinload(Asset.assignments).options(
+                selectinload(AssetAssignment.employee)
+            ),
+            selectinload(Asset.preparer),
+            selectinload(Asset.checker),
+            selectinload(Asset.creator),
+            selectinload(Asset.updater),
         )
     )
     return result.scalar_one_or_none()
@@ -153,13 +148,16 @@ async def get_assets_list(
 
     query = select(Asset).options(
         selectinload(Asset.asset_type),
-        selectinload(Asset.model),  # Добавлено
+        selectinload(Asset.model),
         selectinload(Asset.parent).options(
-            selectinload(Asset.asset_type),  # Добавлено
+            selectinload(Asset.asset_type),
             selectinload(Asset.location),
-            selectinload(Asset.model)
+            selectinload(Asset.model),
+            # === Загружаем assignments И employee для родителя ===
+            selectinload(Asset.assignments).options(
+                selectinload(AssetAssignment.employee)
+            )
         ),
-        selectinload(Asset.parent).options(selectinload(Asset.assignments)),
         selectinload(Asset.assignments).options(
             selectinload(AssetAssignment.employee)
         ),

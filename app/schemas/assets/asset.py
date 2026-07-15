@@ -28,7 +28,8 @@ class AssetBase(BaseModel):
 
 
 class AssetCreate(AssetBase):
-    pass
+    # Для синхронизации привязок пользователей
+    users: Optional[List[AssetUserUpdate]] = None
 
 # Схема для обновления привязок пользователей
 class AssetUserUpdate(BaseModel):

@@ -10,37 +10,30 @@ from app.models.assets import AssetType
 from app.models.assets.asset_assignment import AssetAssignment
 
 
+# async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
+#     db_obj = Asset(**data.model_dump(), created_by=employee_id, updated_by=employee_id)
+#     db.add(db_obj)
+#     await db.commit()
+#     await db.refresh(db_obj)
+#     return await get_asset_by_id(db, db_obj.asset_id)
+
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
-    db_obj = Asset(**data.model_dump(), created_by=employee_id, updated_by=employee_id)
+    # Исключаем users из model_dump, так как у модели Asset нет такого поля
+    asset_data = data.model_dump(exclude={"users"})
+
+    # Создаем актив
+    db_obj = Asset(**asset_data, created_by=employee_id, updated_by=employee_id)
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
+
+    # Синхронизация привязок пользователей, если они переданы
+    if data.users is not None:
+        await _sync_asset_users(db, db_obj.asset_id, data.users, employee_id)
+        await db.commit()
+
+    # Возвращаем актив с загруженными связями
     return await get_asset_by_id(db, db_obj.asset_id)
-
-# async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
-#     result = await db.execute(
-#         select(Asset)
-#         .options(
-#             selectinload(Asset.asset_type),
-#             selectinload(Asset.model),  # Добавлено для model_name и связанных полей
-#             selectinload(Asset.parent).options(
-#                 selectinload(Asset.asset_type),  # исправляет ошибку parent.asset_type_name
-#                 selectinload(Asset.location),
-#                 selectinload(Asset.model)
-#             ),
-#             selectinload(Asset.location),
-#             selectinload(Asset.assignments).options(
-#                 selectinload(AssetAssignment.employee)
-#             ),
-#             selectinload(Asset.preparer),
-#             selectinload(Asset.checker),
-#             selectinload(Asset.creator),
-#             selectinload(Asset.updater),
-#         )
-#         .where(Asset.asset_id == asset_id)
-#     )
-#     return result.scalar_one_or_none()
-
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(

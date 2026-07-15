@@ -8,7 +8,7 @@ from app.database.map_assets.crud_workshop import get_workshop
 from app.database.map_assets.crud_asset_position import (
     get_by_asset_and_workshop, create_asset_position, get_asset_position, hard_delete_asset_position,
     get_all_asset_position_by_workshop, get_all_asset_position_by_asset, update_asset_position,
-    move_asset_position, delete_asset_position
+    move_asset_position, delete_asset_position, get_all_asset_positions
 )
 from app.database.map_assets.crud_asset_position import delete_all_asset_position_by_workshop
 
@@ -77,6 +77,21 @@ async def endpoint_get_positions_by_workshop(
     positions = await get_all_asset_position_by_workshop(db, workshop_id, skip=skip, limit=limit)
     return positions
 
+
+@router_asset_positions.get(
+    "/",
+    response_model=List[AssetPositionResponse],
+    summary="Получить все позиции активов",
+    description="Возвращает список всех активных позиций активов с пагинацией"
+)
+async def get_all_positions(
+        skip: int = 0,
+        limit: int = 100,
+        db: AsyncSession = Depends(get_db)
+):
+    """Получить все активные позиции активов"""
+    positions = await get_all_asset_positions(db, skip=skip, limit=limit)
+    return positions
 
 @router_asset_positions.get(
     "/asset/{asset_id}",

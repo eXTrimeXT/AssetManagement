@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Карта завода (API Frontend)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 100%; margin: 0 auto; }
+        h1 {
+            text-align: center; margin-bottom: 20px; color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-size: 32px;
+        }
+        .map-wrapper {
+            background: white; border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 20px; overflow: hidden; position: relative;
+        }
+        .map-svg {
+            width: 100%; height: auto; border: 2px solid #e0e0e0;
+            border-radius: 8px; background: #fafafa;
+            cursor: grab; display: block; touch-action: none;
+        }
+        .map-svg:active { cursor: grabbing; }
+        
+        .workshop-polygon {
+            stroke: #333; stroke-width: 3; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .workshop-polygon:hover {
+            opacity: 0.85; stroke-width: 4;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        .workshop-text {
+            font-family: Arial, sans-serif; font-weight: bold;
+            fill: #fff; text-anchor: middle; pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        .workshop-name { font-size: 24px; }
+        .workshop-code { font-size: 16px; }
+        
+        .asset-icon {
+            cursor: pointer; transition: filter 0.2s ease;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+        .asset-icon:hover circle { stroke: #007bff; stroke-width: 3; fill: #f0f8ff; }
+        .asset-icon:hover { filter: drop-shadow(4px 4px 8px rgba(0,123,255,0.5)); }
+        .asset-label {
+            font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;
+            fill: #333; text-anchor: middle; pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.9);
+        }
+        
+        .zoom-controls {
+            position: absolute; top: 30px; right: 30px;
+            display: flex; flex-direction: column; gap: 8px; z-index: 10;
+        }
+        .zoom-btn {
+            width: 44px; height: 44px; border: none; border-radius: 8px;
+            background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            cursor: pointer; font-size: 22px; font-weight: bold; color: #333;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .zoom-btn:hover { background: #f0f0f0; transform: scale(1.05); }
+        .zoom-btn:active { transform: scale(0.95); background: #e0e0e0; }
+        .zoom-level {
+            background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border-radius: 8px; padding: 8px 12px; text-align: center;
+            font-size: 13px; font-weight: bold; color: #333; min-width: 44px;
+        }
+        .zoom-divider { height: 1px; background: #e0e0e0; margin: 4px 0; }
+        
+        .legend {
+            margin-top: 20px; padding: 20px; background: white;
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .legend h3 { margin-bottom: 15px; color: #333; font-size: 20px; }
+        .legend-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;
+        }
+        .legend-item {
+            display: flex; align-items: center; padding: 8px 12px;
+            background: #f9f9f9; border-radius: 6px; transition: background 0.2s;
+        }
+        .legend-item:hover { background: #eef2f7; }
+        .legend-color {
+            display: inline-block; width: 24px; height: 24px;
+            margin-right: 12px; border: 2px solid #333; border-radius: 4px;
+        }
+        .map-info {
+            background: #fff3cd; color: #856404; padding: 10px 15px;
+            margin-bottom: 15px; border-radius: 6px; border-left: 4px solid #ffc107;
+            font-family: monospace; font-size: 13px;
+        }
+        .error-msg {
+            background: #f8d7da; color: #721c24; padding: 15px;
+            border-radius: 6px; border-left: 4px solid #f5c6cb;
+            font-family: monospace; display: none; margin-bottom: 15px;
+        }
+
+        @media screen and (min-width: 1200px) {
+            body { padding: 30px 40px; }
+            h1 { font-size: 36px; margin-bottom: 30px; }
+            .map-wrapper { padding: 25px; max-width: 1800px; margin: 0 auto; }
+            .zoom-controls { top: 35px; right: 35px; }
+            .zoom-btn { width: 50px; height: 50px; font-size: 26px; }
+            .legend { max-width: 1800px; margin: 30px auto 0; padding: 25px; }
+        }
+        @media screen and (max-width: 767px) {
+            body { padding: 10px; }
+            h1 { font-size: 22px; margin-bottom: 12px; }
+            .map-wrapper { padding: 12px; }
+            .zoom-controls { top: 15px; right: 15px; }
+            .zoom-btn { width: 36px; height: 36px; font-size: 18px; }
+            .legend { margin-top: 12px; padding: 12px; }
+            .legend-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏭 Карта производственных цехов</h1>
+
+    <div id="error" class="error-msg"></div>
+
+    <div class="map-wrapper" id="mapWrapper" style="display: none;">
+        <div class="map-info">📐 Размер карты: 2000×2000 px | Загрузка данных через API...</div>
+        
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomIn" title="Приблизить">+</button>
+            <div class="zoom-level" id="zoomLevel">100%</div>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="zoomOut" title="Отдалить">−</button>
+            <div class="zoom-divider"></div>
+            <button class="zoom-btn" id="zoomReset" title="Сбросить zoom" style="font-size: 14px;">⟲</button>
+        </div>
+        
+        <svg id="mapSvg" class="map-svg" viewBox="0 0 2000 2000" preserveAspectRatio="xMidYMid meet">
+            <defs>
+                <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+                    <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="2000" height="2000" fill="url(#grid)" />
+            <g id="mapContent">
+                <g id="workshopsLayer"></g>
+                <g id="assetsLayer"></g>
+            </g>
+        </svg>
+    </div>
+
+    <div class="legend" id="legend" style="display: none;">
+        <h3>📋 Легенда цехов</h3>
+        <div class="legend-grid" id="legendContent"></div>
+    </div>
+</div>
+
+<script>
+    // Относительный путь к API.
+    // const API_BASE_URL = 'http://localhost:8800/api';
+    const API_BASE_URL = 'http://10.168.143.7:8800/api';
+    const MAP_WIDTH = 2000;
+    const MAP_HEIGHT = 2000;
+
+    const state = {
+        scale: 1, panX: 0, panY: 0,
+        minScale: 0.1, maxScale: 5, zoomStep: 0.1,
+        isPanning: false, startPanX: 0, startPanY: 0,
+        lastTouchDistance: 0, lastTouchCenter: null
+    };
+
+    const svg = document.getElementById('mapSvg');
+    const zoomLevelEl = document.getElementById('zoomLevel');
+
+    // === 1. ЗАГРУЗКА ДАННЫХ ЧЕРЕЗ API ===
+    async function loadData() {
+        try {
+            // Запрос к GET /api/workshops/
+            const workshopsRes = await fetch(`${API_BASE_URL}/workshops/`);
+            if (!workshopsRes.ok) throw new Error(`Ошибка цехов: ${workshopsRes.status}`);
+            const workshops = await workshopsRes.json();
+
+            // Запрос к GET /api/asset-positions/
+            const positionsRes = await fetch(`${API_BASE_URL}/asset-positions/`);
+            if (!positionsRes.ok) throw new Error(`Ошибка позиций: ${positionsRes.status}`);
+            const positions = await positionsRes.json();
+
+            document.querySelector('.map-info').textContent = 
+                `📐 Размер карты: ${MAP_WIDTH}×${MAP_HEIGHT} px | Цехов: ${workshops.length} | Активов: ${positions.length}`;
+            
+            document.getElementById('mapWrapper').style.display = 'block';
+            document.getElementById('legend').style.display = 'block';
+
+            renderMap(workshops, positions);
+            setupZoomPan();
+            updateTransform();
+
+        } catch (error) {
+            console.error('Ошибка загрузки данных:', error);
+            document.getElementById('error').textContent = `❌ Ошибка: ${error.message}. Убедитесь, что backend запущен и CORS настроен.`;
+            document.getElementById('error').style.display = 'block';
+        }
+    }
+
+    // === 2. РЕНДЕРИНГ ===
+    function renderMap(workshops, positions) {
+        renderWorkshops(workshops);
+        renderAssets(positions);
+        renderLegend(workshops);
+    }
+
+    function renderWorkshops(workshops) {
+        const layer = document.getElementById('workshopsLayer');
+        layer.innerHTML = '';
+
+        workshops.forEach(w => {
+            let coordinates = null;
+            const color = w.color || '#546E7A';
+
+            if (w.geometry && w.geometry.type === 'polygon' && Array.isArray(w.geometry.coordinates) && w.geometry.coordinates.length >= 3) {
+                coordinates = w.geometry.coordinates;
+            } else if (w.workshop_width && w.workshop_height) {
+                const x = w.offset_x || 0;
+                const y = w.offset_y || 0;
+                coordinates = [[x, y], [x + w.workshop_width, y], [x + w.workshop_width, y + w.workshop_height], [x, y + w.workshop_height]];
+            } else {
+                return; // Пропускаем, если нет координат
+            }
+
+            const points = coordinates.map(coord => `${coord[0]},${coord[1]}`).join(' ');
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', points);
+            polygon.setAttribute('fill', color);
+            polygon.setAttribute('class', 'workshop-polygon');
+            
+            polygon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                alert(`Цех: ${w.name} (${w.code})\nID: ${w.workshop_id}`);
+            });
+
+            layer.appendChild(polygon);
+
+            const centroid = calculateCentroid(coordinates);
+            const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            textGroup.style.pointerEvents = 'none';
+
+            const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            nameText.setAttribute('x', centroid.x);
+            nameText.setAttribute('y', centroid.y - 10);
+            nameText.setAttribute('class', 'workshop-text workshop-name');
+            nameText.textContent = w.name;
+
+            const codeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            codeText.setAttribute('x', centroid.x);
+            codeText.setAttribute('y', centroid.y + 20);
+            codeText.setAttribute('class', 'workshop-text workshop-code');
+            codeText.textContent = w.code;
+
+            textGroup.appendChild(nameText);
+            textGroup.appendChild(codeText);
+            layer.appendChild(textGroup);
+        });
+    }
+
+    function renderAssets(positions) {
+        const layer = document.getElementById('assetsLayer');
+        layer.innerHTML = '';
+
+        positions.forEach(pos => {
+            const iconSize = 40 * (pos.scale / 100);
+            const rotation = pos.rotation || 0;
+
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.setAttribute('class', 'asset-icon');
+            group.setAttribute('data-asset-id', pos.asset_id);
+            group.setAttribute('transform', `translate(${pos.x}, ${pos.y}) rotate(${rotation})`);
+
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', iconSize / 2);
+            circle.setAttribute('fill', '#fff');
+            circle.setAttribute('stroke', '#333');
+            circle.setAttribute('stroke-width', '2');
+
+            const iconText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            iconText.setAttribute('text-anchor', 'middle');
+            iconText.setAttribute('dominant-baseline', 'central');
+            iconText.setAttribute('font-size', iconSize * 0.6);
+            iconText.textContent = '⚙️'; // Можно расширить логику иконок
+
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('class', 'asset-label');
+            label.setAttribute('y', iconSize / 2 + 15);
+            label.setAttribute('font-size', '12');
+            label.textContent = `ID: ${pos.asset_id}`; // Показываем ID, т.к. в базовом ответе нет имени
+
+            group.appendChild(circle);
+            group.appendChild(iconText);
+            group.appendChild(label);
+
+            group.addEventListener('click', (e) => {
+                e.stopPropagation();
+                alert(`Актив ID: ${pos.asset_id}\nПозиция ID: ${pos.id}\nЦех ID: ${pos.workshop_id}\nКоординаты: (${pos.x}, ${pos.y})\nПоворот: ${pos.rotation}°\nМасштаб: ${pos.scale}%`);
+            });
+
+            layer.appendChild(group);
+        });
+    }
+
+    function renderLegend(workshops) {
+        const legendContent = document.getElementById('legendContent');
+        legendContent.innerHTML = '';
+        workshops.forEach(w => {
+            const color = w.color || '#546E7A';
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `
+                <span class="legend-color" style="background: ${color}"></span>
+                <div><strong>${w.code}</strong><br><span style="font-size: 0.9em; color: #555;">${w.name}</span></div>
+            `;
+            legendContent.appendChild(item);
+        });
+    }
+
+    function calculateCentroid(coordinates) {
+        let x = 0, y = 0;
+        const n = coordinates.length;
+        for (let i = 0; i < n; i++) { x += coordinates[i][0]; y += coordinates[i][1]; }
+        return { x: x / n, y: y / n };
+    }
+
+    // === 3. ZOOM & PAN ЛОГИКА (без изменений) ===
+    function setupZoomPan() {
+        svg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = svg.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const direction = e.deltaY < 0 ? 1 : -1;
+            const newScale = clampScale(state.scale + direction * state.zoomStep);
+            const scaleChange = newScale / state.scale;
+            state.panX = mouseX - (mouseX - state.panX) * scaleChange;
+            state.panY = mouseY - (mouseY - state.panY) * scaleChange;
+            state.scale = newScale;
+            updateTransform();
+        }, { passive: false });
+
+        svg.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            state.isPanning = true;
+            state.startPanX = e.clientX - state.panX;
+            state.startPanY = e.clientY - state.panY;
+            svg.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!state.isPanning) return;
+            e.preventDefault();
+            state.panX = e.clientX - state.startPanX;
+            state.panY = e.clientY - state.startPanY;
+            updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (state.isPanning) { state.isPanning = false; svg.style.cursor = 'grab'; }
+        });
+
+        document.getElementById('zoomIn').addEventListener('click', () => zoomAtCenter(state.zoomStep));
+        document.getElementById('zoomOut').addEventListener('click', () => zoomAtCenter(-state.zoomStep));
+        document.getElementById('zoomReset').addEventListener('click', () => {
+            state.scale = 1; state.panX = 0; state.panY = 0; updateTransform();
+        });
+    }
+
+    function zoomAtCenter(delta) {
+        const rect = svg.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const newScale = clampScale(state.scale + delta);
+        const scaleChange = newScale / state.scale;
+        state.panX = centerX - (centerX - state.panX) * scaleChange;
+        state.panY = centerY - (centerY - state.panY) * scaleChange;
+        state.scale = newScale;
+        updateTransform();
+    }
+
+    function clampScale(value) { return Math.max(state.minScale, Math.min(state.maxScale, value)); }
+
+    function updateTransform() {
+        const width = MAP_WIDTH / state.scale;
+        const height = MAP_HEIGHT / state.scale;
+        const x = -state.panX / state.scale;
+        const y = -state.panY / state.scale;
+        svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+        zoomLevelEl.textContent = Math.round(state.scale * 100) + '%';
+    }
+
+    // Запуск
+    window.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>

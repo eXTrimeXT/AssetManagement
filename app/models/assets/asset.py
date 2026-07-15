@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from pydantic import computed_field
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, Mapped
 from datetime import datetime
 from app.models.Base import Base
 from app.schemas.assets.asset_assignment import AssetUserResponse
@@ -69,6 +69,20 @@ class Asset(Base):
     checker = relationship("Employee", foreign_keys=[checked_by])
     creator = relationship("Employee", foreign_keys=[created_by])
     updater = relationship("Employee", foreign_keys=[updated_by])
+
+    # === Связи для карты ===
+    # workshop: Mapped[Optional["Workshop"]] = relationship(
+    #     "Workshop",
+    #     back_populates="assets",
+    #     lazy="select"
+    # )
+
+    asset_positions: Mapped[list["AssetPosition"]] = relationship(
+        "AssetPosition",
+        back_populates="asset",
+        lazy="select",
+        cascade="all, delete-orphan"
+    )
 
     @computed_field
     @property

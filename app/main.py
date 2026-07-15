@@ -33,6 +33,11 @@ from app.routers.assets import (
     router_asset_assignments    # каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
 )
 
+# Импорт роутеров карты цехов и позиций активов
+from app.routers.map_assets.router_workshop import router_workshop
+from app.routers.map_assets.router_asset_positions import router_asset_positions
+from app.routers.map_assets.router_map import router_map
+
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -89,7 +94,12 @@ app.include_router(router_vendors, prefix="/api")           # Vendors
 app.include_router(router_asset_types, prefix="/api")       # Asset Types
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_assets, prefix="/api")            # Assets
-app.include_router(router_asset_assignments, prefix="/api") # Asset Catalog
+app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
+
+# Карта активов
+app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты
+app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
+app.include_router(router_map, prefix="/api")               # Роутер html-карты
 
 
 router_root = APIRouter(tags=["/"])

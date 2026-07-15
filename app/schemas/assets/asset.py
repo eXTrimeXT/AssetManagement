@@ -71,9 +71,13 @@ class AssetResponse(AssetBase):
     location: Optional[LocationResponse] = None
     users: Optional[List[AssetUserResponse]] = None
     
-    parent: Optional["AssetResponse"] = None
+    parent: Optional["AssetParentResponse"] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class AssetParentResponse(AssetBase):
+    model_config = ConfigDict(from_attributes=True)
+
 
 class AssetShortResponse(AssetBase):
     asset_id: int

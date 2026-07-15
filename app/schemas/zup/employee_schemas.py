@@ -20,12 +20,17 @@ class EmployeeBase(BaseModel):
     dismissal_date: Optional[date] = None
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[EmailStr] = None
+    comment: Optional[str] = Field(None, max_length=1000)
     position_guid: Optional[str] = Field(None, max_length=36)
     department_guid: Optional[str] = Field(None, max_length=36)
 
 class EmployeeCreate(EmployeeBase):
     """Схема создания сотрудника"""
     pass
+
+class EmployeeCommentUpdate(BaseModel):
+    """Схема для обновления только комментария сотрудника"""
+    comment: Optional[str] = Field(None, max_length=1000)
 
 class EmployeeUpdate(BaseModel):
     """Схема обновления сотрудника (все поля опциональные)"""
@@ -41,6 +46,7 @@ class EmployeeUpdate(BaseModel):
     dismissal_date: Optional[date] = None
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[EmailStr] = None
+    comment: Optional[str] = Field(None, max_length=1000)
     position_guid: Optional[str] = Field(None, max_length=36)
     department_guid: Optional[str] = Field(None, max_length=36)
 
@@ -61,6 +67,7 @@ class EmployeeShortResponse(BaseModel):
     full_name_en: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    comment: Optional[str] = Field(None, max_length=1000)
     society: Optional[WorkplaceResponse] = None
     department: Optional[WorkplaceResponse] = None
     division: Optional[WorkplaceResponse] = None

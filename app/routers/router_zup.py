@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeShortResponse
+from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeShortResponse, EmployeeCommentUpdate
 from app.schemas.zup.position_schemas import PositionResponse
 from app.schemas.zup.department_schemas import WorkplaceResponse, DepartmentDivisionGroupResponse
 from app.schemas.zup.manager_schemas import ManagerResponse
-from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid, get_employee_by_id
+from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid, get_employee_by_id, \
+    update_employee_comment
 from app.database.zup.crud_zup_positions import get_positions_list
 from app.database.zup.crud_zup_departments import get_departments_list, get_hierarchy_departments
 from app.database.zup.crud_zup_managers import get_managers_list
@@ -141,6 +142,25 @@ async def get_employee(
 ):
     """Получить полную информацию о сотруднике по ID"""
     employee = await get_employee_by_id(db, id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Сотрудник не найден")
+    return employee
+
+@router_zup.patch(
+    "/employees/{employee_id}/comment",
+    response_model=EmployeeResponse,
+    summary="Обновить комментарий сотрудника"
+)
+async def update_employee_comment_endpoint(
+        employee_id: str,
+        data: EmployeeCommentUpdate,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Обновить только поле comment для сотрудника по employee_id.
+    """
+    employee = await update_employee_comment(db, employee_id, data.comment)
     if not employee:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return employee

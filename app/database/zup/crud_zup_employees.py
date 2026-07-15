@@ -16,29 +16,6 @@ async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Emp
     result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
     return result.scalar_one_or_none()
 
-# async def get_employee_by_login_or_email(
-#         db: AsyncSession,
-#         login: str,
-#         email: Optional[str] = None
-# ) -> Optional[Employee]:
-#     if email:
-#         result = await db.execute(select(Employee).where(Employee.email == email))
-#         employee = result.scalar_one_or_none()
-#         if employee:
-#             return employee
-#
-#     if login and len(login) > 4:
-#         login_suffix = login[4:]
-#         result = await db.execute(
-#             select(Employee).where(func.substring(Employee.employee_id, 5) == login_suffix)
-#         )
-#         employee = result.scalar_one_or_none()
-#         if employee:
-#             return employee
-#
-#     result = await db.execute(select(Employee).where(Employee.employee_id == login))
-#     return result.scalar_one_or_none()
-
 async def get_employee_by_active_directory_login(
         db: AsyncSession,
         login: str
@@ -110,6 +87,23 @@ async def update_employee(db: AsyncSession, guid: str, employee_in: EmployeeUpda
     update_data = employee_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(employee, key, value)
+    await db.commit()
+    await db.refresh(employee)
+    return employee
+
+async def update_employee_comment(
+        db: AsyncSession,
+        employee_id: str,
+        comment: Optional[str]
+) -> Optional[Employee]:
+    """
+    Обновляет только поле comment сотрудника.
+    """
+    employee = await get_employee_by_id(db, employee_id)
+    if not employee:
+        return None
+
+    employee.comment = comment
     await db.commit()
     await db.refresh(employee)
     return employee

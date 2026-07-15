@@ -15,6 +15,7 @@ class Employee(Base):
     employee_id = Column(String(20), unique=True, index=True, nullable=False)
     # Active Directory Login
     active_directory_login = Column(String(20), unique=True, index=True, nullable=True)
+    comment = Column(String(1000), nullable=True)
 
     # ФИО на русском
     last_name = Column(String(100), index=True)

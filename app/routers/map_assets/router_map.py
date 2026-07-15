@@ -819,12 +819,6 @@ async def get_all_workshops_map(
         polygon.setAttribute('fill', color);
         polygon.setAttribute('class', 'workshop-polygon');
         polygon.setAttribute('data-workshop-id', workshop.workshop_id);
-        
-        polygon.addEventListener('click', (e) => {{
-            e.stopPropagation();
-            console.log('Выбран цех:', workshop);
-            alert(`Цех: ${{workshop.name}} (${{workshop.code}})\\nID: ${{workshop.workshop_id}}\\nЦвет: ${{color}}`);
-        }});
 
         layer.appendChild(polygon);
 

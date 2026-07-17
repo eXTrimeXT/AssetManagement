@@ -26,8 +26,8 @@ router_assets = APIRouter(prefix="/assets", tags=["Assets"])
 
 @router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 async def create_asset_endpoint(
-        data: AssetCreate,
         request: Request,
+        data: AssetCreate,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -42,6 +42,7 @@ async def create_asset_endpoint(
     summary="Получить список активов (с пагинацией)"
 )
 async def get_assets(
+        request: Request,
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
         page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
         name: Optional[str] = Query(None),
@@ -52,7 +53,6 @@ async def get_assets(
         asset_type_id: Optional[int] = Query(None),
         parent_id: Optional[int] = Query(None),
         location_id: Optional[int] = Query(None),
-        request: Request = None,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -95,8 +95,8 @@ async def get_assets(
 
 @router_assets.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(
-        asset_id: int,
         request: Request,
+        asset_id: int,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -110,9 +110,9 @@ async def get_asset(
 
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset_endpoint(
+        request: Request,
         asset_id: int,
         data: AssetUpdate,
-        request: Request,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -128,8 +128,8 @@ async def update_asset_endpoint(
 
 @router_assets.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_asset_endpoint(
-        asset_id: int,
         request: Request,
+        asset_id: int,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -146,8 +146,8 @@ async def delete_asset_endpoint(
 
 @router_assets.get("/{asset_id}/children", response_model=List[AssetShortResponse])
 async def get_asset_children_endpoint(
-        asset_id: int,
         request: Request,
+        asset_id: int,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):

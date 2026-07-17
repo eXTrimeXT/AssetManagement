@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 from app.database.connection import get_db
 from app.database.assets.asset_assignment import (
     create_assignment,
@@ -9,7 +9,7 @@ from app.database.assets.asset_assignment import (
     get_assignments_by_employee,
     delete_assignment,
     close_assignment,
-    get_assignment_by_id
+    get_assignment_by_id, get_all_assignments
 )
 from app.database.assets.asset import get_asset_by_id, get_active_assets_by_employee
 from app.database.crud_pc_data import get_all_pc_data
@@ -32,7 +32,7 @@ router_asset_assignments = APIRouter(prefix="/assets", tags=["Asset Assignments"
     status_code=status.HTTP_201_CREATED,
     summary="Привязать актив к сотруднику"
 )
-async def assign_asset_to_employee(
+async def endpoint_assign_asset_to_employee(
         data: AssetAssignmentCreate,
         request: Request,
         db: AsyncSession = Depends(get_db),
@@ -57,9 +57,9 @@ async def assign_asset_to_employee(
     response_model=List[AssetAssignmentResponse],
     summary="Получить все привязки (с фильтрами)"
 )
-async def get_all_assignments(
-        asset_id: int = Query(None, description="Фильтр по ID актива"),
-        employee_id: str = Query(None, description="Фильтр по табельному номеру"),
+async def endpoint_get_all_assignments(
+        asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        employee_id: Optional[str] = Query(None, description="Фильтр по табельному номеру"),
         active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
@@ -70,10 +70,11 @@ async def get_all_assignments(
     if employee_id is not None:
         return await get_assignments_by_employee(db, employee_id, active_only)
 
-    raise HTTPException(
-        status_code=400,
-        detail="Укажите хотя бы один фильтр: asset_id или employee_id"
-    )
+    return await get_all_assignments(db, active_only)
+    # raise HTTPException(
+    #     status_code=400,
+    #     detail="Укажите хотя бы один фильтр: asset_id или employee_id"
+    # )
 
 
 @router_asset_assignments.get(
@@ -81,7 +82,7 @@ async def get_all_assignments(
     response_model=List[AssetAssignmentResponse],
     summary="Получить привязки конкретного актива"
 )
-async def get_asset_assignments(
+async def endpoint_get_asset_assignments(
         asset_id: int,
         active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
@@ -96,7 +97,7 @@ async def get_asset_assignments(
     response_model=List[AssetAssignmentResponse],
     summary="Получить привязки конкретного сотрудника"
 )
-async def get_employee_assignments(
+async def endpoint_get_employee_assignments(
         employee_id: str,
         active_only: bool = Query(False, description="Только активные привязки"),
         db: AsyncSession = Depends(get_db),
@@ -111,7 +112,7 @@ async def get_employee_assignments(
     response_model=AssetAssignmentResponse,
     summary="Закрыть привязку"
 )
-async def close_assignment_endpoint(
+async def endpoint_close_assignment_endpoint(
         assignment_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
@@ -134,7 +135,7 @@ async def close_assignment_endpoint(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Удалить привязку"
 )
-async def delete_assignment_endpoint(
+async def endpoint_delete_assignment_endpoint(
         assignment_id: int,
         request: Request,
         db: AsyncSession = Depends(get_db),
@@ -160,7 +161,7 @@ async def delete_assignment_endpoint(
         raise HTTPException(status_code=404, detail="Привязка не найдена")
 
 @router_asset_assignments.get("/assignments/my-pc", response_model=list[PCDataResponse])
-async def endpoint_get_my_pc(
+async def endpoint_endpoint_get_my_pc(
         request: Request,
         # username: Optional[str] = Query(None),
         skip: int = 0,
@@ -189,7 +190,7 @@ async def endpoint_get_my_pc(
     response_model=List[AssetResponse],
     summary="Получить все текущие активы текущего пользователя"
 )
-async def get_my_active_assets(
+async def endpoint_get_my_active_assets(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):

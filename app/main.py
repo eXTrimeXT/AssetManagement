@@ -93,8 +93,8 @@ app.include_router(router_vendors, prefix="/api")           # Vendors
 
 app.include_router(router_asset_types, prefix="/api")       # Asset Types
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
-app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
+app.include_router(router_assets, prefix="/api")            # Assets
 
 # Карта активов
 app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты

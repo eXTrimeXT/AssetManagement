@@ -89,6 +89,18 @@ async def get_assignments_by_employee(
     result = await db.execute(query)
     return result.scalars().all()
 
+async def get_all_assignments(
+        db: AsyncSession,
+        active_only: bool = False
+) -> Sequence[AssetAssignment]:
+    """Получить все назначения"""
+    query = select(AssetAssignment)
+    if active_only:
+        query = query.where(AssetAssignment.end_date.is_(None))
+    query = query.order_by(AssetAssignment.start_date.desc())
+    result = await db.execute(query)
+    return result.scalars().all()
+
 async def delete_assignment(db: AsyncSession, assignment_id: int) -> bool:
     """Удалить назначение (только неактивные)."""
     assignment = await get_assignment_by_id(db, assignment_id)

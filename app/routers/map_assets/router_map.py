@@ -409,15 +409,32 @@ async def get_all_workshops_map(
         <div class="map-info"> Размер карты: {MAP_WIDTH}×{MAP_HEIGHT} px | Колесо мыши/щипок — zoom, перетаскивание — pan</div>
         <div class="stats-info">📊 Цехов: {len(workshops_data)} | Активов на карте: {len(assets_data)}</div>
 
-        <!-- Zoom Controls -->
-        <div class="zoom-controls">
-            <button class="zoom-btn" id="zoomIn" title="Приблизить">+</button>
-            <div class="zoom-level" id="zoomLevel">100%</div>
-            <div class="zoom-divider"></div>
-            <button class="zoom-btn" id="zoomOut" title="Отдалить">−</button>
-            <div class="zoom-divider"></div>
-            <button class="zoom-btn" id="zoomReset" title="Сбросить zoom" style="font-size: 14px;">⟲</button>
+    <!-- Zoom Controls - улучшенная версия -->
+    <div class="zoom-controls">
+        <div class="zoom-indicator" id="zoomLevel">100%</div>
+        
+        <div class="zoom-buttons">
+            <button class="zoom-btn" id="zoomIn" title="Приблизить">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+            
+            <button class="zoom-btn" id="zoomOut" title="Отдалить">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+            
+            <button class="zoom-btn zoom-reset" id="zoomReset" title="Сбросить масштаб">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </button>
         </div>
+    </div>
 
         <svg id="mapSvg" class="map-svg" viewBox="0 0 {MAP_WIDTH} {MAP_HEIGHT}" preserveAspectRatio="xMidYMid meet">
             <defs>

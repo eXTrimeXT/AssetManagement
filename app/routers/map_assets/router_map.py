@@ -23,7 +23,6 @@ router_map = APIRouter(tags=["workshops"])
 @router_map.get("/map-crud", response_class=HTMLResponse)
 async def get_all_workshops_map(
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
 ):
     """Генерирует и отдает HTML-страницу с интерактивной картой цехов и активов"""
 
@@ -762,9 +761,7 @@ async def get_all_workshops_map(
 
 
 @router_map.get("/map-fetch")
-async def serve_map_html(
-        current_user=Depends(require_authorized_user)
-):
+async def serve_map_html():
     """Отдает статический HTML-файл карты, который сам делает запросы к API"""
     # Путь к файлу map.html относительно корня проекта
     file_path = os.path.join("app", "frontend", "map.html")

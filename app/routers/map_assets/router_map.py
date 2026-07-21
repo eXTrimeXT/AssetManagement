@@ -1231,7 +1231,7 @@ async def get_all_workshops_map(
         panY: 0,
         minScale: 0.5,
         maxScale: 2,
-        zoomStep: 0.1,
+        zoomStep: 0.2,
         isPanning: false,
         startPanX: 0,
         startPanY: 0,

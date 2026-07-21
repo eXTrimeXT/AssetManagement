@@ -468,7 +468,7 @@ async def get_all_workshops_map(
 
     // === ZOOM & PAN STATE ===
     const state = {{
-        scale: 1,
+        scale: 0.5,
         panX: 0,
         panY: 0,
         minScale: 0.5,

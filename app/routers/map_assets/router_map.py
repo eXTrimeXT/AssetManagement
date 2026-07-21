@@ -3,6 +3,7 @@ import os
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.functions import current_user
 from starlette.responses import HTMLResponse, FileResponse
 
 from app.database.connection import get_db
@@ -12,6 +13,7 @@ from app.database.map_assets.crud_workshop import get_all_workshop
 from sqlalchemy import select
 from app.models.map_assets.asset_position import AssetPosition
 from app.models.assets.asset import Asset
+from app.services.auth.auth_service import require_authorized_user
 
 router_map = APIRouter(tags=["workshops"])
 
@@ -20,7 +22,8 @@ router_map = APIRouter(tags=["workshops"])
 # ==============================================================================
 @router_map.get("/map-crud", response_class=HTMLResponse)
 async def get_all_workshops_map(
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """Генерирует и отдает HTML-страницу с интерактивной картой цехов и активов"""
 
@@ -759,7 +762,9 @@ async def get_all_workshops_map(
 
 
 @router_map.get("/map-fetch")
-async def serve_map_html():
+async def serve_map_html(
+        current_user=Depends(require_authorized_user)
+):
     """Отдает статический HTML-файл карты, который сам делает запросы к API"""
     # Путь к файлу map.html относительно корня проекта
     file_path = os.path.join("app", "frontend", "map.html")

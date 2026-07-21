@@ -194,7 +194,7 @@
             if (!positionsRes.ok) throw new Error(`Ошибка позиций: ${positionsRes.status}`);
             const positions = await positionsRes.json();
 
-            document.querySelector('.map-info').textContent = 
+            document.querySelector('.map-info').textContent =
                 `📐 Размер карты: ${MAP_WIDTH}×${MAP_HEIGHT} px | Цехов: ${workshops.length} | Активов: ${positions.length}`;
             
             document.getElementById('mapWrapper').style.display = 'block';

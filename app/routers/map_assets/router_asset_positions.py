@@ -1,4 +1,6 @@
 from typing import List
+
+from django.views.generic import detail
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,8 +51,26 @@ async def endpoint_create_asset_position(
             detail=f"Актив с ID {position_data.asset_id} уже имеет активную позицию в цехе {position_data.workshop_id}"
         )
 
-    position = await create_asset_position(db, position_data)
-    return position
+    try:
+        position = await create_asset_position(db, position_data)
+        return position
+    except ValueError as e:
+        error_message = str(e)
+        if "not found" in error_message.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=error_message
+            )
+        elif "out of bounds" in error_message.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_message
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=error_message
+            )
 
 
 @router_asset_positions.get(

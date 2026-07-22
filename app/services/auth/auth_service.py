@@ -81,7 +81,7 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
         return False
 
 def check_assets_admin(token: str):
-    is_assets_admin = decode_token(token).get("isAssetsAdmin", False)
+    is_assets_admin = decode_token(token).get("assets_is_admin", False)
     return is_assets_admin
 
 def get_user_permissions_from_token(token: str) -> Optional[Dict[str, Dict[str, bool]]]:
@@ -98,7 +98,6 @@ def get_user_permissions_from_token(token: str) -> Optional[Dict[str, Dict[str, 
 
         # Permissions могут быть в разных форматах
         permissions_raw = payload.get("permissions", [])
-        isAssetsAdmin = payload.get("assets_is_admin", False)
 
         # Если permissions - это массив
         if isinstance(permissions_raw, list):

@@ -57,6 +57,10 @@ from typing import Optional, Dict, Any, List, Literal
 #         "AssetsMU": {
 #             "read": true,
 #             "write": true
+#         },
+#         "android_data": {
+#             "read": true,
+#             "write": true
 #         }
 #     },
 #     "assets_admin": true,

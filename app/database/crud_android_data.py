@@ -36,7 +36,7 @@ async def create_or_update_android_data(db: AsyncSession, data: AndroidDataCreat
 
 async def get_all_android_data(db: AsyncSession, serial_number: str = None, skip: int = 0, limit: int = 100):
     if serial_number:
-        result = await db.execute(select(AndroidData).offset(skip).limit(limit).where(AndroidData.serial_number == serial_number))
+        result = await db.execute(select(AndroidData).offset(skip).limit(limit).where(AndroidData.serial_number.ilike(f"%{serial_number}%")))
     else:
         result = await db.execute(select(AndroidData).offset(skip).limit(limit))
     return result.scalars().all()

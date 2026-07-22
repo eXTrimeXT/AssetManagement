@@ -82,7 +82,7 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
 
 def check_assets_is_admin(token: str):
     payload = decode_token(token)
-    assets_is_admin = payload.get("assets_is_admin")
+    assets_is_admin = payload.get("assets_admin")
     logger.debug(f"check_assets_is_admin = {assets_is_admin}")
     return assets_is_admin
 

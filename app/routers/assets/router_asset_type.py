@@ -10,7 +10,7 @@ from app.database.assets.asset_type import (
 from app.schemas.assets.asset_type import AssetTypeCreate, AssetTypeUpdate, AssetTypeResponse
 from app.services.auth.auth_service import require_authorized_user, get_token_from_request
 from app.services.auth.permission_checker import check_permission
-from services.auth.auth_service import check_assets_is_admin
+from app.services.auth.auth_service import check_assets_is_admin
 
 logger = logging.getLogger(__name__)
 router_asset_types = APIRouter(prefix="/assets-types", tags=["Asset Types"])

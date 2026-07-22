@@ -9,7 +9,6 @@ from app.database.assets.asset import (
     create_asset, get_asset_by_id, get_assets_list,
     update_asset, delete_asset, get_asset_children
 )
-from app.database.assets.asset_type import get_asset_type_by_id
 from app.schemas.assets.asset import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse
 from app.services.auth.auth_service import (
     require_authorized_user,
@@ -18,7 +17,6 @@ from app.services.auth.auth_service import (
 )
 from app.services.auth.permission_checker import check_permission, check_asset_permission
 from app.schemas.PaginationResponse import PaginatedResponse
-from app.models.assets import AssetType
 
 logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])

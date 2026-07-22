@@ -8,8 +8,9 @@ from app.database.assets.asset_type import (
     update_asset_type, delete_asset_type
 )
 from app.schemas.assets.asset_type import AssetTypeCreate, AssetTypeUpdate, AssetTypeResponse
-from app.services.auth.auth_service import require_authorized_user
+from app.services.auth.auth_service import require_authorized_user, get_token_from_request
 from app.services.auth.permission_checker import check_permission
+from services.auth.auth_service import check_assets_is_admin
 
 logger = logging.getLogger(__name__)
 router_asset_types = APIRouter(prefix="/assets-types", tags=["Asset Types"])
@@ -52,6 +53,11 @@ async def get_asset_types(
     """
     # Получаем все типы с учётом фильтров
     all_types = await get_asset_types_list(db, skip, limit, name, en_name)
+    token = await get_token_from_request(request)
+
+    # Исключение для админов активов: доступ ко всем типам
+    if check_assets_is_admin(token):
+        return all_types
 
     # Фильтруем по правам read
     accessible_types = []

@@ -7,7 +7,7 @@ from app.schemas.pc_data.pc_data_schemas import PCDataCreate, PCDataResponse
 from app.database.crud_pc_data import create_or_update_pc_data, get_all_pc_data, update_pc_data, delete_pc_data
 from app.middleware.LoggingMiddleware import logger
 from app.services.auth.auth_service import require_authorized_user
-from app.services.auth.permission_checker import check_permission, require_any_permission
+from app.services.auth.permission_checker import check_permission
 
 router_pc_data = APIRouter(prefix="/pc-data", tags=["pc_data"])
 

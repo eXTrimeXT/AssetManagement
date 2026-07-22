@@ -88,12 +88,14 @@ async def check_any_permission(
     """
     try:
         token = await get_token_from_request(request)
-        permissions = get_user_permissions_from_token(token)
-        is_assets_admin = check_assets_is_admin(token)
 
+        # Проверяем права админа
+        is_assets_admin = check_assets_is_admin(token)
         if is_assets_admin:
             return True
 
+        # Получаем права из токена
+        permissions = get_user_permissions_from_token(token)
         if not permissions:
             return False
 

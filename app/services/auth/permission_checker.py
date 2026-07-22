@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.auth.auth_service import (
     get_user_permissions_from_token,
     get_token_from_request,
-    get_user_from_token
+    get_user_from_token,
+    check_assets_admin
 )
 
 from app.database.assets import get_asset_type_by_id
@@ -54,6 +55,10 @@ async def check_permission(
 
         # Получаем права из токена
         permissions = get_user_permissions_from_token(token)
+        is_assets_admin = check_assets_admin(token)
+
+        if is_assets_admin:
+            return True
 
         if not permissions:
             logger.warning("Права не найдены в токене")
@@ -84,6 +89,10 @@ async def check_any_permission(
     try:
         token = await get_token_from_request(request)
         permissions = get_user_permissions_from_token(token)
+        is_assets_admin = check_assets_admin(token)
+
+        if is_assets_admin:
+            return True
 
         if not permissions:
             return False

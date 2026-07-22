@@ -56,6 +56,7 @@ async def check_permission(
         # Получаем права из токена
         permissions = get_user_permissions_from_token(token)
         is_assets_admin = check_assets_admin(token)
+        logger.debug(f"Проверка на админа = {is_assets_admin}")
 
         if is_assets_admin:
             return True

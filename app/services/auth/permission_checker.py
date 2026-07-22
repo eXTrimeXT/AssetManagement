@@ -147,8 +147,14 @@ def require_any_permission(action: str, resources: List[str] = None):
     async def dependency(request: Request):
         token = await get_token_from_request(request)
         user_data = get_user_from_token(token)
-        permissions = get_user_permissions_from_token(token)
 
+        # Проверяем права админа
+        is_assets_admin = check_assets_is_admin(token)
+        if is_assets_admin:
+            return True
+
+        # # Получаем права из токена
+        permissions = get_user_permissions_from_token(token)
         if not permissions:
             raise HTTPException(status_code=403, detail="Права не найдены")
 
@@ -174,8 +180,14 @@ async def get_accessible_asset_types(request: Request) -> List[str]:
     Возвращает список типов активов, на которые у пользователя есть право read.
     """
     token = await get_token_from_request(request)
-    permissions = get_user_permissions_from_token(token)
 
+    # Проверяем права админа
+    is_assets_admin = check_assets_is_admin(token)
+    if is_assets_admin:
+        return ["*"]
+
+    # # Получаем права из токена
+    permissions = get_user_permissions_from_token(token)
     if not permissions:
         return []
 

@@ -13,7 +13,7 @@ from app.schemas.assets.asset import AssetCreate, AssetUpdate, AssetResponse, As
 from app.services.auth.auth_service import (
     require_authorized_user,
     get_token_from_request,
-    get_user_from_token,
+    get_user_from_token, check_assets_is_admin,
 )
 from app.services.auth.permission_checker import check_permission, check_asset_permission
 from app.schemas.PaginationResponse import PaginatedResponse
@@ -56,13 +56,18 @@ async def get_assets(
 ):
     """Получить страницу активов с фильтрацией по правам."""
     token = await get_token_from_request(request)
-    user_data = get_user_from_token(token)
-    permissions = user_data.permissions
 
-    allowed_type_en_names: List[str] = [
-        en_name for en_name, perms in permissions.items()
-        if perms.get("read", False)
-    ]
+    # Исключение для админов активов: доступ ко всем типам
+    if check_assets_is_admin(token):
+        allowed_type_en_names = None  # None означает без фильтрации по типам
+    else:
+        user_data = get_user_from_token(token)
+        permissions = user_data.permissions
+
+        allowed_type_en_names = [
+            en_name for en_name, perms in permissions.items()
+            if perms.get("read", False)
+        ]
 
     assets, total = await get_assets_list(
         db=db,

@@ -8,7 +8,7 @@ from app.database.assets.asset_model import (
     update_asset_model, delete_asset_model
 )
 from app.schemas.assets.asset_model import AssetModelCreate, AssetModelUpdate, AssetModelResponse
-from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token
+from app.services.auth.auth_service import require_authorized_user, get_token_from_request, get_user_from_token, check_assets_is_admin
 from app.services.auth.permission_checker import check_permission
 from app.database.assets import get_asset_type_by_id
 
@@ -52,26 +52,21 @@ async def get_asset_models(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    """
-    Получить список моделей активов.
-    Возвращает только те модели, на тип актива которых у пользователя есть право read.
-    """
-    # Получаем все модели с учётом фильтров
+    """Получить список моделей активов."""
     all_models = await get_asset_models_list(db, skip, limit, model_name, class_id)
 
-    # Получаем права пользователя из Redis один раз (оптимизация)
+    # Исключение для админов активов: доступ ко всем типам
     token = await get_token_from_request(request)
+    if check_assets_is_admin(token):
+        return all_models
+
     user_data = get_user_from_token(token)
-    # permissions = await get_user_permissions_from_redis(user_data.login) or {}
     permissions = user_data.permissions
 
-    # Фильтруем по правам read на тип актива
     accessible_models = []
     for asset_model in all_models:
-        # Проходим цепочку: model → class → type → en_name
         if asset_model.asset_class and asset_model.asset_class.asset_type:
             en_name = asset_model.asset_class.asset_type.en_name
-            # Проверяем право read (локально, без обращений к Redis)
             resource_perms = permissions.get(en_name, {})
             if resource_perms.get("read", False):
                 accessible_models.append(asset_model)

@@ -53,14 +53,13 @@ async def check_permission(
     try:
         token = await get_token_from_request(request)
 
-        # Получаем права из токена
-        permissions = get_user_permissions_from_token(token)
+        # Проверяем права админа
         is_assets_admin = check_assets_is_admin(token)
-        logger.debug(f"Проверка на админа = {is_assets_admin}")
-
         if is_assets_admin:
             return True
 
+        # Получаем права из токена
+        permissions = get_user_permissions_from_token(token)
         if not permissions:
             logger.warning("Права не найдены в токене")
             return False

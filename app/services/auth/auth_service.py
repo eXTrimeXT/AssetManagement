@@ -80,11 +80,11 @@ def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:
         logger.error("Исключение: TokenValidationError")
         return False
 
-def check_assets_admin(token: str):
+def check_assets_is_admin(token: str):
     payload = decode_token(token)
-    is_assets_admin = payload.get("assets_is_admin")
-    logger.debug(f"check_assets_admin = {is_assets_admin}")
-    return is_assets_admin
+    assets_is_admin = payload.get("assets_is_admin")
+    logger.debug(f"check_assets_admin = {assets_is_admin}")
+    return assets_is_admin
 
 def get_user_permissions_from_token(token: str) -> Optional[Dict[str, Dict[str, bool]]]:
     """

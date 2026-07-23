@@ -53,9 +53,9 @@ async def check_inventory_item(db: AsyncSession, session_id: int, asset_id: int)
     item = result.scalar_one_or_none()
 
     if item:
-        item.is_checked = True
+        item.is_checked = item
         await db.commit()
-        return True
+        return item.is_checked
     return False
 
 async def complete_inventory_session(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:

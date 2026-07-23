@@ -109,6 +109,15 @@ async def complete_inventory_session(db: AsyncSession, session_id: int) -> Optio
             .where(Asset.asset_id.in_(unchecked_asset_ids))
             .values(asset_status="Удален")
         )
+        # 5. Также обновляем статус в таблице inventorization_items
+        await db.execute(
+            update(InventorizationItem)
+            .where(
+                InventorizationItem.session_id == session_id,
+                InventorizationItem.asset_id.in_(unchecked_asset_ids)
+            )
+            .values(asset_status="deleted")
+        )
 
     session.status = "completed"
     await db.commit()

@@ -23,7 +23,7 @@ class InventorizationSessionResponse(BaseModel):
     asset_type_en_name: str
     status: str
     created_at: datetime
-    items: List[InventorizationItemResponse] = []
+    # items: List[InventorizationItemResponse] = []
 
     model_config = {"from_attributes": True}
 

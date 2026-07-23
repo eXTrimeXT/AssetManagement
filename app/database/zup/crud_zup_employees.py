@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload, aliased
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.models.zup.position import Position
-from app.schemas.zup.employee_schemas import EmployeeCreate, EmployeeUpdate
+from app.schemas.zup.EmployeeSchemas import EmployeeCreate, EmployeeUpdate
 
 
 async def get_employee_by_guid(db: AsyncSession, guid: str) -> Optional[Employee]:

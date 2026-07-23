@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship, backref, Mapped
 from datetime import datetime
 from app.models.Base import Base
-from app.schemas.assets.asset_assignment import AssetUserResponse
+from app.schemas.assets.AssetAssignmentSchemas import AssetUserResponse
 
 class Asset(Base):
     __tablename__ = "assets"

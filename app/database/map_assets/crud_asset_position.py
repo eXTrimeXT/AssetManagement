@@ -2,7 +2,7 @@ from typing import Optional, List
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.assets.asset import Asset
+from app.models.assets.Asset import Asset
 from app.models.map_assets.asset_position import AssetPosition
 from app.models.map_assets.workshop import Workshop
 from app.schemas.map_assets.AssetPositionCreate import AssetPositionCreate

@@ -1,13 +1,13 @@
-from app.schemas.zup.employee_schemas import (
+from app.schemas.zup.EmployeeSchemas import (
     EmployeeCreate, EmployeeUpdate, EmployeeResponse, EmployeeShortResponse
 )
-from app.schemas.zup.position_schemas import (
+from app.schemas.zup.PositionSchemas import (
     PositionCreate, PositionUpdate, PositionResponse
 )
-from app.schemas.zup.department_schemas import (
+from app.schemas.zup.DepartmentSchemas import (
     DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
 )
-from app.schemas.zup.manager_schemas import (
+from app.schemas.zup.ManagerSchemas import (
     ManagerCreate, ManagerResponse
 )
 

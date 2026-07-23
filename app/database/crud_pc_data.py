@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.PCData import PCData
-from app.schemas.pc_data.pc_data_schemas import PCDataCreate
+from app.schemas.pc_data.PcDataSchemas import PCDataCreate
 
 
 async def create_or_update_pc_data(db: AsyncSession, pc_data: PCDataCreate):

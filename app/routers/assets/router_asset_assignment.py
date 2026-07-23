@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.database.assets.asset_assignment import (
+from app.database.assets.crud_asset_assignment import (
     create_assignment,
     get_assignments_by_asset,
     get_assignments_by_employee,
@@ -11,16 +11,16 @@ from app.database.assets.asset_assignment import (
     close_assignment,
     get_assignment_by_id, get_all_assignments
 )
-from app.database.assets.asset import get_asset_by_id, get_active_assets_by_employee
+from app.database.assets.crud_asset import get_asset_by_id, get_active_assets_by_employee
 from app.database.crud_pc_data import get_all_pc_data
-from app.schemas.assets.asset_assignment import (
+from app.schemas.assets.AssetAssignmentSchemas import (
     AssetAssignmentCreate,
     AssetAssignmentResponse
 )
 from app.services.auth.auth_service import require_authorized_user
 from app.services.auth.permission_checker import check_asset_permission, check_permission
-from app.schemas.assets.asset import AssetResponse
-from app.schemas.pc_data.pc_data_schemas import PCDataResponse
+from app.schemas.assets.AssetSchemas import AssetResponse
+from app.schemas.pc_data.PcDataSchemas import PCDataResponse
 
 logger = logging.getLogger(__name__)
 router_asset_assignments = APIRouter(prefix="/assets", tags=["Asset Assignments"])

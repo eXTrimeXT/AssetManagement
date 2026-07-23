@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
 from typing import Optional, List
-from app.schemas.assets.asset_assignment import AssetUserResponse
+from app.schemas.assets.AssetAssignmentSchemas import AssetUserResponse
 from app.schemas.locations.LocationResponse import LocationResponse
 
 class AssetBase(BaseModel):

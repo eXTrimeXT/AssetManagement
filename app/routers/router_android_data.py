@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
-from app.schemas.android_data.android_data_schemas import AndroidDataCreate, AndroidDataResponse
+from app.schemas.android_data.AndroidDataSchemas import AndroidDataCreate, AndroidDataResponse
 from app.database.crud_android_data import (
     create_or_update_android_data,
     get_all_android_data,

@@ -1,5 +1,5 @@
-from app.models.assets.asset_type import AssetType
-from app.models.assets.asset_model import AssetModel
-from app.models.assets.asset import Asset
+from app.models.assets.AssetType import AssetType
+from app.models.assets.AssetModel import AssetModel
+from app.models.assets.Asset import Asset
 
 __all__ = ["AssetType", "AssetModel", "Asset"]

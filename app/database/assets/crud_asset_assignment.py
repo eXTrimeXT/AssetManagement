@@ -2,8 +2,8 @@ from typing import Optional, Sequence
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
-from app.models.assets.asset_assignment import AssetAssignment
-from app.schemas.assets.asset_assignment import AssetAssignmentCreate
+from app.models.assets.AssetAssignment import AssetAssignment
+from app.schemas.assets.AssetAssignmentSchemas import AssetAssignmentCreate
 
 
 async def create_assignment(

@@ -2,8 +2,8 @@ from typing import Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.models.assets.asset_model import AssetModel
-from app.schemas.assets.asset_model import AssetModelCreate, AssetModelUpdate
+from app.models.assets.AssetModel import AssetModel
+from app.schemas.assets.AssetModelSchemas import AssetModelCreate, AssetModelUpdate
 
 
 async def get_asset_model_by_id(db: AsyncSession, model_id: int) -> Optional[AssetModel]:

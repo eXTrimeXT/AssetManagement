@@ -1,8 +1,8 @@
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 from datetime import date, datetime
-from app.schemas.zup.department_schemas import WorkplaceResponse
-from app.schemas.zup.position_schemas import PositionResponse
+from app.schemas.zup.DepartmentSchemas import WorkplaceResponse
+from app.schemas.zup.PositionSchemas import PositionResponse
 
 class EmployeeBase(BaseModel):
     """Базовая схема сотрудника"""

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
-from app.schemas.pc_data.pc_data_schemas import PCDataCreate, PCDataResponse
+from app.schemas.pc_data.PcDataSchemas import PCDataCreate, PCDataResponse
 from app.database.crud_pc_data import create_or_update_pc_data, get_all_pc_data, update_pc_data, delete_pc_data
 from app.middleware.LoggingMiddleware import logger
 from app.services.auth.auth_service import require_authorized_user

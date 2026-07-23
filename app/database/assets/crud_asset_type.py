@@ -4,8 +4,8 @@ from django.db.models.expressions import result
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.models.assets.asset_type import AssetType
-from app.schemas.assets.asset_type import AssetTypeCreate, AssetTypeUpdate
+from app.models.assets.AssetType import AssetType
+from app.schemas.assets.AssetTypeSchemas import AssetTypeCreate, AssetTypeUpdate
 
 
 async def create_asset_type(db: AsyncSession, data: AssetTypeCreate, employee_id: str) -> AssetType:

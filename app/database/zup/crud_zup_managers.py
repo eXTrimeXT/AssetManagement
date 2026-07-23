@@ -2,7 +2,7 @@ from typing import Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.zup.manager import Manager
-from app.schemas.zup.manager_schemas import ManagerCreate
+from app.schemas.zup.ManagerSchemas import ManagerCreate
 
 async def get_manager_by_id(db: AsyncSession, id: str) -> Optional[Manager]:
     result = await db.execute(select(Manager).where(Manager.id == id))

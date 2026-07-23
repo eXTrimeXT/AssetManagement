@@ -10,10 +10,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.models.Base import Base
 # ВАЖНО: импортируем все модели, чтобы Alembic их увидел
-from app.models.assets.asset import Asset
-from app.models.assets.asset_model import AssetModel
-from app.models.assets.asset_type import AssetType
-from app.models.assets.asset_assignment import AssetAssignment
+from app.models.assets.Asset import Asset
+from app.models.assets.AssetModel import AssetModel
+from app.models.assets.AssetType import AssetType
+from app.models.assets.AssetAssignment import AssetAssignment
 
 from app.models.zup.department import ZupDepartment
 from app.models.zup.employee import Employee

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
-from app.schemas.assets.asset_type import AssetTypeResponse
+from app.schemas.assets.AssetTypeSchemas import AssetTypeResponse
 
 class AssetModelBase(BaseModel):
     name: str

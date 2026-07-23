@@ -3,11 +3,11 @@ from typing import Optional, Sequence, List, Any, Tuple
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.models.assets.asset import Asset
+from app.models.assets.Asset import Asset
 # from app.models.assets.asset_model import AssetModel
-from app.schemas.assets.asset import AssetCreate, AssetUpdate
+from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
 from app.models.assets import AssetType
-from app.models.assets.asset_assignment import AssetAssignment
+from app.models.assets.AssetAssignment import AssetAssignment
 
 
 # async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:

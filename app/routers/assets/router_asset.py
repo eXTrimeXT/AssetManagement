@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.database.assets.asset import (
+from app.database.assets.crud_asset import (
     create_asset, get_asset_by_id, get_assets_list,
     update_asset, delete_asset, get_asset_children
 )
-from app.schemas.assets.asset import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse
+from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse
 from app.services.auth.auth_service import (
     require_authorized_user,
     get_token_from_request,

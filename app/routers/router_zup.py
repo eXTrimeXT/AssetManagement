@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.schemas.zup.employee_schemas import EmployeeResponse, EmployeeShortResponse, EmployeeCommentUpdate
-from app.schemas.zup.position_schemas import PositionResponse
-from app.schemas.zup.department_schemas import WorkplaceResponse, DepartmentDivisionGroupResponse
-from app.schemas.zup.manager_schemas import ManagerResponse
+from app.schemas.zup.EmployeeSchemas import EmployeeResponse, EmployeeShortResponse, EmployeeCommentUpdate
+from app.schemas.zup.PositionSchemas import PositionResponse
+from app.schemas.zup.DepartmentSchemas import WorkplaceResponse, DepartmentDivisionGroupResponse
+from app.schemas.zup.ManagerSchemas import ManagerResponse
 from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid, get_employee_by_id, \
     update_employee_comment
 from app.database.zup.crud_zup_positions import get_positions_list

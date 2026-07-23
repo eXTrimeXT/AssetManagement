@@ -1,12 +1,12 @@
-from app.database.assets.asset_type import (
+from app.database.assets.crud_asset_type import (
     create_asset_type, get_asset_type_by_id, get_asset_types_list,
     update_asset_type, delete_asset_type
 )
-from app.database.assets.asset_model import (
+from app.database.assets.crud_asset_model import (
     create_asset_model, get_asset_model_by_id, get_asset_models_list,
     update_asset_model, delete_asset_model
 )
-from app.database.assets.asset import (
+from app.database.assets.crud_asset import (
     create_asset, get_asset_by_id, get_assets_list, update_asset, delete_asset,
     get_asset_children
 )

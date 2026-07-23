@@ -2,7 +2,7 @@ from typing import Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.zup.position import Position
-from app.schemas.zup.position_schemas import PositionCreate, PositionUpdate
+from app.schemas.zup.PositionSchemas import PositionCreate, PositionUpdate
 
 async def get_position_by_guid(db: AsyncSession, guid: str) -> Optional[Position]:
     result = await db.execute(select(Position).where(Position.guid == guid))

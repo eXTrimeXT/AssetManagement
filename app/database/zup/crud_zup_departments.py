@@ -2,7 +2,7 @@ from typing import Optional, Sequence, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.zup.department import ZupDepartment
-from app.schemas.zup.department_schemas import DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
+from app.schemas.zup.DepartmentSchemas import DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
 
 
 async def get_department_by_guid(db: AsyncSession, guid: str) -> Optional[ZupDepartment]:

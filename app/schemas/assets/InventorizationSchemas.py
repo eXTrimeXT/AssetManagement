@@ -12,6 +12,7 @@ class InventorizationItemResponse(BaseModel):
     asset_name: str
     asset_inventory_id: str
     asset_serial_number: Optional[str]
+    asset_status: Optional[str]
     is_checked: bool
 
     model_config = {"from_attributes": True}

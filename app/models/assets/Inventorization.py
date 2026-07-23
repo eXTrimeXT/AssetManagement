@@ -22,8 +22,9 @@ class InventorizationItem(Base):
     session_id = Column(Integer, ForeignKey("inventorization_sessions.session_id"), nullable=False)
     asset_id = Column(Integer, nullable=False)  # Без ForeignKey, чтобы удаление из assets не ломало запись здесь
     asset_name = Column(String(150), nullable=False)
-    asset_inventory_id = Column(String(100), nullable=False)
+    asset_inventory_id = Column(String(100), nullable=True)
     asset_serial_number = Column(String(100), nullable=True)
+    asset_status = Column(String(100), nullable=True)
     is_checked = Column(Boolean, default=False)
 
     session = relationship("InventorizationSession", back_populates="items")

@@ -1,5 +1,5 @@
 from typing import Optional, Sequence
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.assets.Inventorization import InventorizationSession, InventorizationItem
@@ -98,9 +98,17 @@ async def complete_inventory_session(db: AsyncSession, session_id: int) -> Optio
     unchecked_items = result.all()
     unchecked_asset_ids = [item.asset_id for item in unchecked_items]
 
-    # 4. Удаляем их из основной таблицы assets
+    # # 4. Удаляем их из основной таблицы assets
+    # if unchecked_asset_ids:
+    #     await db.execute(delete(Asset).where(Asset.asset_id.in_(unchecked_asset_ids)))
+
+    # 4. Меняем статус на "Удален" для непроверенных активов
     if unchecked_asset_ids:
-        await db.execute(delete(Asset).where(Asset.asset_id.in_(unchecked_asset_ids)))
+        await db.execute(
+            update(Asset)
+            .where(Asset.asset_id.in_(unchecked_asset_ids))
+            .values(asset_status="Удален")
+        )
 
     session.status = "completed"
     await db.commit()

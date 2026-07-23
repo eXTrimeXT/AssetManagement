@@ -1,10 +1,22 @@
+from typing import Sequence
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
-from app.schemas.assets.InventorizationSchemas import InventorizationSessionCreate, InventorizationSessionResponse, CheckItemRequest
-from app.database.assets.crud_inventorization import create_inventory_session, check_inventory_item, complete_inventory_session
+from app.schemas.assets.InventorizationSchemas import InventorizationSessionCreate, InventorizationSessionResponse, \
+    CheckItemRequest, InventorizationItemResponse
+from app.database.assets.crud_inventorization import create_inventory_session, check_inventory_item, \
+    complete_inventory_session, get_inventory_sessions_list, get_inventory_items_by_session_id
 
 router_inventorization = APIRouter(prefix="/inventorization", tags=["Inventorization"])
+
+@router_inventorization.get("/sessions/", response_model=Sequence[InventorizationSessionResponse])
+async def get_sessions(skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db)):
+    return await get_inventory_sessions_list(db, skip, limit)
+
+@router_inventorization.get("/sessions/{session_id}/items/", response_model=Sequence[InventorizationItemResponse])
+async def get_session_items(session_id: int, db: AsyncSession = Depends(get_db)):
+    return await get_inventory_items_by_session_id(db, session_id)
 
 @router_inventorization.post("/sessions/", response_model=InventorizationSessionResponse)
 async def start_session(data: InventorizationSessionCreate, db: AsyncSession = Depends(get_db)):
@@ -23,3 +35,4 @@ async def complete_session(session_id: int, db: AsyncSession = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Сессия не найдена")
     return session
+

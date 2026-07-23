@@ -12,5 +12,13 @@ class InventorizationSessionResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class InventorizationItemResponse(BaseModel):
+    inventorization_id: int
+    session_id: int
+    asset_id: int
+    is_checked: bool
+
+    model_config = {"from_attributes": True}
+
 class CheckItemRequest(BaseModel):
     asset_id: int

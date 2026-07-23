@@ -18,11 +18,18 @@ async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: in
     result = await db.execute(query)
     return result.scalars().all()
 
+async def get_inventory_items_by_session_id(db: AsyncSession, session_id: int) -> Sequence[InventorizationItem]:
+    result = await db.execute(
+        select(InventorizationItem)
+        .where(InventorizationItem.session_id == session_id)
+    )
+    return result.scalars().all()
+
 async def create_inventory_session(db: AsyncSession, asset_type_id: int) -> InventorizationSession:
     # 1. Создаем сессию
     session = InventorizationSession(asset_type_id=asset_type_id, status="in_progress")
     db.add(session)
-    await db.flush()  # Получаем session.id
+    await db.flush()  # Получаем session.session_id
 
     # 2. Копируем все asset_id нужного типа в промежуточную таблицу
     result = await db.execute(

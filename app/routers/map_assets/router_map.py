@@ -10,7 +10,7 @@ from app.database.map_assets.crud_workshop import get_all_workshop
 
 # 2. Получаем все активные позиции активов
 from sqlalchemy import select
-from app.models.map_assets.asset_position import AssetPosition
+from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.assets.Asset import Asset
 
 router_map = APIRouter(tags=["Workshops"])

@@ -3,8 +3,8 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.assets.Asset import Asset
-from app.models.map_assets.asset_position import AssetPosition
-from app.models.map_assets.workshop import Workshop
+from app.models.map_assets.AssetPosition import AssetPosition
+from app.models.map_assets.Workshop import Workshop
 from app.schemas.map_assets.AssetPositionCreate import AssetPositionCreate
 from app.schemas.map_assets.AssetPositionUpdate import AssetPositionUpdate
 

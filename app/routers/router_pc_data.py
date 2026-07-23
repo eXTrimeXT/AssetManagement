@@ -9,7 +9,7 @@ from app.middleware.LoggingMiddleware import logger
 from app.services.auth.auth_service import require_authorized_user
 from app.services.auth.permission_checker import check_permission
 
-router_pc_data = APIRouter(prefix="/pc-data", tags=["pc_data"])
+router_pc_data = APIRouter(prefix="/pc-data", tags=["PC Data"])
 
 @router_pc_data.post("/", response_model=PCDataResponse, status_code=200)
 async def endpoint_create_pc_data(

@@ -17,7 +17,7 @@ from app.database.zup.crud_zup_employees import update_employee_active_directory
 from app.services.auth.system_users import SYSTEM_USERS, MockSystemEmployee
 
 logger = logging.getLogger(__name__)
-router_auth = APIRouter(tags=["auth"])
+router_auth = APIRouter(tags=["Auth"])
 
 async def get_employee_or_mock(
         db: AsyncSession,

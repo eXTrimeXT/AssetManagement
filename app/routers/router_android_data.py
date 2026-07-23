@@ -14,7 +14,7 @@ from app.middleware.LoggingMiddleware import logger
 from app.services.auth.auth_service import require_authorized_user
 from app.services.auth.permission_checker import check_permission
 
-router_android_data = APIRouter(prefix="/android-data", tags=["android_data"])
+router_android_data = APIRouter(prefix="/android-data", tags=["Android Data"])
 
 @router_android_data.post("/", response_model=AndroidDataResponse, status_code=200)
 async def endpoint_create_android_data(

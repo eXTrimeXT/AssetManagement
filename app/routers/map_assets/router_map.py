@@ -13,7 +13,7 @@ from sqlalchemy import select
 from app.models.map_assets.asset_position import AssetPosition
 from app.models.assets.Asset import Asset
 
-router_map = APIRouter(tags=["workshops"])
+router_map = APIRouter(tags=["Workshops"])
 
 # ==============================================================================
 # === ЭНДПОИНТ ДЛЯ ГЕНЕРАЦИИ HTML-КАРТЫ ЦЕХОВ ===

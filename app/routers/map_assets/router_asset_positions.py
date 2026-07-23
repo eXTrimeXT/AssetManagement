@@ -18,7 +18,7 @@ from app.schemas.map_assets.AssetPositionResponse import AssetPositionResponse
 from app.schemas.map_assets.AssetPositionCreate import AssetPositionCreate
 from app.schemas.map_assets.AssetPositionUpdate import AssetPositionUpdate
 
-router_asset_positions = APIRouter(prefix="/asset-positions", tags=["asset-positions"])
+router_asset_positions = APIRouter(prefix="/asset-positions", tags=["Asset Positions"])
 
 
 @router_asset_positions.post(

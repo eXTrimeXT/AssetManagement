@@ -4,7 +4,7 @@ from app.database.connection import get_db
 from app.schemas.assets.InventorizationSchemas import InventorizationSessionCreate, InventorizationSessionResponse, CheckItemRequest
 from app.database.assets.crud_inventorization import create_inventory_session, check_inventory_item, complete_inventory_session
 
-router_inventorization = APIRouter(prefix="/inventorization", tags=["inventorization"])
+router_inventorization = APIRouter(prefix="/inventorization", tags=["Inventorization"])
 
 @router_inventorization.post("/sessions/", response_model=InventorizationSessionResponse)
 async def start_session(data: InventorizationSessionCreate, db: AsyncSession = Depends(get_db)):

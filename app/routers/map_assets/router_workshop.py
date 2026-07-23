@@ -11,7 +11,7 @@ from app.schemas.map_assets.WorkshopCreate import WorkshopCreate
 from app.schemas.map_assets.WorkshopUpdate import WorkshopUpdate
 from app.schemas.map_assets.WorkshopResponse import WorkshopResponse
 
-router_workshop = APIRouter(prefix="/workshops", tags=["workshops"])
+router_workshop = APIRouter(prefix="/workshops", tags=["Workshops"])
 
 @router_workshop.post(
     "/",

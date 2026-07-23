@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.assets.Inventorization import InventorizationSession, InventorizationItem
 from app.models.assets.Asset import Asset
+from app.models.assets.AssetType import AssetType
 
 async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
     result = await db.execute(
@@ -26,17 +27,41 @@ async def get_inventory_items_by_session_id(db: AsyncSession, session_id: int) -
     return result.scalars().all()
 
 async def create_inventory_session(db: AsyncSession, asset_type_id: int) -> InventorizationSession:
-    # 1. Создаем сессию
-    session = InventorizationSession(asset_type_id=asset_type_id, status="in_progress")
+    # 1. Получаем информацию о типе актива
+    asset_type_result = await db.execute(
+        select(AssetType).where(AssetType.asset_type_id == asset_type_id)
+    )
+    asset_type = asset_type_result.scalar_one_or_none()
+
+    if not asset_type:
+        raise ValueError(f"Asset type with id {asset_type_id} not found")
+
+    # 2. Создаем сессию с денормализованными данными типа
+    session = InventorizationSession(
+        asset_type_id=asset_type_id,
+        asset_type_name=asset_type.name,
+        asset_type_en_name=asset_type.en_name,
+        status="in_progress"
+    )
     db.add(session)
     await db.flush()  # Получаем session.session_id
 
-    # 2. Копируем все asset_id нужного типа в промежуточную таблицу
+    # 3. Копируем все активы нужного типа с денормализованными полями
     result = await db.execute(
-        select(Asset.asset_id).where(Asset.asset_type_id == asset_type_id)
+        select(Asset).where(Asset.asset_type_id == asset_type_id)
     )
-    assets = result.all()
-    items = [InventorizationItem(session_id=session.session_id, asset_id=asset.asset_id) for asset in assets]
+    assets = result.scalars().all()
+
+    items = [
+        InventorizationItem(
+            session_id=session.session_id,
+            asset_id=asset.asset_id,
+            asset_name=asset.name,
+            asset_inventory_id=asset.inventory_id,
+            asset_serial_number=asset.serial_number
+        )
+        for asset in assets
+    ]
 
     db.add_all(items)
     await db.commit()

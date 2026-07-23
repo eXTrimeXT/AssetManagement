@@ -47,13 +47,12 @@ async def get_asset_models(
         request: Request,
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
-        model_name: Optional[str] = Query(None),
-        class_id: Optional[int] = Query(None),
+        # model_name: Optional[str] = Query(None),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
     """Получить список моделей активов."""
-    all_models = await get_asset_models_list(db, skip, limit, model_name, class_id)
+    all_models = await get_asset_models_list(db, skip, limit)
 
     # Исключение для админов активов: доступ ко всем типам
     token = await get_token_from_request(request)
@@ -65,8 +64,8 @@ async def get_asset_models(
 
     accessible_models = []
     for asset_model in all_models:
-        if asset_model.asset_class and asset_model.asset_class.asset_type:
-            en_name = asset_model.asset_class.asset_type.en_name
+        if asset_model.asset_type:
+            en_name = asset_model.asset_type.en_name
             resource_perms = permissions.get(en_name, {})
             if resource_perms.get("read", False):
                 accessible_models.append(asset_model)
@@ -85,12 +84,12 @@ async def get_asset_model(
         raise HTTPException(status_code=404, detail="Модель актива не найдена")
 
     # Проверяем право read на тип актива
-    if obj.asset_class and obj.asset_class.asset_type:
-        has_perm = await check_permission(request, obj.asset_class.asset_type.en_name, "read")
+    if obj.asset_type:
+        has_perm = await check_permission(request, obj.asset_type.en_name, "read")
         if not has_perm:
             raise HTTPException(
                 status_code=403,
-                detail=f"Нет права 'read' на тип актива '{obj.asset_class.asset_type.en_name}'"
+                detail=f"Нет права 'read' на тип актива '{obj.asset_type.en_name}'"
             )
     return obj
 
@@ -132,12 +131,12 @@ async def delete_asset_model_endpoint(
     if not obj:
         raise HTTPException(status_code=404, detail="Модель актива не найдена")
 
-    if obj.asset_class and obj.asset_class.asset_type:
-        has_perm = await check_permission(request, obj.asset_class.asset_type.en_name, "write")
+    if obj.asset_type:
+        has_perm = await check_permission(request, obj.asset_type.en_name, "write")
         if not has_perm:
             raise HTTPException(
                 status_code=403,
-                detail=f"Нет права 'write' на тип актива '{obj.asset_class.asset_type.en_name}'"
+                detail=f"Нет права 'write' на тип актива '{obj.asset_type.en_name}'"
             )
 
     success = await delete_asset_model(db, model_id)

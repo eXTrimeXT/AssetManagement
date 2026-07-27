@@ -98,13 +98,13 @@ async def check_command(serial_number: str):
 
 # Эндпоинт для GpsWarehouseApp: "Включи звук на этом устройстве"
 @router_android_data.post("/{serial_number}/play-sound", status_code=200)
-async def trigger_play_sound(serial_number: str):
+async def trigger_play_sound(serial_number: str, duration: int = 10):
     """
     Отправляет команду на воспроизведение звука.
     """
     command_data = {
         "action": "PLAY_ALARM_SOUND",
-        "duration": 10
+        "duration": duration
     }
 
     success = await command_manager.send_command(serial_number, command_data)

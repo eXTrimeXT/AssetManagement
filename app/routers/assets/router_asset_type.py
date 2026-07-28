@@ -57,6 +57,7 @@ async def get_asset_types(
 
     # Исключение для админов активов: доступ ко всем типам
     if check_assets_is_admin(token):
+        logger.debug(f"{token} имеем права админа!")
         return all_types
 
     # Фильтруем по правам read
@@ -66,6 +67,7 @@ async def get_asset_types(
         has_perm = await check_permission(request, asset_type.en_name, "read")
         if has_perm:
             accessible_types.append(asset_type)
+            logger.debug(f"Есть право read на {asset_type.en_name}")
     return accessible_types
 
 

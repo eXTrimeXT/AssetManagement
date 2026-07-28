@@ -13,7 +13,7 @@ class UserInfoResponse(BaseModel):
     department: Optional[str] = None
     groups: List[str] = None
     permissions: Dict[str, Dict[str, bool]]  # {"computer": {"read": true, "write": false}, ...}
-    assets_admin: Optional[bool]
+    assets_is_admin: Optional[bool]
     last_ip: Optional[str]
     last_time: Optional[str]
     token: Optional[str] = None

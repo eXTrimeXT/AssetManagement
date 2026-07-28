@@ -144,7 +144,7 @@ class UserJWTData:
             "department": self.department,
             "distinguished_name": self.distinguished_name,
             "groups": self.groups,
-            "assets_admin": self.assets_is_admin,
+            "assets_admin": self.assets_admin,
             "permissions": self.permissions,
             "last_ip": self.last_ip,
             "last_time": self.last_time,

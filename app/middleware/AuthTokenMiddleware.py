@@ -14,7 +14,6 @@ EXCLUDED_PATHS = {
     "/api/android-data",
     "/api/pc-data",
     "/openapi.json",
-    "/api/android-data"
     "/",
 }
 

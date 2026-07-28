@@ -89,7 +89,7 @@ class UserJWTData:
         self.fullname: Optional[str] = user_data.get("fullname")
         self.distinguished_name: Optional[str] = user_data.get("distinguishedName")
         self.groups: List[str] = user_data.get("groups", []) or []
-        self.assets_is_admin: Optional[bool] = payload.get("assets_is_admin", False)
+        self.assets_is_admin: Optional[bool] = payload.get("assets_admin", False)
 
         # === НОВЫЙ ФОРМАТ: преобразуем список [{name_group, read, write}] в dict {group: {read, write}} ===
         raw_perms = payload.get("permissions", [])

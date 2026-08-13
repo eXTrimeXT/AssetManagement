@@ -5,6 +5,7 @@ from typing import Optional
 # История жизни актива
 class AssetLifecycleEntry(BaseModel):
     id: int
+    asset_id: int
     field_name: str
     old_value: Optional[str] = None
     new_value: Optional[str] = None

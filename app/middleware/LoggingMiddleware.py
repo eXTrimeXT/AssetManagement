@@ -245,19 +245,20 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             # Логируем успешный ответ
             log_level = logging.INFO if response_status_code < 400 else logging.WARNING
-            logger.log(
-                log_level,
-                f"{method} {route_path} → {response_status_code}",
-                extra={
-                    "request_id": request_id,
-                    "client_ip": client_ip,
-                    "user_login": user_login,
-                    "url": str(request.url),
-                    "duration_ms": round(process_time * 1000, 2),
-                    "query_params": dict(request.query_params) if request.query_params else None,
-                    "request_body": request_body
-                }
-            )
+            if user_login != "android_data":
+                logger.log(
+                    log_level,
+                    f"{method} {route_path} → {response_status_code}",
+                    extra={
+                        "request_id": request_id,
+                        "client_ip": client_ip,
+                        "user_login": user_login,
+                        "url": str(request.url),
+                        "duration_ms": round(process_time * 1000, 2),
+                        "query_params": dict(request.query_params) if request.query_params else None,
+                        "request_body": request_body
+                    }
+                )
 
             return response
 
@@ -266,21 +267,22 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response_status_code = e.status_code
 
             # Логируем HTTP исключение
-            logger.error(
-                f"{method} {route_path} → HTTP {response_status_code}: {e.detail}",
-                exc_info=False,  # HTTP исключения не требуют traceback
-                extra={
-                    "request_id": request_id,
-                    "client_ip": client_ip,
-                    "user_login": user_login,
-                    "url": str(request.url),
-                    "duration_ms": round(process_time * 1000, 2),
-                    "error_type": "HTTPException",
-                    "error_message": str(e.detail),
-                    "query_params": dict(request.query_params) if request.query_params else None,
-                    "request_body": request_body
-                }
-            )
+            if user_login != "android_data":
+                logger.error(
+                    f"{method} {route_path} → HTTP {response_status_code}: {e.detail}",
+                    exc_info=False,  # HTTP исключения не требуют traceback
+                    extra={
+                        "request_id": request_id,
+                        "client_ip": client_ip,
+                        "user_login": user_login,
+                        "url": str(request.url),
+                        "duration_ms": round(process_time * 1000, 2),
+                        "error_type": "HTTPException",
+                        "error_message": str(e.detail),
+                        "query_params": dict(request.query_params) if request.query_params else None,
+                        "request_body": request_body
+                    }
+                )
             raise
 
         except Exception as e:

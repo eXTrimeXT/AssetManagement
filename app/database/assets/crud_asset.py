@@ -4,25 +4,29 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.assets.Asset import Asset
-# from app.models.assets.asset_model import AssetModel
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
 from app.models.assets import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
+from app.models.assets.AssetStatus import AssetStatus
 
-
-# async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
-#     db_obj = Asset(**data.model_dump(), created_by=employee_id, updated_by=employee_id)
-#     db.add(db_obj)
-#     await db.commit()
-#     await db.refresh(db_obj)
-#     return await get_asset_by_id(db, db_obj.asset_id)
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
-    # Исключаем users из model_dump, так как у модели Asset нет такого поля
-    asset_data = data.model_dump(exclude={"users"})
+    # ИСКЛЮЧАЕМ asset_status, чтобы не передать строку в relationship
+    asset_data = data.model_dump(exclude={"users", "asset_status"})
 
     # Создаем актив
     db_obj = Asset(**asset_data, created_by=employee_id, updated_by=employee_id)
+
+    # === ОБРАБОТКА СТАТУСА ===
+    if data.asset_status:
+        result = await db.execute(
+            select(AssetStatus).where(AssetStatus.status == data.asset_status)
+        )
+        status_obj = result.scalars().first()
+        if status_obj:
+            db_obj.asset_status_id = status_obj.id
+    # =========================
+
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
@@ -41,9 +45,11 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         .where(Asset.asset_id == asset_id)
         .options(
             selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
             selectinload(Asset.model),
             selectinload(Asset.parent).options(
                 selectinload(Asset.asset_type),
+                selectinload(Asset.asset_status),
                 selectinload(Asset.location),
                 selectinload(Asset.model),
                 # === Загружаем assignments И employee для родителя ===
@@ -75,8 +81,11 @@ def _apply_assets_filters(
     if serial_number:
         # query = query.where(Asset.serial_number == serial_number)
         query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
+    # if asset_status:
+    #     query = query.where(Asset.asset_status == asset_status)
     if asset_status:
-        query = query.where(Asset.asset_status == asset_status)
+        query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
+        query = query.where(AssetStatus.status == asset_status)
     if model_id is not None:
         query = query.where(Asset.model_id == model_id)
     if asset_type_id is not None:
@@ -143,6 +152,7 @@ async def get_assets_list(
 
     query = select(Asset).options(
         selectinload(Asset.asset_type),
+        selectinload(Asset.asset_status),
         selectinload(Asset.model),
         selectinload(Asset.parent).options(
             selectinload(Asset.asset_type),
@@ -177,13 +187,27 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     if not obj:
         return None
 
-    # Извлекаем users отдельно, чтобы не передавать в setattr
-    update_data = data.model_dump(exclude_unset=True, exclude={"users"})
+    # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
+    update_data = data.model_dump(exclude_unset=True, exclude={"users", "asset_status"})
 
     # Обновляем поля актива
     for key, value in update_data.items():
         setattr(obj, key, value)
     obj.updated_by = employee_id
+
+    # === ОБРАБОТКА СТАТУСА ===
+    # Проверяем, передавался ли статус в запросе (даже если он None)
+    if "asset_status" in data.model_fields_set:
+        if data.asset_status is None:
+            obj.asset_status_id = None
+        else:
+            result = await db.execute(
+                select(AssetStatus).where(AssetStatus.status == data.asset_status)
+            )
+            status_obj = result.scalars().first()
+            if status_obj:
+                obj.asset_status_id = status_obj.id
+    # =========================
 
     # Синхронизация привязок пользователей
     if data.users is not None:
@@ -267,9 +291,11 @@ async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> S
         )
         .options(
             selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
             selectinload(Asset.model),  # Добавлено
             selectinload(Asset.parent).options(
                 selectinload(Asset.asset_type),  # Добавлено
+                selectinload(Asset.asset_status),
                 selectinload(Asset.location),
                 selectinload(Asset.model)
             ),

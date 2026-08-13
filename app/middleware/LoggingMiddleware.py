@@ -14,7 +14,8 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 
 from app.services.auth.auth_service import extract_login_from_request
-
+from app.database.crud_audit import create_audit_log
+from app.database.connection import async_session
 
 # === КОНФИГУРАЦИЯ ===
 PROJECT_ROOT = Path("/app")
@@ -228,6 +229,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         try:
             response: Response = await call_next(request)
+            if user_login is not None:
+                async with async_session() as db:
+                    await create_audit_log(
+                        db=db,
+                        user_login=user_login,
+                        action=f"{method} {route_path}",
+                        request_data=dict(request.query_params) if request_body is None else request_body
+                    )
+
             process_time = time.time() - start_time
             response_status_code = response.status_code
             # Добавляем ID запроса в заголовок ответа

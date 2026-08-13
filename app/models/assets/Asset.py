@@ -16,7 +16,8 @@ class Asset(Base):
     name = Column(String(150), nullable=False, index=True)
     inventory_id = Column(String(100), unique=True, index=True, nullable=False)
     serial_number = Column(String(100), unique=True, index=True, nullable=True)
-    asset_status = Column(String(100), index=True, default="Приемка")
+    asset_status_id = Column(Integer, ForeignKey("asset_status.id"), nullable=True)
+    quantity = Column(Integer, default=1, nullable=True)
     comment = Column(Text)
 
     # Даты
@@ -50,6 +51,7 @@ class Asset(Base):
     # Relationships
     model = relationship("AssetModel", back_populates="assets")
     asset_type = relationship("AssetType", back_populates="assets")
+    asset_status = relationship("AssetStatus", lazy="select")
     parent = relationship(
         "Asset",
         remote_side=[asset_id],

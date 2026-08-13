@@ -27,6 +27,7 @@ from app.routers.router_vendor_classes import router_vendor_classes     # не �
 from app.routers.router_vendors import router_vendors                   # зависим от vendor_classes, компании
 
 from app.routers.assets import (
+    router_asset_status,         # статусы не зависимы
     router_asset_types,         # тип не зависим
     router_asset_models,        # модель зависим от класса
     router_assets,              # зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
@@ -38,6 +39,9 @@ from app.routers.assets import (
 from app.routers.map_assets.router_workshop import router_workshop
 from app.routers.map_assets.router_asset_positions import router_asset_positions
 from app.routers.map_assets.router_map import router_map
+
+# Импорт роутера аудита
+from app.routers.router_audit import router_audit
 
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -87,16 +91,19 @@ app.include_router(router_pc_data, prefix="/api")           # PC DATA
 app.include_router(router_android_data, prefix="/api")      # Android DATA
 app.include_router(router_zup, prefix="/api")               # 1С ЗУП
 
+app.include_router(router_audit, prefix="/api")
+
 app.include_router(router_locations, prefix="/api")         # Location
 app.include_router(router_companies, prefix="/api")         # Companies
 app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
 app.include_router(router_vendors, prefix="/api")           # Vendors
 
+app.include_router(router_asset_status, prefix="/api")       # Asset Types
 app.include_router(router_asset_types, prefix="/api")       # Asset Types
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
 app.include_router(router_assets, prefix="/api")            # Assets
-app.include_router(router_inventorization, prefix="/api")         # Инвентаризация активов
+app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
 
 # Карта активов
 app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты

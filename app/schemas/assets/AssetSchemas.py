@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Any
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserResponse
 from app.schemas.locations.LocationResponse import LocationResponse
 
@@ -8,7 +8,9 @@ class AssetBase(BaseModel):
     name: str
     inventory_id: str
     serial_number: Optional[str] = None
-    asset_status: Optional[str] = "Приемка"
+    asset_status: Optional[str] = None
+    asset_status_id: Optional[int] = None
+    quantity: Optional[int] = None
     comment: Optional[str] = None
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
@@ -41,6 +43,7 @@ class AssetUpdate(BaseModel):
     inventory_id: Optional[str] = None
     serial_number: Optional[str] = None
     asset_status: Optional[str] = None
+    quantity: Optional[int] = None
     comment: Optional[str] = None
     date_issue: Optional[date] = None
     date_purchasing: Optional[date] = None
@@ -73,6 +76,19 @@ class AssetResponse(AssetBase):
     users: Optional[List[AssetUserResponse]] = None
     
     parent: Optional["AssetParentResponse"] = None
+
+    @field_validator('asset_status', mode='before')
+    @classmethod
+    def extract_status_string(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        # Если SQLAlchemy отдал объект из relationship
+        if hasattr(v, 'status'):
+            return v.status
+        # Если это уже строка
+        if isinstance(v, str):
+            return v
+        return None
 
     model_config = ConfigDict(from_attributes=True)
 

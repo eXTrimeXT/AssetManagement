@@ -22,6 +22,19 @@ class AssetBase(BaseModel):
     prepared_by: Optional[str] = None
     checked_by: Optional[str] = None
 
+    @field_validator('asset_status', mode='before')
+    @classmethod
+    def extract_status_string(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        # Если SQLAlchemy отдал объект из relationship
+        if hasattr(v, 'status'):
+            return v.status
+        # Если это уже строка
+        if isinstance(v, str):
+            return v
+        return None
+
     # Временные поля
     parent_name: Optional[str] = None
     manufacturer_name: Optional[str] = None
@@ -76,19 +89,6 @@ class AssetResponse(AssetBase):
     users: Optional[List[AssetUserResponse]] = None
     
     parent: Optional["AssetParentResponse"] = None
-
-    @field_validator('asset_status', mode='before')
-    @classmethod
-    def extract_status_string(cls, v: Any) -> Optional[str]:
-        if v is None:
-            return None
-        # Если SQLAlchemy отдал объект из relationship
-        if hasattr(v, 'status'):
-            return v.status
-        # Если это уже строка
-        if isinstance(v, str):
-            return v
-        return None
 
     model_config = ConfigDict(from_attributes=True)
 

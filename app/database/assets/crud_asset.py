@@ -183,40 +183,6 @@ async def get_assets_list(
 
     return assets, total
 
-# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
-#     obj = await get_asset_by_id(db, asset_id)
-#     if not obj:
-#         return None
-#
-#     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
-#     update_data = data.model_dump(exclude_unset=True, exclude={"users", "asset_status"})
-#
-#     # Обновляем поля актива
-#     for key, value in update_data.items():
-#         setattr(obj, key, value)
-#     obj.updated_by = employee_id
-#
-#     # === ОБРАБОТКА СТАТУСА ===
-#     # Проверяем, передавался ли статус в запросе (даже если он None)
-#     if "asset_status" in data.model_fields_set:
-#         if data.asset_status is None:
-#             obj.asset_status_id = None
-#         else:
-#             result = await db.execute(
-#                 select(AssetStatus).where(AssetStatus.status == data.asset_status)
-#             )
-#             status_obj = result.scalars().first()
-#             if status_obj:
-#                 obj.asset_status_id = status_obj.id
-#     # =========================
-#
-#     # Синхронизация привязок пользователей
-#     if data.users is not None:
-#         await _sync_asset_users(db, asset_id, data.users, employee_id)
-#
-#     await db.commit()
-#     return await get_asset_by_id(db, asset_id)
-
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:

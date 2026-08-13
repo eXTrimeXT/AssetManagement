@@ -21,7 +21,8 @@ class AuthTokenMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         method = request.method
 
-        logger.debug(f"[AuthTokenMiddleware] Обработка запроса: {method} {path}")
+        if not path.startswith("/api/android-data"):
+            logger.debug(f"[AuthTokenMiddleware] Обработка запроса: {method} {path}")
 
         # Пропускаем исключённые пути
         if path in EXCLUDED_PATHS or path.startswith("/docs") or path.startswith("/redoc") or path.startswith("/api/android-data"):

@@ -4,6 +4,7 @@ from typing import List
 from app.database.connection import get_db
 from app.database.assets.crud_asset_history import get_asset_history
 from app.schemas.assets.AssetHistorySchemas import AssetHistoryResponse
+from app.services.auth.auth_service import require_authorized_user
 
 router_asset_history = APIRouter(prefix="/asset-history", tags=["Asset History"])
 
@@ -12,7 +13,8 @@ async def read_asset_history(
         asset_id: int,
         skip: int = 0,
         limit: int = 100,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """Получить историю изменений актива"""
     history = await get_asset_history(db, asset_id, skip=skip, limit=limit)

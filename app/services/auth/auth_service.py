@@ -144,7 +144,7 @@ async def require_authorized_user(
 
         # === Системные пользователи (призраки) ===
         if user_data.login in SYSTEM_USERS:
-            logger.debug(f"Системный пользователь: {user_data.login}")
+            # logger.debug(f"Системный пользователь: {user_data.login}")
             return MockSystemEmployee(user_data.login)
 
         # === Обычные пользователи ===

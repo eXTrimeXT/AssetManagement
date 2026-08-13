@@ -215,15 +215,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 pass
 
         # Привязываем контекст ко ВСЕМ логам в рамках этого запроса
-        structlog.contextvars.bind_contextvars(
-            request_id=request_id,
-            client_ip=client_ip,
-            user_login=user_login,
-            route=route_path,
-            method=method,
-            query_params=dict(request.query_params) if request.query_params else None,
-            request_body=request_body
-        )
+        if user_login != "android_data":
+            structlog.contextvars.bind_contextvars(
+                request_id=request_id,
+                client_ip=client_ip,
+                user_login=user_login,
+                route=route_path,
+                method=method,
+                query_params=dict(request.query_params) if request.query_params else None,
+                request_body=request_body
+            )
 
         start_time = time.time()
 

@@ -27,12 +27,13 @@ from app.routers.router_vendor_classes import router_vendor_classes     # не �
 from app.routers.router_vendors import router_vendors                   # зависим от vendor_classes, компании
 
 from app.routers.assets import (
-    router_asset_status,         # статусы не зависимы
-    router_asset_types,         # тип не зависим
-    router_asset_models,        # модель зависим от класса
-    router_assets,              # зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
-    router_asset_assignments,   # каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
-    router_inventorization            # Инвентаризация активов
+    router_asset_status,        # Статусы не зависимы
+    router_asset_types,         # Тип не зависим
+    router_asset_models,        # Модель зависим от класса
+    router_assets,              # Зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
+    router_asset_assignments,   # Каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
+    router_inventorization,     # Инвентаризация активов
+    router_asset_history,     # История актива
 )
 
 # Импорт роутеров карты цехов и позиций активов
@@ -104,6 +105,7 @@ app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
 app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
+app.include_router(router_asset_history, prefix="/api")   # Инвентаризация активов
 
 # Карта активов
 app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты

@@ -8,6 +8,7 @@ from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
 from app.models.assets import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
+from app.database.assets.crud_asset_history import compare_and_save_changes
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -182,10 +183,66 @@ async def get_assets_list(
 
     return assets, total
 
+# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
+#     obj = await get_asset_by_id(db, asset_id)
+#     if not obj:
+#         return None
+#
+#     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
+#     update_data = data.model_dump(exclude_unset=True, exclude={"users", "asset_status"})
+#
+#     # Обновляем поля актива
+#     for key, value in update_data.items():
+#         setattr(obj, key, value)
+#     obj.updated_by = employee_id
+#
+#     # === ОБРАБОТКА СТАТУСА ===
+#     # Проверяем, передавался ли статус в запросе (даже если он None)
+#     if "asset_status" in data.model_fields_set:
+#         if data.asset_status is None:
+#             obj.asset_status_id = None
+#         else:
+#             result = await db.execute(
+#                 select(AssetStatus).where(AssetStatus.status == data.asset_status)
+#             )
+#             status_obj = result.scalars().first()
+#             if status_obj:
+#                 obj.asset_status_id = status_obj.id
+#     # =========================
+#
+#     # Синхронизация привязок пользователей
+#     if data.users is not None:
+#         await _sync_asset_users(db, asset_id, data.users, employee_id)
+#
+#     await db.commit()
+#     return await get_asset_by_id(db, asset_id)
+
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
         return None
+
+    # Сохраняем старые значения для истории
+    old_data = {
+        'name': obj.name,
+        'inventory_id': obj.inventory_id,
+        'serial_number': obj.serial_number,
+        'comment': obj.comment,
+        'date_issue': obj.date_issue,
+        'date_purchasing': obj.date_purchasing,
+        'model_id': obj.model_id,
+        'model_name': obj.model_name,
+        'asset_type_id': obj.asset_type_id,
+        'parent_id': obj.parent_id,
+        'location_id': obj.location_id,
+        'asset_status_id': obj.asset_status_id,
+        'prepared_by': obj.prepared_by,
+        'checked_by': obj.checked_by,
+        'parent_name': obj.parent_name,
+        'manufacturer_name': obj.manufacturer_name,
+        'vendor_name': obj.vendor_name,
+        'os_name': obj.os_name
+    }
 
     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
     update_data = data.model_dump(exclude_unset=True, exclude={"users", "asset_status"})
@@ -196,7 +253,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     obj.updated_by = employee_id
 
     # === ОБРАБОТКА СТАТУСА ===
-    # Проверяем, передавался ли статус в запросе (даже если он None)
     if "asset_status" in data.model_fields_set:
         if data.asset_status is None:
             obj.asset_status_id = None
@@ -207,7 +263,36 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             status_obj = result.scalars().first()
             if status_obj:
                 obj.asset_status_id = status_obj.id
-    # =========================
+
+    # === СОХРАНЕНИЕ ИСТОРИИ ИЗМЕНЕНИЙ ===
+    new_data = {
+        'name': obj.name,
+        'inventory_id': obj.inventory_id,
+        'serial_number': obj.serial_number,
+        'comment': obj.comment,
+        'date_issue': obj.date_issue,
+        'date_purchasing': obj.date_purchasing,
+        'model_id': obj.model_id,
+        'model_name': obj.model_name,
+        'asset_type_id': obj.asset_type_id,
+        'parent_id': obj.parent_id,
+        'location_id': obj.location_id,
+        'asset_status_id': obj.asset_status_id,
+        'prepared_by': obj.prepared_by,
+        'checked_by': obj.checked_by,
+        'parent_name': obj.parent_name,
+        'manufacturer_name': obj.manufacturer_name,
+        'vendor_name': obj.vendor_name,
+        'os_name': obj.os_name
+    }
+
+    await compare_and_save_changes(
+        db=db,
+        asset_id=asset_id,
+        old_data=old_data,
+        new_data=new_data,
+        changed_by=employee_id
+    )
 
     # Синхронизация привязок пользователей
     if data.users is not None:

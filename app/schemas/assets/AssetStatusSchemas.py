@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class AssetStatusCreate(BaseModel):
     status: str
@@ -10,7 +10,5 @@ class AssetStatusResponse(BaseModel):
     id: int
     status: str
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(from_attributes=True)
 

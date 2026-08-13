@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
 
@@ -26,7 +26,7 @@ class InventorizationSessionResponse(BaseModel):
     created_at: datetime
     # items: List[InventorizationItemResponse] = []
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 class CheckItemRequest(BaseModel):
     asset_id: int

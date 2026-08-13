@@ -11,7 +11,6 @@ EXCLUDED_PATHS = {
     "/api/auth_token",
     "/api/login",
     "/api/logout",
-    "/api/android-data",
     "/api/pc-data",
     "/openapi.json",
     "/",
@@ -25,7 +24,7 @@ class AuthTokenMiddleware(BaseHTTPMiddleware):
         logger.debug(f"[AuthTokenMiddleware] Обработка запроса: {method} {path}")
 
         # Пропускаем исключённые пути
-        if path in EXCLUDED_PATHS or path.startswith("/docs") or path.startswith("/redoc"):
+        if path in EXCLUDED_PATHS or path.startswith("/docs") or path.startswith("/redoc") or path.startswith("/api/android-data"):
             logger.debug(f"[AuthTokenMiddleware] Путь исключён из проверки: {path}")
             return await call_next(request)
 

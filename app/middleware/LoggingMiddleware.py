@@ -229,7 +229,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         try:
             response: Response = await call_next(request)
-            if user_login is not None:
+            if user_login is not None and user_login not "android_data":
                 async with async_session() as db:
                     await create_audit_log(
                         db=db,

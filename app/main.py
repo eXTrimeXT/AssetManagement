@@ -44,6 +44,9 @@ from app.routers.map_assets.router_map import router_map
 # Импорт роутера аудита
 from app.routers.router_audit import router_audit
 
+# Аналитика
+from app.routers.router_analytics import router_analytics
+
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -99,13 +102,15 @@ app.include_router(router_companies, prefix="/api")         # Companies
 app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
 app.include_router(router_vendors, prefix="/api")           # Vendors
 
-app.include_router(router_asset_status, prefix="/api")       # Asset Types
+app.include_router(router_asset_status, prefix="/api")      # Asset Types
 app.include_router(router_asset_types, prefix="/api")       # Asset Types
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
 app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
-app.include_router(router_asset_history, prefix="/api")   # Инвентаризация активов
+app.include_router(router_asset_history, prefix="/api")     # Инвентаризация активов
+
+app.include_router(router_analytics, prefix="/api")         # Аналитика
 
 # Карта активов
 app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты

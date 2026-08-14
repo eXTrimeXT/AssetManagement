@@ -74,7 +74,7 @@ async def get_all_workshops_map(
             "asset_id": asset.asset_id,
             "name": asset.name,
             "inventory_id": asset.inventory_id,
-            "asset_status": asset.asset_status,
+            # "asset_status": asset.asset_status,
             "x": pos.x,
             "y": pos.y,
             "rotation": pos.rotation,

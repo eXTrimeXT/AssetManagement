@@ -27,4 +27,7 @@ class InventorizationItem(Base):
     asset_status = Column(String(100), nullable=True)
     is_checked = Column(Boolean, default=False)
 
+    quantity = Column(Integer, nullable=True)        # Количество из актива (копируется при создании сессии)
+    quantity_fact = Column(Integer, nullable=True, default=1)   # Фактическое количество (указывается при проверке)
+
     session = relationship("InventorizationSession", back_populates="items")

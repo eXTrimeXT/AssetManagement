@@ -1,12 +1,12 @@
 from typing import Sequence
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
 from app.schemas.assets.InventorizationSchemas import InventorizationSessionCreate, InventorizationSessionResponse, \
     CheckItemRequest, InventorizationItemResponse
 from app.database.assets.crud_inventorization import create_inventory_session, check_inventory_item, \
-    complete_inventory_session, get_inventory_sessions_list, get_inventory_items_by_session_id
+    complete_inventory_session, get_inventory_sessions_list, get_inventory_items_by_session_id, \
+    get_inventory_session_by_id
 from app.services.auth.auth_service import require_authorized_user
 
 router_inventorization = APIRouter(prefix="/inventorization", tags=["Assets Inventorization"])
@@ -36,6 +36,7 @@ async def start_session(
 ):
     return await create_inventory_session(db, data.asset_type_id)
 
+
 @router_inventorization.post("/sessions/{session_id}/check")
 async def check_item(
         session_id: int,
@@ -43,10 +44,26 @@ async def check_item(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    success = await check_inventory_item(db, session_id, data.asset_id)
+    # === ПРОВЕРКА: сессия не должна быть completed ===
+    session = await get_inventory_session_by_id(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
+    if session.status == "completed":
+        raise HTTPException(
+            status_code=400,
+            detail="Сессия уже завершена. Изменять items нельзя."
+        )
+    # ==================================================
+    if data.quantity_fact < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Количество не может быть меньше 0"
+        )
+
+    success = await check_inventory_item(db, session_id, data.asset_id, data.quantity_fact)
     if not success:
         raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
-    return {"message": "Актив отмечен как проверенный"}
+    return {"message": "success"}
 
 @router_inventorization.post("/sessions/{session_id}/complete", response_model=InventorizationSessionResponse)
 async def complete_session(
@@ -54,6 +71,17 @@ async def complete_session(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
+    # === ПРОВЕРКА: нельзя завершить уже завершенную сессию ===
+    session = await get_inventory_session_by_id(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
+    if session.status == "completed":
+        raise HTTPException(
+            status_code=400,
+            detail="Сессия уже завершена."
+        )
+    # =========================================================
+
     session = await complete_inventory_session(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Сессия не найдена")

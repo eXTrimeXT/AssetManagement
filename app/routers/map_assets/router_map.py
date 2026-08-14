@@ -12,6 +12,7 @@ from app.database.map_assets.crud_workshop import get_all_workshop
 from sqlalchemy import select
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.assets.Asset import Asset
+from app.models.assets.AssetStatus import AssetStatus
 
 router_map = APIRouter(tags=["Workshops"])
 
@@ -34,8 +35,8 @@ async def get_all_workshops_map(
     result = await db.execute(
         select(AssetPosition)
         .where(AssetPosition.is_active == True)
-        .join(Asset, AssetPosition.asset_id == Asset.asset_id)
-        .where(Asset.asset_status != "Списание")  # Только активные активы
+        # .join(AssetStatus, Asset.asset_id == AssetStatus.id)
+        # .where(Asset.asset_status != "Списание")  # Только активные активы
     )
     positions = result.scalars().all()
 

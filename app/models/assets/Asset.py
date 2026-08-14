@@ -72,6 +72,13 @@ class Asset(Base):
     creator = relationship("Employee", foreign_keys=[created_by])
     updater = relationship("Employee", foreign_keys=[updated_by])
 
+    write_offs = relationship(
+        "AssetWriteOff",
+        back_populates="asset",
+        cascade="all, delete-orphan",
+        lazy="select"
+    )
+
     asset_positions: Mapped[list["AssetPosition"]] = relationship(
         "AssetPosition",
         back_populates="asset",

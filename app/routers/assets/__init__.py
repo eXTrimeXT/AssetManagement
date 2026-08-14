@@ -5,6 +5,7 @@ from app.routers.assets.router_asset import router_assets
 from app.routers.assets.router_asset_assignment import router_asset_assignments
 from app.routers.assets.router_inventorization import router_inventorization
 from app.routers.assets.router_asset_history import router_asset_history
+from app.routers.assets.router_asset_write_off import router_asset_write_off
 
 __all__ = [
     "router_asset_status",
@@ -14,4 +15,5 @@ __all__ = [
     "router_asset_assignments",
     "router_inventorization",
     "router_asset_history",
+    "router_asset_write_off",
 ]

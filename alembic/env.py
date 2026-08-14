@@ -16,6 +16,7 @@ from app.models.assets.AssetModel import AssetModel
 from app.models.assets.AssetType import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.Inventorization import InventorizationItem, InventorizationSession
+from app.models.assets.AssetWriteOff import AssetWriteOff
 
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.map_assets.Workshop import Workshop

@@ -82,7 +82,7 @@ async def complete_session(
         )
     # =========================================================
 
-    session = await complete_inventory_session(db, session_id)
+    session = await complete_inventory_session(db, session_id, updated_by=current_user.employee_id)
     if not session:
         raise HTTPException(status_code=404, detail="Сессия не найдена")
     return session

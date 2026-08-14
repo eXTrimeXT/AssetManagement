@@ -206,7 +206,7 @@ async def check_inventory_item(
     return False
 
 
-async def complete_inventory_session(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
+async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[InventorizationSession]:
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         return None
@@ -228,28 +228,28 @@ async def complete_inventory_session(db: AsyncSession, session_id: int) -> Optio
 
     # Меняем статус на "Удален" для непроверенных активов
     # (адаптировано под новую таблицу статусов: ищем id статуса "Удален")
-    if unchecked_asset_ids:
-        status_result = await db.execute(
-            select(AssetStatus).where(AssetStatus.status == "Удален")
-        )
-        deleted_status = status_result.scalars().first()
-
-        if deleted_status:
-            await db.execute(
-                update(Asset)
-                .where(Asset.asset_id.in_(unchecked_asset_ids))
-                .values(asset_status_id=deleted_status.id)
-            )
-
-        # Также обновляем статус в таблице inventorization_items
-        await db.execute(
-            update(InventorizationItem)
-            .where(
-                InventorizationItem.session_id == session_id,
-                InventorizationItem.asset_id.in_(unchecked_asset_ids)
-            )
-            .values(asset_status="deleted")
-        )
+    # if unchecked_asset_ids:
+    #     status_result = await db.execute(
+    #         select(AssetStatus).where(AssetStatus.status == "Удален")
+    #     )
+    #     deleted_status = status_result.scalars().first()
+    #
+    #     if deleted_status:
+    #         await db.execute(
+    #             update(Asset)
+    #             .where(Asset.asset_id.in_(unchecked_asset_ids))
+    #             .values(asset_status_id=deleted_status.id)
+    #         )
+    #
+    #     # Также обновляем статус в таблице inventorization_items
+    #     await db.execute(
+    #         update(InventorizationItem)
+    #         .where(
+    #             InventorizationItem.session_id == session_id,
+    #             InventorizationItem.asset_id.in_(unchecked_asset_ids)
+    #         )
+    #         .values(asset_status="deleted")
+    #     )
 
     # === при завершении меняем quantity на quantity_fact ===
     result = await db.execute(
@@ -265,7 +265,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int) -> Optio
         await db.execute(
             update(Asset)
             .where(Asset.asset_id == item.asset_id)
-            .values(quantity=item.quantity_fact)
+            .values(quantity=item.quantity_fact, updated_by=updated_by)
         )
 
     session.status = "completed"

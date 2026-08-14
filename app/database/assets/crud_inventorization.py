@@ -160,7 +160,8 @@ async def create_inventory_session(db: AsyncSession, asset_type_id: int) -> Inve
             asset_name=asset.name,
             asset_inventory_id=asset.inventory_id,
             asset_serial_number=asset.serial_number,
-            quantity=asset.quantity,        # ДОБАВЛЕНО: копируем количество из актива
+            quantity=asset.quantity,        # копируем количество из актива
+            quantity_fact=asset.quantity,   # копируем количество из актива
         )
         for asset in assets
     ]

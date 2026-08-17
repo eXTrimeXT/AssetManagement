@@ -49,4 +49,6 @@ class AssetUserResponse(BaseModel):
     start_date: date
     end_date: Optional[date] = None
 
+    assignment_type: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)

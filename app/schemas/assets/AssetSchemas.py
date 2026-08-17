@@ -46,6 +46,7 @@ class AssetBase(BaseModel):
 class AssetCreate(AssetBase):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
+    responsible_users: Optional[List[AssetUserUpdate]] = None
 
 # Схема для обновления привязок пользователей
 class AssetUserUpdate(BaseModel):
@@ -78,6 +79,7 @@ class AssetUpdate(BaseModel):
     
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
+    responsible_users: Optional[List[AssetUserUpdate]] = None
 
 class AssetResponse(AssetBase):
     asset_id: int
@@ -88,7 +90,10 @@ class AssetResponse(AssetBase):
     asset_type_name: Optional[str] = None
     # model: Optional["AssetModelResponse"] = None
     location: Optional[LocationResponse] = None
+
+    # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserResponse]] = None
+    responsible_users: Optional[List[AssetUserResponse]] = None
     
     parent: Optional["AssetParentResponse"] = None
 

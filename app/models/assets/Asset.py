@@ -98,11 +98,13 @@ class Asset(Base):
     @computed_field
     @property
     def users(self) -> List[AssetUserResponse]:
-        """Список активных пользователей с полной информацией о сотруднике"""
+        """Список обычных пользователей (type='user') с полной информацией о сотруднике"""
         result = []
         for a in self.assignments:
             if a.end_date is not None:
                 continue  # Только активные привязки
+            if a.assignment_type != "user":
+                continue  # Только обычные пользователи
 
             emp = a.employee
             if not emp:
@@ -115,28 +117,77 @@ class Asset(Base):
             result.append(AssetUserResponse(
                 # Поля из Employee
                 guid=emp.guid,
-                guid_person=emp.guid_person,
+                # guid_person=emp.guid_person,
                 employee_id=emp.employee_id,
-                last_name=emp.last_name,
-                first_name=emp.first_name,
-                middle_name=emp.middle_name,
-                last_name_en=emp.last_name_en,
-                first_name_en=emp.first_name_en,
-                middle_name_en=emp.middle_name_en,
-                birth_date=emp.birth_date,
-                employment_date=emp.employment_date,
-                dismissal_date=emp.dismissal_date,
-                phone=emp.phone,
-                email=emp.email,
-                position_guid=emp.position_guid,
-                department_guid=emp.department_guid,
-                created_at=emp.created_at,
-                updated_at=emp.updated_at,
+                # last_name=emp.last_name,
+                # first_name=emp.first_name,
+                # middle_name=emp.middle_name,
+                # last_name_en=emp.last_name_en,
+                # first_name_en=emp.first_name_en,
+                # middle_name_en=emp.middle_name_en,
+                # birth_date=emp.birth_date,
+                # employment_date=emp.employment_date,
+                # dismissal_date=emp.dismissal_date,
+                # phone=emp.phone,
+                # email=emp.email,
+                # position_guid=emp.position_guid,
+                # department_guid=emp.department_guid,
+                # created_at=emp.created_at,
+                # updated_at=emp.updated_at,
                 full_name_ru=" ".join(parts_ru) if parts_ru else None,
                 full_name_en=" ".join(parts_en) if parts_en else None,
                 # Поля из AssetAssignment
                 start_date=a.start_date,
                 end_date=a.end_date,
+                assignment_type=a.assignment_type,
+            ))
+        return result
+
+    @computed_field
+    @property
+    def responsible_users(self) -> List[AssetUserResponse]:
+        """Список ответственных пользователей (type='responsible') с полной информацией о сотруднике"""
+        result = []
+        for a in self.assignments:
+            if a.end_date is not None:
+                continue  # Только активные привязки
+            if a.assignment_type != "responsible":
+                continue  # Только ответственные пользователи
+
+            emp = a.employee
+            if not emp:
+                continue
+
+            # Формируем ФИО
+            parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+            parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
+
+            result.append(AssetUserResponse(
+                # Поля из Employee
+                guid=emp.guid,
+                # guid_person=emp.guid_person,
+                employee_id=emp.employee_id,
+                # last_name=emp.last_name,
+                # first_name=emp.first_name,
+                # middle_name=emp.middle_name,
+                # last_name_en=emp.last_name_en,
+                # first_name_en=emp.first_name_en,
+                # middle_name_en=emp.middle_name_en,
+                # birth_date=emp.birth_date,
+                # employment_date=emp.employment_date,
+                # dismissal_date=emp.dismissal_date,
+                # phone=emp.phone,
+                # email=emp.email,
+                # position_guid=emp.position_guid,
+                # department_guid=emp.department_guid,
+                # created_at=emp.created_at,
+                # updated_at=emp.updated_at,
+                full_name_ru=" ".join(parts_ru) if parts_ru else None,
+                full_name_en=" ".join(parts_en) if parts_en else None,
+                # Поля из AssetAssignment
+                start_date=a.start_date,
+                end_date=a.end_date,
+                assignment_type=a.assignment_type,
             ))
         return result
 

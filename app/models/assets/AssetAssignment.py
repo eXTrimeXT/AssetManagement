@@ -13,6 +13,10 @@ class AssetAssignment(Base):
     asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False, index=True)
     employee_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False, index=True)
 
+    # Тип назначения: "user" или "responsible"
+    assignment_type = Column(String(20), nullable=False, default="user", index=True)
+
+
     # Временные рамки
     start_date = Column(Date, nullable=False, default=date.today, index=True)
     end_date = Column(Date, nullable=True, index=True)  # NULL = активная связь
@@ -22,9 +26,9 @@ class AssetAssignment(Base):
     comment = Column(String(500))
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 
-    # Защита от дубликатов: нельзя назначить одного сотрудника на один актив дважды
+    # Защита от дубликатов: нельзя назначить одного сотрудника на один актив дважды (по типу)
     __table_args__ = (
-        UniqueConstraint('asset_id', 'employee_id', 'end_date', name='uq_asset_employee_active'),
+        UniqueConstraint('asset_id', 'employee_id', 'assignment_type', 'end_date', name='uq_asset_employee_type_active'),
     )
 
     # Relationships

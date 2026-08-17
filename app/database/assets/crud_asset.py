@@ -354,7 +354,7 @@ async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> S
             ),
             selectinload(Asset.location),
             selectinload(Asset.assignments).options(selectinload(AssetAssignment.employee)),
-            selectinload(Asset.responsible),
+            # selectinload(Asset.responsible),
             # selectinload(Asset.preparer),
             # selectinload(Asset.checker),
             selectinload(Asset.creator),

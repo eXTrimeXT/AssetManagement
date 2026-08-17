@@ -13,7 +13,7 @@ from app.database.assets.crud_asset_history import compare_and_save_changes
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
     # ИСКЛЮЧАЕМ asset_status, чтобы не передать строку в relationship
-    asset_data = data.model_dump(exclude={"users", "asset_status"})
+    asset_data = data.model_dump(exclude={"users", "responsible_users", "asset_status"})
 
     # Создаем актив
     db_obj = Asset(**asset_data, created_by=employee_id, updated_by=employee_id)
@@ -212,7 +212,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     }
 
     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
-    update_data = data.model_dump(exclude_unset=True, exclude={"users", "asset_status"})
+    update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status"})
 
     # Обновляем поля актива
     for key, value in update_data.items():

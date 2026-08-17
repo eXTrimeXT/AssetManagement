@@ -62,8 +62,8 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.assignments).options(
                 selectinload(AssetAssignment.employee)
             ),
-            selectinload(Asset.preparer),
-            selectinload(Asset.checker),
+            # selectinload(Asset.preparer),
+            # selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
         )

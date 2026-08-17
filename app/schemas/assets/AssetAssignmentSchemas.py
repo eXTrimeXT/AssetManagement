@@ -6,6 +6,7 @@ class AssetAssignmentCreate(BaseModel):
     """Создание привязки — asset_id в теле запроса"""
     asset_id: int = Field(..., description="ID актива")
     employee_id: str = Field(..., max_length=20, description="Табельный номер сотрудника")
+    assignment_type: Optional[str] = Field("user", max_length=20, description="Тип привязки")
     comment: Optional[str] = Field(None, max_length=500, description="Комментарий")
 
 class AssetAssignmentResponse(BaseModel):
@@ -16,6 +17,7 @@ class AssetAssignmentResponse(BaseModel):
     start_date: date
     end_date: Optional[date] = None
     assigned_by: Optional[str] = None
+    assignment_type: Optional[str] = None
     comment: Optional[str] = None
     created_at: datetime
 

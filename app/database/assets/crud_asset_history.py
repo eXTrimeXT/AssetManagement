@@ -54,7 +54,9 @@ async def compare_and_save_changes(
         'name', 'inventory_id', 'serial_number', 'comment',
         'date_issue', 'date_purchasing', 'model_id', 'model_name',
         'asset_type_id', 'parent_id', 'location_id', 'asset_status_id',
-        'prepared_by', 'checked_by', 'parent_name', 'manufacturer_name',
+        # 'responsible_by',
+        # 'prepared_by', 'checked_by',
+        'parent_name', 'manufacturer_name',
         'vendor_name', 'os_name'
     ]
 

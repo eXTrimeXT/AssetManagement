@@ -19,8 +19,9 @@ class AssetBase(BaseModel):
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
-    prepared_by: Optional[str] = None
-    checked_by: Optional[str] = None
+    # responsible_by: Optional[str] = None
+    # prepared_by: Optional[str] = None
+    # checked_by: Optional[str] = None
 
     @field_validator('asset_status', mode='before')
     @classmethod
@@ -65,8 +66,9 @@ class AssetUpdate(BaseModel):
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
-    prepared_by: Optional[str] = None
-    checked_by: Optional[str] = None
+    # responsible_by: Optional[str] = None
+    # prepared_by: Optional[str] = None
+    # checked_by: Optional[str] = None
 
     # Временные поля
     parent_name: Optional[str] = None

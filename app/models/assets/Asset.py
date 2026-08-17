@@ -39,8 +39,9 @@ class Asset(Base):
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
     # Ответственные
-    prepared_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-    checked_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
+    # responsible_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
+    # prepared_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
+    # checked_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
 
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
@@ -67,8 +68,9 @@ class Asset(Base):
         lazy="selectin"
     )
 
-    preparer = relationship("Employee", foreign_keys=[prepared_by])
-    checker = relationship("Employee", foreign_keys=[checked_by])
+    # responsible = relationship("Employee", foreign_keys=[responsible_by])
+    # preparer = relationship("Employee", foreign_keys=[prepared_by])
+    # checker = relationship("Employee", foreign_keys=[checked_by])
     creator = relationship("Employee", foreign_keys=[created_by])
     updater = relationship("Employee", foreign_keys=[updated_by])
 

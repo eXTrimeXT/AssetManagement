@@ -1,5 +1,3 @@
-from dataclasses import Field
-
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
@@ -12,9 +10,6 @@ class InventorizationItemResponse(BaseModel):
     session_id: int
     asset_id: int
     asset_name: str
-    asset_inventory_id: str
-    asset_serial_number: Optional[str]
-    asset_status: Optional[str]
     is_checked: bool
 
     quantity: Optional[int] = None

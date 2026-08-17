@@ -53,7 +53,6 @@ async def check_item(
             status_code=400,
             detail="Сессия уже завершена. Изменять items нельзя."
         )
-    # ==================================================
     if data.quantity_fact < 0:
         raise HTTPException(
             status_code=400,
@@ -80,7 +79,6 @@ async def complete_session(
             status_code=400,
             detail="Сессия уже завершена."
         )
-    # =========================================================
 
     session = await complete_inventory_session(db, session_id, updated_by=current_user.employee_id)
     if not session:

@@ -19,9 +19,11 @@ class AssetBase(BaseModel):
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
-    # responsible_by: Optional[str] = None
-    # prepared_by: Optional[str] = None
-    # checked_by: Optional[str] = None
+
+    # Еженедельная проверка оборудования
+    every_week_check: Optional[bool] = False # true/false
+    next_service: Optional[datetime] = None  # datetime
+    service_period: Optional[int] = None     # Int (count days or count week ?)
 
     @field_validator('asset_status', mode='before')
     @classmethod
@@ -67,9 +69,11 @@ class AssetUpdate(BaseModel):
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     location_id: Optional[int] = None
-    # responsible_by: Optional[str] = None
-    # prepared_by: Optional[str] = None
-    # checked_by: Optional[str] = None
+
+    # Еженедельная проверка оборудования
+    every_week_check: Optional[bool] = False # true/false
+    next_service: Optional[datetime] = None  # datetime
+    service_period: Optional[int] = None     # Int (count days or count week ?)
 
     # Временные поля
     parent_name: Optional[str] = None

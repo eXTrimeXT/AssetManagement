@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 from pydantic import computed_field
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean
 from sqlalchemy.orm import relationship, backref, Mapped
 from datetime import datetime
 from app.models.Base import Base
@@ -37,6 +37,11 @@ class Asset(Base):
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
+
+    # Еженедельная проверка оборудования
+    every_week_check = Column(Boolean, default=false)     # true/false
+    next_service = Column(Date)         # datetime
+    service_period = Column(Integer, insert_default=0, default=0, nullable=True)       # Int (count days or count week ?)
 
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))

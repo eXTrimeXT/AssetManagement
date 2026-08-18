@@ -62,8 +62,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.assignments).options(
                 selectinload(AssetAssignment.employee)
             ),
-            # selectinload(Asset.preparer),
-            # selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
         )
@@ -202,9 +200,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'parent_id': obj.parent_id,
         'location_id': obj.location_id,
         'asset_status_id': obj.asset_status_id,
-        # 'responsible_by': obj.responsible_by,
-        # 'prepared_by': obj.prepared_by,
-        # 'checked_by': obj.checked_by,
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
@@ -245,9 +240,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'parent_id': obj.parent_id,
         'location_id': obj.location_id,
         'asset_status_id': obj.asset_status_id,
-        # 'responsible_by': obj.responsible_by,
-        # 'prepared_by': obj.prepared_by,
-        # 'checked_by': obj.checked_by,
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
@@ -269,46 +261,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     await db.commit()
     return await get_asset_by_id(db, asset_id)
 
-# async def _sync_asset_users(
-#         db: AsyncSession,
-#         asset_id: int,
-#         users: list,
-#         assigned_by: str
-# ) -> None:
-#     """
-#     Синхронизация привязок пользователей к активу.
-#     - Пользователи из массива users привязываются
-#     - Все остальные активные привязки закрываются
-#     """
-#     # Получаем список employee_id из запроса
-#     requested_employee_ids = {user.employee_id for user in users}
-#
-#     # Получаем все активные привязки для этого актива
-#     result = await db.execute(
-#         select(AssetAssignment).where(
-#             AssetAssignment.asset_id == asset_id,
-#             AssetAssignment.end_date.is_(None)
-#         )
-#     )
-#     active_assignments = result.scalars().all()
-#     active_employee_ids = {assignment.employee_id for assignment in active_assignments}
-#
-#     # Привязываем новых пользователей
-#     for employee_id in requested_employee_ids:
-#         if employee_id not in active_employee_ids:
-#             new_assignment = AssetAssignment(
-#                 asset_id=asset_id,
-#                 employee_id=employee_id,
-#                 start_date=date.today(),
-#                 end_date=None,
-#                 assigned_by=assigned_by
-#             )
-#             db.add(new_assignment)
-#
-#     # Отвязываем пользователей, которых нет в запросе
-#     for assignment in active_assignments:
-#         if assignment.employee_id not in requested_employee_ids:
-#             assignment.end_date = date.today()
 
 async def _sync_asset_users(
         db: AsyncSession,
@@ -422,9 +374,6 @@ async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> S
             ),
             selectinload(Asset.location),
             selectinload(Asset.assignments).options(selectinload(AssetAssignment.employee)),
-            # selectinload(Asset.responsible),
-            # selectinload(Asset.preparer),
-            # selectinload(Asset.checker),
             selectinload(Asset.creator),
             selectinload(Asset.updater),
         )

@@ -38,11 +38,6 @@ class Asset(Base):
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
-    # Ответственные
-    # responsible_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-    # prepared_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-    # checked_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
     updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
@@ -68,9 +63,6 @@ class Asset(Base):
         lazy="selectin"
     )
 
-    # responsible = relationship("Employee", foreign_keys=[responsible_by])
-    # preparer = relationship("Employee", foreign_keys=[prepared_by])
-    # checker = relationship("Employee", foreign_keys=[checked_by])
     creator = relationship("Employee", foreign_keys=[created_by])
     updater = relationship("Employee", foreign_keys=[updated_by])
 
@@ -95,6 +87,7 @@ class Asset(Base):
             return self.asset_type.name
         return None
 
+    # Обычные пользователи активов
     @computed_field
     @property
     def users(self) -> List[AssetUserResponse]:
@@ -143,6 +136,7 @@ class Asset(Base):
             ))
         return result
 
+    # Ответственные пользователи активов
     @computed_field
     @property
     def responsible_users(self) -> List[AssetUserResponse]:

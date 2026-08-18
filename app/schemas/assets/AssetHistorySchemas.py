@@ -11,4 +11,8 @@ class AssetHistoryResponse(BaseModel):
     changed_by: str
     changed_at: datetime
 
+    # ФИО изменившего
+    changer_full_name_ru: Optional[str] = None
+    changer_full_name_en: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)

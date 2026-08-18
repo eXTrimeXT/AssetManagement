@@ -22,7 +22,7 @@ class AssetBase(BaseModel):
 
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False # true/false
-    next_service: Optional[datetime] = None  # datetime
+    next_service: Optional[date] = None  # datetime
     service_period: Optional[int] = None     # Int (count days or count week ?)
 
     @field_validator('asset_status', mode='before')
@@ -72,7 +72,7 @@ class AssetUpdate(BaseModel):
 
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False # true/false
-    next_service: Optional[datetime] = None  # datetime
+    next_service: Optional[date] = None  # datetime
     service_period: Optional[int] = None     # Int (count days or count week ?)
 
     # Временные поля

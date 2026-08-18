@@ -40,7 +40,7 @@ class Asset(Base):
 
     # Еженедельная проверка оборудования
     every_week_check = Column(Boolean, default=false)     # true/false
-    next_service = Column(Date)         # datetime
+    next_service = Column(Date)         # date
     service_period = Column(Integer, insert_default=0, default=0, nullable=True)       # Int (count days or count week ?)
 
     # Аудит

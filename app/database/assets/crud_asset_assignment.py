@@ -25,6 +25,7 @@ async def create_assignment(
         start_date=date.today(),
         end_date=None,
         assigned_by=assigned_by,
+        assignment_type=data.assignment_type,
         comment=data.comment
     )
     db.add(db_assignment)

@@ -39,9 +39,9 @@ class Asset(Base):
     location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
     # Еженедельная проверка оборудования
-    every_week_check = Column(Boolean, default=false)     # true/false
-    next_service = Column(Date)         # date
-    service_period = Column(Integer, insert_default=0, default=0, nullable=True)       # Int (count days or count week ?)
+    every_week_check = Column(Boolean, default=false)
+    next_service = Column(Date)  # date
+    service_period = Column(Integer, default=0) # Int (count days)
 
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))

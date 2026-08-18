@@ -48,6 +48,12 @@ from app.routers.router_audit import router_audit
 # Аналитика
 from app.routers.router_analytics import router_analytics
 
+# Планировщик задач
+from app.scheduler.scheduler import init_scheduler, shutdown_scheduler
+
+# Импорт роутера уведомлений
+from app.routers.router_notifications import router_notifications
+
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -63,12 +69,18 @@ async def lifespan(app: FastAPI):
 
     # Инициализация дефолтного конфига карты
     # await MapConfigService.init_default_config()
+    # При старте приложения
+    init_scheduler()
+    # yield
+    # При завершении приложения
+    # shutdown_scheduler()
 
     # Для разработки раскомментировать
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     yield
+    shutdown_scheduler()
 
 # --- Создание экземпляра приложения ---
 app = FastAPI(
@@ -118,6 +130,9 @@ app.include_router(router_analytics, prefix="/api")         # Аналитика
 app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты
 app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
 app.include_router(router_map, prefix="/api")               # Роутер html-карты
+
+# Уведомления
+app.include_router(router_notifications, prefix="/api")     # Роутер уведомлений
 
 
 router_root = APIRouter(tags=["/"])

@@ -417,14 +417,19 @@ async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> S
         .options(
             selectinload(Asset.asset_type),
             selectinload(Asset.asset_status),
-            selectinload(Asset.model),  # Добавлено
+            selectinload(Asset.model),
             selectinload(Asset.parent).options(
-                selectinload(Asset.asset_type),  # Добавлено
+                selectinload(Asset.asset_type),
                 selectinload(Asset.asset_status),
-                # selectinload(Asset.location),
-                selectinload(Asset.model)
+                selectinload(Asset.model),
+                # === загрузка позиций и workshop для родителя ===
+                selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+                selectinload(Asset.assignments).options(
+                    selectinload(AssetAssignment.employee)
+                ),
             ),
-            # selectinload(Asset.location),
+            # === загрузка позиций и workshop для основного актива ===
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
             selectinload(Asset.assignments).options(selectinload(AssetAssignment.employee)),
             selectinload(Asset.creator),
             selectinload(Asset.updater),

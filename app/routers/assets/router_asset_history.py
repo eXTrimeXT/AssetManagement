@@ -18,6 +18,4 @@ async def read_asset_history(
 ):
     """Получить историю изменений актива"""
     history = await get_asset_history(db, asset_id, skip=skip, limit=limit)
-    # if not history:
-    #     raise HTTPException(status_code=404, detail="No history found for this asset")
     return history

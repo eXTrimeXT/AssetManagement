@@ -2,8 +2,6 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
 
-from app.schemas.assets import AssetShortResponse, AssetResponse
-
 
 class NotificationBase(BaseModel):
     employee_id: str
@@ -15,13 +13,19 @@ class NotificationResponse(NotificationBase):
     notification_id: int
     created_at: datetime
 
-    asset: Optional[AssetShortResponse] = None  # новое поле
-
     model_config = ConfigDict(from_attributes=True)
 
 
-class NotificationCheckRequest(BaseModel):
-    notification_checked: bool = True
+class PaginatedNotificationResponse(BaseModel):
+    """Ответ со списком уведомлений и количеством непрочитанных"""
+    items: List[NotificationResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+    unchecked_count: int  # количество непрочитанных
 
 
 class NotificationListResponse(BaseModel):

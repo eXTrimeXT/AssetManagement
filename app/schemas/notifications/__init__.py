@@ -1,5 +1,6 @@
 from app.schemas.notifications.NotificationSchemas import (
+    NotificationBase,
     NotificationResponse,
-    NotificationCheckRequest,
+    PaginatedNotificationResponse,
     NotificationListResponse,
 )

@@ -55,15 +55,15 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             selectinload(Asset.model),
             selectinload(Asset.parent).options(
                 selectinload(Asset.asset_type),
+                # === загрузка asset_status для родителя ===
                 selectinload(Asset.asset_status),
-                # selectinload(Asset.location),
-                selectinload(Asset.model),
-                # === Загружаем assignments И employee для родителя ===
+                selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
                 selectinload(Asset.assignments).options(
                     selectinload(AssetAssignment.employee)
                 )
             ),
-            # selectinload(Asset.location),
+            # загрузка asset_positions для основного актива
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
             selectinload(Asset.assignments).options(
                 selectinload(AssetAssignment.employee)
             ),

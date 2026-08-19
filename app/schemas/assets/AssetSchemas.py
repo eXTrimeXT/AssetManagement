@@ -1,8 +1,7 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import datetime, date
 from typing import Optional, List, Any
-from app.schemas.assets.AssetAssignmentSchemas import AssetUserResponse
-# from app.schemas.locations.LocationResponse import LocationResponse
+from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 
 class AssetBase(BaseModel):
     name: str
@@ -98,8 +97,8 @@ class AssetResponse(AssetBase):
     location: Optional[AssetLocationResponse] = None
 
     # Для синхронизации привязок пользователей
-    users: Optional[List[AssetUserResponse]] = None
-    responsible_users: Optional[List[AssetUserResponse]] = None
+    users: Optional[List[AssetUserFullResponse]] = None
+    responsible_users: Optional[List[AssetUserFullResponse]] = None
     
     parent: Optional["AssetParentResponse"] = None
 

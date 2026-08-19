@@ -10,7 +10,7 @@ from app.models.notifications.Notification import Notification
 
 logger = logging.getLogger(__name__)
 
-SERVICE_REQUIRED_STATUS = "Требует проверки"
+SERVICE_REQUIRED_STATUS = "На обслуживании"
 
 
 async def get_or_create_service_status(session) -> AssetStatus:

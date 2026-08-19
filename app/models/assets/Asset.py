@@ -112,6 +112,7 @@ class Asset(Base):
         workshop = active_position.workshop
 
         return AssetLocationResponse(
+            workshop_id=workshop.workshop_id,
             workshop_name=workshop.name if workshop else None,
             workshop_code=workshop.code if workshop else None,
             line=active_position.line,

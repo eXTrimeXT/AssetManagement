@@ -20,9 +20,9 @@ class AssetBase(BaseModel):
     # location_id: Optional[int] = None
 
     # Еженедельная проверка оборудования
-    every_week_check: Optional[bool] = False # true/false
-    next_service: Optional[date] = None  # datetime
-    service_period: Optional[int] = None     # Int (count days or count week ?)
+    every_week_check: Optional[bool] = False    # true/false
+    next_service: Optional[date] = None         # datetime
+    service_period: Optional[int] = None        # Int (count days)
 
     @field_validator('asset_status', mode='before')
     @classmethod
@@ -136,6 +136,7 @@ class AssetLocationUpdate(BaseModel):
 
 class AssetLocationResponse(BaseModel):
     """Локация актива на основе Workshop и AssetPosition"""
+    workshop_id: int
     workshop_name: Optional[str] = None
     workshop_code: Optional[str] = None
     line: Optional[str] = None

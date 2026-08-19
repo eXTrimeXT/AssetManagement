@@ -17,7 +17,7 @@ def init_scheduler():
         check_service_assets,
         # trigger=CronTrigger(hour=9, minute=0),
         # для быстрой проверки
-        trigger=IntervalTrigger(seconds=30),
+        trigger=IntervalTrigger(minutes=30),
         id="service_check",
         replace_existing=True,
     )

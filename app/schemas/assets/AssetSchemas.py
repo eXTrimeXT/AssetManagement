@@ -95,6 +95,8 @@ class AssetResponse(AssetBase):
     # model: Optional["AssetModelResponse"] = None
     # location: Optional[LocationResponse] = None
 
+    location: Optional[AssetLocationResponse] = None
+
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserResponse]] = None
     responsible_users: Optional[List[AssetUserResponse]] = None
@@ -112,5 +114,21 @@ class AssetShortResponse(AssetBase):
     # model: Optional["AssetModelResponse"] = None
     asset_type_name: Optional[str] = None
     # location: Optional[LocationResponse] = None
+
+    location: Optional[AssetLocationResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AssetLocationResponse(BaseModel):
+    """Локация актива на основе Workshop и AssetPosition"""
+    workshop_name: Optional[str] = None
+    workshop_code: Optional[str] = None
+    line: Optional[str] = None
+    office: Optional[str] = None
+    room: Optional[str] = None
+    floor: Optional[str] = None
+    x: Optional[int] = None
+    y: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

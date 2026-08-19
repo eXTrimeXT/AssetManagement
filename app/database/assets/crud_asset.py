@@ -9,6 +9,7 @@ from app.models.assets import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
 from app.database.assets.crud_asset_history import compare_and_save_changes
+from app.models.map_assets.AssetPosition import AssetPosition
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -129,6 +130,66 @@ async def get_assets_count(
     result = await db.execute(query)
     return result.scalar_one()
 
+# async def get_assets_list(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         name: Optional[str] = None,
+#         inventory_id: Optional[str] = None,
+#         serial_number: Optional[str] = None,
+#         asset_status: Optional[str] = None,
+#         model_id: Optional[int] = None,
+#         asset_type_id: Optional[int] = None,
+#         parent_id: Optional[int] = None,
+#         # location_id: Optional[int] = None,
+#         allowed_type_en_names: Optional[List[str]] = None,
+# ) -> Tuple[Sequence[Asset], int]:
+#     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
+#         return [], 0
+#
+#     total = await get_assets_count(
+#         db, name, inventory_id, serial_number, asset_status,
+#         model_id, asset_type_id, parent_id,
+#         # location_id,
+#         allowed_type_en_names
+#     )
+#
+#     skip = (page - 1) * page_size
+#
+#     query = select(Asset).options(
+#         selectinload(Asset.asset_type),
+#         selectinload(Asset.asset_status),
+#         selectinload(Asset.model),
+#         selectinload(Asset.parent).options(
+#             selectinload(Asset.asset_type),
+#             # selectinload(Asset.location),
+#             selectinload(Asset.model),
+#             # === Загружаем assignments И employee для родителя ===
+#             selectinload(Asset.assignments).options(
+#                 selectinload(AssetAssignment.employee)
+#             )
+#         ),
+#         selectinload(Asset.assignments).options(
+#             selectinload(AssetAssignment.employee)
+#         ),
+#         # selectinload(Asset.location),
+#     )
+#
+#     query = _apply_assets_filters(
+#         query, name, inventory_id, serial_number, asset_status,
+#         model_id, asset_type_id, parent_id,
+#         # location_id,
+#         allowed_type_en_names
+#     )
+#
+#     query = query.order_by(Asset.asset_id)
+#     query = query.offset(skip).limit(page_size)
+#
+#     result = await db.execute(query)
+#     assets = result.scalars().all()
+#
+#     return assets, total
+
 async def get_assets_list(
         db: AsyncSession,
         page: int = 1,
@@ -140,7 +201,6 @@ async def get_assets_list(
         model_id: Optional[int] = None,
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
-        # location_id: Optional[int] = None,
         allowed_type_en_names: Optional[List[str]] = None,
 ) -> Tuple[Sequence[Asset], int]:
     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
@@ -148,9 +208,7 @@ async def get_assets_list(
 
     total = await get_assets_count(
         db, name, inventory_id, serial_number, asset_status,
-        model_id, asset_type_id, parent_id,
-        # location_id,
-        allowed_type_en_names
+        model_id, asset_type_id, parent_id, allowed_type_en_names
     )
 
     skip = (page - 1) * page_size
@@ -161,24 +219,17 @@ async def get_assets_list(
         selectinload(Asset.model),
         selectinload(Asset.parent).options(
             selectinload(Asset.asset_type),
-            # selectinload(Asset.location),
-            selectinload(Asset.model),
-            # === Загружаем assignments И employee для родителя ===
-            selectinload(Asset.assignments).options(
-                selectinload(AssetAssignment.employee)
-            )
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
         ),
+        selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
         selectinload(Asset.assignments).options(
             selectinload(AssetAssignment.employee)
         ),
-        # selectinload(Asset.location),
     )
 
     query = _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
-        model_id, asset_type_id, parent_id,
-        # location_id,
-        allowed_type_en_names
+        model_id, asset_type_id, parent_id, allowed_type_en_names
     )
 
     query = query.order_by(Asset.asset_id)

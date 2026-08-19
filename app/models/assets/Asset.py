@@ -6,6 +6,8 @@ from sqlalchemy.orm import relationship, backref, Mapped
 from datetime import datetime
 from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserResponse
+from app.schemas.assets.AssetSchemas import AssetLocationResponse
+
 
 class Asset(Base):
     __tablename__ = "assets"
@@ -91,6 +93,34 @@ class Asset(Base):
         if self.asset_type:
             return self.asset_type.name
         return None
+
+    # === Локация из AssetPosition + Workshop ===
+    @computed_field
+    @property
+    def location(self) -> Optional[AssetLocationResponse]:
+        """Текущая локация актива (активная позиция на карте)"""
+        # Ищем активную позицию
+        active_position = None
+        for pos in (self.asset_positions or []):
+            if pos.is_active:
+                active_position = pos
+                break
+
+        if not active_position:
+            return None
+
+        workshop = active_position.workshop
+
+        return AssetLocationResponse(
+            workshop_name=workshop.name if workshop else None,
+            workshop_code=workshop.code if workshop else None,
+            line=active_position.line,
+            office=active_position.office,
+            room=active_position.room,
+            floor=active_position.floor,
+            x=active_position.x,
+            y=active_position.y,
+        )
 
     # Обычные пользователи активов
     @computed_field

@@ -6,17 +6,23 @@ from sqlalchemy.orm import selectinload
 from app.models.notifications.Notification import Notification
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
+from app.models.map_assets.AssetPosition import AssetPosition
 
 
 def _asset_load_options():
     """Общие опции загрузки для Asset внутри Notification"""
     return [
+        # Базовые relationship актива
+        selectinload(Notification.asset).selectinload(Asset.asset_type),
+        selectinload(Notification.asset).selectinload(Asset.asset_status),
+
+        # Вместо Asset.location загружаем asset_positions с workshop
+        # (computed_field location сам возьмёт данные из них)
         selectinload(Notification.asset)
-        .selectinload(Asset.asset_type),
-        selectinload(Notification.asset)
-        .selectinload(Asset.asset_status),
-        selectinload(Notification.asset)
-        .selectinload(Asset.location),
+        .selectinload(Asset.asset_positions)
+        .selectinload(AssetPosition.workshop),
+
+        # Для responsible_users и users (computed_field)
         selectinload(Notification.asset)
         .selectinload(Asset.assignments)
         .selectinload(AssetAssignment.employee),

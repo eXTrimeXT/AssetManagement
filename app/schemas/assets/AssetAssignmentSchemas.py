@@ -41,8 +41,8 @@ class AssetUserFullResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     comment: Optional[str] = None
-    # position_guid: Optional[str] = None
-    # department_guid: Optional[str] = None
+    position_guid: Optional[str] = None
+    department_guid: Optional[str] = None
 
     # Служебные поля
     created_at: Optional[datetime] = None

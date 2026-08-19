@@ -155,8 +155,8 @@ class Asset(Base):
                 phone=emp.phone,
                 email=emp.email,
                 comment=emp.comment,
-                # position_guid=emp.position_guid,
-                # department_guid=emp.department_guid,
+                position_guid=emp.position_guid,
+                department_guid=emp.department_guid,
                 created_at=emp.created_at,
                 updated_at=emp.updated_at,
 
@@ -205,8 +205,8 @@ class Asset(Base):
                 phone=emp.phone,
                 email=emp.email,
                 comment=emp.comment,
-                # position_guid=emp.position_guid,
-                # department_guid=emp.department_guid,
+                position_guid=emp.position_guid,
+                department_guid=emp.department_guid,
                 created_at=emp.created_at,
                 updated_at=emp.updated_at,
 

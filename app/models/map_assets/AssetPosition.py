@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean, CheckConstraint
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean, CheckConstraint, String
 from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 
@@ -38,6 +38,12 @@ class AssetPosition(Base):
 
     # === Статус ===
     is_active = Column(Boolean, default=True, index=True)  # Текущая позиция (для истории)
+
+    # Линия, офис, помещение и этаж
+    line = Column(String(100), nullable=True)      # Линия (1-07)
+    office = Column(String(200), nullable=True)    # Офис (Линия претрим)
+    room = Column(String(200), nullable=True)      # Помещение (Офис сборки)
+    floor = Column(String(50), nullable=True)      # Этаж (2 Этаж)
 
     # === Служебные поля ===
     created_at = Column(DateTime, default=datetime.now, nullable=False)

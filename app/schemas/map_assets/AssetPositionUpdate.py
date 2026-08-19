@@ -13,6 +13,11 @@ class AssetPositionUpdate(BaseModel):
     # Статус
     is_active: Optional[bool] = Field(None, description="Активна ли позиция")
 
+    line: str = Field(None, description="Линия цеха")
+    office: str = Field(None, description="Офис")
+    room: str = Field(None, description="Помещение")
+    floor: str = Field(None, description="Этаж")
+
     @field_validator('x', 'y')
     @classmethod
     def validate_coordinates(cls, v: Optional[int]) -> Optional[int]:

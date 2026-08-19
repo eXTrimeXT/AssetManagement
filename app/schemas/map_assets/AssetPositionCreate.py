@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class AssetPositionCreate(BaseModel):
@@ -14,6 +14,11 @@ class AssetPositionCreate(BaseModel):
 
     # Статус
     is_active: bool = Field(True, description="Активна ли позиция")
+
+    line: str = Field(..., description="Линия цеха")
+    office: str = Field(..., description="Офис")
+    room: str = Field(..., description="Помещение")
+    floor: str = Field(..., description="Этаж")
 
     @field_validator('x', 'y')
     @classmethod
@@ -32,6 +37,10 @@ class AssetPositionCreate(BaseModel):
                 "y": 150,
                 "rotation": 0,
                 "scale": 100,
-                "is_active": True
+                "is_active": True,
+                "line": "line",
+                "office": "office",
+                "room": "room",
+                "floor": "floor"
             }
         }

@@ -18,6 +18,11 @@ class AssetPositionResponse(BaseModel):
     # Статус
     is_active: bool = Field(..., description="Активна ли позиция")
 
+    line: Optional[str] = None
+    office: Optional[str] = None
+    room: Optional[str] = None
+    floor: Optional[str] = None
+
     # Служебные поля
     created_at: datetime = Field(..., description="Дата создания")
     updated_at: Optional[datetime] = Field(None, description="Дата обновления")

@@ -48,6 +48,8 @@ class AssetCreate(AssetBase):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
     responsible_users: Optional[List[AssetUserUpdate]] = None
+    # Локация на карте
+    location: Optional[AssetLocationUpdate] = None
 
 # Схема для обновления привязок пользователей
 class AssetUserUpdate(BaseModel):
@@ -68,6 +70,7 @@ class AssetUpdate(BaseModel):
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
     # location_id: Optional[int] = None
+    location: Optional[AssetLocationUpdate] = None
 
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False # true/false
@@ -79,7 +82,7 @@ class AssetUpdate(BaseModel):
     manufacturer_name: Optional[str] = None
     vendor_name: Optional[str] = None
     os_name: Optional[str] = None
-    
+
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
     responsible_users: Optional[List[AssetUserUpdate]] = None
@@ -99,7 +102,7 @@ class AssetResponse(AssetBase):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserFullResponse]] = None
     responsible_users: Optional[List[AssetUserFullResponse]] = None
-    
+
     parent: Optional["AssetParentResponse"] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -118,6 +121,18 @@ class AssetShortResponse(AssetBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class AssetLocationUpdate(BaseModel):
+    """Схема для обновления позиции актива на карте"""
+    workshop_id: int
+    line: Optional[str] = None
+    office: Optional[str] = None
+    room: Optional[str] = None
+    floor: Optional[str] = None
+    x: int
+    y: int
+    rotation: Optional[int] = 0
+    scale: Optional[int] = 100
 
 class AssetLocationResponse(BaseModel):
     """Локация актива на основе Workshop и AssetPosition"""

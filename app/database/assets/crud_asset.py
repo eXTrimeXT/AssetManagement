@@ -38,6 +38,10 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
         await _sync_asset_users(db, db_obj.asset_id, data.users or [], data.responsible_users or [], employee_id)
         await db.commit()
 
+    # === НОВОЕ: Создание локации на карте ===
+    if data.location is not None:
+        await _sync_asset_location(db, db_obj.asset_id, data.location, employee_id)
+
     # Возвращаем актив с загруженными связями
     return await get_asset_by_id(db, db_obj.asset_id)
 
@@ -129,66 +133,6 @@ async def get_assets_count(
     )
     result = await db.execute(query)
     return result.scalar_one()
-
-# async def get_assets_list(
-#         db: AsyncSession,
-#         page: int = 1,
-#         page_size: int = 50,
-#         name: Optional[str] = None,
-#         inventory_id: Optional[str] = None,
-#         serial_number: Optional[str] = None,
-#         asset_status: Optional[str] = None,
-#         model_id: Optional[int] = None,
-#         asset_type_id: Optional[int] = None,
-#         parent_id: Optional[int] = None,
-#         # location_id: Optional[int] = None,
-#         allowed_type_en_names: Optional[List[str]] = None,
-# ) -> Tuple[Sequence[Asset], int]:
-#     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
-#         return [], 0
-#
-#     total = await get_assets_count(
-#         db, name, inventory_id, serial_number, asset_status,
-#         model_id, asset_type_id, parent_id,
-#         # location_id,
-#         allowed_type_en_names
-#     )
-#
-#     skip = (page - 1) * page_size
-#
-#     query = select(Asset).options(
-#         selectinload(Asset.asset_type),
-#         selectinload(Asset.asset_status),
-#         selectinload(Asset.model),
-#         selectinload(Asset.parent).options(
-#             selectinload(Asset.asset_type),
-#             # selectinload(Asset.location),
-#             selectinload(Asset.model),
-#             # === Загружаем assignments И employee для родителя ===
-#             selectinload(Asset.assignments).options(
-#                 selectinload(AssetAssignment.employee)
-#             )
-#         ),
-#         selectinload(Asset.assignments).options(
-#             selectinload(AssetAssignment.employee)
-#         ),
-#         # selectinload(Asset.location),
-#     )
-#
-#     query = _apply_assets_filters(
-#         query, name, inventory_id, serial_number, asset_status,
-#         model_id, asset_type_id, parent_id,
-#         # location_id,
-#         allowed_type_en_names
-#     )
-#
-#     query = query.order_by(Asset.asset_id)
-#     query = query.offset(skip).limit(page_size)
-#
-#     result = await db.execute(query)
-#     assets = result.scalars().all()
-#
-#     return assets, total
 
 async def get_assets_list(
         db: AsyncSession,
@@ -388,6 +332,55 @@ async def _sync_asset_users(
         elif assignment.assignment_type == "responsible":
             if assignment.employee_id not in requested_responsible_ids:
                 assignment.end_date = date.today()
+
+async def _sync_asset_location(
+        db: AsyncSession,
+        asset_id: int,
+        location_data,  # AssetLocationUpdate
+        assigned_by: str
+) -> dict:
+    """
+    Синхронизация позиции актива на карте.
+    - Деактивирует все существующие позиции (is_active = False)
+    - Создаёт новую активную позицию
+    """
+    # Деактивируем все существующие позиции для этого актива
+    result = await db.execute(
+        select(AssetPosition).where(
+            AssetPosition.asset_id == asset_id,
+            AssetPosition.is_active == True
+        )
+    )
+    existing_positions = result.scalars().all()
+    for pos in existing_positions:
+        pos.is_active = False
+
+    # Создаём новую активную позицию
+    new_position = AssetPosition(
+        asset_id=asset_id,
+        workshop_id=location_data.workshop_id,
+        line=location_data.line,
+        office=location_data.office,
+        room=location_data.room,
+        floor=location_data.floor,
+        x=location_data.x,
+        y=location_data.y,
+        rotation=location_data.rotation if hasattr(location_data, 'rotation') else 0,
+        scale=location_data.scale if hasattr(location_data, 'scale') else 100,
+        is_active=True,
+    )
+    db.add(new_position)
+    await db.flush()  # Получаем id без commit
+
+    return {
+        "workshop_id": new_position.workshop_id,
+        "line": new_position.line,
+        "office": new_position.office,
+        "room": new_position.room,
+        "floor": new_position.floor,
+        "x": new_position.x,
+        "y": new_position.y,
+    }
 
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     obj = await get_asset_by_id(db, asset_id)

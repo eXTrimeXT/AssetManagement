@@ -4,11 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.zup.department import ZupDepartment
 from app.schemas.zup.DepartmentSchemas import DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
 
-
 async def get_department_by_guid(db: AsyncSession, guid: str) -> Optional[ZupDepartment]:
     result = await db.execute(select(ZupDepartment).where(ZupDepartment.guid == guid))
     return result.scalar_one_or_none()
-
 
 async def create_department(db: AsyncSession, department_in: DepartmentCreate) -> ZupDepartment:
     db_department = ZupDepartment(**department_in.model_dump())
@@ -16,7 +14,6 @@ async def create_department(db: AsyncSession, department_in: DepartmentCreate) -
     await db.commit()
     await db.refresh(db_department)
     return db_department
-
 
 async def update_department(db: AsyncSession, guid: str, department_in: DepartmentUpdate) -> Optional[ZupDepartment]:
     department = await get_department_by_guid(db, guid)
@@ -31,12 +28,10 @@ async def update_department(db: AsyncSession, guid: str, department_in: Departme
     await db.refresh(department)
     return department
 
-
 async def get_departments_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[ZupDepartment]:
     query = select(ZupDepartment).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
-
 
 async def get_hierarchy_departments(
         db: AsyncSession,

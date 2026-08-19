@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.database.connection import get_db
-from app.schemas.zup.EmployeeSchemas import EmployeeResponse, EmployeeShortResponse, EmployeeCommentUpdate
+from app.schemas.zup.EmployeeSchemas import EmployeeResponse, EmployeeShortResponse, EmployeeCommentUpdate, \
+    EmployeePersonalResponse
 from app.schemas.zup.PositionSchemas import PositionResponse
 from app.schemas.zup.DepartmentSchemas import WorkplaceResponse, DepartmentDivisionGroupResponse
 from app.schemas.zup.ManagerSchemas import ManagerResponse
 from app.database.zup.crud_zup_employees import get_employees_list, get_employee_by_guid, get_employee_by_id, \
     update_employee_comment
-from app.database.zup.crud_zup_positions import get_positions_list
+from app.database.zup.crud_zup_positions import get_positions_list, get_position_by_guid
 from app.database.zup.crud_zup_departments import get_departments_list, get_hierarchy_departments
 from app.database.zup.crud_zup_managers import get_managers_list
 from app.services.zup.zup_integration import sync_all_data, sync_employee_data
@@ -133,6 +134,37 @@ async def get_employee(
     if not employee:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return employee
+
+@router_zup.get("/employees/me", response_model=EmployeePersonalResponse)
+async def get_employee(
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    employee = await get_employee_by_id(db, current_user.employee_id)
+
+    if not employee:
+        raise HTTPException(status_code=404, detail="Сотрудник не найден")
+
+    # Создаём базовый response без проблемных полей
+    response = EmployeePersonalResponse.model_validate(employee)
+
+    # Загружаем иерархию отдельно
+    if employee.department_guid:
+        hierarchy = await get_hierarchy_departments(db, employee.department_guid)
+        if hierarchy:
+            response.group = hierarchy.group
+            response.division = hierarchy.division
+            response.department = hierarchy.department
+            response.society = hierarchy.society
+            # ... остальные поля иерархии
+
+    # Загружаем должность отдельно
+    if employee.position_guid:
+        position = await get_position_by_guid(db, employee.position_guid)
+        if position:
+            response.position = PositionResponse.model_validate(position)
+
+    return response
 
 @router_zup.get("/employees/id/{id}", response_model=EmployeeResponse, summary="Получить сотрудника по ID")
 async def get_employee(

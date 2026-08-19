@@ -12,8 +12,19 @@ async def get_employee_by_guid(db: AsyncSession, guid: str) -> Optional[Employee
     result = await db.execute(select(Employee).where(Employee.guid == guid))
     return result.scalar_one_or_none()
 
+# async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Employee]:
+#     result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
+#     return result.scalar_one_or_none()
+
 async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Employee]:
-    result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
+    result = await db.execute(
+        select(Employee)
+        .options(
+            selectinload(Employee.position),  # Загружаем должность
+            selectinload(Employee.group),  # Загружаем департамент
+        )
+        .where(Employee.employee_id == employee_id)
+    )
     return result.scalar_one_or_none()
 
 async def get_employee_by_active_directory_login(

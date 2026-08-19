@@ -59,6 +59,24 @@ class EmployeeResponse(EmployeeBase):
     full_name_en: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+class EmployeePersonalResponse(EmployeeBase):
+    """Полная схема ответа"""
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    # Вычисляемые поля
+    full_name_ru: Optional[str] = None
+    full_name_en: Optional[str] = None
+
+    # === НОВЫЕ ПОЛЯ: иерархия и должность ===
+    society: Optional[WorkplaceResponse] = None
+    department: Optional[WorkplaceResponse] = None
+    division: Optional[WorkplaceResponse] = None
+    group: Optional[WorkplaceResponse] = None
+    position: Optional[PositionResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 class EmployeeShortResponse(BaseModel):
     """Краткая схема для списков"""
     guid: str

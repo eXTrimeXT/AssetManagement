@@ -59,6 +59,7 @@ async def create_inventory_session(db: AsyncSession, asset_type_id: int) -> Inve
             asset_id=asset.asset_id,
             asset_name=asset.name,
             is_checked=False,
+            serial_number=asset.serial_number, # Копируем серийный номер для будущего поиска по сканированию для Android
             quantity=asset.quantity,        # копируем количество из актива
             quantity_fact=None,             # ставим None - значит кол-во факт не известно
         )

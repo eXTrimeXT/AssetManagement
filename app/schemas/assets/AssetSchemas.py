@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import datetime, date
 from typing import Optional, List, Any
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserResponse
-from app.schemas.locations.LocationResponse import LocationResponse
+# from app.schemas.locations.LocationResponse import LocationResponse
 
 class AssetBase(BaseModel):
     name: str
@@ -18,7 +18,7 @@ class AssetBase(BaseModel):
     model_name: Optional[str] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
-    location_id: Optional[int] = None
+    # location_id: Optional[int] = None
 
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False # true/false
@@ -68,7 +68,7 @@ class AssetUpdate(BaseModel):
     model_name: Optional[str] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
-    location_id: Optional[int] = None
+    # location_id: Optional[int] = None
 
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False # true/false
@@ -93,7 +93,7 @@ class AssetResponse(AssetBase):
     updated_at: Optional[datetime] = None
     asset_type_name: Optional[str] = None
     # model: Optional["AssetModelResponse"] = None
-    location: Optional[LocationResponse] = None
+    # location: Optional[LocationResponse] = None
 
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserResponse]] = None
@@ -111,6 +111,6 @@ class AssetShortResponse(AssetBase):
     asset_id: int
     # model: Optional["AssetModelResponse"] = None
     asset_type_name: Optional[str] = None
-    location: Optional[LocationResponse] = None
+    # location: Optional[LocationResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

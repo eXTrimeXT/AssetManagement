@@ -120,6 +120,7 @@ app.include_router(router_asset_types, prefix="/api")       # Asset Types
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
 app.include_router(router_assets, prefix="/api")            # Assets
+app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
 app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
 app.include_router(router_asset_history, prefix="/api")     # История активов
 app.include_router(router_asset_write_off, prefix="/api")   # Списание активов
@@ -128,7 +129,6 @@ app.include_router(router_analytics, prefix="/api")         # Аналитика
 
 # Карта активов
 app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты
-app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
 app.include_router(router_map, prefix="/api")               # Роутер html-карты
 
 # Уведомления

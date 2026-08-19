@@ -50,7 +50,7 @@ async def get_assets(
         model_id: Optional[int] = Query(None),
         asset_type_id: Optional[int] = Query(None),
         parent_id: Optional[int] = Query(None),
-        location_id: Optional[int] = Query(None),
+        # location_id: Optional[int] = Query(None),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -80,7 +80,7 @@ async def get_assets(
         model_id=model_id,
         asset_type_id=asset_type_id,
         parent_id=parent_id,
-        location_id=location_id,
+        # location_id=location_id,
         allowed_type_en_names=allowed_type_en_names,
     )
 

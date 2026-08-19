@@ -36,7 +36,7 @@ class Asset(Base):
 
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
-    location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
+    # location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
     # Еженедельная проверка оборудования
     every_week_check = Column(Boolean, default=false)
@@ -59,7 +59,7 @@ class Asset(Base):
         backref=backref("children", lazy="selectin", cascade="all, delete-orphan"),
         lazy="selectin"
     )
-    location = relationship("Location", back_populates="assets")
+    # location = relationship("Location", back_populates="assets")
 
     assignments = relationship(
         "AssetAssignment",

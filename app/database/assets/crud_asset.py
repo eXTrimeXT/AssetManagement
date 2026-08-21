@@ -360,7 +360,7 @@ async def _sync_asset_location(
         asset_id=asset_id,
         workshop_id=location_data.workshop_id,
         line=location_data.place,
-        floor=location_data.floor,
+        level=location_data.level,
         x=location_data.x,
         y=location_data.y,
         rotation=location_data.rotation if hasattr(location_data, 'rotation') else 0,
@@ -373,7 +373,7 @@ async def _sync_asset_location(
     return {
         "workshop_id": new_position.workshop_id,
         "line": new_position.place,
-        "floor": new_position.floor,
+        "level": new_position.level,
         "x": new_position.x,
         "y": new_position.y,
     }

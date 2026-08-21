@@ -52,10 +52,8 @@ async def create_asset_position(db: AsyncSession, position_data: AssetPositionCr
             rotation=position_data.rotation,
             scale=position_data.scale,
             is_active=position_data.is_active,
-            line=position_data.line,
-            office=position_data.office,
-            room=position_data.room,
-            floor=position_data.floor
+            place=position_data.place,
+            level=position_data.level,
         )
         db.add(new_position)
         await db.commit()

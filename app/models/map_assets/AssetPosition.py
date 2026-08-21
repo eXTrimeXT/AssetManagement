@@ -41,7 +41,7 @@ class AssetPosition(Base):
 
     # Линия, офис, помещение и этаж
     place = Column(String(100), nullable=True)  # Линия (1-07)
-    floor = Column(Integer, default=0)          # Этаж (2 Этаж)
+    level = Column(Integer, default=0)          # Этаж (2 Этаж)
 
     # === Служебные поля ===
     created_at = Column(DateTime, default=datetime.now, nullable=False)

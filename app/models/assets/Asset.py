@@ -114,7 +114,7 @@ class Asset(Base):
         return AssetLocationResponse(
             workshop_id=workshop.workshop_id,
             place=active_position.place,
-            floor=active_position.floor,
+            level=active_position.level,
             x=active_position.x,
             y=active_position.y,
         )

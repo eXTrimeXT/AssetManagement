@@ -15,10 +15,8 @@ class AssetPositionCreate(BaseModel):
     # Статус
     is_active: bool = Field(True, description="Активна ли позиция")
 
-    line: str = Field(..., description="Линия цеха")
-    office: str = Field(..., description="Офис")
-    room: str = Field(..., description="Помещение")
-    floor: str = Field(..., description="Этаж")
+    place: str = Field(..., description="Местоположение")
+    level: str = Field(..., description="Этаж")
 
     @field_validator('x', 'y')
     @classmethod
@@ -38,9 +36,7 @@ class AssetPositionCreate(BaseModel):
                 "rotation": 0,
                 "scale": 100,
                 "is_active": True,
-                "line": "line",
-                "office": "office",
-                "room": "room",
-                "floor": "floor"
+                "place": "place",
+                "level": 1
             }
         }

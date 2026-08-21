@@ -126,7 +126,7 @@ class AssetLocationUpdate(BaseModel):
     """Схема для обновления позиции актива на карте"""
     workshop_id: int
     place: Optional[str] = None
-    floor: Optional[int] = None
+    level: Optional[int] = None
     x: int
     y: int
     rotation: Optional[int] = 0
@@ -136,7 +136,7 @@ class AssetLocationResponse(BaseModel):
     """Локация актива на основе Workshop и AssetPosition"""
     workshop_id: int
     place: Optional[str] = None
-    floor: Optional[int] = None
+    level: Optional[int] = None
     x: Optional[int] = None
     y: Optional[int] = None
 

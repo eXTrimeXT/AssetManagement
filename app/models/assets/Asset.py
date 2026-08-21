@@ -115,9 +115,7 @@ class Asset(Base):
             workshop_id=workshop.workshop_id,
             workshop_name=workshop.name if workshop else None,
             workshop_code=workshop.code if workshop else None,
-            line=active_position.line,
-            office=active_position.office,
-            room=active_position.room,
+            place=active_position.place,
             floor=active_position.floor,
             x=active_position.x,
             y=active_position.y,
@@ -171,7 +169,6 @@ class Asset(Base):
                 assignment_type=a.assignment_type,
             ))
         return result
-
 
     @computed_field
     @property

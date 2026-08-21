@@ -125,9 +125,7 @@ class AssetShortResponse(AssetBase):
 class AssetLocationUpdate(BaseModel):
     """Схема для обновления позиции актива на карте"""
     workshop_id: int
-    line: Optional[str] = None
-    office: Optional[str] = None
-    room: Optional[str] = None
+    place: Optional[str] = None
     floor: Optional[str] = None
     x: int
     y: int
@@ -139,9 +137,7 @@ class AssetLocationResponse(BaseModel):
     workshop_id: int
     workshop_name: Optional[str] = None
     workshop_code: Optional[str] = None
-    line: Optional[str] = None
-    office: Optional[str] = None
-    room: Optional[str] = None
+    place: Optional[str] = None
     floor: Optional[str] = None
     x: Optional[int] = None
     y: Optional[int] = None

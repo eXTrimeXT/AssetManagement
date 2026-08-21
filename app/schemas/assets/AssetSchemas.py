@@ -135,8 +135,6 @@ class AssetLocationUpdate(BaseModel):
 class AssetLocationResponse(BaseModel):
     """Локация актива на основе Workshop и AssetPosition"""
     workshop_id: int
-    workshop_name: Optional[str] = None
-    workshop_code: Optional[str] = None
     place: Optional[str] = None
     floor: Optional[int] = None
     x: Optional[int] = None

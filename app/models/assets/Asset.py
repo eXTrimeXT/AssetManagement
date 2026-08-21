@@ -113,8 +113,6 @@ class Asset(Base):
 
         return AssetLocationResponse(
             workshop_id=workshop.workshop_id,
-            workshop_name=workshop.name if workshop else None,
-            workshop_code=workshop.code if workshop else None,
             place=active_position.place,
             floor=active_position.floor,
             x=active_position.x,

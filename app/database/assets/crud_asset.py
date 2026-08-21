@@ -10,6 +10,8 @@ from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
 from app.database.assets.crud_asset_history import compare_and_save_changes
 from app.models.map_assets.AssetPosition import AssetPosition
+from app.database.crud_notifications import create_notification
+from app.models.notifications.Notification import NotificationEventType
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -265,6 +267,74 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     return await get_asset_by_id(db, asset_id)
 
 
+# async def _sync_asset_users(
+#         db: AsyncSession,
+#         asset_id: int,
+#         users: list,
+#         responsible_users: list,
+#         assigned_by: str
+# ) -> None:
+#     """
+#     Синхронизация привязок пользователей к активу.
+#     - Пользователи из массивов users и responsible_users привязываются
+#     - Все остальные активные привязки закрываются
+#     """
+#     # Получаем списки employee_id из запроса
+#     requested_user_ids = {user.employee_id for user in (users or [])}
+#     requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
+#
+#     # Получаем все активные привязки для этого актива
+#     result = await db.execute(
+#         select(AssetAssignment).where(
+#             AssetAssignment.asset_id == asset_id,
+#             AssetAssignment.end_date.is_(None)
+#         )
+#     )
+#     active_assignments = result.scalars().all()
+#
+#     # Привязываем новых обычных пользователей
+#     for employee_id in requested_user_ids:
+#         exists = any(
+#             a.employee_id == employee_id and a.assignment_type == "user"
+#             for a in active_assignments
+#         )
+#         if not exists:
+#             new_assignment = AssetAssignment(
+#                 asset_id=asset_id,
+#                 employee_id=employee_id,
+#                 assignment_type="user",
+#                 start_date=date.today(),
+#                 end_date=None,
+#                 assigned_by=assigned_by
+#             )
+#             db.add(new_assignment)
+#
+#     # Привязываем новых ответственных пользователей
+#     for employee_id in requested_responsible_ids:
+#         exists = any(
+#             a.employee_id == employee_id and a.assignment_type == "responsible"
+#             for a in active_assignments
+#         )
+#         if not exists:
+#             new_assignment = AssetAssignment(
+#                 asset_id=asset_id,
+#                 employee_id=employee_id,
+#                 assignment_type="responsible",
+#                 start_date=date.today(),
+#                 end_date=None,
+#                 assigned_by=assigned_by
+#             )
+#             db.add(new_assignment)
+#
+#     # Отвязываем пользователей, которых нет в запросе
+#     for assignment in active_assignments:
+#         if assignment.assignment_type == "user":
+#             if assignment.employee_id not in requested_user_ids:
+#                 assignment.end_date = date.today()
+#         elif assignment.assignment_type == "responsible":
+#             if assignment.employee_id not in requested_responsible_ids:
+#                 assignment.end_date = date.today()
+
 async def _sync_asset_users(
         db: AsyncSession,
         asset_id: int,
@@ -274,14 +344,13 @@ async def _sync_asset_users(
 ) -> None:
     """
     Синхронизация привязок пользователей к активу.
-    - Пользователи из массивов users и responsible_users привязываются
-    - Все остальные активные привязки закрываются
+    - Новые привязки → уведомление assigned_*
+    - Удалённые привязки → уведомление unassigned_*
     """
-    # Получаем списки employee_id из запроса
     requested_user_ids = {user.employee_id for user in (users or [])}
     requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
 
-    # Получаем все активные привязки для этого актива
+    # Получаем все активные привязки
     result = await db.execute(
         select(AssetAssignment).where(
             AssetAssignment.asset_id == asset_id,
@@ -290,7 +359,7 @@ async def _sync_asset_users(
     )
     active_assignments = result.scalars().all()
 
-    # Привязываем новых обычных пользователей
+    # === Привязываем новых обычных пользователей ===
     for employee_id in requested_user_ids:
         exists = any(
             a.employee_id == employee_id and a.assignment_type == "user"
@@ -306,8 +375,16 @@ async def _sync_asset_users(
                 assigned_by=assigned_by
             )
             db.add(new_assignment)
+            # Уведомление пользователю
+            await create_notification(
+                db=db,
+                employee_id=employee_id,
+                asset_id=asset_id,
+                event_type=NotificationEventType.ASSIGNED_USER,
+                initiator_id=assigned_by,
+            )
 
-    # Привязываем новых ответственных пользователей
+    # === Привязываем новых ответственных ===
     for employee_id in requested_responsible_ids:
         exists = any(
             a.employee_id == employee_id and a.assignment_type == "responsible"
@@ -323,15 +400,39 @@ async def _sync_asset_users(
                 assigned_by=assigned_by
             )
             db.add(new_assignment)
+            # Уведомление ответственному
+            await create_notification(
+                db=db,
+                employee_id=employee_id,
+                asset_id=asset_id,
+                event_type=NotificationEventType.ASSIGNED_RESPONSIBLE,
+                initiator_id=assigned_by,
+            )
 
-    # Отвязываем пользователей, которых нет в запросе
+    # === Отвязываем пользователей, которых нет в запросе ===
     for assignment in active_assignments:
         if assignment.assignment_type == "user":
             if assignment.employee_id not in requested_user_ids:
                 assignment.end_date = date.today()
+                # Уведомление бывшему пользователю
+                await create_notification(
+                    db=db,
+                    employee_id=assignment.employee_id,
+                    asset_id=asset_id,
+                    event_type=NotificationEventType.UNASSIGNED_USER,
+                    initiator_id=assigned_by,
+                )
         elif assignment.assignment_type == "responsible":
             if assignment.employee_id not in requested_responsible_ids:
                 assignment.end_date = date.today()
+                # Уведомление бывшему ответственному
+                await create_notification(
+                    db=db,
+                    employee_id=assignment.employee_id,
+                    asset_id=asset_id,
+                    event_type=NotificationEventType.UNASSIGNED_RESPONSIBLE,
+                    initiator_id=assigned_by,
+                )
 
 async def _sync_asset_location(
         db: AsyncSession,

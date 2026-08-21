@@ -2,12 +2,11 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List, Literal
 
 # {
-#     "user_id": 4,
 #     "login": "gw07015370",
 #     "email": "Timur.Malyshev@hmmr.ru",
 #     "fullname": "Timur Malyshev",
 #     "distinguished_name": "CN=Timur Malyshev,OU=SOFTWARE DEVELOPMENT GROUP (SDG),OU=INFORMATION SYSTEMS SUPPORT SECTION (ISSS),OU=Russian Digital Center (RDC),OU=Users,OU=HMMR,DC=local,DC=hmmr,DC=ru",
-#     "department": "SDG",
+#     "department": "RDC",
 #     "groups": [],
 #     "permissions": {
 #         "computer": {
@@ -15,12 +14,12 @@ from typing import Optional, Dict, Any, List, Literal
 #             "write": false
 #         },
 #         "mes_equipment": {
-#             "read": false,
+#             "read": true,
 #             "write": true
 #         },
 #         "supplies": {
 #             "read": true,
-#             "write": false
+#             "write": true
 #         },
 #         "power_adapter": {
 #             "read": true,
@@ -50,26 +49,22 @@ from typing import Optional, Dict, Any, List, Literal
 #             "read": true,
 #             "write": true
 #         },
-#         "usersMU": {
-#             "read": true,
-#             "write": true
-#         },
 #         "AssetsMU": {
 #             "read": true,
 #             "write": true
 #         },
 #         "android_data": {
 #             "read": true,
-#             "write": true
+#             "write": false
 #         }
 #     },
-#     "assets_admin": true,
-#     "last_ip": "172.18.0.2",
-#     "last_time": "11:44:33 30.06.2026",
-#     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODI4MjQyMTAsImV4cCI6MTc4Mjg2NzQxMCwibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjE3Mi4xOC4wLjIiLCJsYXN0X3RpbWUiOiIxMTo0NDozMyAzMC4wNi4yMDI2IiwiZGVwYXJ0bWVudCI6bnVsbCwicGVybWlzc2lvbnMiOlt7Im5hbWVfZ3JvdXAiOiJjb21wdXRlciIsInJlYWQiOmZhbHNlLCJ3cml0ZSI6ZmFsc2V9LHsibmFtZV9ncm91cCI6Im1lc19lcXVpcG1lbnQiLCJyZWFkIjpmYWxzZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJwb3dlcl9hZGFwdGVyIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImRhdGFfY29sbGVjdGlvbl9lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiQWNjZXNzb3JpZXMiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoibmV0d29ya19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoicHJpbnRpbmdfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InNlcnZlcl9oYXJkd2FyZSIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJ1c2VycyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJ1c2Vyc01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9XSwiYXNzZXRzX2FkbWluIjp0cnVlLCJ1c2VyX2RhdGEiOnsiZW1haWwiOiJUaW11ci5NYWx5c2hldkBobW1yLnJ1IiwiZnVsbG5hbWUiOiJUaW11ciBNYWx5c2hldiIsImRlcGFydG1lbnQiOiJTREciLCJkaXN0aW5ndWlzaGVkTmFtZSI6IkNOPVRpbXVyIE1hbHlzaGV2LE9VPVNPRlRXQVJFIERFVkVMT1BNRU5UIEdST1VQIChTREcpLE9VPUlORk9STUFUSU9OIFNZU1RFTVMgU1VQUE9SVCBTRUNUSU9OIChJU1NTKSxPVT1SdXNzaWFuIERpZ2l0YWwgQ2VudGVyIChSREMpLE9VPVVzZXJzLE9VPUhNTVIsREM9bG9jYWwsREM9aG1tcixEQz1ydSIsImdyb3VwcyI6W119fQ.8zHWPMtpsGqx8TtEkW2rtit4CqzXFaAFWEy8Nhd-p0w",
+#     "assets_admin": false,
+#     "last_ip": "10.168.135.30",
+#     "last_time": "13:02:53 19.08.2026",
+#     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODcyODk1MTMsImV4cCI6MTc4NzMzMjcxMywibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjEwLjE2OC4xMzUuMzAiLCJsYXN0X3RpbWUiOiIxMzowMjo1MyAxOS4wOC4yMDI2IiwiZGVwYXJ0bWVudCI6IlJEQyIsInBlcm1pc3Npb25zIjpbeyJuYW1lX2dyb3VwIjoiY29tcHV0ZXIiLCJyZWFkIjpmYWxzZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJtZXNfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InBvd2VyX2FkYXB0ZXIiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiZGF0YV9jb2xsZWN0aW9uX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJBY2Nlc3NvcmllcyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJuZXR3b3JrX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJwcmludGluZ19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoic2VydmVyX2hhcmR3YXJlIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InVzZXJzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImFuZHJvaWRfZGF0YSIsInJlYWQiOnRydWUsIndyaXRlIjpmYWxzZX1dLCJhc3NldHNfaXNfYWRtaW4iOnRydWUsInVzZXJfZGF0YSI6eyJlbWFpbCI6IlRpbXVyLk1hbHlzaGV2QGhtbXIucnUiLCJmdWxsbmFtZSI6IlRpbXVyIE1hbHlzaGV2IiwiZGVwYXJ0bWVudCI6IlJEQyIsImRpc3Rpbmd1aXNoZWROYW1lIjoiQ049VGltdXIgTWFseXNoZXYsT1U9U09GVFdBUkUgREVWRUxPUE1FTlQgR1JPVVAgKFNERyksT1U9SU5GT1JNQVRJT04gU1lTVEVNUyBTVVBQT1JUIFNFQ1RJT04gKElTU1MpLE9VPVJ1c3NpYW4gRGlnaXRhbCBDZW50ZXIgKFJEQyksT1U9VXNlcnMsT1U9SE1NUixEQz1sb2NhbCxEQz1obW1yLERDPXJ1IiwiZ3JvdXBzIjpbXX19.mPXHgKKmuSDuUi78Atva9DKEMGpAbQiLNU8pDOG0-Kw",
 #     "is_expired": false,
-#     "iat": 1782824210,
-#     "exp": 1782867410,
+#     "iat": 1787289513,
+#     "exp": 1787332713,
 #     "ttl": 12
 # }
 

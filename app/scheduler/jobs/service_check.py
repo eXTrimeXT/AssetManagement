@@ -6,15 +6,23 @@ from app.database.connection import async_session
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
-from app.models.notifications.Notification import Notification
+from app.models.notifications.Notification import (
+    Notification,
+    NotificationEventType,
+    NotificationStatus,
+)
 
 logger = logging.getLogger(__name__)
 
-SERVICE_REQUIRED_STATUS = "На обслуживании"
+# Название статуса, который устанавливается при необходимости проверки
+SERVICE_REQUIRED_STATUS = "Требует проверки"
 
 
 async def get_or_create_service_status(session) -> AssetStatus:
-    """Получить статус 'Требует проверки' или создать его."""
+    """
+    Получить статус 'Требует проверки' из таблицы asset_status.
+    Если статуса нет - создать его.
+    """
     result = await session.execute(
         select(AssetStatus).where(AssetStatus.status == SERVICE_REQUIRED_STATUS)
     )
@@ -24,6 +32,7 @@ async def get_or_create_service_status(session) -> AssetStatus:
         logger.info(f"Статус '{SERVICE_REQUIRED_STATUS}' найден: id={status_obj.id}")
         return status_obj
 
+    # Создаём новый статус
     new_status = AssetStatus(status=SERVICE_REQUIRED_STATUS)
     session.add(new_status)
     await session.flush()
@@ -109,11 +118,14 @@ async def check_service_assets():
                 notification = Notification(
                     employee_id=assignment.employee_id,
                     asset_id=asset.asset_id,
-                    notification_checked=False,
+                    # === НОВЫЕ ПОЛЯ ===
+                    event_type=NotificationEventType.SERVICE_DUE,
+                    initiator_id=assignment.initiator_id,  # системное уведомление
+                    status=NotificationStatus.UNREAD,
                 )
                 session.add(notification)
                 logger.info(
-                    f"  [+] Уведомление: employee={assignment.employee_id}, asset={asset.asset_id}"
+                    f"  [+] Уведомление (service_due): employee={assignment.employee_id}, asset={asset.asset_id}"
                 )
                 total_notifications_created += 1
 

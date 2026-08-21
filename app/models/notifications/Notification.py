@@ -1,7 +1,25 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.Base import Base
+
+
+class NotificationEventType:
+    """Типы событий уведомлений"""
+    SERVICE_DUE = "service_due"
+    ASSIGNED_RESPONSIBLE = "assigned_responsible"
+    RESPONSIBLE_DECLINED = "responsible_declined"
+    ASSIGNED_USER = "assigned_user"
+    USER_DECLINED = "user_declined"
+    UNASSIGNED_RESPONSIBLE = "unassigned_responsible"
+    UNASSIGNED_USER = "unassigned_user"
+
+
+class NotificationStatus:
+    """Статусы уведомлений"""
+    UNREAD = "unread"
+    READ = "read"
+    DECLINED = "declined"
 
 
 class Notification(Base):
@@ -10,7 +28,16 @@ class Notification(Base):
     notification_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     employee_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False, index=True)
     asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False, index=True)
-    notification_checked = Column(Boolean, default=False, nullable=False)
+    event_type = Column(String(50), nullable=False, index=True)
+    initiator_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True)
+    status = Column(String(20), nullable=False, default=NotificationStatus.UNREAD, index=True)
+    responded_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Relationships
     asset = relationship("Asset", foreign_keys=[asset_id], lazy="selectin")
+    initiator = relationship("Employee", foreign_keys=[initiator_id])
+    recipient = relationship("Employee", foreign_keys=[employee_id])
+
+    def __repr__(self):
+        return f"<Notification(id={self.notification_id}, type={self.event_type}, status={self.status})>"

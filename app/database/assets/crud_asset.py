@@ -191,6 +191,19 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     if not obj:
         return None
 
+    # === Получаем старую локацию для истории ===
+    old_location_data = None
+    for pos in (obj.asset_positions or []):
+        if pos.is_active:
+            old_location_data = {
+                "workshop_id": pos.workshop_id,
+                "place": pos.place,
+                "level": pos.level,
+                "x": pos.x,
+                "y": pos.y,
+            }
+            break
+
     # Сохраняем старые значения для истории
     old_data = {
         'name': obj.name,
@@ -204,6 +217,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'asset_type_id': obj.asset_type_id,
         'parent_id': obj.parent_id,
         # 'location_id': obj.location_id,
+        'location': str(old_location_data) if old_location_data else None,
         'asset_status_id': obj.asset_status_id,
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
@@ -212,7 +226,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     }
 
     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
-    update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status"})
+    update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status", "location"})
 
     # Обновляем поля актива
     for key, value in update_data.items():
@@ -231,6 +245,12 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             if status_obj:
                 obj.asset_status_id = status_obj.id
 
+    # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
+    new_location_data = None
+    if "location" in data.model_fields_set and data.location is not None:
+        new_location_data = await _sync_asset_location(db, asset_id, data.location, employee_id)
+
+
     # === СОХРАНЕНИЕ ИСТОРИИ ИЗМЕНЕНИЙ ===
     new_data = {
         'name': obj.name,
@@ -244,6 +264,9 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'asset_type_id': obj.asset_type_id,
         'parent_id': obj.parent_id,
         # 'location_id': obj.location_id,
+        'location': str(new_location_data) if new_location_data else (
+            str(old_location_data) if old_location_data else None
+        ),
         'asset_status_id': obj.asset_status_id,
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
@@ -265,75 +288,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     await db.commit()
     return await get_asset_by_id(db, asset_id)
-
-
-# async def _sync_asset_users(
-#         db: AsyncSession,
-#         asset_id: int,
-#         users: list,
-#         responsible_users: list,
-#         assigned_by: str
-# ) -> None:
-#     """
-#     Синхронизация привязок пользователей к активу.
-#     - Пользователи из массивов users и responsible_users привязываются
-#     - Все остальные активные привязки закрываются
-#     """
-#     # Получаем списки employee_id из запроса
-#     requested_user_ids = {user.employee_id for user in (users or [])}
-#     requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
-#
-#     # Получаем все активные привязки для этого актива
-#     result = await db.execute(
-#         select(AssetAssignment).where(
-#             AssetAssignment.asset_id == asset_id,
-#             AssetAssignment.end_date.is_(None)
-#         )
-#     )
-#     active_assignments = result.scalars().all()
-#
-#     # Привязываем новых обычных пользователей
-#     for employee_id in requested_user_ids:
-#         exists = any(
-#             a.employee_id == employee_id and a.assignment_type == "user"
-#             for a in active_assignments
-#         )
-#         if not exists:
-#             new_assignment = AssetAssignment(
-#                 asset_id=asset_id,
-#                 employee_id=employee_id,
-#                 assignment_type="user",
-#                 start_date=date.today(),
-#                 end_date=None,
-#                 assigned_by=assigned_by
-#             )
-#             db.add(new_assignment)
-#
-#     # Привязываем новых ответственных пользователей
-#     for employee_id in requested_responsible_ids:
-#         exists = any(
-#             a.employee_id == employee_id and a.assignment_type == "responsible"
-#             for a in active_assignments
-#         )
-#         if not exists:
-#             new_assignment = AssetAssignment(
-#                 asset_id=asset_id,
-#                 employee_id=employee_id,
-#                 assignment_type="responsible",
-#                 start_date=date.today(),
-#                 end_date=None,
-#                 assigned_by=assigned_by
-#             )
-#             db.add(new_assignment)
-#
-#     # Отвязываем пользователей, которых нет в запросе
-#     for assignment in active_assignments:
-#         if assignment.assignment_type == "user":
-#             if assignment.employee_id not in requested_user_ids:
-#                 assignment.end_date = date.today()
-#         elif assignment.assignment_type == "responsible":
-#             if assignment.employee_id not in requested_responsible_ids:
-#                 assignment.end_date = date.today()
 
 async def _sync_asset_users(
         db: AsyncSession,

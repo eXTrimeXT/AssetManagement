@@ -16,6 +16,10 @@ class NotificationEventType:
     UNASSIGNED_RESPONSIBLE = "unassigned_responsible"
     UNASSIGNED_USER = "unassigned_user"
 
+    # === события списания ===
+    WRITE_OFF_REQUESTED = "write_off_requested"  # Заявка создана → ответственным
+    WRITE_OFF_APPROVED = "write_off_approved"    # Заявка утверждена → инициатору
+    WRITE_OFF_REJECTED = "write_off_rejected"    # Заявка отклонена → инициатору
 
 class NotificationStatus:
     """Статусы уведомлений"""

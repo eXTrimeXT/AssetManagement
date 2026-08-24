@@ -95,3 +95,48 @@ async def complete_session(
     if not session:
         raise HTTPException(status_code=404, detail="Сессия не найдена")
     return session
+
+
+""" Списание """
+from app.schemas.assets.InventorizationSchemas import (
+    InventorizationReportResponse,
+    InventorizationDiscrepanciesResponse,
+)
+from app.database.assets.crud_inventorization import (
+    get_inventorization_report,
+    get_inventorization_discrepancies,
+)
+
+
+@router_inventorization.get(
+    "/sessions/{session_id}/report",
+    response_model=InventorizationReportResponse,
+    summary="Получить отчёт по сессии инвентаризации"
+)
+async def get_session_report(
+        session_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user),
+):
+    """Сводный отчёт: прогресс, расхождения, излишки, недостачи."""
+    report = await get_inventorization_report(db, session_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
+    return report
+
+
+@router_inventorization.get(
+    "/sessions/{session_id}/report/discrepancies",
+    response_model=InventorizationDiscrepanciesResponse,
+    summary="Получить список расхождений"
+)
+async def get_session_discrepancies(
+        session_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user),
+):
+    """Список расхождений: недостачи, излишки, непроверенные."""
+    result = await get_inventorization_discrepancies(db, session_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
+    return result

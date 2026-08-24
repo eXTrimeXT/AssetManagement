@@ -146,3 +146,126 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
     await db.commit()
     await db.refresh(session)
     return session
+
+
+""" Списание """
+async def get_inventorization_report(
+        db: AsyncSession,
+        session_id: int,
+) -> Optional[dict]:
+    """Получить сводный отчёт по сессии инвентаризации."""
+    session = await get_inventory_session_by_id(db, session_id)
+    if not session:
+        return None
+
+    result = await db.execute(
+        select(InventorizationItem).where(
+            InventorizationItem.session_id == session_id
+        )
+    )
+    items = result.scalars().all()
+
+    total = len(items)
+    checked = sum(1 for i in items if i.is_checked)
+    unchecked = total - checked
+
+    matches = 0
+    discrepancies = 0
+    surplus = 0
+    missing = 0
+
+    for item in items:
+        if not item.is_checked:
+            continue
+        if item.quantity_fact is None:
+            continue
+
+        if item.quantity == item.quantity_fact:
+            matches += 1
+        else:
+            discrepancies += 1
+            if item.quantity_fact > (item.quantity or 0):
+                surplus += 1
+            else:
+                missing += 1
+
+    progress = (checked / total * 100) if total > 0 else 0.0
+
+    return {
+        "session_id": session.session_id,
+        "asset_type_id": session.asset_type_id,
+        "asset_type_name": session.asset_type_name,
+        "status": session.status,
+        "created_at": session.created_at,
+        "total_items": total,
+        "checked_items": checked,
+        "unchecked_items": unchecked,
+        "progress_percent": round(progress, 2),
+        "matches_count": matches,
+        "discrepancies_count": discrepancies,
+        "surplus_count": surplus,
+        "missing_count": missing,
+        "not_checked_count": unchecked,
+    }
+
+
+async def get_inventorization_discrepancies(
+        db: AsyncSession,
+        session_id: int,
+) -> Optional[dict]:
+    """Получить список расхождений по сессии."""
+    session = await get_inventory_session_by_id(db, session_id)
+    if not session:
+        return None
+
+    result = await db.execute(
+        select(InventorizationItem).where(
+            InventorizationItem.session_id == session_id
+        )
+    )
+    items = result.scalars().all()
+
+    discrepancies = []
+    for item in items:
+        # Пропускаем полностью совпадающие
+        if item.is_checked and item.quantity == item.quantity_fact:
+            continue
+
+        # Определяем тип расхождения
+        if not item.is_checked:
+            discrepancy_type = "not_checked"
+            difference = None
+        elif item.quantity_fact is None:
+            discrepancy_type = "not_checked"
+            difference = None
+        elif item.quantity_fact > (item.quantity or 0):
+            discrepancy_type = "surplus"
+            difference = item.quantity_fact - (item.quantity or 0)
+        elif item.quantity_fact < (item.quantity or 0):
+            discrepancy_type = "missing"
+            difference = item.quantity_fact - (item.quantity or 0)
+        else:
+            continue
+
+        # Получаем serial_number из актива
+        asset_result = await db.execute(
+            select(Asset.serial_number).where(Asset.asset_id == item.asset_id)
+        )
+        serial_number = asset_result.scalar_one_or_none()
+
+        discrepancies.append({
+            "inventorization_id": item.inventorization_id,
+            "asset_id": item.asset_id,
+            "asset_name": item.asset_name,
+            "serial_number": serial_number,
+            "quantity": item.quantity,
+            "quantity_fact": item.quantity_fact,
+            "difference": difference,
+            "discrepancy_type": discrepancy_type,
+        })
+
+    return {
+        "session_id": session_id,
+        "total_discrepancies": len(discrepancies),
+        "items": discrepancies,
+    }

@@ -94,3 +94,52 @@ async def notify_unassigned_user(
         asset_id=asset_id,
         initiator_id=initiator_id,
     )
+
+
+""" Списание """
+async def notify_write_off_requested(
+        db: AsyncSession,
+        employee_id: str,
+        asset_id: int,
+        initiator_id: str,
+) -> None:
+    """Уведомить о создании заявки на списание."""
+    await _send_notification(
+        db=db,
+        event_type=NotificationEventType.WRITE_OFF_REQUESTED,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        initiator_id=initiator_id,
+    )
+
+
+async def notify_write_off_approved(
+        db: AsyncSession,
+        employee_id: str,
+        asset_id: int,
+        initiator_id: str,
+) -> None:
+    """Уведомить об утверждении заявки на списание."""
+    await _send_notification(
+        db=db,
+        event_type=NotificationEventType.WRITE_OFF_APPROVED,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        initiator_id=initiator_id,
+    )
+
+
+async def notify_write_off_rejected(
+        db: AsyncSession,
+        employee_id: str,
+        asset_id: int,
+        initiator_id: str,
+) -> None:
+    """Уведомить об отклонении заявки на списание."""
+    await _send_notification(
+        db=db,
+        event_type=NotificationEventType.WRITE_OFF_REJECTED,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        initiator_id=initiator_id,
+    )

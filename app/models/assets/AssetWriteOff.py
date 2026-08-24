@@ -1,35 +1,48 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.models.Base import Base
+
+
+class WriteOffStatus:
+    """Статусы заявки на списание"""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class WriteOffType:
+    """Типы списания"""
+    BROKEN = "broken"      # Сломан
+    LOST = "lost"          # Утерян
+    OBSOLETE = "obsolete"  # Устарел
+    SOLD = "sold"          # Продан
+    OTHER = "other"        # Другое
+
 
 class AssetWriteOff(Base):
     __tablename__ = "asset_write_offs"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-
-    # Связь с активом
+    write_off_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False, index=True)
 
-    # Причина
-    reason = Column(String(50), nullable=False)  # broken, obsolete, lost, stolen, disposed
-    reason_description = Column(Text, nullable=True)
+    # Информация о списании
+    reason = Column(Text, nullable=False)
+    write_off_type = Column(String(50), nullable=False, default=WriteOffType.OTHER)
 
-    # Документ
-    act_number = Column(String(100), unique=True, nullable=False, index=True)
-    act_date = Column(Date, nullable=False)
+    # Процесс утверждения
+    requested_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False)
+    requested_at = Column(DateTime(),  default=datetime.now, nullable=False)
+    approved_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True)
+    approved_at = Column(DateTime(), nullable=True)
+    reject_reason = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default=WriteOffStatus.PENDING, index=True)
 
-    # Метод утилизации
-    disposal_method = Column(String(50), nullable=True)  # recycled, disposed, sold, returned
+    # Relationships
+    asset = relationship("Asset", foreign_keys=[asset_id], lazy="selectin")
+    requester = relationship("Employee", foreign_keys=[requested_by], lazy="selectin")
+    approver = relationship("Employee", foreign_keys=[approved_by], lazy="selectin")
 
-    # Инициатор
-    initiated_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False)
-
-    # Примечания
-    notes = Column(Text, nullable=True)
-
-    # Дата списания
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # Relationship
-    asset = relationship("Asset", back_populates="write_offs")
+    def __repr__(self):
+        return f"<AssetWriteOff(id={self.write_off_id}, asset_id={self.asset_id}, status={self.status})>"

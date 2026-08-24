@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetStatus import AssetStatus
-# from app.models.Location import Location
 from app.models.assets.AssetHistory import AssetHistory
 
 
@@ -17,18 +16,6 @@ async def get_assets_by_status(db: AsyncSession) -> List[dict]:
     )
     result = await db.execute(query)
     return [{"name": row[0], "count": row[1]} for row in result.all()]
-
-
-# async def get_assets_by_location(db: AsyncSession) -> List[dict]:
-#     """Распределение активов по локациям"""
-#     query = (
-#         select(Location.name, func.count(Asset.asset_id).label("count"))
-#         .outerjoin(Asset, Asset.location_id == Location.location_id)
-#         .group_by(Location.name)
-#     )
-#     result = await db.execute(query)
-#     return [{"name": row[0] or "Без локации", "count": row[1]} for row in result.all()]
-
 
 async def get_changes_heatmap(db: AsyncSession) -> List[dict]:
     """Какие поля меняются чаще всего (из истории)"""

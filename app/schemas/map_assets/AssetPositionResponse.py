@@ -19,26 +19,10 @@ class AssetPositionResponse(BaseModel):
     is_active: bool = Field(..., description="Активна ли позиция")
 
     place: Optional[str] = None
-    level: Optional[str] = None
+    level: Optional[int] = None
 
     # Служебные поля
     created_at: datetime = Field(..., description="Дата создания")
     updated_at: Optional[datetime] = Field(None, description="Дата обновления")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "asset_id": 1,
-                "workshop_id": 1,
-                "x": 250,
-                "y": 150,
-                "rotation": 0,
-                "scale": 100,
-                "is_active": True,
-                "created_at": "2026-01-15T10:30:00",
-                "updated_at": "2026-01-15T10:30:00"
-            }
-        }
-
-    # model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)

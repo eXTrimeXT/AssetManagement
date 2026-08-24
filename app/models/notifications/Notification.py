@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -31,8 +33,8 @@ class Notification(Base):
     event_type = Column(String(50), nullable=False, index=True)
     initiator_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True)
     status = Column(String(20), nullable=False, default=NotificationStatus.UNREAD, index=True)
-    responded_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    responded_at = Column(DateTime(), nullable=True)
+    created_at = Column(DateTime(), default=datetime.now)
 
     # Relationships
     asset = relationship("Asset", foreign_keys=[asset_id], lazy="selectin")

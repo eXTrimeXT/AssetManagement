@@ -127,7 +127,12 @@ async def endpoint_close_assignment_endpoint(
     if asset:
         await check_asset_permission(db, request, asset.asset_type_id, "write")
 
-    return await close_assignment(db, assignment_id)
+    # === ПЕРЕДАЁМ current_user.employee_id как инициатора ===
+    return await close_assignment(
+        db=db,
+        assignment_id=assignment_id,
+        closed_by=current_user.employee_id,
+    )
 
 
 @router_asset_assignments.delete(

@@ -10,8 +10,8 @@ from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
 from app.database.assets.crud_asset_history import compare_and_save_changes
 from app.models.map_assets.AssetPosition import AssetPosition
-from app.database.crud_notifications import create_notification
-from app.models.notifications.Notification import NotificationEventType
+from app.services.notifications.notification_service import notify_assigned_responsible, notify_assigned_user, \
+    notify_unassigned_user, notify_unassigned_responsible
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -340,12 +340,15 @@ async def _sync_asset_users(
         asset_id: int,
         users: list,
         responsible_users: list,
-        assigned_by: str
+        assigned_by: str,
 ) -> None:
     """
     Синхронизация привязок пользователей к активу.
-    - Новые привязки → уведомление assigned_*
-    - Удалённые привязки → уведомление unassigned_*
+
+    Логика:
+    - Новые пользователи (которых нет в активных привязках) → уведомление
+    - Существующие пользователи (уже привязанные) → БЕЗ уведомления
+    - Отвязанные пользователи (есть в БД, но нет в запросе) → уведомление об отвязке
     """
     requested_user_ids = {user.employee_id for user in (users or [])}
     requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
@@ -359,78 +362,89 @@ async def _sync_asset_users(
     )
     active_assignments = result.scalars().all()
 
-    # === Привязываем новых обычных пользователей ===
+    # Мапы для быстрого поиска
+    active_user_ids = {
+        a.employee_id for a in active_assignments
+        if a.assignment_type == "user"
+    }
+    active_responsible_ids = {
+        a.employee_id for a in active_assignments
+        if a.assignment_type == "responsible"
+    }
+
+    # === НОВЫЕ обычные пользователи (привязка + уведомление) ===
     for employee_id in requested_user_ids:
-        exists = any(
-            a.employee_id == employee_id and a.assignment_type == "user"
-            for a in active_assignments
-        )
-        if not exists:
-            new_assignment = AssetAssignment(
-                asset_id=asset_id,
-                employee_id=employee_id,
-                assignment_type="user",
-                start_date=date.today(),
-                end_date=None,
-                assigned_by=assigned_by
-            )
-            db.add(new_assignment)
-            # Уведомление пользователю
-            await create_notification(
-                db=db,
-                employee_id=employee_id,
-                asset_id=asset_id,
-                event_type=NotificationEventType.ASSIGNED_USER,
-                initiator_id=assigned_by,
-            )
+        if employee_id in active_user_ids:
+            # Уже привязан — пропускаем без уведомления
+            continue
 
-    # === Привязываем новых ответственных ===
+        new_assignment = AssetAssignment(
+            asset_id=asset_id,
+            employee_id=employee_id,
+            assignment_type="user",
+            start_date=date.today(),
+            end_date=None,
+            assigned_by=assigned_by
+        )
+        db.add(new_assignment)
+
+        # Уведомление только для НОВОГО пользователя
+        await notify_assigned_user(
+            db=db,
+            employee_id=employee_id,
+            asset_id=asset_id,
+            initiator_id=assigned_by,
+        )
+
+    # === НОВЫЕ ответственные пользователи (привязка + уведомление) ===
     for employee_id in requested_responsible_ids:
-        exists = any(
-            a.employee_id == employee_id and a.assignment_type == "responsible"
-            for a in active_assignments
-        )
-        if not exists:
-            new_assignment = AssetAssignment(
-                asset_id=asset_id,
-                employee_id=employee_id,
-                assignment_type="responsible",
-                start_date=date.today(),
-                end_date=None,
-                assigned_by=assigned_by
-            )
-            db.add(new_assignment)
-            # Уведомление ответственному
-            await create_notification(
-                db=db,
-                employee_id=employee_id,
-                asset_id=asset_id,
-                event_type=NotificationEventType.ASSIGNED_RESPONSIBLE,
-                initiator_id=assigned_by,
-            )
+        if employee_id in active_responsible_ids:
+            # Уже привязан — пропускаем без уведомления
+            continue
 
-    # === Отвязываем пользователей, которых нет в запросе ===
+        new_assignment = AssetAssignment(
+            asset_id=asset_id,
+            employee_id=employee_id,
+            assignment_type="responsible",
+            start_date=date.today(),
+            end_date=None,
+            assigned_by=assigned_by
+        )
+        db.add(new_assignment)
+
+        # Уведомление только для НОВОГО ответственного
+        await notify_assigned_responsible(
+            db=db,
+            employee_id=employee_id,
+            asset_id=asset_id,
+            initiator_id=assigned_by,
+        )
+
+    # === Отвязка пользователей (которых нет в запросе) ===
     for assignment in active_assignments:
+        should_unassign = False
+
         if assignment.assignment_type == "user":
-            if assignment.employee_id not in requested_user_ids:
-                assignment.end_date = date.today()
-                # Уведомление бывшему пользователю
-                await create_notification(
+            should_unassign = assignment.employee_id not in requested_user_ids
+        elif assignment.assignment_type == "responsible":
+            should_unassign = assignment.employee_id not in requested_responsible_ids
+
+        if should_unassign:
+            assignment.end_date = date.today()
+
+            # Уведомление об отвязке
+            if assignment.assignment_type == "user":
+                await notify_unassigned_user(
                     db=db,
                     employee_id=assignment.employee_id,
                     asset_id=asset_id,
-                    event_type=NotificationEventType.UNASSIGNED_USER,
                     initiator_id=assigned_by,
                 )
-        elif assignment.assignment_type == "responsible":
-            if assignment.employee_id not in requested_responsible_ids:
-                assignment.end_date = date.today()
-                # Уведомление бывшему ответственному
-                await create_notification(
+            else:
+                await notify_unassigned_responsible(
                     db=db,
                     employee_id=assignment.employee_id,
                     asset_id=asset_id,
-                    event_type=NotificationEventType.UNASSIGNED_RESPONSIBLE,
                     initiator_id=assigned_by,
                 )
 

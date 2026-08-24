@@ -14,25 +14,20 @@ from app.models.notifications.Notification import (
 
 logger = logging.getLogger(__name__)
 
-# Название статуса, который устанавливается при необходимости проверки
 SERVICE_REQUIRED_STATUS = "Требует проверки"
 
 
 async def get_or_create_service_status(session) -> AssetStatus:
-    """
-    Получить статус 'Требует проверки' из таблицы asset_status.
-    Если статуса нет - создать его.
-    """
+    """Получить статус 'Требует проверки' или создать его."""
     result = await session.execute(
         select(AssetStatus).where(AssetStatus.status == SERVICE_REQUIRED_STATUS)
     )
     status_obj = result.scalars().first()
 
     if status_obj:
-        logger.info(f"Статус '{SERVICE_REQUIRED_STATUS}' найден: id={status_obj.id}")
+        logger.debug(f"Статус '{SERVICE_REQUIRED_STATUS}' найден: id={status_obj.id}")
         return status_obj
 
-    # Создаём новый статус
     new_status = AssetStatus(status=SERVICE_REQUIRED_STATUS)
     session.add(new_status)
     await session.flush()
@@ -40,22 +35,34 @@ async def get_or_create_service_status(session) -> AssetStatus:
     return new_status
 
 
+def _calculate_service_period(asset: Asset) -> int:
+    """
+    Определяет период обслуживания в днях.
+    Возвращает 0 если актив нужно пропустить.
+    """
+    if asset.every_week_check:
+        return 7
+    elif asset.service_period is not None and asset.service_period > 0:
+        return asset.service_period
+    return 0
+
+
 async def check_service_assets():
     """
-    Проверка активов, требующих обслуживания.
+    Планировщик проверки оборудования.
 
     Логика:
-    - every_week_check = True  → прибавляем 7 дней
-    - every_week_check = False и service_period IS NULL → пропускаем
-    - every_week_check = False и service_period IS NOT NULL → прибавляем service_period дней
+    - every_week_check=True → период 7 дней
+    - every_week_check=False, service_period IS NULL → пропуск
+    - every_week_check=False, service_period > 0 → период = service_period
     """
-    logger.info("Запуск задачи проверки активов...")
+    logger.info("🔧 Запуск задачи проверки активов...")
     today = date.today()
 
     async with async_session() as session:
         service_status = await get_or_create_service_status(session)
 
-        # Подгружаем asset_status и assignments
+        # Получаем активы с наступившим сроком обслуживания
         result = await session.execute(
             select(Asset)
             .options(
@@ -67,8 +74,6 @@ async def check_service_assets():
             .where(
                 Asset.next_service <= today,
                 Asset.next_service.isnot(None),
-                # Либо every_week_check = True
-                # Либо (every_week_check = False И service_period IS NOT NULL)
                 (Asset.every_week_check == True) | (
                         (Asset.every_week_check == False) &
                         (Asset.service_period.isnot(None))
@@ -77,78 +82,64 @@ async def check_service_assets():
         )
         assets = result.scalars().all()
 
-        logger.info(f"Найдено активов, требующих обслуживания (next_service <= {today}): {len(assets)}")
+        if not assets:
+            logger.info("Нет активов, требующих обслуживания")
+            return
 
-        total_notifications_created = 0
-        total_assets_updated = 0
+        logger.info(f"📋 Найдено активов: {len(assets)}")
+
+        notifications_created = 0
+        assets_updated = 0
 
         for asset in assets:
-            # Определяем period в зависимости от логики
-            if asset.every_week_check:
-                period = 7
-            elif asset.service_period is not None and asset.service_period > 0:
-                period = asset.service_period
-            else:
-                # service_period IS NULL или <= 0 — пропускаем (на всякий случай)
-                logger.info(f"  Актив {asset.asset_id}: пропущен (нет периода обслуживания)")
+            period = _calculate_service_period(asset)
+            if period == 0:
+                logger.debug(f"  ⊘ Актив {asset.asset_id}: пропущен (нет периода)")
                 continue
 
-            logger.info(
-                f"Обработка актива: id={asset.asset_id}, name={asset.name}, "
-                f"every_week_check={asset.every_week_check}, service_period={asset.service_period}, "
-                f"next_service={asset.next_service}, period={period}"
-            )
-
-            # Определяем старое название статуса
-            old_status_name = asset.asset_status.status if asset.asset_status else None
-            old_status_id = asset.asset_status_id
-
             # Находим активных ответственных
-            responsible = [
+            responsible_users = [
                 a for a in asset.assignments
                 if a.assignment_type == "responsible" and a.end_date is None
             ]
 
-            if not responsible:
-                logger.info(f"  Актив {asset.asset_id}: нет активных ответственных, пропускаем")
+            if not responsible_users:
+                logger.debug(f"  ⊘ Актив {asset.asset_id}: нет ответственных")
                 continue
 
             # Создаём уведомления для каждого ответственного
-            for assignment in responsible:
+            for assignment in responsible_users:
                 notification = Notification(
                     employee_id=assignment.employee_id,
                     asset_id=asset.asset_id,
-                    # === НОВЫЕ ПОЛЯ ===
                     event_type=NotificationEventType.SERVICE_DUE,
-                    initiator_id=assignment.initiator_id,  # системное уведомление
+                    initiator_id=None,  # Системное уведомление
                     status=NotificationStatus.UNREAD,
                 )
                 session.add(notification)
-                logger.info(
-                    f"  [+] Уведомление (service_due): employee={assignment.employee_id}, asset={asset.asset_id}"
-                )
-                total_notifications_created += 1
+                notifications_created += 1
 
-            # Изменяем статус на "Требует проверки"
+            # Изменяем статус
+            old_status = asset.asset_status.status if asset.asset_status else None
             asset.asset_status_id = service_status.id
+
+            # Сдвигаем next_service
+            asset.next_service = today + timedelta(days=period)
+            assets_updated += 1
+
             logger.info(
-                f"  [+] Статус изменён: '{old_status_name}' (id={old_status_id}) -> "
-                f"'{SERVICE_REQUIRED_STATUS}' (id={service_status.id})"
+                f"  ✓ Актив {asset.asset_id} ({asset.name}): "
+                f"статус '{old_status}' → '{SERVICE_REQUIRED_STATUS}', "
+                f"next_service → {asset.next_service}, "
+                f"уведомлений: {len(responsible_users)}"
             )
 
-            # Сдвигаем next_service на period дней
-            asset.next_service = today + timedelta(days=period)
-            total_assets_updated += 1
-            logger.info(f"  [+] next_service сдвинут на {period} дней: {asset.next_service}")
-
-        # Сохраняем все изменения
-        if total_notifications_created > 0 or total_assets_updated > 0:
+        # Сохраняем изменения
+        if notifications_created > 0 or assets_updated > 0:
             await session.commit()
             logger.info(
-                f"Сохранено: {total_notifications_created} уведомлений, "
-                f"{total_assets_updated} активов обновлено"
+                f"Завершено: {notifications_created} уведомлений, "
+                f"{assets_updated} активов обновлено"
             )
         else:
-            logger.info("Нет активов, требующих обслуживания")
-
-    logger.info("Задача проверки активов завершена.")
+            logger.info("Нет изменений для сохранения")

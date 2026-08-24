@@ -428,7 +428,7 @@ async def _sync_asset_location(
     new_position = AssetPosition(
         asset_id=asset_id,
         workshop_id=location_data.workshop_id,
-        line=location_data.place,
+        place=location_data.place,
         level=location_data.level,
         x=location_data.x,
         y=location_data.y,
@@ -441,7 +441,7 @@ async def _sync_asset_location(
 
     return {
         "workshop_id": new_position.workshop_id,
-        "line": new_position.place,
+        "place": new_position.place,
         "level": new_position.level,
         "x": new_position.x,
         "y": new_position.y,

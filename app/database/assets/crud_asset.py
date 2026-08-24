@@ -78,7 +78,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
 def _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
         model_id, asset_type_id, parent_id,
-        # location_id,
         allowed_type_en_names
 ):
     if name:
@@ -100,8 +99,6 @@ def _apply_assets_filters(
         query = query.where(Asset.asset_type_id == asset_type_id)
     if parent_id is not None:
         query = query.where(Asset.parent_id == parent_id)
-    # if location_id is not None:
-    #     query = query.where(Asset.location_id == location_id)
 
     if allowed_type_en_names is not None:
         query = (
@@ -120,7 +117,6 @@ async def get_assets_count(
         model_id: Optional[int] = None,
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
-        # location_id: Optional[int] = None,
         allowed_type_en_names: Optional[List[str]] = None,
 ) -> int:
     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
@@ -130,7 +126,6 @@ async def get_assets_count(
     query = _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
         model_id, asset_type_id, parent_id,
-        # location_id,
         allowed_type_en_names
     )
     result = await db.execute(query)
@@ -216,7 +211,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'model_name': obj.model_name,
         'asset_type_id': obj.asset_type_id,
         'parent_id': obj.parent_id,
-        # 'location_id': obj.location_id,
         'location': str(old_location_data) if old_location_data else None,
         'asset_status_id': obj.asset_status_id,
         'parent_name': obj.parent_name,
@@ -263,7 +257,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'model_name': obj.model_name,
         'asset_type_id': obj.asset_type_id,
         'parent_id': obj.parent_id,
-        # 'location_id': obj.location_id,
         'location': str(new_location_data) if new_location_data else (
             str(old_location_data) if old_location_data else None
         ),

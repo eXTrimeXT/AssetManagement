@@ -2,7 +2,7 @@ import math
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+from typing import Optional, List
 
 from app.database.connection import get_db
 from app.database.crud_notifications import (
@@ -29,33 +29,6 @@ logger = logging.getLogger(__name__)
 router_notifications = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
-def _notification_to_response(notification) -> NotificationResponse:
-    """Преобразует Notification ORM в NotificationResponse"""
-    asset = notification.asset
-    initiator = notification.initiator
-
-    initiator_name = None
-    if initiator:
-        parts = [p for p in [initiator.last_name, initiator.first_name, initiator.middle_name] if p]
-        initiator_name = " ".join(parts) if parts else None
-
-    return NotificationResponse(
-        notification_id=notification.notification_id,
-        employee_id=notification.employee_id,
-        asset_id=notification.asset_id,
-        event_type=notification.event_type,
-        event_type_ru=notification.event_type_ru,
-        initiator_id=notification.initiator_id,
-        status=notification.status,
-        status_ru=notification.status_ru,
-        responded_at=notification.responded_at,
-        created_at=notification.created_at,
-        asset_name=asset.name if asset else None,
-        asset_inventory_id=asset.inventory_id if asset else None,
-        initiator_full_name=initiator_name,
-    )
-
-
 @router_notifications.get("/my", response_model=PaginatedNotificationResponse)
 async def get_my_notifications(
         page: int = Query(1, ge=1),
@@ -78,10 +51,9 @@ async def get_my_notifications(
     unread_count = await get_unread_count(db, current_user.employee_id)
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
-    items = [_notification_to_response(n) for n in notifications]
-
+    # ✅ FastAPI сам сериализует через from_attributes
     return PaginatedNotificationResponse(
-        items=items,
+        items=list(notifications),
         total=total,
         page=page,
         page_size=page_size,
@@ -92,7 +64,7 @@ async def get_my_notifications(
     )
 
 
-@router_notifications.get("/my/grouped", response_model=list[NotificationGroupedItem])
+@router_notifications.get("/my/grouped", response_model=List[NotificationGroupedItem])
 async def get_my_notifications_grouped(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -109,7 +81,8 @@ async def get_my_notifications_grouped(
             asset_id=asset_id,
             asset_name=asset.name if asset else None,
             asset_inventory_id=asset.inventory_id if asset else None,
-            notifications=[_notification_to_response(n) for n in notifications],
+            # ✅ FastAPI сам сериализует каждое уведомление
+            notifications=list(notifications),
             total=len(notifications),
             unread_count=unread,
         ))
@@ -137,7 +110,8 @@ async def read_notification(
     notification = await mark_as_read(db, notification_id, current_user.employee_id)
     if not notification:
         raise HTTPException(status_code=404, detail="Уведомление не найдено")
-    return _notification_to_response(notification)
+    # ✅ Возвращаем объект напрямую
+    return notification
 
 
 @router_notifications.patch("/my/read-all")
@@ -156,10 +130,13 @@ async def decline_my_notification(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Отклонить назначение (актив отвязывается, инициатор получает уведомление)"""
+    """Отклонить назначение"""
     result = await decline_notification(db, notification_id, current_user.employee_id)
     if not result:
-        raise HTTPException(status_code=404, detail="Уведомление не найдено или не может быть отклонено")
+        raise HTTPException(
+            status_code=404,
+            detail="Уведомление не найдено или не может быть отклонено"
+        )
     return NotificationDeclineResponse(
         message="Назначение отклонено",
         notification_id=notification_id,

@@ -1,8 +1,12 @@
+import asyncio
+import json
 import math
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
+
+from starlette.responses import StreamingResponse
 
 from app.database.connection import get_db
 from app.database.crud_notifications import (
@@ -23,6 +27,7 @@ from app.schemas.notifications.NotificationSchemas import (
     NotificationDeclineResponse,
 )
 from app.services.auth.auth_service import require_authorized_user
+from app.services.notifications import notification_manager
 
 logger = logging.getLogger(__name__)
 
@@ -163,3 +168,32 @@ async def clear_read_notifications(
     """Удалить все прочитанные уведомления"""
     count = await delete_all_read(db, current_user.employee_id)
     return {"deleted": count}
+
+
+@router_notifications.get("/stream")
+async def stream_notifications(employee = Depends(require_authorized_user)):
+    """ Эндпоинт потока уведомлений """
+    # Подключаем сотрудника к менеджеру
+    queue = await notification_manager.connect(employee.employee_id)
+
+    async def event_generator():
+        try:
+            while True:
+                # Ждем новое сообщение в очереди
+                data = await queue.get()
+                # Формируем строку в формате SSE
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+        except asyncio.CancelledError:
+            # Клиент отключился
+            notification_manager.disconnect(employee.employee_id)
+            raise
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            # "X-Accel-Buffering": "no" # Важно для Nginx, если он используется как прокси
+        }
+    )

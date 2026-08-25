@@ -1,3 +1,5 @@
+import asyncio
+import json
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
@@ -12,6 +14,9 @@ from contextlib import asynccontextmanager
 from app.middleware.LoggingMiddleware import LoggingMiddleware
 # Middleware для проверки авторизации
 from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
+
+# Импорт менеджера уведомлений
+from app.services.notifications import notification_manager
 
 # Импорт роутеров
 # Роутеры для данных о ПК и андроид устройств
@@ -67,20 +72,40 @@ async def lifespan(app: FastAPI):
        описанные в моделях (классы, наследующие Base), если они еще не существуют в БД.
     """
 
-    # Инициализация дефолтного конфига карты
-    # await MapConfigService.init_default_config()
+    # Запуск слушателя БД
+    listener_task = asyncio.create_task(db_notification_listener())
+
     # При старте приложения
     init_scheduler()
-    # yield
-    # При завершении приложения
-    # shutdown_scheduler()
+
 
     # Для разработки раскомментировать
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    yield
+    yield # Завершение жизненного цикла приложения
+
+    # Остановка при завершении работы приложения
+    listener_task.cancel()
+
+    # Завершаем выполенение планировщика задач
     shutdown_scheduler()
+
+async def db_notification_listener():
+    # Создаем отдельное подключение специально для прослушивания
+    async with engine.connect() as conn:
+        # Подписываемся на канал
+        await conn.execute("LISTEN notification_channel")
+
+        while True:
+            # Ожидаем уведомления (блокирующая операция, не нагружает CPU)
+            notification = await conn.wait_for_notification()
+            if notification:
+                try:
+                    payload = json.loads(notification.payload)
+                    await notification_manager.broadcast(payload)
+                except json.JSONDecodeError:
+                    pass
 
 # --- Создание экземпляра приложения ---
 app = FastAPI(

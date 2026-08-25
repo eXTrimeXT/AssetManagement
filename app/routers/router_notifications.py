@@ -51,7 +51,7 @@ async def get_my_notifications(
     unread_count = await get_unread_count(db, current_user.employee_id)
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
-    # ✅ FastAPI сам сериализует через from_attributes
+    # FastAPI сам сериализует через from_attributes
     return PaginatedNotificationResponse(
         items=list(notifications),
         total=total,
@@ -81,7 +81,7 @@ async def get_my_notifications_grouped(
             asset_id=asset_id,
             asset_name=asset.name if asset else None,
             asset_inventory_id=asset.inventory_id if asset else None,
-            # ✅ FastAPI сам сериализует каждое уведомление
+            # FastAPI сам сериализует каждое уведомление
             notifications=list(notifications),
             total=len(notifications),
             unread_count=unread,
@@ -110,7 +110,7 @@ async def read_notification(
     notification = await mark_as_read(db, notification_id, current_user.employee_id)
     if not notification:
         raise HTTPException(status_code=404, detail="Уведомление не найдено")
-    # ✅ Возвращаем объект напрямую
+    # Возвращаем объект напрямую
     return notification
 
 

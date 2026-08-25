@@ -274,41 +274,34 @@ async def decline_notification(
 
 async def notify_assigned_responsible(db, employee_id, asset_id, initiator_id):
     """Уведомить о назначении ответственным."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.ASSIGNED_RESPONSIBLE, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.ASSIGNED_RESPONSIBLE, initiator_id)
 
 
 async def notify_assigned_user(db, employee_id, asset_id, initiator_id):
     """Уведомить о назначении пользователем."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.ASSIGNED_USER, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.ASSIGNED_USER, initiator_id)
 
 
 async def notify_unassigned_responsible(db, employee_id, asset_id, initiator_id):
     """Уведомить об отвязке ответственного."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.UNASSIGNED_RESPONSIBLE, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.UNASSIGNED_RESPONSIBLE, initiator_id)
 
 
 async def notify_unassigned_user(db, employee_id, asset_id, initiator_id):
     """Уведомить об отвязке пользователя."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.UNASSIGNED_USER, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.UNASSIGNED_USER, initiator_id)
 
 
 async def notify_write_off_requested(db, employee_id, asset_id, initiator_id):
     """Уведомить о создании заявки на списание."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.WRITE_OFF_REQUESTED, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.WRITE_OFF_REQUESTED, initiator_id)
 
 
 async def notify_write_off_approved(db, employee_id, asset_id, initiator_id):
     """Уведомить об утверждении списания."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.WRITE_OFF_APPROVED, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.WRITE_OFF_APPROVED, initiator_id)
 
 
 async def notify_write_off_rejected(db, employee_id, asset_id, initiator_id):
     """Уведомить об отклонении списания."""
-    await create_notification(db, employee_id, asset_id,
-                              NotificationEventType.WRITE_OFF_REJECTED, initiator_id)
+    await create_notification(db, employee_id, asset_id, NotificationEventType.WRITE_OFF_REJECTED, initiator_id)

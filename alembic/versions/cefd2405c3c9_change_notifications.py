@@ -18,27 +18,28 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
+    pass
     # Удаляем старый столбец
-    op.drop_column('notifications', 'notification_checked')
+    # op.drop_column('notifications', 'notification_checked')
 
     # Добавляем новые столбцы
-    op.add_column('notifications', sa.Column(
-        'event_type', sa.String(50), nullable=False, server_default='service_due'
-    ))
-    op.add_column('notifications', sa.Column(
-        'initiator_id', sa.String(20), sa.ForeignKey('zup_employees.employee_id'), nullable=True
-    ))
-    op.add_column('notifications', sa.Column(
-        'status', sa.String(20), nullable=False, server_default='unread'
-    ))
-    op.add_column('notifications', sa.Column(
-        'responded_at', sa.DateTime(timezone=True), nullable=True
-    ))
+    # op.add_column('notifications', sa.Column(
+    #     'event_type', sa.String(50), nullable=False, server_default='service_due'
+    # ))
+    # op.add_column('notifications', sa.Column(
+    #     'initiator_id', sa.String(20), sa.ForeignKey('zup_employees.employee_id'), nullable=True
+    # ))
+    # op.add_column('notifications', sa.Column(
+    #     'status', sa.String(20), nullable=False, server_default='unread'
+    # ))
+    # op.add_column('notifications', sa.Column(
+    #     'responded_at', sa.DateTime(timezone=True), nullable=True
+    # ))
 
     # Индексы
-    op.create_index('ix_notifications_event_type', 'notifications', ['event_type'])
-    op.create_index('ix_notifications_status', 'notifications', ['status'])
-    op.create_index('ix_notifications_employee_status', 'notifications', ['employee_id', 'status'])
+    # op.create_index('ix_notifications_event_type', 'notifications', ['event_type'])
+    # op.create_index('ix_notifications_status', 'notifications', ['status'])
+    # op.create_index('ix_notifications_employee_status', 'notifications', ['employee_id', 'status'])
 
 
 def downgrade() -> None:

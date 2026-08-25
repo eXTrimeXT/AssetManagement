@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+import os
 
+import asyncpg
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
@@ -75,7 +77,7 @@ async def lifespan(app: FastAPI):
        описанные в моделях (классы, наследующие Base), если они еще не существуют в БД.
     """
 
-    # Запуск слушателя БД
+    # Запуск слушателя БД для уведомлений
     listener_task = asyncio.create_task(db_notification_listener())
 
     # При старте приложения
@@ -95,19 +97,44 @@ async def lifespan(app: FastAPI):
     shutdown_scheduler()
 
 async def db_notification_listener():
-    async with engine.connect() as conn:
-        await conn.execute("LISTEN notification_channel")
-        logger.debug("Слушатель уведомлений БД запущен и ожидает события...")
+    try:
+        # 1. Берем URL из переменных окружения
+        db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets_db")
 
-        while True:
-            notification = await conn.wait_for_notification()
-            if notification:
-                logger.debug(f"ПОЛУЧЕНО ИЗ БД: канал={notification.channel}, payload={notification.payload}")
-                try:
-                    payload = json.loads(notification.payload)
-                    await notification_manager.broadcast(payload)
-                except json.JSONDecodeError as e:
-                    logger.debug(f"Ошибка парсинга JSON: {e}")
+        # 2. Убираем префикс "+asyncpg", так как чистый asyncpg его не понимает
+        clean_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+
+        # 3. Создаем ПРЯМОЕ соединение asyncpg
+        conn = await asyncpg.connect(clean_url)
+
+        # 4. Функция обратного вызова, которая сработает при получении уведомления
+        async def notification_callback(connection, pid, channel, payload):
+            logger.debug(f"ПОЛУЧЕНО ИЗ БД: канал={channel}, payload={payload}")
+            try:
+                parsed_payload = json.loads(payload)
+                await notification_manager.broadcast(parsed_payload)
+            except json.JSONDecodeError as e:
+                logger.error(f"Ошибка парсинга JSON из БД: {e}")
+
+        # 5. Подписываемся на канал через add_listener, как вы и просили
+        await conn.add_listener("notification_channel", notification_callback)
+        logger.info("Слушатель уведомлений БД успешно запущен через add_listener.")
+
+        # 6. Держим задачу живой, пока работает приложение
+        stop_event = asyncio.Event()
+        try:
+            await stop_event.wait()
+        except asyncio.CancelledError:
+            # При завершении приложения корректно отписываемся и закрываем соединение
+            logger.info("Остановка слушателя уведомлений БД...")
+            await conn.remove_listener("notification_channel", notification_callback)
+            await conn.close()
+            raise
+
+    except Exception as e:
+        logger.error(f"Критическая ошибка при запуске слушателя БД: {e}")
+        import traceback
+        traceback.print_exc()
 
 # --- Создание экземпляра приложения ---
 app = FastAPI(

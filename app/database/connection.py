@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 Если переменной нет, используется значение по умолчанию для локального запуска.
 Формат: postgresql+asyncpg://<user>:<password>@<host>:<port>/<dbname>
 """
-DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets_db")
+db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets_db")
 
 """
 Создаем асинхронный движок SQLAlchemy.
@@ -17,7 +17,7 @@ max_overflow=20: Максимальное количество дополнит�
 pool_pre_ping=True: Перед использованием соединения отправляет простой запрос, чтобы убедиться, 
 что соединение с БД не разорвано. Критично для стабильности.
 """
-engine = create_async_engine(DB_URL, pool_size=10, max_overflow=20, pool_pre_ping=True)
+engine = create_async_engine(db_url, pool_size=10, max_overflow=20, pool_pre_ping=True)
 
 """
 Фабрика асинхронных сессий.

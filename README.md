@@ -1,7 +1,6 @@
 # Управление IT активами (IT Assets API)
 RESTful API для управления IT-активами компании.
 
-
 ## Технологический стек
 | Компонент             | Технология      | Назначение                           |
 |:----------------------|:----------------|:-------------------------------------|
@@ -14,49 +13,150 @@ RESTful API для управления IT-активами компании.
 | **Драйвер БД**        | asyncpg         | Асинхронный драйвер для PostgreSQL   |
 | **Контейнеротизация** | Docker Compose  | Инструмент для CI/CD                 |
 
-
 ## Общая структура проекта
 ```text
 project/
-├── alembic/                        # Инструмент для миграций
-│   ├── versions/    
-│   │   └── *.py                    # Файлы миграций
-│   └── env.py                      # Скрипт конфигурации миграций
+├── alembic/                                    # Инструмент для миграций БД
+│   ├── versions/                               # Файлы миграций
+│   └── env.py                                  # Скрипт конфигурации миграций
 │
 ├── app/
-│   ├── database/    
-│   │   ├── crud_*.py               # CRUD операции каждой таблицы
-│   │   └── connection.py           # Настройки асинхронного подключения и сессии БД
-│   ├── middleware/ 
-│   │   └── LoggingMiddleware.py    # Настройки логирования через middleware
-│   ├── models/ 
-│   │   └── *.py                    # Модели актива с полями и связями
-│   ├── routers/    
-│   │   └── router_*.py             # Отдельные роутеры под каждую таблицу
-│   ├── schemas/                    # Схемы для каждой таблицы
-│   │       └── schema/             # Схема конкретной таблицы
-│   │           ├── *Create.py      # Схема создания
-│   │           ├── *Response.py    # Схема ответа
-│   │           ├── *Update.py      # Схема обновления
-│   │           └── excel.py        # Работа с excel
-│   ├── services/    
-│   │   └── excel/                  # Сервис для работы с Excel файлами
-│   │       └── import/export.py    # Работа с excel
-│   └── main.py                     # Точка входа: создание FastAPI app, подключение роутеров, lifespan, UI, middleware
+│   ├── database/                               # Работа с базой данных (CRUD)
+│   │   ├── analytics/                          # CRUD для аналитики
+│   │   ├── assets/                             # CRUD для активов и связанных сущностей
+│   │   │   ├── __init__.py
+│   │   │   ├── crud_asset.py
+│   │   │   ├── crud_asset_assignment.py
+│   │   │   ├── crud_asset_history.py
+│   │   │   ├── crud_asset_model.py
+│   │   │   ├── crud_asset_status.py
+│   │   │   ├── crud_asset_type.py
+│   │   │   ├── crud_asset_write_off.py
+│   │   │   └── crud_inventorization.py
+│   │   ├── map_assets/                         # CRUD для карты и позиций
+│   │   │   ├── __init__.py
+│   │   │   ├── crud_asset_position.py
+│   │   │   └── crud_workshop.py
+│   │   ├── zup/                                # CRUD для интеграции с 1С-ЗУП
+│   │   │   ├── __init__.py
+│   │   │   ├── crud_zup_departments.py
+│   │   │   ├── crud_zup_employees.py
+│   │   │   ├── crud_zup_managers.py
+│   │   │   └── crud_zup_positions.py
+│   │   ├── __init__.py
+│   │   ├── connection.py                       # Настройки асинхронного подключения и сессии БД
+│   │   ├── crud_android_data.py
+│   │   ├── crud_audit.py
+│   │   ├── crud_companies.py
+│   │   ├── crud_locations.py
+│   │   ├── crud_notifications.py
+│   │   ├── crud_pc_data.py
+│   │   ├── crud_vendor_classes.py
+│   │   └── crud_vendors.py
+│   │
+│   ├── frontend/                               # Фронтенд-часть (проверка карты)
+│   │
+│   ├── middleware/                             # Middleware приложения
+│   │   ├── __init__.py
+│   │   ├── AuthTokenMiddleware.py              # Проверка JWT-токенов и прав доступа
+│   │   └── LoggingMiddleware.py                # Логирование HTTP-запросов
+│   │
+│   ├── models/                                 # SQLAlchemy модели (таблицы БД)
+│   │   ├── assets/                             # Модели активов (Asset, AssetType, AssetModel, и др.)
+│   │   ├── map_assets/                         # Модели карты (Workshop, AssetPosition)
+│   │   ├── notifications/                      # Модели уведомлений
+│   │   ├── zup/                                # Модели сотрудников ЗУП (employee, department, и др.)
+│   │   ├── AndroidData.py
+│   │   ├── AuditLog.py
+│   │   ├── Base.py                             # Базовый класс SQLAlchemy
+│   │   ├── Company.py
+│   │   ├── Location.py
+│   │   ├── PCData.py
+│   │   ├── UserJWTData.py
+│   │   ├── Vendor.py
+│   │   ├── VendorClass.py
+│   │   └── __init__.py
+│   │
+│   ├── routers/                                # Роутеры и эндпоинты
+│   │   ├── assets/                             # Роутеры для активов
+│   │   │   ├── __init__.py
+│   │   │   ├── router_asset.py
+│   │   │   ├── router_asset_assignment.py
+│   │   │   ├── router_asset_history.py
+│   │   │   ├── router_asset_model.py
+│   │   │   ├── router_asset_status.py
+│   │   │   ├── router_asset_type.py
+│   │   │   ├── router_asset_write_off.py
+│   │   │   └── router_inventorization.py
+│   │   ├── map_assets/                         # Роутеры для карты
+│   │   │   ├── __init__.py
+│   │   │   ├── router_asset_positions.py
+│   │   │   ├── router_map.py
+│   │   │   └── router_workshop.py
+│   │   ├── __init__.py
+│   │   ├── router_analytics.py
+│   │   ├── router_android_data.py
+│   │   ├── router_audit.py
+│   │   ├── router_auth.py
+│   │   ├── router_companies.py
+│   │   ├── router_locations.py
+│   │   ├── router_notifications.py
+│   │   ├── router_pc_data.py
+│   │   ├── router_vendor_classes.py
+│   │   ├── router_vendors.py
+│   │   └── router_zup.py
+│   │
+│   ├── scheduler/                              # Планировщик фоновых задач
+│   │   ├── jobs/                               # Конкретные задачи (jobs)
+│   │   ├── __init__.py
+│   │   └── scheduler.py                        # Инициализация и запуск AsyncIOScheduler
+│   │
+│   ├── schemas/                                # Pydantic-схемы (валидация данных)
+│   │   ├── analytics/
+│   │   ├── android_data/
+│   │   ├── assets/
+│   │   ├── audit/
+│   │   ├── auth/
+│   │   ├── companies/
+│   │   ├── locations/
+│   │   ├── map_assets/
+│   │   ├── notifications/
+│   │   ├── pc_data/
+│   │   ├── vendors/
+│   │   ├── zup/
+│   │   ├── PaginationResponse.py
+│   │   └── __init__.py
+│   │
+│   ├── services/                               # Бизнес-логика и внешние интеграции
+│   │   ├── android/                            # Сервис управления Android-устройствами
+│   │   │   ├── __init__.py
+│   │   │   └── command_manager.py
+│   │   ├── auth/                               # Сервис аутентификации и авторизации
+│   │   │   ├── __init__.py
+│   │   │   ├── auth_service.py
+│   │   │   ├── external_auth.py
+│   │   │   ├── permission_checker.py
+│   │   │   └── system_users.py
+│   │   ├── zup/                                # Сервис интеграции с 1С-ЗУП
+│   │   │   ├── __init__.py
+│   │   │   └── zup_integration.py
+│   │   └── __init__.py
+│   │
+│   ├── __init__.py
+│   └── main.py                                 # Точка входа: создание FastAPI app, подключение роутеров, lifespan, UI, middleware
 │
-├── xlsx/                           # Папка для Excel файлов (оригинал + для тестов)
+├── xlsx/                                       # Папка для Excel файлов (шаблоны, тесты)
 │
-├── packages/                       # Папка с зависимостями для локальной сборки 
-│   └── *.whl/                      # Файлы для сборки
+├── packages/                                   # Зависимости для локальной сборки (*.whl)
 │
-├── alembic.ini                     # Основной конфигурационный файл Alembic
-├── Dockerfile                      # Файл сборки образа контейнеров
-├── docker-compose.yml              # Файл оркестрации многоконтейнерных приложений
-├── entrypoint.sh                   # Исполняемый файл последовательного запуска
-├── requirements.txt                # Зависимости проекта с указанными версиями
-└── README.md                       # Документация проекта
+├── alembic.ini                                 # Основной конфигурационный файл Alembic
+├── Dockerfile                                  # Файл сборки образа контейнеров
+├── docker-compose.yml                          # Файл оркестрации многоконтейнерных приложений
+├── entrypoint.sh                               # Исполняемый файл последовательного запуска
+├── requirements.txt                            # Зависимости проекта с указанными версиями
+├── .env                                        # Переменные окружения (не коммитится)
+└── README.md                                   # Документация проекта
 ```
-
 
 ## Настройка переменных окружения `.env`
 ### Обязательные поля:
@@ -73,23 +173,20 @@ project/
 - `JWT_SECRET_KEY` = "geasd$#3neGG!#@J#nnd28n"
 
 > **Примечание**: Перед запуском проверить и настроить порты: `docker-compose.yml`
-> 
+>
 > Ссылка для подключения к БД формируется автоматически из полей `DB_*`.
-> 
+>
 > При локальном запуске необходимо использовать @localhost
-> 
+>
 > Если запуск через Docker, то @postgres
 ---
 
-
 ## Пакеты Python
-```python
-pip download pandas-stubs==3.0.3.260530 --dest=/packages/ --no-deps
-pip download psycopg2==2.9.12 --dest=/packages/ --no-deps
-pip download pycryptodome==3.23.0 --dest=/packages/ --no-deps
-```
+Смотри файл `requirements.txt`
 
-## Запуск через Docker 
+*Примечание: добавлены зависимости для AsyncIOScheduler.*
+
+## Запуск через Docker
 C пересборкой проекта (Выполняется единожды при первом запуске):
 ```bash
 docker compose up --build
@@ -101,7 +198,6 @@ docker compose up -d
 ```
 ---
 
-
 ## Документация API
 После запуска приложения доступна интерактивная документация:
 *   **Swagger:** `http://127.0.0.1:8800/docs`
@@ -110,69 +206,38 @@ docker compose up -d
 ---
 
 ## Структура базы данных
-Ниже приведено подробное описание таблиц базы данных, используемых в приложении для управления IT-активами на основе моделей (**app.models**).
+Ниже приведено подробное описание таблиц базы данных, используемых в приложении для управления IT-активами на основе моделей.
 
 <details>
 <summary>Таблица assets</summary>
 
+### Таблица: `assets`
 | Колонка               | Тип данных  | Описание                                                      |
 |:----------------------|:------------|:--------------------------------------------------------------|
 | asset_id              | Integer     | Первичный ключ, автоинкремент                                 |
-| asset_status          | String(100) | Статус актива (по умолчанию "Приемка ")                       |
-| type_domain           | String(100) | Тип домена                                                    |
-| asset_type_id         | Integer     | Внешний ключ на `asset_types.asset_type_id`                   |
-| inventory_id          | String(50)  | Инвентарный номер (уникальный)                                |
-| affixed_inventory_id  | Boolean     | Флаг: инвентарный номер наклеен                               |
-| info_storage_location | String(200) | Место хранения информации об активе                           |
-| location_id           | Integer     | Внешний ключ на `locations.location_id`                       |
-| serial_number         | String(100) | Серийный номер (уникальный)                                   |
-| name                  | String(150) | Имя актива (не nullable)                                      |
+| name                  | String(150) | Имя актива (не nullable, индекс)                              |
+| inventory_id          | String(100) | Инвентарный номер (уникальный, индекс, не nullable)           |
+| serial_number         | String(100) | Серийный номер (уникальный, индекс, nullable)                 |
+| asset_status_id       | Integer     | Внешний ключ на `asset_status.id`                             |
+| quantity              | Integer     | Количество (по умолчанию 1)                                   |
+| comment               | Text        | Комментарий                                                   |
 | date_issue            | Date        | Дата выдачи                                                   |
 | date_purchasing       | Date        | Дата покупки                                                  |
-| comment               | Text        | Комментарий                                                   |
-| price                 | Integer     | Цена                                                          |
-| parent_id             | Integer     | Внешний ключ на `assets.asset_id` (для иерархии/комплектации) |
-| manufacturer_id       | Integer     | Внешний ключ на `vendors.vendor_id` (производитель)           |
-| vendor_id             | Integer     | Внешний ключ на `vendors.vendor_id` (поставщик)               |
-| prepared_by           | Integer     | Внешний ключ на `users.user_id` (кто подготовил)              |
-| checked_by            | Integer     | Внешний ключ на `users.user_id` (кто проверил)                |
-| deleted_at            | DateTime    | Дата мягкого удаления                                         |
+| model_id              | Integer     | Внешний ключ на `asset_models.model_id`                       |
+| model_name            | String(300) | Название модели (денормализованное)                           |
+| parent_name           | String(100) | Название родителя (денормализованное)                         |
+| manufacturer_name     | String(100) | Название производителя (денормализованное)                    |
+| vendor_name           | String(100) | Название поставщика (денормализованное)                       |
+| os_name               | String(100) | Название ОС (денормализованное)                               |
+| asset_type_id         | Integer     | Внешний ключ на `asset_types.asset_type_id`                   |
+| parent_id             | Integer     | Внешний ключ на `assets.asset_id` (для иерархии комплектации) |
+| every_week_check      | Boolean     | Флаг еженедельной проверки                                    |
+| next_service          | Date        | Дата следующего обслуживания                                  |
+| service_period        | Integer     | Период обслуживания в днях                                    |
+| created_by            | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
+| updated_by            | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
 | created_at            | DateTime    | Дата создания                                                 |
 | updated_at            | DateTime    | Дата обновления                                               |
-| software_id           | Integer     | Внешний ключ на `software.software_id`                        |
-</details>
-
-<details>
-<summary>Таблица asset_classes</summary>
-
-### Таблица: `asset_classes`
-| Колонка       | Тип данных  | Описание                                                  |
-|:--------------|:------------|:----------------------------------------------------------|
-| class_id      | Integer     | Первичный ключ, автоинкремент                             |
-| class_name    | String(100) | Название класса (не nullable, индекс)                     |
-| class_type_id | Integer     | Внешний ключ на `asset_types.asset_type_id` (не nullable) |
-| description   | Text        | Описание класса                                           |
-| created_at    | DateTime    | Дата создания                                             |
-| updated_at    | DateTime    | Дата обновления                                           |
-| created_by    | Integer     | Внешний ключ на `users.user_id` (создатель)               |
-| updated_by    | Integer     | Внешний ключ на `users.user_id` (обновивший)              |
-</details>
-
-<details>
-<summary>Таблица asset_catalog</summary>
-
-### Таблица: `asset_catalog`
-| Колонка           | Тип данных | Описание                                                    |
-|:------------------|:-----------|:------------------------------------------------------------|
-| catalog_id        | Integer    | Первичный ключ, автоинкремент                               |
-| class_id          | Integer    | Внешний ключ на `asset_classes.class_id` (не nullable)      |
-| model_id          | Integer    | Внешний ключ на `asset_models.model_id` (не nullable)       |
-| asset_id          | Integer    | Внешний ключ на `assets.asset_id` (уникальный, не nullable) |
-| owner_id          | Integer    | Внешний ключ на `users.user_id` (владелец)                  |
-| warehouse_id      | Integer    | Внешний ключ на `warehouses.warehouse_id`                   |
-| warranty_end_date | Date       | Дата окончания гарантии                                     |
-| created_at        | DateTime   | Дата создания                                               |
-| created_by        | Integer    | Внешний ключ на `users.user_id` (создатель записи)          |
 </details>
 
 <details>
@@ -183,57 +248,147 @@ docker compose up -d
 |:--------------|:------------|:----------------------------------------|
 | asset_type_id | Integer     | Первичный ключ, автоинкремент           |
 | name          | String(100) | Название типа (не nullable, уникальное) |
+| en_name       | String(100) | Название типа на английском (уникальное)|
+| created_by    | String(20)  | Внешний ключ на `zup_employees.employee_id` |
+| created_at    | DateTime    | Дата создания                           |
+| updated_at    | DateTime    | Дата обновления                         |
 </details>
 
 <details>
 <summary>Таблица asset_models</summary>
 
 ### Таблица: `asset_models`
-| Колонка            | Тип данных  | Описание                                                 |
-|:-------------------|:------------|:---------------------------------------------------------|
-| model_id           | Integer     | Первичный ключ, автоинкремент                            |
-| model_name         | String(150) | Название модели (не nullable, индекс)                    |
-| class_id           | Integer     | Внешний ключ на `asset_classes.class_id` (не nullable)   |
-| description        | Text        | Описание модели                                          |
-| is_active          | Boolean     | Флаг активности модели (по умолчанию True)               |
-| is_serial_required | Boolean     | Флаг обязательности серийного номера (по умолчанию True) |
-| created_at         | DateTime    | Дата создания                                            |
-| updated_at         | DateTime    | Дата обновления                                          |
-| created_by         | Integer     | Внешний ключ на `users.user_id` (создатель)              |
-| updated_by         | Integer     | Внешний ключ на `users.user_id` (обновивший)             |
+| Колонка       | Тип данных  | Описание                                                 |
+|:--------------|:------------|:---------------------------------------------------------|
+| model_id      | Integer     | Первичный ключ, автоинкремент                            |
+| name          | String(150) | Название модели (не nullable, индекс)                    |
+| description   | Text        | Описание модели                                          |
+| asset_type_id | Integer     | Внешний ключ на `asset_types.asset_type_id`              |
+| created_by    | String(20)  | Внешний ключ на `zup_employees.employee_id`              |
+| updated_by    | String(20)  | Внешний ключ на `zup_employees.employee_id`              |
+| created_at    | DateTime    | Дата создания                                            |
+| updated_at    | DateTime    | Дата обновления                                          |
 </details>
 
 <details>
-<summary>Таблица companies</summary>
+<summary>Таблица asset_assignments</summary>
 
-### Таблица: `companies`
-| Колонка      | Тип данных  | Описание                                |
-|:-------------|:------------|:----------------------------------------|
-| company_id   | Integer     | Первичный ключ, автоинкремент           |
-| company_name | String(255) | Название компании (не nullable, индекс) |
-| gen_director | String(150) | Генеральный директор (ФИО)              |
-| phone_number | String(50)  | Телефон компании                        |
-| location_id  | Integer     | Внешний ключ на `locations.location_id` |
+### Таблица: `asset_assignments`
+| Колонка          | Тип данных  | Описание                                                    |
+|:-----------------|:------------|:------------------------------------------------------------|
+| id               | Integer     | Первичный ключ, автоинкремент                               |
+| asset_id         | Integer     | Внешний ключ на `assets.asset_id`                           |
+| employee_id      | String(20)  | Внешний ключ на `zup_employees.employee_id`                 |
+| assignment_type  | String(20)  | Тип назначения: "user" или "responsible"                    |
+| start_date       | Date        | Дата начала назначения                                      |
+| end_date         | Date        | Дата окончания (NULL = активная связь)                      |
+| assigned_by      | String(20)  | Внешний ключ на `zup_employees.employee_id` (кто назначил)  |
+| comment          | String(500) | Комментарий                                                 |
+| created_at       | DateTime    | Дата создания                                               |
 </details>
 
 <details>
-<summary>Таблица software</summary>
+<summary>Таблица asset_status</summary>
 
-### Таблица: `software`
-| Колонка          | Тип данных  | Описание                                         |
-|:-----------------|:------------|:-------------------------------------------------|
-| software_id      | Integer     | Первичный ключ, автоинкремент                    |
-| office_type      | String(100) | Тип офисного ПО                                  |
-| office_key       | String(100) | Ключ лицензии офисного ПО                        |
-| os_type          | String(100) | Тип операционной системы                         |
-| os_key           | String(100) | Ключ лицензии ОС                                 |
-| remote_control   | String(150) | ПО удалённого управления                         |
-| admin_permission | Boolean     | Наличие прав администратора (по умолчанию False) |
-| who_installed    | Integer     | Внешний ключ на `users.user_id` (кто установил)  |
-| installed_at     | DateTime    | Дата установки                                   |
-| comment          | Text        | Комментарий                                      |
-| created_at       | DateTime    | Дата создания                                    |
-| updated_at       | DateTime    | Дата обновления                                  |
+### Таблица: `asset_status`
+| Колонка | Тип данных  | Описание                          |
+|:--------|:------------|:----------------------------------|
+| id      | Integer     | Первичный ключ, автоинкремент     |
+| status  | String(100) | Название статуса (уникальное)     |
+</details>
+
+<details>
+<summary>Таблица asset_history</summary>
+
+### Таблица: `asset_history`
+| Колонка     | Тип данных  | Описание                                                    |
+|:------------|:------------|:------------------------------------------------------------|
+| id          | Integer     | Первичный ключ, автоинкремент                               |
+| asset_id    | Integer     | Внешний ключ на `assets.asset_id`                           |
+| action_type | String(50)  | Тип действия (create, update, delete, assign, move и др.)   |
+| field_name  | String(100) | Название измененного поля                                   |
+| old_value   | Text        | Старое значение                                             |
+| new_value   | Text        | Новое значение                                              |
+| changed_by  | String(20)  | Внешний ключ на `zup_employees.employee_id`                 |
+| changed_at  | DateTime    | Дата изменения                                              |
+| comment     | Text        | Комментарий к изменению                                     |
+| session_id  | String(36)  | UUID для группировки изменений в одну операцию               |
+</details>
+
+<details>
+<summary>Таблица asset_write_offs</summary>
+
+### Таблица: `asset_write_offs`
+| Колонка        | Тип данных  | Описание                                                    |
+|:---------------|:------------|:------------------------------------------------------------|
+| write_off_id   | Integer     | Первичный ключ, автоинкремент                               |
+| asset_id       | Integer     | Внешний ключ на `assets.asset_id`                           |
+| reason         | Text        | Причина списания                                            |
+| write_off_type | String(50)  | Тип списания (broken, lost, obsolete, sold, other)          |
+| requested_by   | String(20)  | Внешний ключ на `zup_employees.employee_id` (заявитель)     |
+| requested_at   | DateTime    | Дата запроса                                                |
+| approved_by    | String(20)  | Внешний ключ на `zup_employees.employee_id` (утвердивший)   |
+| approved_at    | DateTime    | Дата утверждения                                            |
+| reject_reason  | Text        | Причина отказа                                              |
+| status         | String(20)  | Статус (pending, approved, rejected)                        |
+</details>
+
+<details>
+<summary>Таблица inventorization_sessions</summary>
+
+### Таблица: `inventorization_sessions`
+| Колонка           | Тип данных  | Описание                                                    |
+|:------------------|:------------|:------------------------------------------------------------|
+| session_id        | Integer     | Первичный ключ, автоинкремент                               |
+| asset_type_id     | Integer     | Внешний ключ на `asset_types.asset_type_id`                 |
+| asset_type_name   | String(100) | Название типа актива                                        |
+| asset_type_en_name| String(100) | Название типа актива на английском                          |
+| status            | String(50)  | Статус (in_progress, completed)                             |
+| created_at        | DateTime    | Дата создания                                               |
+</details>
+
+<details>
+<summary>Таблица inventorization_items</summary>
+
+### Таблица: `inventorization_items`
+| Колонка          | Тип данных  | Описание                                                    |
+|:-----------------|:------------|:------------------------------------------------------------|
+| inventorization_id| Integer    | Первичный ключ, автоинкремент                               |
+| session_id       | Integer     | Внешний ключ на `inventorization_sessions.session_id`       |
+| asset_id         | Integer     | ID актива (без внешнего ключа для сохранения истории)       |
+| serial_number    | String(100) | Серийный номер                                              |
+| asset_name       | String(150) | Название актива                                             |
+| is_checked       | Boolean     | Флаг проверки                                               |
+| quantity         | Integer     | Ожидаемое количество                                        |
+| quantity_fact    | Integer     | Фактическое количество                                      |
+</details>
+
+<details>
+<summary>Таблица zup_employees</summary>
+
+### Таблица: `zup_employees`
+| Колонка                | Тип данных  | Описание                                                    |
+|:-----------------------|:------------|:------------------------------------------------------------|
+| guid                   | String(36)  | Первичный ключ, UUID из 1С                                  |
+| guid_person            | String(36)  | Ссылка на физическое лицо                                   |
+| employee_id            | String(20)  | Табельный номер (уникальный, индекс)                        |
+| active_directory_login | String(20)  | Логин Active Directory (уникальный)                         |
+| comment                | String(1000)| Комментарий                                                 |
+| last_name              | String(100) | Фамилия на русском                                          |
+| first_name             | String(100) | Имя на русском                                              |
+| middle_name            | String(100) | Отчество на русском                                         |
+| last_name_en           | String(100) | Фамилия на английском                                       |
+| first_name_en          | String(100) | Имя на английском                                           |
+| middle_name_en         | String(100) | Отчество на английском                                      |
+| birth_date             | Date        | Дата рождения                                               |
+| employment_date        | Date        | Дата приема на работу                                       |
+| dismissal_date         | Date        | Дата увольнения (NULL = действующий)                        |
+| phone                  | String(20)  | Телефон                                                     |
+| email                  | String(100) | Email                                                       |
+| position_guid          | String(36)  | GUID должности                                              |
+| department_guid        | String(36)  | GUID подразделения                                          |
+| created_at             | DateTime    | Дата создания                                               |
+| updated_at             | DateTime    | Дата обновления                                             |
 </details>
 
 <details>
@@ -243,31 +398,45 @@ docker compose up -d
 | Колонка     | Тип данных  | Описание                                                    |
 |:------------|:------------|:------------------------------------------------------------|
 | location_id | Integer     | Первичный ключ, автоинкремент                               |
-| country     | String(100) | Страна (по умолчанию "Страна")                              |
-| city        | String(100) | Город (по умолчанию "Город")                                |
-| address     | String(255) | Адрес (по умолчанию "Улица и номер дома")                   |
-| room        | String(50)  | Помещение/кабинет (по умолчанию "Номер помещения/кабинета") |
-| floor       | String(10)  | Этаж (по умолчанию "Этаж")                                  |
+| name        | String(100) | Название локации (уникальное)                               |
+| country     | String(100) | Страна                                                      |
+| city        | String(100) | Город                                                       |
+| address     | String(255) | Адрес                                                       |
+| room        | String(50)  | Помещение/кабинет                                           |
+| floor       | String(10)  | Этаж                                                        |
+| created_by  | String(20)  | Внешний ключ на `zup_employees.employee_id`                 |
+| created_at  | DateTime    | Дата создания                                               |
+| updated_at  | DateTime    | Дата обновления                                             |
 </details>
 
 <details>
-<summary>Таблица users</summary>
+<summary>Таблица companies</summary>
 
-### Таблица: `users`
-| Колонка       | Тип данных  | Описание                                           |
-|:--------------|:------------|:---------------------------------------------------|
-| user_id       | Integer     | Первичный ключ, автоинкремент                      |
-| user_tab_id   | String(50)  | Табельный номер (уникальный, индекс)               |
-| owner         | String(150) | ФИО на русском (не nullable, индекс)               |
-| user_en_name  | String(150) | ФИО на английском                                  |
-| role          | String(40)  | Роль пользователя                                  |
-| user_position | String(100) | Должность                                          |
-| department    | String(100) | Отдел (индекс)                                     |
-| email         | String(100) | Email (уникальный, не nullable, индекс)            |
-| phone         | String(50)  | Телефон                                            |
-| is_active     | Boolean     | Статус активности (по умолчанию True, не nullable) |
-| created_at    | DateTime    | Дата создания                                      |
-| updated_at    | DateTime    | Дата обновления                                    |
+### Таблица: `companies`
+| Колонка      | Тип данных  | Описание                                |
+|:-------------|:------------|:----------------------------------------|
+| company_id   | Integer     | Первичный ключ, автоинкремент           |
+| company_name | String(255) | Название компании (уникальное)          |
+| gen_director | String(150) | Генеральный директор (ФИО)              |
+| phone_number | String(50)  | Телефон компании                        |
+| location_id  | Integer     | Внешний ключ на `locations.location_id` |
+| created_by   | String(20)  | Внешний ключ на `zup_employees.employee_id` |
+| created_at   | DateTime    | Дата создания                           |
+| updated_at   | DateTime    | Дата обновления                         |
+</details>
+
+<details>
+<summary>Таблица vendor_classes</summary>
+
+### Таблица: `vendor_classes`
+| Колонка     | Тип данных  | Описание                                                      |
+|:------------|:------------|:--------------------------------------------------------------|
+| class_id    | Integer     | Первичный ключ, автоинкремент                                 |
+| name        | String(100) | Название класса контрагента (уникальное)                      |
+| description | String(300) | Описание                                                      |
+| created_by  | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
+| created_at  | DateTime    | Дата создания                                                 |
+| updated_at  | DateTime    | Дата обновления                                               |
 </details>
 
 <details>
@@ -277,36 +446,77 @@ docker compose up -d
 | Колонка         | Тип данных  | Описание                                                               |
 |:----------------|:------------|:-----------------------------------------------------------------------|
 | vendor_id       | Integer     | Первичный ключ, автоинкремент                                          |
-| name            | String(255) | Название вендора/поставщика (не nullable, индекс)                      |
-| vendor_class_id | Integer     | Внешний ключ на `vendor_classes.vendor_class_id` (не nullable, индекс) |
+| name            | String(150) | Название вендора/поставщика                                            |
+| supplier_number | String(50)  | Номер поставщика (уникальный)                                          |
+| contact_person  | String(150) | Контактное лицо                                                        |
+| phone           | String(50)  | Телефон                                                                |
+| email           | String(100) | Email                                                                  |
+| address         | String(300) | Адрес                                                                  |
+| description     | String(500) | Описание                                                               |
 | company_id      | Integer     | Внешний ключ на `companies.company_id`                                 |
-| created_by      | Integer     | Внешний ключ на `users.user_id` (создатель, не nullable)               |
+| vendor_class_id | Integer     | Внешний ключ на `vendor_classes.class_id`                              |
+| created_by      | String(20)  | Внешний ключ на `zup_employees.employee_id`                            |
 | created_at      | DateTime    | Дата создания                                                          |
+| updated_at      | DateTime    | Дата обновления                                                        |
 </details>
 
 <details>
-<summary>Таблица vendor_classes</summary>
+<summary>Таблица asset_positions</summary>
 
-### Таблица: `vendor_classes`
-| Колонка         | Тип данных  | Описание                                                      |
-|:----------------|:------------|:--------------------------------------------------------------|
-| vendor_class_id | Integer     | Первичный ключ, автоинкремент, индекс                         |
-| name            | String(100) | Название класса контрагента (не nullable, уникальное, индекс) |
-| created_at      | DateTime    | Дата создания (не nullable)                                   |
+### Таблица: `asset_positions`
+| Колонка     | Тип данных  | Описание                                                    |
+|:------------|:------------|:------------------------------------------------------------|
+| id          | Integer     | Первичный ключ, автоинкремент                               |
+| asset_id    | Integer     | Внешний ключ на `assets.asset_id`                           |
+| workshop_id | Integer     | Внешний ключ на `workshops.workshop_id`                     |
+| x           | Integer     | Координата X относительно цеха                              |
+| y           | Integer     | Координата Y относительно цеха                              |
+| rotation    | Integer     | Угол поворота                                               |
+| scale       | Float       | Масштаб                                                     |
+| place       | String(100) | Линия/помещение                                             |
+| level       | Integer     | Этаж (по умолчанию 0)                                       |
+| is_active   | Boolean     | Флаг активности позиции                                     |
+| created_at  | DateTime    | Дата создания                                               |
+| updated_at  | DateTime    | Дата обновления                                             |
 </details>
 
 <details>
-<summary>Таблица warehouses</summary>
+<summary>Таблица workshops</summary>
 
-### Таблица: `warehouses`
-| Колонка      | Тип данных  | Описание                                                |
-|:-------------|:------------|:--------------------------------------------------------|
-| warehouse_id | Integer     | Первичный ключ, автоинкремент, индекс                   |
-| name         | String(100) | Название склада (не nullable, уникальное, индекс)       |
-| location_id  | Integer     | Внешний ключ на `locations.location_id` (индекс)        |
-| prepared_by  | Integer     | Внешний ключ на `users.user_id` (ответственный, индекс) |
+### Таблица: `workshops`
+| Колонка              | Тип данных  | Описание                                                |
+|:---------------------|:------------|:--------------------------------------------------------|
+| workshop_id          | Integer     | Первичный ключ, автоинкремент                           |
+| name                 | String(100) | Название цеха                                           |
+| code                 | String(50)  | Уникальный код цеха                                     |
+| description          | String(500) | Описание                                                |
+| background_image_url | String(300) | URL фонового изображения                                |
+| geometry             | JSONB       | Сложная геометрия (полигон)                             |
+| workshop_width       | Integer     | Ширина прямоугольника цеха                              |
+| workshop_height      | Integer     | Высота прямоугольника цеха                              |
+| offset_x             | Integer     | Смещение по X на общей карте                            |
+| offset_y             | Integer     | Смещение по Y на общей карте                            |
+| workshop_scale       | Float       | Масштаб цеха                                            |
+| color                | String(20)  | Цвет цеха в hex формате                                 |
+| is_active            | Boolean     | Флаг активности                                         |
+| created_at           | DateTime    | Дата создания                                           |
+| updated_at           | DateTime    | Дата обновления                                         |
 </details>
 
+<details>
+<summary>Таблица audit_logs</summary>
+
+### Таблица: `audit_logs`
+| Колонка      | Тип данных  | Описание                                                    |
+|:-------------|:------------|:------------------------------------------------------------|
+| id           | Integer     | Первичный ключ, автоинкремент                               |
+| user_login   | String      | Логин пользователя                                          |
+| action       | String      | Действие (например, "POST /api/assets")                     |
+| entity       | String      | Сущность                                                    |
+| entity_id    | Integer     | ID записи                                                   |
+| request_data | JSON        | Тело запроса/параметры                                      |
+| created_at   | DateTime    | Дата создания                                               |
+</details>
 
 ### Схема взаимосвязей таблиц
 
@@ -317,62 +527,147 @@ erDiagram
     Asset {
         int asset_id PK
         string inventory_id UK
-        string serial_number
+        string serial_number UK
         string name
-        string asset_status
-        int price
+        int asset_status_id FK
+        int quantity
         int model_id FK
-        int manufacturer_id FK
-        int vendor_id FK
-        int warehouse_id FK
-        int workshop_id FK
-        int prepared_by FK
-        int checked_by FK
+        string model_name
+        int asset_type_id FK
+        int parent_id FK
+        boolean every_week_check
+        date next_service
+        int service_period
+        string created_by FK
+        string updated_by FK
         datetime created_at
         datetime updated_at
-        datetime deleted_at
     }
 
     AssetType {
         int asset_type_id PK
         string name UK
         string en_name UK
-        string description
-        datetime created_at
-        datetime updated_at
-    }
-
-    AssetClass {
-        int class_id PK
-        string class_name
-        int class_type_id FK
-        string description
-        int created_by FK
-        int updated_by FK
+        string created_by FK
         datetime created_at
         datetime updated_at
     }
 
     AssetModel {
         int model_id PK
-        string model_name
-        int class_id FK
-        string description
-        boolean is_active
-        boolean is_serial_required
-        int created_by FK
-        int updated_by FK
+        string name
+        text description
+        int asset_type_id FK
+        string created_by FK
+        string updated_by FK
         datetime created_at
         datetime updated_at
     }
 
-    AssetCatalog {
-        int catalog_id PK
+    AssetAssignment {
+        int id PK
         int asset_id FK
-        string serial_number
-        int owner_id FK
-        int created_by FK
+        string employee_id FK
+        string assignment_type
+        date start_date
+        date end_date
+        string assigned_by FK
+        string comment
         datetime created_at
+    }
+
+    AssetStatus {
+        int id PK
+        string status UK
+    }
+
+    AssetHistory {
+        int id PK
+        int asset_id FK
+        string action_type
+        string field_name
+        text old_value
+        text new_value
+        string changed_by FK
+        datetime changed_at
+        text comment
+        string session_id
+    }
+
+    AssetWriteOff {
+        int write_off_id PK
+        int asset_id FK
+        text reason
+        string write_off_type
+        string requested_by FK
+        datetime requested_at
+        string approved_by FK
+        datetime approved_at
+        text reject_reason
+        string status
+    }
+
+    InventorizationSession {
+        int session_id PK
+        int asset_type_id FK
+        string asset_type_name
+        string status
+        datetime created_at
+    }
+
+    InventorizationItem {
+        int inventorization_id PK
+        int session_id FK
+        int asset_id
+        string serial_number
+        string asset_name
+        boolean is_checked
+        int quantity
+        int quantity_fact
+    }
+
+    Employee {
+        string guid PK
+        string employee_id UK
+        string active_directory_login UK
+        string last_name
+        string first_name
+        string email
+        string position_guid FK
+        string department_guid FK
+        date dismissal_date
+    }
+
+    Vendor {
+        int vendor_id PK
+        string name
+        string supplier_number UK
+        int company_id FK
+        int vendor_class_id FK
+        string created_by FK
+    }
+
+    VendorClass {
+        int class_id PK
+        string name UK
+        string description
+    }
+
+    Company {
+        int company_id PK
+        string company_name UK
+        string gen_director
+        int location_id FK
+    }
+
+    Location {
+        int location_id PK
+        string name UK
+        string country
+        string city
+        string address
+        string room
+        string floor
     }
 
     AssetPosition {
@@ -382,18 +677,16 @@ erDiagram
         int x
         int y
         int rotation
-        int scale
+        float scale
+        string place
+        int level
         boolean is_active
-        datetime created_at
-        datetime updated_at
     }
 
     Workshop {
         int workshop_id PK
         string name
         string code UK
-        string description
-        string background_image_url
         jsonb geometry
         int workshop_width
         int workshop_height
@@ -402,432 +695,167 @@ erDiagram
         float workshop_scale
         string color
         boolean is_active
+    }
+
+    AuditLog {
+        int id PK
+        string user_login
+        string action
+        string entity
+        int entity_id
+        json request_data
         datetime created_at
-        datetime updated_at
-    }
-
-    User {
-        int user_id PK
-        string user_tab_id UK
-        string user_en_name
-        string owner
-        string email
-        int department_id FK
-        json permissions
-        boolean is_active
-        datetime created_at
-        datetime updated_at
-    }
-
-    Vendor {
-        int vendor_id PK
-        string name
-        int vendor_class_id FK
-        int company_id FK
-        int created_by FK
-        datetime created_at
-    }
-
-    VendorClass {
-        int vendor_class_id PK
-        string name UK
-        datetime created_at
-    }
-
-    Company {
-        int company_id PK
-        string company_name
-        string gen_director
-        string phone_number
-        int location_id FK
-    }
-
-    Warehouse {
-        int warehouse_id PK
-        string name UK
-        int location_id FK
-        int prepared_by FK
-    }
-
-    Location {
-        int location_id PK
-        string country
-        string city
-        string address
-        string room
-        string floor
-    }
-
-    Department {
-        int id PK
-        string name
-        string abbreviation UK
-    }
-
-    Division {
-        int id PK
-        string name
-        string abbreviation UK
-        int department_id FK
-    }
-
-    Group {
-        int id PK
-        string name
-        string abbreviation UK
-        int division_id FK
-    }
-
-    Software {
-        int software_id PK
-        string software_name
-        string version
-        string license_key
-        datetime license_expiry
-        boolean admin_permission
-        int who_installed FK
-    }
-
-    PCData {
-        int id PK
-        string username UK
-        int user_id FK
-        jsonb user
-        jsonb network
-        jsonb os
-        jsonb components
-        jsonb office_package
-        jsonb programs
-        datetime updated_at
-    }
-
-    AndroidData {
-        int id PK
-        string serial_number UK
-        jsonb device
-        jsonb system
-        jsonb hardware
-        jsonb network
-        jsonb battery
-    }
-
-    UserSession {
-        int id PK
-        string login UK
-        string token
-        string user_info
-        datetime created_at
-    }
-
-%% ==================== HISTORY ENTITIES ====================
-
-    AssetOperation {
-        int id PK
-        int asset_id FK
-        string inventory_id_snapshot
-        string name_snapshot
-        string operation_type
-        json old_values
-        json new_values
-        int performed_by FK
-        string comment
-        datetime timestamp
-    }
-
-    CatalogOperation {
-        int id PK
-        int catalog_id FK
-        string asset_inventory_id_snapshot
-        string model_name_snapshot
-        string class_name_snapshot
-        string warehouse_name_snapshot
-        string owner_name_snapshot
-        string operation_type
-        json old_values
-        json new_values
-        int performed_by FK
-        string comment
-        datetime timestamp
     }
 
 %% ==================== CORE RELATIONSHIPS ====================
 
-%% Иерархия типов активов
-    AssetType ||--o{ AssetClass : "классифицирует (class_type_id)"
-    AssetClass ||--o{ AssetModel : "содержит модели (class_id)"
+%% Классификация активов (без иерархии классов)
+    AssetType ||--o{ Asset : "классифицирует (asset_type_id)"
     AssetModel ||--o{ Asset : "используется в (model_id)"
+    AssetModel }o--|| AssetType : "принадлежит типу"
 
-%% Актив и его позиции
-    Asset ||--o{ AssetCatalog : "записан в каталог"
+%% Актив и его позиции/история/списания
+    Asset ||--o{ AssetAssignment : "назначения"
+    Asset ||--o{ AssetHistory : "история операций"
+    Asset ||--o{ AssetWriteOff : "заявки на списание"
     Asset ||--o{ AssetPosition : "позиция на карте"
-    Asset ||--o{ AssetOperation : "история операций"
+    Asset ||--o{ Asset : "родительский актив (parent_id)"
 
-%% Местоположение и хранение
-    Asset }o--|| Warehouse : "хранится на складе"
-    Asset }o--|| Workshop : "находится в цеху"
+%% Инвентаризация
+    AssetType ||--o{ InventorizationSession : "сессия инвентаризации"
+    InventorizationSession ||--o{ InventorizationItem : "элементы сессии"
 
-%% Контрагенты
-    Asset }o--|| Vendor : "производитель (manufacturer_id)"
-    Asset }o--|| Vendor : "поставщик (vendor_id)"
+%% Сотрудники и назначения
+    Employee ||--o{ AssetAssignment : "назначен на актив"
+    Employee ||--o{ Asset : "создал/обновил"
+    Employee ||--o{ AssetHistory : "изменил"
+    Employee ||--o{ AssetWriteOff : "запросил/утвердил"
 
-%% ПО
-    Software ||--o{ Asset : "установлено на (software_id)"
-
-%% Ответственные лица
-    Asset }o--|| User : "подготовлен (prepared_by)"
-    Asset }o--|| User : "проверен (checked_by)"
-
-%% Каталог
-    AssetCatalog }o--|| User : "владелец (owner_id)"
-    AssetCatalog }o--|| User : "создан (created_by)"
-    AssetCatalog ||--o{ CatalogOperation : "история изменений"
-
-%% Позиции на карте
-    AssetPosition }o--|| Workshop : "позиция в цеху"
-
-%% Контрагенты - внутренние связи
+%% Контрагенты и компании
     Vendor }o--|| VendorClass : "класс контрагента"
     Vendor }o--o| Company : "представляет компанию"
-    Vendor }o--|| User : "создан пользователем"
-
-%% Компании и локации
     Company }o--o| Location : "адрес компании"
-    Warehouse }o--o| Location : "адрес склада"
 
-%% Пользователи и отделы
-%% Иерархия организационной структуры
-    Department ||--o{ Division : "содержит отделы"
-    Division ||--o{ Group : "содержит группы"
+%% Местоположение и хранение
+    AssetPosition }o--|| Workshop : "позиция в цеху"
 
-%% Пользователи привязаны к департаменту
-    Department ||--o{ User : "сотрудники департамента"
-
-%% Обратные связи
-    Division }o--|| Department : "входит в департамент"
-    Group }o--|| Division : "входит в отдел"
-    User }o--o| Department : "работает в департаменте"
-
-%% ПО и устройства
-    Software }o--o| User : "установил (who_installed)"
-    PCData }o--o| User : "данные ПК пользователя"
-    AssetCatalog }o--o| AndroidData : "связь по serial_number"
-
-%% История операций
-    AssetOperation }o--|| User : "операцию выполнил"
-    CatalogOperation }o--|| User : "операцию выполнил"
-
-%% ==================== INDEXES (DOCUMENTATION) ====================
-%% Note: Mermaid ERD doesn't support index definition,
-%% but the following fields are indexed in PostgreSQL:
-%% - Asset: inventory_id, serial_number, asset_status, model_id, manufacturer_id, vendor_id, warehouse_id, workshop_id, price
-%% - AssetType: name (unique), en_name (unique)
-%% - AssetClass: class_name, class_type_id
-%% - AssetModel: model_name, class_id, is_active
-%% - AssetPosition: asset_id, workshop_id, is_active
-%% - Workshop: name, code (unique), is_active
-%% - User: user_tab_id (unique), email, department_id
-%% - Vendor: name, vendor_class_id, company_id
-%% - PCData: username (unique)
-%% - AndroidData: serial_number (unique)
-%% - AssetOperation: asset_id, inventory_id_snapshot
-%% - CatalogOperation: catalog_id, asset_inventory_id_snapshot
+%% Аудит
+    AuditLog }o--o| Employee : "действие пользователя"
 ```
-
-> UserSession — это техническая таблица для хранения сессий в БД (дублирование Redis). 
-> Она не участвует в бизнес-логике и связях с другими сущностями.
-> Поэтому в БД будет на 1 таблицу меньше, чем в этой схеме!
 
 ## Описание основных связей
 
-### 1. **Иерархия типов активов (3 уровня)**
+### 1. **Классификация активов**
 
 ```
-AssetType (Тип) → AssetClass (Класс) → AssetModel (Модель) → Asset (Актив)
+AssetType (Тип) ---> Asset (Актив)
+AssetModel (Модель) ---> Asset (Актив)
 ```
 
-- **AssetType** — верхний уровень классификации (например, "Компьютеры", "Сетевое оборудование")
-    - Имеет уникальные поля `name` и `en_name`
-- **AssetClass** — средний уровень (например, "Ноутбуки", "Серверы")
-    - Связан с `AssetType` через `class_type_id`
-- **AssetModel** — конкретная модель (например, "ThinkPad X1 Carbon")
-    - Связан с `AssetClass` через `class_id`
-    - Имеет флаг `is_serial_required` (обязателен ли серийный номер)
+- **AssetType** — тип актива (например, "Компьютеры", "Сетевое оборудование"). Имеет уникальные поля `name` и `en_name`.
+- **AssetModel** — конкретная модель (например, "ThinkPad X1 Carbon"). Связана с `AssetType` через `asset_type_id`.
+- Промежуточная сущность `AssetClass` (Класс) удалена. Тип и модель связаны с активом напрямую, без многоуровневой иерархии.
 
 ### 2. **Asset (Активы) — центральная сущность**
 
 Связи актива:
-- **model_id** → `AssetModel` (какая модель)
-- **manufacturer_id** → `Vendor` (производитель)
-- **vendor_id** → `Vendor` (поставщик)
-- **warehouse_id** → `Warehouse` (склад хранения)
-- **workshop_id** → `Workshop` (цех размещения)
-- **prepared_by** → `User` (кто подготовил)
-- **checked_by** → `User` (кто проверил)
+- **asset_type_id** → `AssetType` (тип актива)
+- **model_id** → `AssetModel` (модель)
+- **parent_id** → `Asset` (родительский актив для иерархии комплектации)
+- **asset_status_id** → `AssetStatus` (текущий статус)
 
 Особенности:
-- Поддерживает мягкое удаление через `deleted_at`
-- Имеет `price` для учёта стоимости
+- Поддерживает мягкое удаление через логику статусов и историю.
+- Имеет поля для сервисного обслуживания: `every_week_check`, `next_service`, `service_period`.
+- Содержит денормализованные текстовые поля (`model_name`, `parent_name`, `manufacturer_name`, `vendor_name`, `os_name`) для оптимизации выборок.
+- Аудит: `created_by`, `updated_by` ссылаются на `zup_employees.employee_id`.
 
-### 3. **AssetCatalog (Каталог активов)**
+### 3. **AssetAssignment (Назначения активов)**
 
-Связывает физический актив с его учётными данными:
+Заменяет удаленную таблицу `AssetCatalog`. Связывает физический актив с сотрудником:
 - **asset_id** → `Asset` (сам актив)
-- **serial_number** → `AndroidData` (для Android-устройств)
-- **owner_id** → `User` (владелец)
-- **created_by** → `User` (кто создал запись)
+- **employee_id** → `zup_employees.employee_id` (сотрудник)
+- **assignment_type**: "user" (пользователь) или "responsible" (ответственный).
+- **start_date**, **end_date**: временные рамки назначения. Значение `NULL` в `end_date` означает активную связь.
+- **assigned_by**: сотрудник, оформивший назначение.
 
-### 4. **Карта цехов и позиций активов**
+### 4. **История операций и аудит**
 
-```
-Workshop (Цех) ←── AssetPosition (Позиция) ──→ Asset (Актив)
-```
+- **AssetHistory**: детальная история изменений актива. Сохраняет `action_type` (create, update, delete, assign, unassign, move, status_change), `field_name`, `old_value`, `new_value`. Поле `session_id` позволяет группировать несколько изменений в одну логическую операцию.
+- **AuditLog**: общий журнал HTTP-запросов и действий пользователей (логин, действие, сущность, ID, данные запроса).
 
-- **Workshop** — производственный цех
-    - Может быть описан полигоном (`geometry` JSONB) или прямоугольником (`workshop_width`, `workshop_height`)
-    - Имеет позицию на общей карте (`offset_x`, `offset_y`)
-    - Имеет индивидуальный `workshop_scale` и `color`
-- **AssetPosition** — позиция конкретного актива на карте цеха
-    - Координаты `x`, `y` относительны цеха (0,0 = левый верхний угол)
-    - Поддерживает `rotation` и `scale`
-    - Имеет флаг `is_active` (для истории перемещений)
+### 5. **Списание активов (AssetWriteOff)**
 
-### 5. **Контрагенты (Vendor)**
+- Реализован полноценный workflow списания: `requested_by` создает заявку со статусом `pending`, `approved_by` утверждает (`approved`) или отклоняет (`rejected`) с указанием `reject_reason`.
+- Поддерживаемые типы списания: `broken` (сломан), `lost` (утерян), `obsolete` (устарел), `sold` (продан), `other` (другое).
 
-- **Vendor** — конкретный поставщик/бренд
-    - Связан с `VendorClass` (роль: производитель, поставщик, сервисный центр)
-    - Опционально связан с `Company` (юридическое лицо)
-- **VendorClass** — классификация контрагентов
-- **Company** — юридическое лицо с адресом через `Location`
+### 6. **Инвентаризация (Inventorization)**
 
-### 6. **Локации и склады**
+- **InventorizationSession**: сессия инвентаризации для конкретного `asset_type_id`. Статусы: `in_progress`, `completed`.
+- **InventorizationItem**: элемент сессии. Содержит `asset_id`, `serial_number`, `asset_name`, `is_checked`, `quantity` (ожидаемое) и `quantity_fact` (фактическое). Внешний ключ на `assets` намеренно отсутствует, чтобы история инвентаризации сохранялась даже при удалении актива.
+
+### 7. **Карта цехов и позиций активов**
 
 ```
-Location (Адрес) ←── Company (Юрлицо)
-                 ←── Warehouse (Склад)
+Workshop (Цех) <--- AssetPosition (Позиция) ---> Asset (Актив)
 ```
 
-- **Location** — физический адрес (страна, город, адрес, комната, этаж)
-- **Warehouse** — склад, привязанный к локации
-- **Company** — компания с адресом и директором
+- **Workshop**: производственный цех. Может быть описан полигоном (`geometry` JSONB) или прямоугольником (`workshop_width`, `workshop_height`). Имеет позицию на общей карте (`offset_x`, `offset_y`), `workshop_scale` и `color`.
+- **AssetPosition**: позиция конкретного актива на карте цеха. Координаты `x`, `y` относительны цеха (0,0 = левый верхний угол). Поддерживает `rotation` и `scale`. Включает текстовое описание места: `place` (линия/помещение) и `level` (этаж).
 
-### 7. **Данные об устройствах**
+### 8. **Контрагенты и компании**
 
-- **PCData** — данные о ПК (пользователь, сеть, ОС, компоненты, программы)
-    - Связан с `User` через `user_id`
-    - Все технические данные в JSONB
-- **AndroidData** — данные об Android-устройствах
-    - Связан с `AssetCatalog` через `serial_number`
-    - Данные о железе, сети, батарее в JSONB
+- **VendorClass**: классификация контрагентов.
+- **Vendor**: конкретный поставщик/бренд. Связан с `VendorClass` и опционально с `Company` (юридическое лицо).
+- **Company**: юридическое лицо с адресом через `Location`.
 
-### 8. **Пользователи и права**
+### 9. **Локации и склады**
 
-**Права**:
-```json
-"permissions": {
-    "computer": {
-        "read": false,
-        "write": false
-    },
-    "mes_equipment": {
-        "read": false,
-        "write": true
-    },
-    "supplies": {
-        "read": true,
-        "write": false
-    },
-    "power_adapter": {
-        "read": true,
-        "write": true
-    },
-    "data_collection_equipment": {
-        "read": true,
-        "write": true
-    },
-    "Accessories": {
-        "read": true,
-        "write": true
-    },
-    "network_equipment": {
-        "read": true,
-        "write": true
-    },
-    "printing_equipment": {
-        "read": true,
-        "write": true
-    },
-    "server_hardware": {
-        "read": true,
-        "write": true
-    },
-    "users": {
-        "read": true,
-        "write": true
-    },
-    "usersMU": {
-        "read": true,
-        "write": true
-    },
-    "AssetsMU": {
-        "read": true,
-        "write": true
-    }
-}
-```
+- **Location**: физический адрес (название, страна, город, адрес, комната, этаж).
+- **Company** и другие сущности могут быть привязаны к `Location`.
 
-**Системные пользователи**:
+### 10. **Сотрудники (zup_employees)**
 
-- **root** - имеет все права
-- **read** - имеет права только на чтение
-- **write** - имеет права только на запись
-- **android** - имеет права на роутер `/api/android-data/`  
-- **pc_data** - имеет права на роутер `/api/pc-data/`  
-
-### 9. **История операций**
-
-- **AssetOperation** — история изменений активов
-    - Сохраняет `old_values` и `new_values` (JSON)
-    - Снапшоты `inventory_id_snapshot`, `name_snapshot`
-- **CatalogOperation** — история изменений каталога
-    - Снапшоты модели, класса, склада, владельца
-
-### 10. **Сессии пользователей**
-
-- **UserSession** — активные сессии
-    - Хранит `token` (JWT)
-    - Дублируется в Redis для быстрого доступа
+- Все ссылки на пользователей (`created_by`, `updated_by`, `employee_id`, `assigned_by`, `requested_by`, `approved_by`, `changed_by`) теперь указывают на таблицу `zup_employees` (поле `employee_id` типа String(20)).
+- Модель содержит данные из 1С-ЗУП: GUID, табельный номер, AD login, ФИО на русском и английском, даты приема/увольнения, контакты, GUID должности и подразделения.
 
 ---
 
 ## Ключевые особенности архитектуры
 
-| Особенность          | Описание                                                              |
-|----------------------|-----------------------------------------------------------------------|
-| **Мягкое удаление**  | `Asset.deleted_at` — активы не удаляются физически                    |
-| **История операций** | `AssetOperation`, `CatalogOperation` — полный аудит                   |
-| **JSONB поля**       | `geometry`, `permissions`, `PCData`, `AndroidData` — гибкая структура |
-| **Карта цехов**      | Относительные координаты + offset + scale для каждого цеха            |
-| **Права доступа**    | Гранулярные права по типам активов (read/write)                       |
-| **Самореференция**   | `Asset` может иметь иерархию (комплектующие)                          |
-| **Снапшоты**         | В истории сохраняются значения на момент операции                     |
+| Особенность               | Описание                                                                    |
+|---------------------------|-----------------------------------------------------------------------------|
+| **Плоская классификация** | Удален `AssetClass`. Связи: `AssetType` → `Asset` и `AssetModel` → `Asset`. |
+| **Назначения активов**    | Таблица `asset_assignments` с типами "user"/"responsible" и датами.         |
+| **История операций**      | `AssetHistory` с группировкой по `session_id` и детальным аудитом.          |
+| **Списание**              | Полный workflow заявок на списание (`AssetWriteOff`).                       |
+| **Инвентаризация**        | Сессии и элементы с сохранением истории даже при удалении актива.           |
+| **Карта цехов**           | Относительные координаты + offset + scale + геометрия полигонов.            |
+| **Интеграция с ЗУП**      | Все пользовательские ссылки ведут на `zup_employees` (1С-ЗУП).              |
+| **Денормализация**        | Текстовые поля `*_name` в `Asset` для ускорения выборок без JOIN.           |
 
+## Новый функционал
 
-
+- **Система уведомлений**: Реализована логика уведомлений (Notification Logic), добавлена поддержка русского языка (RU Notification) и актуализированы схемы данных (NotificationSchemas).
+- **Аналитика и история**: Обновлена логика работы с историей изменений и редактирования аналитики. Устранены избыточные исключения при чтении истории активов.
+- **Списание активов**: Реализован и завершен функционал списания (write-off) с этапами запроса и утверждения.
+- **Позиционирование активов**: Детализация местоположения перенесена в модель `AssetPosition`, которая включает поля: `place` (линия/помещение) и `level` (этаж).
+- **Сотрудники**: Добавлен эндпоинт `/employee/me`. Реализован метод получения активных активов сотрудника и расширенная схема ответа `AssetUserFullResponse`.
+- **Инвентаризация**: В процессы инвентаризации добавлен учет и проверка серийного номера (`serial_number`) и фактического количества (`quantity_fact`).
+- **Планировщик задач**: Добавлена зависимость и поддержка `AsyncIOScheduler` для выполнения фоновых задач.
+- **Сервисные активы**: Обновлена логика проверки сервисных активов (`every_week_check`, `next_service`, `service_period`).
+- **Удаление устаревших сущностей**: Удалены таблицы `AssetCatalog`, `AssetClass`, `UserSession`. Удалена зависимость от Redis.
 
 ## Описание API эндпоинтов
 
 ### Роутер: Assets (`/assets`)
 | Метод  | URL                             | Описание                                                                                                                                                                    |
 |:-------|:--------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| POST   | `/assets/`                      | Создать новый актив. Проверяет уникальность инвентарного и серийного номеров, существование родителя, производителя, поставщика, типа актива и ответственных пользователей. |
-| GET    | `/assets/`                      | Получить список активов с пагинацией (`skip`, `limit`) и фильтрацией по статусу (`asset_status`), типу (`type_id`) и наличию удаления (`deleted`).                          |
-| GET    | `/assets/{asset_id}`            | Получить полную информацию об активе по ID. Возвращает 404, если актив не найден или удален.                                                                                |
-| PATCH  | `/assets/{asset_id}`            | Обновить данные актива. Проверяет уникальность изменяемых полей (инвентарный номер, серийный номер) и валидность родительского актива. Запрещает циклические ссылки.        |
-| POST   | `/assets/{asset_id}/deactivate` | Деактивация актива (мягкое удаление). Устанавливает дату удаления.                                                                                                          |
-| POST   | `/assets/{asset_id}/activate`   | Активация актива (восстановление после мягкого удаления).                                                                                                                   |
-| DELETE | `/assets/{asset_id}/hard`       | Жесткое удаление актива. Требует предварительной деактивации. Удаляет актив и всех его дочерних элементов рекурсивно.                                                       |
-| GET    | `/assets/{asset_id}/children`   | Получить всех дочерних активов рекурсивно (плоский список) с опциональной глубиной вложенности (`max_depth`).                                                               |
-
+| POST   | `/assets/`                      | Создать новый актив. Проверяет уникальность инвентарного и серийного номеров, существование родителя, типа актива и ответственных сотрудников.                              |
+| GET    | `/assets/`                      | Получить список активов с пагинацией (`skip`, `limit`) и фильтрацией по статусу, типу и наличию удаления.                                                                   |
+| GET    | `/assets/{asset_id}`            | Получить полную информацию об активе по ID.                                                                                                                                 |
+| PATCH  | `/assets/{asset_id}`            | Обновить данные актива. Проверяет уникальность изменяемых полей и валидность родительского актива. Запрещает циклические ссылки.                                            |
+| DELETE | `/assets/{asset_id}`            | Деактивация актива (мягкое удаление).                                                                                                                                       |
 
 ### Роутер: Asset Types (`/assets-types`)
 | Метод  | URL                             | Описание                                                                           |
@@ -838,112 +866,76 @@ Location (Адрес) ←── Company (Юрлицо)
 | PATCH  | `/assets-types/{asset_type_id}` | Обновить тип актива по ID.                                                         |
 | DELETE | `/assets-types/{asset_type_id}` | Удалить тип актива по ID. Не позволяет удалить, если есть ссылки из других таблиц. |
 
-
-### Роутер: Catalog (`/catalog`)
+### Роутер: Asset Models (`/asset-models`)
 | Метод  | URL                                | Описание                                                                                             |
 |:-------|:-----------------------------------|:-----------------------------------------------------------------------------------------------------|
-| POST   | `/catalog/classes`                 | Создать новый класс оборудования.                                                                    |
-| GET    | `/catalog/classes`                 | Получить список классов оборудования с пагинацией.                                                   |
-| GET    | `/catalog/classes/{class_id}`      | Получить класс оборудования по ID.                                                                   |
-| PATCH  | `/catalog/classes/{class_id}`      | Обновить класс оборудования по ID.                                                                   |
-| DELETE | `/catalog/classes/{class_id}`      | Удалить класс оборудования по ID.                                                                    |
-| POST   | `/catalog/models`                  | Создать новую модель оборудования.                                                                   |
-| GET    | `/catalog/models`                  | Получить список моделей оборудования с пагинацией и опциональной фильтрацией по классу (`class_id`). |
-| GET    | `/catalog/models/{model_id}`       | Получить модель оборудования по ID.                                                                  |
-| PATCH  | `/catalog/models/{model_id}`       | Обновить модель оборудования по ID.                                                                  |
-| GET    | `/catalog/models/{model_id}/stats` | Получить статистику (количество) активов для конкретной модели.                                      |
-| POST   | `/catalog/items`                   | Добавить запись в каталог (связь актива с моделью и классом).                                        |
-| GET    | `/catalog/items`                   | Получить список записей каталога с пагинацией.                                                       |
-| GET    | `/catalog/items/{catalog_id}`      | Получить запись каталога по ID.                                                                      |
+| POST   | `/asset-models/`                   | Создать новую модель оборудования.                                                                   |
+| GET    | `/asset-models/`                   | Получить список моделей оборудования с пагинацией.                                                   |
+| GET    | `/asset-models/{model_id}`         | Получить модель оборудования по ID.                                                                  |
+| PATCH  | `/asset-models/{model_id}`         | Обновить модель оборудования по ID.                                                                  |
 
+### Роутер: Asset Assignments (`/asset-assignments`)
+| Метод  | URL                                | Описание                                                                                             |
+|:-------|:-----------------------------------|:-----------------------------------------------------------------------------------------------------|
+| POST   | `/asset-assignments/`              | Назначить актив сотруднику (user или responsible).                                                   |
+| GET    | `/asset-assignments/`              | Получить список назначений с фильтрацией по активу или сотруднику.                                   |
+| PATCH  | `/asset-assignments/{id}`          | Завершить назначение (указать `end_date`) или обновить комментарий.                                  |
 
-### Роутер: Companies (`/companies`)
-| Метод  | URL                       | Описание                                                                 |
-|:-------|:--------------------------|:-------------------------------------------------------------------------|
-| POST   | `/companies/`             | Создать новую компанию. Проверяет уникальность названия.                 |
-| GET    | `/companies/`             | Получить список компаний с пагинацией (`skip`, `limit`).                 |
-| GET    | `/companies/{company_id}` | Получить компанию по ID.                                                 |
-| PATCH  | `/companies/{company_id}` | Обновить данные компании. Проверяет уникальность названия при изменении. |
-| DELETE | `/companies/{company_id}` | Удалить компанию по ID.                                                  |
+### Роутер: Asset Write-Offs (`/asset-write-offs`)
+| Метод  | URL                                | Описание                                                                                             |
+|:-------|:-----------------------------------|:-----------------------------------------------------------------------------------------------------|
+| POST   | `/asset-write-offs/`               | Создать заявку на списание актива.                                                                   |
+| GET    | `/asset-write-offs/`               | Получить список заявок на списание с фильтрацией по статусу.                                         |
+| PATCH  | `/asset-write-offs/{id}/approve`   | Утвердить заявку на списание.                                                                        |
+| PATCH  | `/asset-write-offs/{id}/reject`    | Отклонить заявку на списание с указанием причины.                                                    |
 
-
-### Роутер: Assets Excel (`/assets/excel`)
-| Метод | URL                      | Описание                                                                         |
-|:------|:-------------------------|:---------------------------------------------------------------------------------|
-| GET   | `/assets/excel/export`   | Экспорт списка активов в файл Excel. Поддерживает пагинацию (`skip`, `limit`).   |
-| GET   | `/assets/excel/template` | Скачать шаблон Excel файла для импорта активов.                                  |
-| POST  | `/assets/excel/import`   | Импортировать активы из загруженного Excel файла. Возвращает результаты импорта. |
-
+### Роутер: Inventorization (`/inventorization`)
+| Метод  | URL                                | Описание                                                                                             |
+|:-------|:-----------------------------------|:-----------------------------------------------------------------------------------------------------|
+| POST   | `/inventorization/sessions`        | Создать новую сессию инвентаризации для типа актива.                                                 |
+| GET    | `/inventorization/sessions`        | Получить список сессий инвентаризации.                                                               |
+| POST   | `/inventorization/items/check`     | Отметить элемент инвентаризации как проверенный с указанием фактического количества.                 |
 
 ### Роутер: Vendors (`/vendors`)
 | Метод  | URL                    | Описание                                                                                                                               |
 |:-------|:-----------------------|:---------------------------------------------------------------------------------------------------------------------------------------|
 | POST   | `/vendors/`            | Создать нового вендора или поставщика.                                                                                                 |
-| GET    | `/vendors/`            | Получить список вендоров с пагинацией (`skip`, `limit`) и фильтрацией по классу вендора (`vendor_class_id`) и компании (`company_id`). |
+| GET    | `/vendors/`            | Получить список вендоров с пагинацией и фильтрацией по классу вендора и компании.                                                      |
 | GET    | `/vendors/{vendor_id}` | Получить информацию о вендоре по ID.                                                                                                   |
 | PATCH  | `/vendors/{vendor_id}` | Обновить данные вендора по ID.                                                                                                         |
 | DELETE | `/vendors/{vendor_id}` | Удалить вендора по ID.                                                                                                                 |
-
 
 ### Роутер: Locations (`/locations`)
 | Метод  | URL                        | Описание                                                                                                      |
 |:-------|:---------------------------|:--------------------------------------------------------------------------------------------------------------|
 | POST   | `/locations/`              | Создать новую локацию (адрес/помещение).                                                                      |
-| GET    | `/locations/`              | Получить список локаций с пагинацией (`skip`, `limit`) и фильтрацией по городу (`city`) и стране (`country`). |
+| GET    | `/locations/`              | Получить список локаций с пагинацией.                                                                         |
 | GET    | `/locations/{location_id}` | Получить полную информацию о локации по ID.                                                                   |
 | PATCH  | `/locations/{location_id}` | Обновить данные локации по ID.                                                                                |
 | DELETE | `/locations/{location_id}` | Удалить локацию по ID.                                                                                        |
 
+### Роутер: Companies (`/companies`)
+| Метод  | URL                       | Описание                                                                 |
+|:-------|:--------------------------|:-------------------------------------------------------------------------|
+| POST   | `/companies/`             | Создать новую компанию. Проверяет уникальность названия.                 |
+| GET    | `/companies/`             | Получить список компаний с пагинацией.                                   |
+| GET    | `/companies/{company_id}` | Получить компанию по ID.                                                 |
+| PATCH  | `/companies/{company_id}` | Обновить данные компании.                                                |
+| DELETE | `/companies/{company_id}` | Удалить компанию по ID.                                                  |
 
-### Роутер: Vendor Classes (`/vendor-classes`)
-| Метод  | URL                                 | Описание                                                                                               |
-|:-------|:------------------------------------|:-------------------------------------------------------------------------------------------------------|
-| POST   | `/vendor-classes/`                  | Создать новый класс вендора (например, "Производитель", "Поставщик"). Проверяет уникальность названия. |
-| GET    | `/vendor-classes/`                  | Получить список классов вендоров с пагинацией (`skip`, `limit`).                                       |
-| GET    | `/vendor-classes/{vendor_class_id}` | Получить класс вендора по ID.                                                                          |
-| PATCH  | `/vendor-classes/{vendor_class_id}` | Обновить класс вендора. Проверяет уникальность названия при изменении.                                 |
-| DELETE | `/vendor-classes/{vendor_class_id}` | Удалить класс вендора по ID.                                                                           |
-
-
-### Роутер: Users (`/users`)
+### Роутер: Employees (`/employees`)
 | Метод  | URL                           | Описание                                                                                                                                |
 |:-------|:------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------|
-| POST   | `/users/`                     | Создать нового пользователя (сотрудника). Проверяет уникальность email и табельного номера.                                             |
-| GET    | `/users/`                     | Получить список пользователей с пагинацией (`skip`, `limit`) и фильтрацией по отделу (`department`) и статусу активности (`is_active`). |
-| GET    | `/users/{user_id}`            | Получить пользователя по ID.                                                                                                            |
-| PATCH  | `/users/{user_id}`            | Обновить данные пользователя. Проверяет уникальность email и табельного номера при изменении.                                           |
-| POST   | `/users/{user_id}/activate`   | Активировать пользователя. Возвращает ошибку, если пользователь уже активен.                                                            |
-| POST   | `/users/{user_id}/deactivate` | Деактивировать пользователя. Возвращает ошибку, если пользователь уже деактивирован.                                                    |
-| DELETE | `/users/{user_id}`            | Жестко удалить пользователя. Разрешено только для деактивированных пользователей.                                                       |
-
-
-### Роутер: Software (`/software`)
-| Метод  | URL                              | Описание                                                                                                                                   |
-|:-------|:---------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------|
-| POST   | `/software/`                     | Создать новую запись о программном обеспечении.                                                                                            |
-| GET    | `/software/`                     | Получить список ПО с пагинацией (`skip`, `limit`) и фильтрацией по наличию прав администратора (`admin_permission`) и типу ОС (`os_type`). |
-| GET    | `/software/{software_id}`        | Получить запись о ПО по ID.                                                                                                                |
-| PATCH  | `/software/{software_id}`        | Обновить запись о ПО по ID.                                                                                                                |
-| DELETE | `/software/{software_id}`        | Удалить запись о ПО. Запрещено, если ПО привязано к активным активам.                                                                      |
-| GET    | `/software/{software_id}/assets` | Получить список активов, на которых установлено данное ПО.                                                                                 |
-
-
-### Роутер: Warehouses (`/warehouses`)
-| Метод  | URL                          | Описание                                                                         |
-|:-------|:-----------------------------|:---------------------------------------------------------------------------------|
-| POST   | `/warehouses/`               | Создать новый склад. Проверяет уникальность названия склада.                     |
-| GET    | `/warehouses/`               | Получить список всех складов с пагинацией (`skip`, `limit`).                     |
-| GET    | `/warehouses/{warehouse_id}` | Получить полную информацию о складе по ID. Возвращает 404, если склад не найден. |
-| PATCH  | `/warehouses/{warehouse_id}` | Обновить данные склада по ID. Проверяет уникальность названия при изменении.     |
-| DELETE | `/warehouses/{warehouse_id}` | Удалить склад по ID. Возвращает 204 при успешном удалении.                       |
-
-
+| GET    | `/employees/`                 | Получить список сотрудников с пагинацией и фильтрацией по подразделению и статусу активности.                                           |
+| GET    | `/employees/{employee_id}`    | Получить сотрудника по ID.                                                                                                              |
+| GET    | `/employee/me`                | Получить данные текущего авторизованного сотрудника.                                                                                    |
+| GET    | `/employees/{id}/assets`      | Получить список активных активов, назначенных на сотрудника.                                                                            |
 
 ## Карта цехов
 
 ### Конфигурация карты
 
-Размеры карты хранятся в Redis и могут быть изменены через API:
+Размеры карты хранятся в базе данных и могут быть изменены через API:
 
 ```bash
 # Получить конфигурацию
@@ -979,7 +971,7 @@ POST /api/workshops/
 ```
 
 #### Создание цеха со сложной геометрией (Г-образный)
-> Примечание: Используется экранная система координат ( (0,0) - левый верхний, (2000,2000) - правый нижний угол) 
+> Примечание: Используется экранная система координат ( (0,0) - левый верхний, (2000,2000) - правый нижний угол)
 ```bash
 POST /api/workshops/
 {
@@ -1050,7 +1042,6 @@ GET /api/workshops/map
 | `workshop_scale`  | float  | Масштаб цеха (0.1 - 10.0)         |
 | `color`           | string | Цвет цеха в hex формате (#RRGGBB) |
 
-
 ### Размещение актива на карте
 
 ```bash
@@ -1061,8 +1052,10 @@ POST /api/asset-positions/
   "x": 100,
   "y": 200,
   "rotation": 0,
-  "scale": 1
+  "scale": 1,
+  "place": "Линия 1, Офис 101",
+  "level": 2
 }
 ```
 
-**Важно:** Координаты `x` и `y` относительны цеха (0,0 = левый верхний угол цеха).
+**Важно:** Координаты `x` и `y` относительны цеха (0,0 = левый верхний угол цеха). Детальное текстовое описание местоположения указывается через поля `place` и `level`.

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.schemas.assets.AssetAssignmentSchemas import AssetAssignmentCreate
-from app.services.notifications.notification_service import (
+from app.database.crud_notifications import (
     notify_assigned_user,
     notify_assigned_responsible,
     notify_unassigned_user,

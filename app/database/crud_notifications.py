@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Tuple, Sequence
 from datetime import datetime
 from sqlalchemy import select, func
@@ -7,9 +8,14 @@ from sqlalchemy.orm import selectinload
 from app.models.notifications.Notification import (
     Notification, NotificationEventType, NotificationStatus
 )
-from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
 
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# БАЗОВЫЕ CRUD-ОПЕРАЦИИ
+# ============================================================
 
 async def create_notification(
         db: AsyncSession,
@@ -17,8 +23,14 @@ async def create_notification(
         asset_id: int,
         event_type: str,
         initiator_id: Optional[str] = None,
+        push_sse: bool = True,
 ) -> Notification:
-    """Создать уведомление"""
+    """
+    Создать уведомление + отправить через SSE.
+
+    Args:
+        push_sse: если False, SSE пуш не происходит (для массовых операций планировщика)
+    """
     notification = Notification(
         employee_id=employee_id,
         asset_id=asset_id,
@@ -28,7 +40,37 @@ async def create_notification(
     )
     db.add(notification)
     await db.flush()
+
+    # === SSE PUSH ===
+    # if push_sse:
+    #     await sse_manager.send_to_user(employee_id, {
+    #         "notification_id": notification.notification_id,
+    #         "event_type": event_type,
+    #         "asset_id": asset_id,
+    #         "initiator_id": initiator_id,
+    #     })
+
+    logger.info(
+        f"[Notify] {event_type}: employee={employee_id}, "
+        f"asset={asset_id}, initiator={initiator_id}"
+    )
     return notification
+
+
+async def get_notification_by_id(
+        db: AsyncSession,
+        notification_id: int,
+) -> Optional[Notification]:
+    result = await db.execute(
+        select(Notification)
+        .options(
+            selectinload(Notification.asset),
+            selectinload(Notification.initiator),
+        )
+        .where(Notification.notification_id == notification_id)
+    )
+    return result.scalar_one_or_none()
+
 
 async def get_notifications_by_employee(
         db: AsyncSession,
@@ -38,7 +80,6 @@ async def get_notifications_by_employee(
         only_unread: bool = False,
         asset_id: Optional[int] = None,
 ) -> Tuple[Sequence[Notification], int]:
-    """Получить уведомления сотрудника с пагинацией"""
     # Подсчёт
     count_query = (
         select(func.count(Notification.notification_id))
@@ -48,9 +89,7 @@ async def get_notifications_by_employee(
         count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         count_query = count_query.where(Notification.asset_id == asset_id)
-
-    total_result = await db.execute(count_query)
-    total = total_result.scalar_one()
+    total = (await db.execute(count_query)).scalar_one()
 
     # Данные
     query = (
@@ -65,21 +104,17 @@ async def get_notifications_by_employee(
         query = query.where(Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         query = query.where(Notification.asset_id == asset_id)
-
     query = query.order_by(Notification.created_at.desc())
     query = query.offset((page - 1) * page_size).limit(page_size)
 
     result = await db.execute(query)
-    notifications = result.scalars().all()
-
-    return notifications, total
+    return result.scalars().all(), total
 
 
 async def get_notifications_grouped_by_asset(
         db: AsyncSession,
         employee_id: str,
-) -> list:
-    """Получить уведомления, сгруппированные по asset_id"""
+) -> dict:
     result = await db.execute(
         select(Notification)
         .options(
@@ -91,30 +126,23 @@ async def get_notifications_grouped_by_asset(
     )
     notifications = result.scalars().all()
 
-    # Группируем
     grouped = {}
     for n in notifications:
         if n.asset_id not in grouped:
             grouped[n.asset_id] = []
         grouped[n.asset_id].append(n)
-
     return grouped
 
 
-async def get_notification_by_id(
-        db: AsyncSession,
-        notification_id: int,
-) -> Optional[Notification]:
-    """Получить уведомление по ID"""
+async def get_unread_count(db: AsyncSession, employee_id: str) -> int:
     result = await db.execute(
-        select(Notification)
-        .options(
-            selectinload(Notification.asset),
-            selectinload(Notification.initiator),
-        )
-        .where(Notification.notification_id == notification_id)
+        select(func.count(Notification.notification_id))
+        .where(
+            Notification.employee_id == employee_id,
+            Notification.status == NotificationStatus.UNREAD,
+            )
     )
-    return result.scalar_one_or_none()
+    return result.scalar_one()
 
 
 async def mark_as_read(
@@ -122,36 +150,57 @@ async def mark_as_read(
         notification_id: int,
         employee_id: str,
 ) -> Optional[Notification]:
-    """Пометить уведомление как прочитанное"""
     notification = await get_notification_by_id(db, notification_id)
     if not notification or notification.employee_id != employee_id:
         return None
-
     notification.status = NotificationStatus.READ
     await db.commit()
     await db.refresh(notification)
     return notification
 
 
-async def mark_all_as_read(
-        db: AsyncSession,
-        employee_id: str,
-) -> int:
-    """Пометить все уведомления как прочитанные"""
+async def mark_all_as_read(db: AsyncSession, employee_id: str) -> int:
     result = await db.execute(
-        select(Notification)
-        .where(
+        select(Notification).where(
             Notification.employee_id == employee_id,
             Notification.status == NotificationStatus.UNREAD,
             )
     )
     notifications = result.scalars().all()
-
     count = 0
     for n in notifications:
         n.status = NotificationStatus.READ
         count += 1
+    if count > 0:
+        await db.commit()
+    return count
 
+
+async def delete_notification(
+        db: AsyncSession,
+        notification_id: int,
+        employee_id: str,
+) -> bool:
+    notification = await get_notification_by_id(db, notification_id)
+    if not notification or notification.employee_id != employee_id:
+        return False
+    await db.delete(notification)
+    await db.commit()
+    return True
+
+
+async def delete_all_read(db: AsyncSession, employee_id: str) -> int:
+    result = await db.execute(
+        select(Notification).where(
+            Notification.employee_id == employee_id,
+            Notification.status == NotificationStatus.READ,
+            )
+    )
+    notifications = result.scalars().all()
+    count = 0
+    for n in notifications:
+        await db.delete(n)
+        count += 1
     if count > 0:
         await db.commit()
     return count
@@ -172,14 +221,12 @@ async def decline_notification(
     if not notification or notification.employee_id != employee_id:
         return None
 
-    # Проверяем что это назначение, которое можно отклонить
     if notification.event_type not in (
             NotificationEventType.ASSIGNED_RESPONSIBLE,
             NotificationEventType.ASSIGNED_USER,
     ):
         return None
 
-    # Определяем тип привязки и тип ответного уведомления
     if notification.event_type == NotificationEventType.ASSIGNED_RESPONSIBLE:
         assignment_type = "responsible"
         decline_event = NotificationEventType.RESPONSIBLE_DECLINED
@@ -187,7 +234,7 @@ async def decline_notification(
         assignment_type = "user"
         decline_event = NotificationEventType.USER_DECLINED
 
-    # Находим активную привязку и закрываем её
+    # Закрываем привязку
     result = await db.execute(
         select(AssetAssignment).where(
             AssetAssignment.asset_id == notification.asset_id,
@@ -201,7 +248,6 @@ async def decline_notification(
         from datetime import date
         assignment.end_date = date.today()
 
-    # Помечаем уведомление как declined
     notification.status = NotificationStatus.DECLINED
     notification.responded_at = datetime.now()
 
@@ -216,62 +262,53 @@ async def decline_notification(
         )
 
     await db.commit()
-
     return {
         "notification_id": notification.notification_id,
         "declined": True,
     }
 
 
-async def delete_notification(
-        db: AsyncSession,
-        notification_id: int,
-        employee_id: str,
-) -> bool:
-    """Удалить уведомление"""
-    notification = await get_notification_by_id(db, notification_id)
-    if not notification or notification.employee_id != employee_id:
-        return False
+# ============================================================
+# БИЗНЕС-ЛОГИКА: ОБЁРТКИ ДЛЯ КОНКРЕТНЫХ ТИПОВ УВЕДОМЛЕНИЙ
+# ============================================================
 
-    await db.delete(notification)
-    await db.commit()
-    return True
+async def notify_assigned_responsible(db, employee_id, asset_id, initiator_id):
+    """Уведомить о назначении ответственным."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.ASSIGNED_RESPONSIBLE, initiator_id)
 
 
-async def delete_all_read(
-        db: AsyncSession,
-        employee_id: str,
-) -> int:
-    """Удалить все прочитанные уведомления"""
-    result = await db.execute(
-        select(Notification)
-        .where(
-            Notification.employee_id == employee_id,
-            Notification.status == NotificationStatus.READ,
-            )
-    )
-    notifications = result.scalars().all()
-
-    count = 0
-    for n in notifications:
-        await db.delete(n)
-        count += 1
-
-    if count > 0:
-        await db.commit()
-    return count
+async def notify_assigned_user(db, employee_id, asset_id, initiator_id):
+    """Уведомить о назначении пользователем."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.ASSIGNED_USER, initiator_id)
 
 
-async def get_unread_count(
-        db: AsyncSession,
-        employee_id: str,
-) -> int:
-    """Количество непрочитанных уведомлений"""
-    result = await db.execute(
-        select(func.count(Notification.notification_id))
-        .where(
-            Notification.employee_id == employee_id,
-            Notification.status == NotificationStatus.UNREAD,
-            )
-    )
-    return result.scalar_one()
+async def notify_unassigned_responsible(db, employee_id, asset_id, initiator_id):
+    """Уведомить об отвязке ответственного."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.UNASSIGNED_RESPONSIBLE, initiator_id)
+
+
+async def notify_unassigned_user(db, employee_id, asset_id, initiator_id):
+    """Уведомить об отвязке пользователя."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.UNASSIGNED_USER, initiator_id)
+
+
+async def notify_write_off_requested(db, employee_id, asset_id, initiator_id):
+    """Уведомить о создании заявки на списание."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.WRITE_OFF_REQUESTED, initiator_id)
+
+
+async def notify_write_off_approved(db, employee_id, asset_id, initiator_id):
+    """Уведомить об утверждении списания."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.WRITE_OFF_APPROVED, initiator_id)
+
+
+async def notify_write_off_rejected(db, employee_id, asset_id, initiator_id):
+    """Уведомить об отклонении списания."""
+    await create_notification(db, employee_id, asset_id,
+                              NotificationEventType.WRITE_OFF_REJECTED, initiator_id)

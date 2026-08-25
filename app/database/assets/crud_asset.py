@@ -3,15 +3,15 @@ from typing import Optional, Sequence, List, Any, Tuple
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.models.assets.Asset import Asset
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
+from app.models.assets.Asset import Asset
 from app.models.assets import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
-from app.database.assets.crud_asset_history import compare_and_save_changes
 from app.models.map_assets.AssetPosition import AssetPosition
-from app.services.notifications.notification_service import notify_assigned_responsible, notify_assigned_user, \
-    notify_unassigned_user, notify_unassigned_responsible
+from app.database.assets.crud_asset_history import compare_and_save_changes
+from app.database.crud_notifications import notify_assigned_user, notify_assigned_responsible, notify_unassigned_user, \
+    notify_unassigned_responsible
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:

@@ -7,8 +7,10 @@ class NotificationBase(BaseModel):
     employee_id: str
     asset_id: int
     event_type: str
+    event_type_ru: Optional[str] = None
     initiator_id: Optional[str] = None
     status: str = "unread"
+    status_ru: Optional[str] = None
 
 
 class NotificationResponse(NotificationBase):

@@ -1,6 +1,6 @@
 import logging
-from typing import Optional, Sequence, Tuple, List
-from datetime import datetime
+from typing import Optional, Sequence, Tuple
+from datetime import datetime, date
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -10,16 +10,11 @@ from app.models.assets.AssetWriteOff import AssetWriteOff, WriteOffStatus
 from app.models.assets.AssetStatus import AssetStatus
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.schemas.assets.AssetWriteOffSchemas import WriteOffRequest, WriteOffRejectRequest
-from app.services.notifications.notification_service import (
-    notify_write_off_requested,
-    notify_write_off_approved,
-    notify_write_off_rejected,
-    notify_unassigned_user,
-    notify_unassigned_responsible,
-)
 from app.database.assets.crud_asset_history import create_history_record
 
-from datetime import date
+
+from app.database.crud_notifications import notify_write_off_requested, notify_write_off_rejected, \
+    notify_write_off_approved, notify_unassigned_responsible, notify_unassigned_user
 
 logger = logging.getLogger(__name__)
 

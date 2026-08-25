@@ -170,75 +170,23 @@ async def clear_read_notifications(
     return {"deleted": count}
 
 
-# @router_notifications.get("/stream")
-# async def stream_notifications(employee = Depends(require_authorized_user)):
-#     """ Эндпоинт потока уведомлений """
-#     # Подключаем сотрудника к менеджеру
-#     queue = await notification_manager.connect(employee.employee_id)
-#     logger.debug(f"employee_id = {employee.employee_id}")
-#
-#     async def event_generator():
-#         try:
-#             while True:
-#                 # Ждем новое сообщение в очереди
-#                 data = await queue.get()
-#                 # Формируем строку в формате SSE
-#                 yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-#         except asyncio.CancelledError:
-#             # Клиент отключился
-#             notification_manager.disconnect(employee.employee_id)
-#             raise
-#
-#     return StreamingResponse(
-#         event_generator(),
-#         media_type="text/event-stream",
-#         headers={
-#             "Cache-Control": "no-cache",
-#             "Connection": "keep-alive",
-#             # "X-Accel-Buffering": "no" # Важно для Nginx, если он используется как прокси
-#         }
-#     )
-
 @router_notifications.get("/stream")
-async def stream_notifications(
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user),
-):
-    """Эндпоинт потока уведомлений: сначала история, потом новые события"""
-    employee_id = current_user.employee_id
-
-    # Подключаем сотрудника к менеджеру очередей
-    queue = await notification_manager.connect(employee_id)
-    logger.debug(f"Подключение к SSE: employee_id = {employee_id}")
+async def stream_notifications(employee = Depends(require_authorized_user)):
+    """ Эндпоинт потока уведомлений """
+    # Подключаем сотрудника к менеджеру
+    queue = await notification_manager.connect(employee.employee_id)
+    logger.debug(f"employee_id = {employee.employee_id}")
 
     async def event_generator():
         try:
-            # ШАГ 1: Получаем последние уведомления из БД (например, 50 штук)
-            notifications, _ = await get_notifications_by_employee(
-                db=db,
-                employee_id=employee_id,
-                page=1,
-                page_size=50,
-                only_unread=False,
-            )
-
-            # ШАГ 2: Отправляем каждое историческое уведомление в формате SSE
-            for n in notifications:
-                # Сериализуем SQLAlchemy модель через Pydantic схему
-                n_dict = NotificationResponse.model_validate(n).model_dump()
-                n_dict["source"] = "history"  # Метка для фронтенда
-                yield f"data: {json.dumps(n_dict, ensure_ascii=False)}\n\n"
-
-            # ШАГ 3: Переходим в режим ожидания новых событий в реальном времени
             while True:
+                # Ждем новое сообщение в очереди
                 data = await queue.get()
-                data["source"] = "realtime"   # Метка для фронтенда
+                # Формируем строку в формате SSE
                 yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
         except asyncio.CancelledError:
-            # Клиент отключился (закрыл вкладку или оборвалось соединение)
-            notification_manager.disconnect(employee_id)
-            logger.debug(f"Клиент {employee_id} отключился от потока SSE")
+            # Клиент отключился
+            notification_manager.disconnect(employee.employee_id)
             raise
 
     return StreamingResponse(
@@ -247,5 +195,6 @@ async def stream_notifications(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            # "X-Accel-Buffering": "no" # Важно для Nginx, если он используется как прокси
         }
     )

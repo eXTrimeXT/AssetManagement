@@ -175,6 +175,7 @@ async def stream_notifications(employee = Depends(require_authorized_user)):
     """ Эндпоинт потока уведомлений """
     # Подключаем сотрудника к менеджеру
     queue = await notification_manager.connect(employee.employee_id)
+    logger.debug(f"employee_id = {employee.employee_id}")
 
     async def event_generator():
         try:
@@ -192,7 +193,7 @@ async def stream_notifications(employee = Depends(require_authorized_user)):
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            # "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             # "X-Accel-Buffering": "no" # Важно для Nginx, если он используется как прокси
         }

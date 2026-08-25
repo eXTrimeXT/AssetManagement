@@ -1,5 +1,7 @@
 import asyncio
 import json
+import logging
+
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 
@@ -59,6 +61,7 @@ from app.scheduler.scheduler import init_scheduler, shutdown_scheduler
 # Импорт роутера уведомлений
 from app.routers.router_notifications import router_notifications
 
+logger = logging.getLogger(__name__)
 
 # --- Управление жизненным циклом (Lifespan) ---
 @asynccontextmanager
@@ -92,20 +95,19 @@ async def lifespan(app: FastAPI):
     shutdown_scheduler()
 
 async def db_notification_listener():
-    # Создаем отдельное подключение специально для прослушивания
     async with engine.connect() as conn:
-        # Подписываемся на канал
         await conn.execute("LISTEN notification_channel")
+        logger.debug("Слушатель уведомлений БД запущен и ожидает события...")
 
         while True:
-            # Ожидаем уведомления (блокирующая операция, не нагружает CPU)
             notification = await conn.wait_for_notification()
             if notification:
+                logger.debug(f"ПОЛУЧЕНО ИЗ БД: канал={notification.channel}, payload={notification.payload}")
                 try:
                     payload = json.loads(notification.payload)
                     await notification_manager.broadcast(payload)
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    logger.debug(f"Ошибка парсинга JSON: {e}")
 
 # --- Создание экземпляра приложения ---
 app = FastAPI(

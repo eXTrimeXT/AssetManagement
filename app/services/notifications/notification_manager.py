@@ -1,5 +1,8 @@
 import asyncio
+import logging
 from typing import Dict
+
+logger = logging.getLogger(__name__)
 
 class NotificationManager:
     def __init__(self):
@@ -18,9 +21,11 @@ class NotificationManager:
     async def broadcast(self, payload: dict):
         # Получаем employee_id из полезной нагрузки (он должен там быть)
         target_employee_id = payload.get("employee_id")
+        logger.debug(f"Ищем подключение для employee_id: {target_employee_id}")
 
         # Если уведомление для конкретного пользователя, и он подключен
         if target_employee_id and target_employee_id in self.active_connections:
+            logger.debug(f"Найдено! Отправляем в очередь.")
             await self.active_connections[target_employee_id].put(payload)
 
         # Если это системное уведомление для всех (например, target_employee_id == "all")

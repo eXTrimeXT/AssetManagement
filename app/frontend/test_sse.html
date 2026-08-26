@@ -2,359 +2,94 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Уведомления SSE</title>
+    <title>Минимальный тест SSE</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .controls {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 70%;
-            padding: 10px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: monospace;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            color: white;
-        }
-        .btn-connect { background: #28a745; }
-        .btn-connect:disabled { background: #94d3a2; cursor: not-allowed; }
-        .btn-disconnect { background: #dc3545; }
-        .btn-disconnect:disabled { background: #e49a9f; cursor: not-allowed; }
-        .btn-load { background: #007bff; margin-top: 10px; }
-
-        #status {
-            display: inline-block;
-            margin-left: 15px;
-            font-weight: bold;
-        }
-        .status-connected { color: #28a745; }
-        .status-disconnected { color: #dc3545; }
-
-        .section-title {
-            margin-top: 30px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #ddd;
-        }
-
-        #notifications-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            min-height: 100px;
-        }
-        .notification-item {
-            background: #e9ecef;
-            border-left: 4px solid #007bff;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            animation: fadeIn 0.3s ease-in;
-        }
-        .notification-item.new {
-            border-left-color: #28a745;
-            background: #e8f5e9;
-        }
-        .notification-item.unread {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-        }
-        .notification-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .notification-type {
-            font-weight: bold;
-            color: #333;
-        }
-        .notification-status {
-            font-size: 0.85em;
-            padding: 2px 8px;
-            border-radius: 12px;
-            background: #6c757d;
-            color: white;
-        }
-        .notification-status.unread { background: #ffc107; color: #333; }
-        .notification-status.read { background: #6c757d; }
-        .notification-status.declined { background: #dc3545; }
-
-        .notification-meta {
-            font-size: 0.85em;
-            color: #6c757d;
-            margin-bottom: 8px;
-        }
-        .notification-asset {
-            font-family: monospace;
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 4px;
-            margin-top: 8px;
-        }
-        .empty-msg {
-            color: #6c757d;
-            text-align: center;
-            padding: 20px;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        body { font-family: monospace; padding: 20px; background: #fafafa; }
+        .msg { background: #fff; padding: 10px; margin: 8px 0; border-left: 4px solid #007bff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .msg.realtime { border-left-color: #28a745; background: #e8f5e9; }
+        pre { margin: 5px 0 0 0; font-size: 0.85em; color: #555; }
     </style>
 </head>
 <body>
-
-<h2>Система уведомлений</h2>
-
-<div class="controls">
-    <label for="tokenInput">JWT Токен:</label><br><br>
-    <input type="text" id="tokenInput" placeholder="Вставьте ваш JWT токен">
-    <button id="connectBtn" class="btn-connect" onclick="connect()">Загрузить и подключиться</button>
-    <button id="disconnectBtn" class="btn-disconnect" onclick="disconnect()" disabled>Отключиться</button>
-    <span id="status" class="status-disconnected">Статус: Отключено</span>
-</div>
-
-<h3 class="section-title">Уведомления (<span id="count">0</span>)</h3>
-<div id="notifications-container">
-    <p class="empty-msg" id="empty-msg">Введите токен и нажмите "Загрузить и подключиться"</p>
-</div>
+<h3>Тест /api/notifications/stream</h3>
+<input type="text" id="token" placeholder="Вставьте JWT токен" style="width: 350px; padding: 6px;">
+<button onclick="connect()">Подключиться</button>
+<button onclick="disconnect()" style="color: red;">Отключиться</button>
+<div id="log" style="margin-top: 20px;"></div>
 
 <script>
     let abortController = null;
-    let reconnectTimeout = null;
-    let isManualDisconnect = false;
-    let existingIds = new Set();
-
-    // const API_BASE = "http://127.0.0.1:8800/api";
-    const API_BASE = "http://10.168.143.7:8800/api";
 
     async function connect() {
-        const token = document.getElementById('tokenInput').value.trim();
-        if (!token) {
-            alert("Введите JWT токен");
-            return;
-        }
+        // const token = document.getElementById('token').value.trim();
+        const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODc3MjAzNjEsImV4cCI6MTc4Nzc2MzU2MSwibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjEwLjE2OC4xNTQuNDIiLCJsYXN0X3RpbWUiOiIwNTo0MDo0OCAyNS4wOC4yMDI2IiwiZGVwYXJ0bWVudCI6IlJEQyIsInBlcm1pc3Npb25zIjpbeyJuYW1lX2dyb3VwIjoiY29tcHV0ZXIiLCJyZWFkIjpmYWxzZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJtZXNfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InBvd2VyX2FkYXB0ZXIiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiZGF0YV9jb2xsZWN0aW9uX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJBY2Nlc3NvcmllcyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJuZXR3b3JrX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJwcmludGluZ19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoic2VydmVyX2hhcmR3YXJlIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InVzZXJzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImFuZHJvaWRfZGF0YSIsInJlYWQiOnRydWUsIndyaXRlIjpmYWxzZX1dLCJhc3NldHNfaXNfYWRtaW4iOnRydWUsInVzZXJfZGF0YSI6eyJlbWFpbCI6IlRpbXVyLk1hbHlzaGV2QGhtbXIucnUiLCJmdWxsbmFtZSI6IlRpbXVyIE1hbHlzaGV2IiwiZGVwYXJ0bWVudCI6IlJEQyIsImRpc3Rpbmd1aXNoZWROYW1lIjoiQ049VGltdXIgTWFseXNoZXYsT1U9U09GVFdBUkUgREVWRUxPUE1FTlQgR1JPVVAgKFNERyksT1U9SU5GT1JNQVRJT04gU1lTVEVNUyBTVVBQT1JUIFNFQ1RJT04gKElTU1MpLE9VPVJ1c3NpYW4gRGlnaXRhbCBDZW50ZXIgKFJEQyksT1U9VXNlcnMsT1U9SE1NUixEQz1sb2NhbCxEQz1obW1yLERDPXJ1IiwiZ3JvdXBzIjpbXX19.dlvvoq57NF6OGXUxKKT-hDmV0NyNn5C8W4g2XTME3rM"
+        if (!token) return alert('Введите токен!');
 
-        isManualDisconnect = false;
-        document.getElementById('empty-msg').style.display = 'none';
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+        document.getElementById('log').innerHTML = '<div class="msg">Подключение...</div>';
 
         try {
-            updateStatus(true, "Загрузка истории...");
+            const response = await fetch('http://127.0.0.1:8800/api/notifications/stream', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'text/event-stream'
+                },
+                signal: abortController.signal
+            });
 
-            // ШАГ 1: Загружаем историю уведомлений
-            await loadHistory(token);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            // ШАГ 2: Подключаемся к SSE потоку
-            updateStatus(true, "Подключение к потоку...");
-            await connectToStream(token);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
 
-        } catch (error) {
-            console.error("Ошибка:", error);
-            alert("Ошибка: " + error.message);
-            updateStatus(false, "Ошибка");
-        }
-    }
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-    async function loadHistory(token) {
-        const response = await fetch(`${API_BASE}/notifications/my?page=1&page_size=50`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            }
-        });
+                buffer += decoder.decode(value, { stream: true });
+                const messages = buffer.split('\n\n');
+                buffer = messages.pop(); // Оставляем неполный кусок в буфере
 
-        if (!response.ok) {
-            throw new Error(`Ошибка загрузки истории: ${response.status}`);
-        }
+                for (const msg of messages) {
+                    if (msg.startsWith('data: ')) {
+                        const data = JSON.parse(msg.substring(6));
+                        const isRealtime = data.source === 'realtime';
 
-        const data = await response.json();
-        console.log("Загружено уведомлений:", data);
+                        const div = document.createElement('div');
+                        div.className = 'msg' + (isRealtime ? ' realtime' : '');
 
-        const items = data.items || data.notifications || [];
-        const total = data.total || items.length;
+                        // Формируем читаемый заголовок из данных
+                        const title = data.event_type_ru || data.event_type || 'Уведомление';
+                        const asset = data.asset_name ? `(${data.asset_name})` : '';
 
-        document.getElementById('count').textContent = total;
-
-        // Очищаем контейнер перед загрузкой истории
-        const container = document.getElementById('notifications-container');
-        container.innerHTML = '';
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="empty-msg">Уведомлений нет</p>';
-            return;
-        }
-
-        // Рендерим историю (от новых к старым)
-        items.forEach(item => {
-            renderNotification(item, false);
-            existingIds.add(item.notification_id || item.id);
-        });
-    }
-
-    async function connectToStream(token) {
-        abortController = new AbortController();
-
-        const response = await fetch(`${API_BASE}/notifications/stream`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'text/event-stream',
-                'Cache-Control': 'no-cache'
-            },
-            signal: abortController.signal
-        });
-
-        if (!response.ok) {
-            throw new Error(`Ошибка SSE: ${response.status}`);
-        }
-
-        updateStatus(true, "Подключено");
-        console.log("SSE соединение установлено");
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const messages = buffer.split('\n\n');
-            buffer = messages.pop();
-
-            for (const msg of messages) {
-                if (msg.startsWith('data: ')) {
-                    const jsonData = msg.substring(6).trim();
-                    try {
-                        const data = JSON.parse(jsonData);
-                        handleNewNotification(data);
-                    } catch (e) {
-                        console.error("Ошибка парсинга:", e);
+                        div.innerHTML = `
+                                <b>[${isRealtime ? 'REALTIME' : 'HISTORY'}]</b> ${title} ${asset}<br>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            `;
+                        // Новые сообщения добавляем в начало
+                        document.getElementById('log').prepend(div);
                     }
                 }
             }
-        }
-    }
-
-    function handleNewNotification(data) {
-        const id = data.notification_id || data.id;
-
-        // Если уже есть такое уведомление, пропускаем
-        if (id && existingIds.has(id)) {
-            return;
-        }
-
-        if (id) existingIds.add(id);
-
-        // Увеличиваем счетчик
-        const countEl = document.getElementById('count');
-        countEl.textContent = parseInt(countEl.textContent) + 1;
-
-        renderNotification(data, true);
-    }
-
-    function renderNotification(data, isNew) {
-        const container = document.getElementById('notifications-container');
-        const emptyMsg = document.getElementById('empty-msg');
-        if (emptyMsg) emptyMsg.remove();
-
-        const item = document.createElement('div');
-        item.className = 'notification-item';
-        if (isNew) item.classList.add('new');
-
-        const status = data.status || 'unread';
-        if (status === 'unread') item.classList.add('unread');
-
-        const eventTypeRu = data.event_type_ru || data.event_type || 'Неизвестно';
-        const statusRu = data.status_ru || status;
-        const createdAt = data.created_at ? new Date(data.created_at).toLocaleString('ru-RU') : '';
-        const initiatorName = data.initiator_full_name || data.initiator_id || '';
-        const assetName = data.asset_name || '';
-        const assetInventory = data.asset_inventory_id || '';
-
-        let assetInfo = '';
-        if (assetName || assetInventory) {
-            assetInfo = `<div class="notification-asset">
-                    <strong>Актив:</strong> ${assetName} ${assetInventory ? '(' + assetInventory + ')' : ''}
-                </div>`;
-        }
-
-        item.innerHTML = `
-                <div class="notification-header">
-                    <span class="notification-type">${eventTypeRu}</span>
-                    <span class="notification-status ${status}">${statusRu}</span>
-                </div>
-                <div class="notification-meta">
-                    ${createdAt ? `<span>📅 ${createdAt}</span>` : ''}
-                    ${initiatorName ? `<span> | 👤 ${initiatorName}</span>` : ''}
-                </div>
-                ${assetInfo}
-            `;
-
-        // Новые добавляем в начало, историю - в конец
-        if (isNew) {
-            container.insertBefore(item, container.firstChild);
-        } else {
-            container.appendChild(item);
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                document.getElementById('log').innerHTML += `<div class="msg" style="border-left-color: red;">Ошибка: ${e.message}</div>`;
+            }
         }
     }
 
     function disconnect() {
-        isManualDisconnect = true;
-        if (reconnectTimeout) {
-            clearTimeout(reconnectTimeout);
-            reconnectTimeout = null;
-        }
         if (abortController) {
             abortController.abort();
             abortController = null;
-        }
-        updateStatus(false, "Отключено");
-    }
-
-    function updateStatus(isConnected, textOverride = null) {
-        const statusEl = document.getElementById('status');
-        const connectBtn = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-
-        if (isConnected) {
-            statusEl.textContent = textOverride || "Статус: Подключено";
-            statusEl.className = "status-connected";
-            connectBtn.disabled = true;
-            disconnectBtn.disabled = false;
-        } else {
-            statusEl.textContent = textOverride || "Статус: Отключено";
-            statusEl.className = "status-disconnected";
-            connectBtn.disabled = false;
-            disconnectBtn.disabled = true;
+            document.getElementById('log').innerHTML += '<div class="msg">Соединение разорвано.</div>';
         }
     }
 
-    window.addEventListener('beforeunload', () => {
-        disconnect();
-    });
+    // закрываем соединение при закрытии вкладки
+    window.addEventListener('beforeunload', disconnect);
 </script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import math
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 from starlette.responses import StreamingResponse
 
@@ -18,7 +18,7 @@ from app.database.crud_notifications import (
     decline_notification,
     delete_notification,
     delete_all_read,
-    get_unread_count,
+    get_unread_count, get_notification_counts,
 )
 from app.schemas.notifications.NotificationSchemas import (
     NotificationResponse,
@@ -39,11 +39,14 @@ async def get_my_notifications(
         page: int = Query(1, ge=1),
         page_size: int = Query(50, ge=1, le=200),
         only_unread: bool = Query(False),
-        asset_id: Optional[int] = Query(None, description="Фильтр по активу"),
+        asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        direction: Literal["incoming", "outgoing", "all"] = Query("incoming", description="incoming (входящие), outgoing (исходящие) или all (все)"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Получить уведомления текущего пользователя с пагинацией"""
+    logger.debug(f"Подключение к SSE: employee_id = {current_user.employee_id}, direction = {direction}, asset_id = {asset_id}")
+
+    """Получить уведомления текущего пользователя с пагинацией и фильтрами"""
     notifications, total = await get_notifications_by_employee(
         db=db,
         employee_id=current_user.employee_id,
@@ -51,9 +54,13 @@ async def get_my_notifications(
         page_size=page_size,
         only_unread=only_unread,
         asset_id=asset_id,
+        direction=direction,
     )
 
-    unread_count = await get_unread_count(db, current_user.employee_id)
+
+    # Получаем все счетчики одним запросом (считаются только для входящих)
+    counts = await get_notification_counts(db, current_user.employee_id)
+
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
     serialized_items = [
@@ -61,17 +68,17 @@ async def get_my_notifications(
         for n in notifications
     ]
 
-    # FastAPI сам сериализует через from_attributes
     return PaginatedNotificationResponse(
         items=serialized_items,
-        # items=list(notifications),
         total=total,
         page=page,
         page_size=page_size,
         total_pages=total_pages,
         has_next=page < total_pages,
         has_previous=page > 1,
-        unchecked_count=unread_count,
+        unchecked_count=counts["unchecked_count"],
+        checked_count=counts["checked_count"],
+        declined_count=counts["declined_count"],
     )
 
 @router_notifications.get("/my/grouped", response_model=List[NotificationGroupedItem])
@@ -170,51 +177,58 @@ async def clear_read_notifications(
 
 @router_notifications.get("/stream")
 async def stream_notifications(
+        asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming, outgoing или all"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Эндпоинт потока: при любом изменении отправляет полный актуальный список уведомлений"""
+    """Эндпоинт потока: отправляет отфильтрованный актуальный список и обновляет его при изменениях"""
     employee_id = current_user.employee_id
     queue = await notification_manager.connect(employee_id)
-    logger.debug(f"Подключение к SSE: employee_id = {employee_id}")
+    logger.debug(f"Подключение к SSE: employee_id = {employee_id}, direction = {direction}, asset_id = {asset_id}")
 
     async def get_full_state():
-        """Вспомогательная функция для получения полного состояния, как в /my"""
+        """Вспомогательная функция для получения отфильтрованного состояния"""
         notifications, total = await get_notifications_by_employee(
             db=db,
             employee_id=employee_id,
             page=1,
-            page_size=50,
+            page_size=100, # Для стрима можно увеличить лимит, чтобы отдать больше истории сразу
             only_unread=False,
+            asset_id=asset_id,
+            direction=direction,
         )
-        unread_count = await get_unread_count(db, employee_id)
-        total_pages = math.ceil(total / 50) if total > 0 else 0
+
+        # Счетчики всегда возвращаем полные (для входящих), чтобы фронтенд мог обновлять бейджи
+        counts = await get_notification_counts(db, employee_id)
+        total_pages = math.ceil(total / 100) if total > 0 else 0
 
         return {
             "items": [NotificationResponse.model_validate(n, context={"viewer_id": employee_id}).model_dump(mode='json') for n in notifications],
             "total": total,
             "page": 1,
-            "page_size": 50,
+            "page_size": 100,
             "total_pages": total_pages,
             "has_next": 1 < total_pages,
             "has_previous": False,
-            "unchecked_count": unread_count,
+            "unchecked_count": counts["unchecked_count"],
+            "checked_count": counts["checked_count"],
+            "declined_count": counts["declined_count"],
         }
 
     async def event_generator():
         try:
-            # 1. При подключении сразу отправляем полное текущее состояние
+            # 1. При подключении сразу отправляем полное текущее (отфильтрованное) состояние
             initial_state = await get_full_state()
             initial_state["source"] = "initial"
             yield f"data: {json.dumps(initial_state, ensure_ascii=False)}\n\n"
 
             # 2. Бесконечный цикл ожидания любых изменений
             while True:
-                # Ждем сигнал из очереди. Содержимое payload нам не важно,
-                # важно лишь то, что что-то изменилось (insert/update/delete)
+                # Ждем сигнал из очереди
                 _ = await queue.get()
 
-                # 3. При получении сигнала заново запрашиваем и отправляем полный список
+                # 3. При получении сигнала заново запрашиваем и отправляем полный список с учетом фильтров
                 updated_state = await get_full_state()
                 updated_state["source"] = "update"
                 yield f"data: {json.dumps(updated_state, ensure_ascii=False)}\n\n"

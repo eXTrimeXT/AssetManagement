@@ -53,7 +53,8 @@ class NotificationResponse(BaseModel):
     @property
     def event_type_ru(self) -> str:
         """Динамическое формирование текста в зависимости от роли зрителя"""
-        is_recipient = (self.employee_id == self.viewer_id)
+        is_recipient = (self.employee_id == self.viewer_id)     # Получатель
+        is_initiator = (self.initiator_id == self.viewer_id)    # Инициатор
 
         # Словарь сообщений: ключ - event_type, значение - кортеж (сообщение_для_получателя, сообщение_для_инициатора)
         messages = {
@@ -95,8 +96,13 @@ class NotificationResponse(BaseModel):
             ),
         }
 
-        type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
-        return type_messages[0] if is_recipient else type_messages[1]
+        type_messages = messages.get(self.event_type, ("Исходящее (наше)", "входящее (нам)"))
+        # Всегда делаем проверку на исходящее уведомление, потому что входящее легче проверить
+        if is_initiator and not is_recipient:
+            return type_messages[0]
+        elif not is_initiator and is_recipient:
+            return type_messages[1]
+        return "Что-то пошло не так!"
 
     @computed_field
     @property
@@ -119,6 +125,8 @@ class PaginatedNotificationResponse(BaseModel):
     has_next: bool
     has_previous: bool
     unchecked_count: int
+    checked_count: int
+    declined_count: int
 
 
 class NotificationGroupedItem(BaseModel):

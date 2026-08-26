@@ -24,7 +24,7 @@ def upgrade() -> None:
 
     # Добавляем новые столбцы
     # op.add_column('notifications', sa.Column(
-    #     'event_type', sa.String(50), nullable=False, server_default='service_due'
+    #     'event_type', sa.String(50), nullable=False, server_default='service_action'
     # ))
     # op.add_column('notifications', sa.Column(
     #     'initiator_id', sa.String(20), sa.ForeignKey('zup_employees.employee_id'), nullable=True

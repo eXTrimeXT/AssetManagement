@@ -11,16 +11,17 @@
         pre { margin: 5px 0 0 0; font-size: 0.85em; color: #555; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .count { font-weight: bold; color: #dc3545; }
+        .total { font-weight: bold; }
     </style>
 </head>
 <body>
-<h3>Тест /api/notifications/stream (полная замена)</h3>
+<h3>Тест /api/notifications/stream</h3>
 <input type="text" id="token" placeholder="Вставьте JWT токен" style="width: 350px; padding: 6px;">
 <button onclick="connect()">Подключиться</button>
 <button onclick="disconnect()" style="color: red;">Отключиться</button>
 
 <div class="header" style="margin-top: 20px;">
-    <span>Уведомлений: <span id="count" class="count">0</span></span>
+    <span>Уведомлений: <span id="count" class="count">0</span> / <span id="total" class="total">0</span></span>
     <span>Статус: <span id="status">Отключено</span></span>
 </div>
 
@@ -39,8 +40,8 @@
         document.getElementById('status').textContent = 'Подключение...';
 
         try {
-            const response = await fetch('http://127.0.0.1:8800/api/notifications/stream', {
-            // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream', {
+            // const response = await fetch('http://127.0.0.1:8800/api/notifications/stream', {
+            const response = await fetch('http://10.168.143.7:8800/api/notifications/stream', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'text/event-stream'
@@ -84,6 +85,7 @@
 
         // Обновляем счетчик
         document.getElementById('count').textContent = data.unchecked_count || 0;
+        document.getElementById('total').textContent = data.total || 0;
 
         // Полностью очищаем контейнер
         container.innerHTML = '';

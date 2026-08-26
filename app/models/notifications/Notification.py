@@ -8,7 +8,7 @@ from app.models.Base import Base
 
 class NotificationEventType:
     """Типы событий уведомлений"""
-    SERVICE_DUE = "service_due"
+    SERVICE_ACTION = "service_action"
     ASSIGNED_RESPONSIBLE = "assigned_responsible"
     RESPONSIBLE_DECLINED = "responsible_declined"
     ASSIGNED_USER = "assigned_user"
@@ -21,7 +21,7 @@ class NotificationEventType:
     WRITE_OFF_REJECTED = "write_off_rejected"
 
     RU_LABELS = {
-        SERVICE_DUE: "Требуется обслуживание",
+        SERVICE_ACTION: "Требуется обслуживание",
         ASSIGNED_RESPONSIBLE: "Вы назначены ответственным за актив",
         RESPONSIBLE_DECLINED: "Ответственный отклонил назначение",
         ASSIGNED_USER: "Вы назначены пользователем актива",

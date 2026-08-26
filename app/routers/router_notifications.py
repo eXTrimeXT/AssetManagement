@@ -162,68 +162,6 @@ async def clear_read_notifications(
     count = await delete_all_read(db, current_user.employee_id)
     return {"deleted": count}
 
-# @router_notifications.get("/stream")
-# async def stream_notifications(
-#         db: AsyncSession = Depends(get_db),
-#         current_user=Depends(require_authorized_user),
-# ):
-#     """Эндпоинт потока уведомлений: история + новые события в реальном времени"""
-#     employee_id = current_user.employee_id
-#
-#     # Получаем уникальную очередь для этой конкретной вкладки
-#     queue = await notification_manager.connect(employee_id)
-#     logger.debug(f"Подключение к SSE: employee_id = {employee_id}")
-#
-#     async def event_generator():
-#         try:
-#             # ШАГ 1: Отправляем историю из БД
-#             notifications, _ = await get_notifications_by_employee(
-#                 db=db,
-#                 employee_id=employee_id,
-#                 page=1,
-#                 page_size=50,
-#                 only_unread=False,
-#             )
-#
-#             for n in notifications:
-#                 # mode='json' автоматически преобразует datetime в строки ISO
-#                 n_dict = NotificationResponse.model_validate(n).model_dump(mode='json')
-#                 n_dict["source"] = "history"
-#                 yield f"data: {json.dumps(n_dict, ensure_ascii=False)}\n\n"
-#
-#             # ШАГ 2: Переходим в режим реального времени
-#             while True:
-#                 data = await queue.get()
-#
-#                 # Получаем полный объект уведомления из БД по ID,
-#                 # чтобы добавить вычисляемые поля (asset_name, event_type_ru, initiator_full_name и т.д.)
-#                 notification = await get_notification_by_id(db, data.get("notification_id"))
-#
-#                 if notification:
-#                     n_dict = NotificationResponse.model_validate(notification).model_dump(mode='json')
-#                 else:
-#                     # Fallback, если уведомление вдруг было удалено до момента отправки
-#                     n_dict = data
-#
-#                 n_dict["source"] = "realtime"
-#                 yield f"data: {json.dumps(n_dict, ensure_ascii=False)}\n\n"
-#
-#         except asyncio.CancelledError:
-#             # Передаем именно эту очередь, чтобы отключить только текущую вкладку
-#             notification_manager.disconnect(employee_id, queue)
-#             logger.debug(f"Клиент {employee_id} отключился от потока SSE (одна из вкладок)")
-#             raise
-#
-#     return StreamingResponse(
-#         event_generator(),
-#         media_type="text/event-stream",
-#         headers={
-#             "Cache-Control": "no-cache",
-#             "Connection": "keep-alive",
-#         }
-#     )
-
-
 @router_notifications.get("/stream")
 async def stream_notifications(
         db: AsyncSession = Depends(get_db),

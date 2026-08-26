@@ -112,7 +112,7 @@ async def check_service_assets():
                 notification = Notification(
                     employee_id=assignment.employee_id,
                     asset_id=asset.asset_id,
-                    event_type=NotificationEventType.SERVICE_ACTION,
+                    event_type=NotificationEventType.SERVICE_DUE,
                     initiator_id=None,  # Системное уведомление
                     status=NotificationStatus.UNREAD,
                 )

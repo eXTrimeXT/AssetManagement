@@ -44,9 +44,6 @@ async def get_my_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    logger.debug(f"Подключение к SSE: employee_id = {current_user.employee_id}, direction = {direction}, asset_id = {asset_id}")
-
-    """Получить уведомления текущего пользователя с пагинацией и фильтрами"""
     notifications, total = await get_notifications_by_employee(
         db=db,
         employee_id=current_user.employee_id,
@@ -57,10 +54,8 @@ async def get_my_notifications(
         direction=direction,
     )
 
-
-    # Получаем все счетчики одним запросом (считаются только для входящих)
+    # Получаем все счетчики (всегда считаются для входящих)
     counts = await get_notification_counts(db, current_user.employee_id)
-
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
     serialized_items = [
@@ -178,28 +173,25 @@ async def clear_read_notifications(
 @router_notifications.get("/stream")
 async def stream_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
-        direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming, outgoing или all"),
+        direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming (входящие), outgoing (исходящие) или all"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Эндпоинт потока: отправляет отфильтрованный актуальный список и обновляет его при изменениях"""
     employee_id = current_user.employee_id
     queue = await notification_manager.connect(employee_id)
-    logger.debug(f"Подключение к SSE: employee_id = {employee_id}, direction = {direction}, asset_id = {asset_id}")
+    logger.debug(f"Подключение к SSE: employee_id = {employee_id}, direction = {direction}")
 
     async def get_full_state():
-        """Вспомогательная функция для получения отфильтрованного состояния"""
         notifications, total = await get_notifications_by_employee(
             db=db,
             employee_id=employee_id,
             page=1,
-            page_size=100, # Для стрима можно увеличить лимит, чтобы отдать больше истории сразу
+            page_size=100,
             only_unread=False,
             asset_id=asset_id,
             direction=direction,
         )
 
-        # Счетчики всегда возвращаем полные (для входящих), чтобы фронтенд мог обновлять бейджи
         counts = await get_notification_counts(db, employee_id)
         total_pages = math.ceil(total / 100) if total > 0 else 0
 
@@ -218,17 +210,12 @@ async def stream_notifications(
 
     async def event_generator():
         try:
-            # 1. При подключении сразу отправляем полное текущее (отфильтрованное) состояние
             initial_state = await get_full_state()
             initial_state["source"] = "initial"
             yield f"data: {json.dumps(initial_state, ensure_ascii=False)}\n\n"
 
-            # 2. Бесконечный цикл ожидания любых изменений
             while True:
-                # Ждем сигнал из очереди
                 _ = await queue.get()
-
-                # 3. При получении сигнала заново запрашиваем и отправляем полный список с учетом фильтров
                 updated_state = await get_full_state()
                 updated_state["source"] = "update"
                 yield f"data: {json.dumps(updated_state, ensure_ascii=False)}\n\n"

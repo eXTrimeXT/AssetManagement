@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict, computed_field, Field
 from datetime import datetime
 from typing import Optional, List
 
-
 class NotificationBase(BaseModel):
     employee_id: str
     asset_id: int
@@ -11,22 +10,6 @@ class NotificationBase(BaseModel):
     initiator_id: Optional[str] = None
     status: str = "unread"
     status_ru: Optional[str] = None
-
-
-# class NotificationResponse(NotificationBase):
-#     notification_id: int
-#     responded_at: Optional[datetime] = None
-#     created_at: datetime
-#
-#     # Данные об активе
-#     asset_name: Optional[str] = None
-#     asset_inventory_id: Optional[str] = None
-#
-#     # Данные об инициаторе
-#     initiator_full_name: Optional[str] = None
-#
-#     model_config = ConfigDict(from_attributes=True)
-
 
 class NotificationResponse(BaseModel):
     notification_id: int
@@ -39,12 +22,11 @@ class NotificationResponse(BaseModel):
     responded_at: Optional[datetime] = None
     created_at: datetime
 
-    # Связанные данные (из model)
     asset_name: Optional[str] = None
     asset_inventory_id: Optional[str] = None
     initiator_full_name: Optional[str] = None
 
-    # Поле для внутреннего использования, чтобы знать, для кого генерируем текст
+    # Поле для внутреннего использования (не попадет в JSON)
     viewer_id: Optional[str] = Field(default=None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)
@@ -52,71 +34,41 @@ class NotificationResponse(BaseModel):
     @computed_field
     @property
     def event_type_ru(self) -> str:
-        """Динамическое формирование текста в зависимости от роли зрителя"""
-        is_recipient = (self.employee_id == self.viewer_id)     # Получатель
-        is_initiator = (self.initiator_id == self.viewer_id)    # Инициатор
+        """Формирование текста строго по роли зрителя"""
+        is_initiator = (self.initiator_id == self.viewer_id)
+        is_recipient = (self.employee_id == self.viewer_id)
 
-        # Словарь сообщений: ключ - event_type, значение - кортеж (сообщение_для_получателя, сообщение_для_инициатора)
+        # Кортеж: (текст_для_инициатора, текст_для_получателя)
         messages = {
-            "assigned_responsible": (
-                "Вы назначены ответственным за актив",
-                "Вы назначили сотрудника ответственным за актив"
-            ),
-            "assigned_user": (
-                "Вы назначены пользователем актива",
-                "Вы назначили сотрудника пользователем актива"
-            ),
-            "unassigned_responsible": (
-                "Вы откреплены как ответственный",
-                "Вы открепили сотрудника от ответственности"
-            ),
-            "unassigned_user": (
-                "Вы откреплены как пользователь",
-                "Вы открепили сотрудника от актива"
-            ),
-            "write_off_requested": (
-                "Создана заявка на списание актива",
-                "Вы создали заявку на списание актива"
-            ),
-            "write_off_approved": (
-                "Заявка на списание утверждена",
-                "Вы утвердили заявку на списание"
-            ),
-            "write_off_rejected": (
-                "Заявка на списание отклонена",
-                "Вы отклонили заявку на списание"
-            ),
-            "responsible_declined": (
-                "Сотрудник отклонил назначение ответственным",
-                "Сотрудник отклонил ваше назначение ответственным"
-            ),
-            "user_declined": (
-                "Сотрудник отклонил назначение пользователем",
-                "Сотрудник отклонил ваше назначение пользователем"
-            ),
+            "assigned_responsible": ("Вы назначили сотрудника ответственным за актив", "Вы назначены ответственным за актив"),
+            "assigned_user": ("Вы назначили сотрудника пользователем актива", "Вы назначены пользователем актива"),
+            "unassigned_responsible": ("Вы открепили сотрудника от ответственности", "Вы откреплены как ответственный"),
+            "unassigned_user": ("Вы открепили сотрудника от актива", "Вы откреплены как пользователь"),
+            "write_off_requested": ("Вы создали заявку на списание", "Создана заявка на списание актива"),
+            "write_off_approved": ("Вы утвердили заявку на списание", "Ваша заявка на списание утверждена"),
+            "write_off_rejected": ("Вы отклонили заявку на списание", "Ваша заявка на списание отклонена"),
+            "responsible_declined": ("Сотрудник отклонил ваше назначение ответственным", "Вы отклонили назначение ответственным"),
+            "user_declined": ("Сотрудник отклонил ваше назначение пользователем", "Вы отклонили назначение пользователем"),
+            "service_due": ("Требуется обслуживание актива", "Требуется обслуживание актива"),
         }
 
-        type_messages = messages.get(self.event_type, ("Исходящее (наше)", "входящее (нам)"))
-        # Всегда делаем проверку на исходящее уведомление, потому что входящее легче проверить
+        type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
+
+        # Если зритель является инициатором (и не является получателем одновременно)
         if is_initiator and not is_recipient:
             return type_messages[0]
-        elif not is_initiator and is_recipient:
-            return type_messages[1]
-        return "Что-то пошло не так!"
+
+        # Во всех остальных случаях (зритель - получатель, или системное уведомление без инициатора)
+        return type_messages[1]
 
     @computed_field
     @property
     def status_ru(self) -> str:
-        statuses = {
-            "unread": "Не прочитано",
-            "read": "Прочитано",
-            "declined": "Отклонено"
-        }
+        statuses = {"unread": "Не прочитано", "read": "Прочитано", "declined": "Отклонено"}
         return statuses.get(self.status, self.status)
 
 
 class PaginatedNotificationResponse(BaseModel):
-    """Ответ со списком уведомлений и количеством непрочитанных"""
     items: List[NotificationResponse]
     total: int
     page: int
@@ -125,12 +77,11 @@ class PaginatedNotificationResponse(BaseModel):
     has_next: bool
     has_previous: bool
     unchecked_count: int
-    checked_count: int
-    declined_count: int
+    checked_count: int      # НОВОЕ
+    declined_count: int     # НОВОЕ
 
 
 class NotificationGroupedItem(BaseModel):
-    """Группа уведомлений по активу"""
     asset_id: int
     asset_name: Optional[str] = None
     asset_inventory_id: Optional[str] = None

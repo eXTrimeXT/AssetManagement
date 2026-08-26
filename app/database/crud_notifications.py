@@ -57,24 +57,12 @@ async def create_notification(
     return notification
 
 async def get_notification_counts(db: AsyncSession, employee_id: str) -> dict:
-    """Возвращает количество уведомлений по статусам (только для входящих)"""
+    """Возвращает количество входящих уведомлений по статусам"""
     base_incoming = Notification.employee_id == employee_id
 
-    unread_res = await db.execute(
-        select(func.count(Notification.notification_id)).where(
-            base_incoming, Notification.status == NotificationStatus.UNREAD
-        )
-    )
-    read_res = await db.execute(
-        select(func.count(Notification.notification_id)).where(
-            base_incoming, Notification.status == NotificationStatus.READ
-        )
-    )
-    declined_res = await db.execute(
-        select(func.count(Notification.notification_id)).where(
-            base_incoming, Notification.status == NotificationStatus.DECLINED
-        )
-    )
+    unread_res = await db.execute(select(func.count()).where(base_incoming, Notification.status == NotificationStatus.UNREAD))
+    read_res = await db.execute(select(func.count()).where(base_incoming, Notification.status == NotificationStatus.READ))
+    declined_res = await db.execute(select(func.count()).where(base_incoming, Notification.status == NotificationStatus.DECLINED))
 
     return {
         "unchecked_count": unread_res.scalar_one(),
@@ -90,30 +78,27 @@ async def get_notifications_by_employee(
         page_size: int = 50,
         only_unread: bool = False,
         asset_id: Optional[int] = None,
-        direction: Literal["incoming", "outgoing", "all"] = "all",
+        direction: Literal["incoming", "outgoing", "all"] = "incoming",
 ) -> Tuple[Sequence[Notification], int]:
 
-    # 1. Формируем базовое условие в зависимости от направления
+    # 1. Жёсткая логика фильтрации по направлению
     if direction == "incoming":
-        base_condition = Notification.employee_id == employee_id
+        condition = Notification.employee_id == employee_id
     elif direction == "outgoing":
-        base_condition = Notification.initiator_id == employee_id
+        condition = Notification.initiator_id == employee_id
     else: # "all"
-        base_condition = or_(
-            Notification.employee_id == employee_id,
-            Notification.initiator_id == employee_id
-        )
+        condition = or_(Notification.employee_id == employee_id, Notification.initiator_id == employee_id)
 
-    # 2. Подсчёт общего количества
-    count_query = select(func.count(Notification.notification_id)).where(base_condition)
-    if only_unread:
-        count_query = count_query.where(Notification.employee_id == employee_id, Notification.status == NotificationStatus.UNREAD)
+    # 2. Подсчёт
+    count_query = select(func.count(Notification.notification_id)).where(condition)
+    if only_unread and direction != "outgoing": # У исходящих нет статуса "не прочитано" для инициатора
+        count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         count_query = count_query.where(Notification.asset_id == asset_id)
 
     total = (await db.execute(count_query)).scalar_one()
 
-    # 3. Получение данных (с selectinload для recipient, чтобы избежать MissingGreenlet)
+    # 3. Получение данных (с selectinload для предотвращения MissingGreenlet)
     query = (
         select(Notification)
         .options(
@@ -121,16 +106,15 @@ async def get_notifications_by_employee(
             selectinload(Notification.initiator),
             selectinload(Notification.recipient),
         )
-        .where(base_condition)
+        .where(condition)
     )
 
-    if only_unread:
-        query = query.where(Notification.employee_id == employee_id, Notification.status == NotificationStatus.UNREAD)
+    if only_unread and direction != "outgoing":
+        query = query.where(Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         query = query.where(Notification.asset_id == asset_id)
 
-    query = query.order_by(Notification.created_at.desc())
-    query = query.offset((page - 1) * page_size).limit(page_size)
+    query = query.order_by(Notification.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
 
     result = await db.execute(query)
     return result.scalars().all(), total

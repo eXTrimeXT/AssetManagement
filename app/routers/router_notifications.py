@@ -68,7 +68,6 @@ async def get_my_notifications(
         unchecked_count=unread_count,
     )
 
-
 @router_notifications.get("/my/grouped", response_model=List[NotificationGroupedItem])
 async def get_my_notifications_grouped(
         db: AsyncSession = Depends(get_db),
@@ -94,7 +93,6 @@ async def get_my_notifications_grouped(
 
     return result
 
-
 @router_notifications.get("/my/unread-count")
 async def get_my_unread_count(
         db: AsyncSession = Depends(get_db),
@@ -103,7 +101,6 @@ async def get_my_unread_count(
     """Количество непрочитанных уведомлений"""
     count = await get_unread_count(db, current_user.employee_id)
     return {"count": count}
-
 
 @router_notifications.patch("/{notification_id}/read", response_model=NotificationResponse)
 async def read_notification(
@@ -118,7 +115,6 @@ async def read_notification(
     # Возвращаем объект напрямую
     return notification
 
-
 @router_notifications.patch("/my/read-all")
 async def read_all_my_notifications(
         db: AsyncSession = Depends(get_db),
@@ -127,7 +123,6 @@ async def read_all_my_notifications(
     """Пометить все уведомления как прочитанные"""
     count = await mark_all_as_read(db, current_user.employee_id)
     return {"marked_as_read": count}
-
 
 @router_notifications.post("/{notification_id}/decline", response_model=NotificationDeclineResponse)
 async def decline_my_notification(
@@ -147,7 +142,6 @@ async def decline_my_notification(
         notification_id=notification_id,
     )
 
-
 @router_notifications.delete("/{notification_id}", status_code=204)
 async def delete_notification_endpoint(
         notification_id: int,
@@ -159,7 +153,6 @@ async def delete_notification_endpoint(
     if not success:
         raise HTTPException(status_code=404, detail="Уведомление не найдено")
 
-
 @router_notifications.delete("/my/clear-read")
 async def clear_read_notifications(
         db: AsyncSession = Depends(get_db),
@@ -169,24 +162,56 @@ async def clear_read_notifications(
     count = await delete_all_read(db, current_user.employee_id)
     return {"deleted": count}
 
-
 # @router_notifications.get("/stream")
-# async def stream_notifications(employee = Depends(require_authorized_user)):
-#     """ Эндпоинт потока уведомлений """
-#     # Подключаем сотрудника к менеджеру
-#     queue = await notification_manager.connect(employee.employee_id)
-#     logger.debug(f"employee_id = {employee.employee_id}")
+# async def stream_notifications(
+#         db: AsyncSession = Depends(get_db),
+#         current_user=Depends(require_authorized_user),
+# ):
+#     """Эндпоинт потока уведомлений: история + новые события в реальном времени"""
+#     employee_id = current_user.employee_id
+#
+#     # Получаем уникальную очередь для этой конкретной вкладки
+#     queue = await notification_manager.connect(employee_id)
+#     logger.debug(f"Подключение к SSE: employee_id = {employee_id}")
 #
 #     async def event_generator():
 #         try:
+#             # ШАГ 1: Отправляем историю из БД
+#             notifications, _ = await get_notifications_by_employee(
+#                 db=db,
+#                 employee_id=employee_id,
+#                 page=1,
+#                 page_size=50,
+#                 only_unread=False,
+#             )
+#
+#             for n in notifications:
+#                 # mode='json' автоматически преобразует datetime в строки ISO
+#                 n_dict = NotificationResponse.model_validate(n).model_dump(mode='json')
+#                 n_dict["source"] = "history"
+#                 yield f"data: {json.dumps(n_dict, ensure_ascii=False)}\n\n"
+#
+#             # ШАГ 2: Переходим в режим реального времени
 #             while True:
-#                 # Ждем новое сообщение в очереди
 #                 data = await queue.get()
-#                 # Формируем строку в формате SSE
-#                 yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+#
+#                 # Получаем полный объект уведомления из БД по ID,
+#                 # чтобы добавить вычисляемые поля (asset_name, event_type_ru, initiator_full_name и т.д.)
+#                 notification = await get_notification_by_id(db, data.get("notification_id"))
+#
+#                 if notification:
+#                     n_dict = NotificationResponse.model_validate(notification).model_dump(mode='json')
+#                 else:
+#                     # Fallback, если уведомление вдруг было удалено до момента отправки
+#                     n_dict = data
+#
+#                 n_dict["source"] = "realtime"
+#                 yield f"data: {json.dumps(n_dict, ensure_ascii=False)}\n\n"
+#
 #         except asyncio.CancelledError:
-#             # Клиент отключился
-#             notification_manager.disconnect(employee.employee_id)
+#             # Передаем именно эту очередь, чтобы отключить только текущую вкладку
+#             notification_manager.disconnect(employee_id, queue)
+#             logger.debug(f"Клиент {employee_id} отключился от потока SSE (одна из вкладок)")
 #             raise
 #
 #     return StreamingResponse(
@@ -195,7 +220,6 @@ async def clear_read_notifications(
 #         headers={
 #             "Cache-Control": "no-cache",
 #             "Connection": "keep-alive",
-#             # "X-Accel-Buffering": "no" # Важно для Nginx, если он используется как прокси
 #         }
 #     )
 
@@ -205,41 +229,54 @@ async def stream_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Эндпоинт потока уведомлений: сначала история, потом новые события в реальном времени"""
+    """Эндпоинт потока: при любом изменении отправляет полный актуальный список уведомлений"""
     employee_id = current_user.employee_id
-
-    # Подключаем сотрудника к менеджеру очередей
     queue = await notification_manager.connect(employee_id)
     logger.debug(f"Подключение к SSE: employee_id = {employee_id}")
 
+    async def get_full_state():
+        """Вспомогательная функция для получения полного состояния, как в /my"""
+        notifications, total = await get_notifications_by_employee(
+            db=db,
+            employee_id=employee_id,
+            page=1,
+            page_size=50,
+            only_unread=False,
+        )
+        unread_count = await get_unread_count(db, employee_id)
+        total_pages = math.ceil(total / 50) if total > 0 else 0
+
+        return {
+            "items": [NotificationResponse.model_validate(n).model_dump(mode='json') for n in notifications],
+            "total": total,
+            "page": 1,
+            "page_size": 50,
+            "total_pages": total_pages,
+            "has_next": 1 < total_pages,
+            "has_previous": False,
+            "unchecked_count": unread_count,
+        }
+
     async def event_generator():
         try:
-            # ШАГ 1: Получаем последние уведомления из БД (как в /my)
-            notifications, _ = await get_notifications_by_employee(
-                db=db,
-                employee_id=employee_id,
-                page=1,
-                page_size=50,
-                only_unread=False,
-            )
+            # 1. При подключении сразу отправляем полное текущее состояние
+            initial_state = await get_full_state()
+            initial_state["source"] = "initial"
+            yield f"data: {json.dumps(initial_state, ensure_ascii=False)}\n\n"
 
-            # ШАГ 2: Отправляем каждое историческое уведомление в формате SSE
-            for n in notifications:
-                # Сериализуем SQLAlchemy модель через Pydantic схему,
-                # чтобы формат JSON в точности совпадал с ответом /my
-                n_dict = NotificationResponse.model_validate(n).model_dump(mode='json')
-                n_dict["source"] = "history"  # Метка для фронтенда (опционально, но полезно)
-                yield f"data: {json.dumps(n_dict, ensure_ascii=False)}\n\n"
-
-            # ШАГ 3: Переходим в режим ожидания новых событий в реальном времени
+            # 2. Бесконечный цикл ожидания любых изменений
             while True:
-                data = await queue.get()
-                data["source"] = "realtime"   # Метка для фронтенда
-                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+                # Ждем сигнал из очереди. Содержимое payload нам не важно,
+                # важно лишь то, что что-то изменилось (insert/update/delete)
+                _ = await queue.get()
+
+                # 3. При получении сигнала заново запрашиваем и отправляем полный список
+                updated_state = await get_full_state()
+                updated_state["source"] = "update"
+                yield f"data: {json.dumps(updated_state, ensure_ascii=False)}\n\n"
 
         except asyncio.CancelledError:
-            # Клиент отключился (закрыл вкладку или оборвалось соединение)
-            notification_manager.disconnect(employee_id)
+            notification_manager.disconnect(employee_id, queue)
             logger.debug(f"Клиент {employee_id} отключился от потока SSE")
             raise
 

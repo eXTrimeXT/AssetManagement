@@ -31,7 +31,7 @@ def upgrade():
                $$ LANGUAGE plpgsql;
                """)
 
-    # Привязываем функцию к таблице notifications (замените название таблицы на ваше)
+    # Привязываем функцию к таблице notifications
     op.execute("""
                CREATE TRIGGER trigger_new_notification
                    AFTER INSERT ON notifications

@@ -112,5 +112,19 @@ class Notification(Base):
         ]
         return " ".join(parts) if parts else None
 
+    # === ДАННЫЕ ОБ пользователе ===
+    @property
+    def employee_full_name(self) -> Optional[str]:
+        if not self.recipient:
+            return None
+        parts = [
+            p for p in [
+                self.recipient.last_name,
+                self.recipient.first_name,
+                self.recipient.middle_name,
+            ] if p
+        ]
+        return " ".join(parts) if parts else None
+
     def __repr__(self):
         return f"<Notification(id={self.notification_id}, type={self.event_type}, status={self.status})>"

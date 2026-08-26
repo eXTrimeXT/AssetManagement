@@ -141,8 +141,9 @@ async def get_notifications_by_employee(
         .options(
             selectinload(Notification.asset),
             selectinload(Notification.initiator),
+            selectinload(Notification.recipient),
         )
-        .where(base_condition) # <-- Используем or_ здесь
+        .where(base_condition)
     )
 
     if only_unread:

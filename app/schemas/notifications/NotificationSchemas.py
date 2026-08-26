@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field, Field
 from datetime import datetime
 from typing import Optional, List
 
@@ -28,15 +28,10 @@ class NotificationBase(BaseModel):
 #     model_config = ConfigDict(from_attributes=True)
 
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
-from datetime import datetime
-from typing import Optional
-
-# ... ваши остальные схемы ...
-
 class NotificationResponse(BaseModel):
     notification_id: int
     employee_id: str
+    employee_full_name: Optional[str] = None
     asset_id: int
     event_type: str
     initiator_id: Optional[str] = None

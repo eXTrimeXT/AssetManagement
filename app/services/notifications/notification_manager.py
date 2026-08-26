@@ -22,18 +22,35 @@ class NotificationManager:
             if not self.active_connections[employee_id]:
                 del self.active_connections[employee_id]
 
-    async def broadcast(self, payload: dict):
-        target_employee_id = payload.get("employee_id")
-        logger.debug(f"Получен сигнал обновления для employee_id: {target_employee_id}")
+    # async def broadcast(self, payload: dict):
+    #     target_employee_id = payload.get("employee_id")
+    #     logger.debug(f"Получен сигнал обновления для employee_id: {target_employee_id}")
+    #
+    #     if target_employee_id and target_employee_id in self.active_connections:
+    #         queues = self.active_connections[target_employee_id]
+    #         logger.debug(f"Отправляем сигнал обновления в {len(queues)} вкладок(ки)")
+    #         for q in queues:
+    #             await q.put(payload)
+    #     elif target_employee_id == "all":
+    #         for queues in self.active_connections.values():
+    #             for q in queues:
+    #                 await q.put(payload)
 
-        if target_employee_id and target_employee_id in self.active_connections:
-            queues = self.active_connections[target_employee_id]
-            logger.debug(f"Отправляем сигнал обновления в {len(queues)} вкладок(ки)")
-            for q in queues:
-                await q.put(payload)
-        elif target_employee_id == "all":
-            for queues in self.active_connections.values():
-                for q in queues:
-                    await q.put(payload)
+    async def broadcast(self, payload: dict):
+        # Собираем всех, кого касается это уведомление
+        targets = set()
+        if payload.get("employee_id"):
+            targets.add(payload["employee_id"])
+        if payload.get("initiator_id"):
+            targets.add(payload["initiator_id"])
+
+        logger.debug(f"Ищем подключения для пользователей: {targets}")
+
+        # Отправляем уведомление во все активные очереди всех затронутых пользователей
+        for target_id in targets:
+            if target_id in self.active_connections:
+                logger.debug(f"Отправляем уведомление пользователю {target_id}")
+                for queue in self.active_connections[target_id]:
+                    await queue.put(payload)
 
 notification_manager = NotificationManager()

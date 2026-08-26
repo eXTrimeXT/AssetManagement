@@ -13,19 +13,105 @@ class NotificationBase(BaseModel):
     status_ru: Optional[str] = None
 
 
-class NotificationResponse(NotificationBase):
+# class NotificationResponse(NotificationBase):
+#     notification_id: int
+#     responded_at: Optional[datetime] = None
+#     created_at: datetime
+#
+#     # Данные об активе
+#     asset_name: Optional[str] = None
+#     asset_inventory_id: Optional[str] = None
+#
+#     # Данные об инициаторе
+#     initiator_full_name: Optional[str] = None
+#
+#     model_config = ConfigDict(from_attributes=True)
+
+
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+from datetime import datetime
+from typing import Optional
+
+# ... ваши остальные схемы ...
+
+class NotificationResponse(BaseModel):
     notification_id: int
+    employee_id: str
+    asset_id: int
+    event_type: str
+    initiator_id: Optional[str] = None
+    status: str
     responded_at: Optional[datetime] = None
     created_at: datetime
 
-    # Данные об активе
+    # Связанные данные (из model)
     asset_name: Optional[str] = None
     asset_inventory_id: Optional[str] = None
-
-    # Данные об инициаторе
     initiator_full_name: Optional[str] = None
 
+    # Поле для внутреннего использования, чтобы знать, для кого генерируем текст
+    viewer_id: Optional[str] = Field(default=None, exclude=True)
+
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def event_type_ru(self) -> str:
+        """Динамическое формирование текста в зависимости от роли зрителя"""
+        is_recipient = (self.employee_id == self.viewer_id)
+
+        # Словарь сообщений: ключ - event_type, значение - кортеж (сообщение_для_получателя, сообщение_для_инициатора)
+        messages = {
+            "assigned_responsible": (
+                "Вы назначены ответственным за актив",
+                "Вы назначили сотрудника ответственным за актив"
+            ),
+            "assigned_user": (
+                "Вы назначены пользователем актива",
+                "Вы назначили сотрудника пользователем актива"
+            ),
+            "unassigned_responsible": (
+                "Вы откреплены как ответственный",
+                "Вы открепили сотрудника от ответственности"
+            ),
+            "unassigned_user": (
+                "Вы откреплены как пользователь",
+                "Вы открепили сотрудника от актива"
+            ),
+            "write_off_requested": (
+                "Создана заявка на списание актива",
+                "Вы создали заявку на списание актива"
+            ),
+            "write_off_approved": (
+                "Заявка на списание утверждена",
+                "Вы утвердили заявку на списание"
+            ),
+            "write_off_rejected": (
+                "Заявка на списание отклонена",
+                "Вы отклонили заявку на списание"
+            ),
+            "responsible_declined": (
+                "Сотрудник отклонил назначение ответственным",
+                "Сотрудник отклонил ваше назначение ответственным"
+            ),
+            "user_declined": (
+                "Сотрудник отклонил назначение пользователем",
+                "Сотрудник отклонил ваше назначение пользователем"
+            ),
+        }
+
+        type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
+        return type_messages[0] if is_recipient else type_messages[1]
+
+    @computed_field
+    @property
+    def status_ru(self) -> str:
+        statuses = {
+            "unread": "Не прочитано",
+            "read": "Прочитано",
+            "declined": "Отклонено"
+        }
+        return statuses.get(self.status, self.status)
 
 
 class PaginatedNotificationResponse(BaseModel):

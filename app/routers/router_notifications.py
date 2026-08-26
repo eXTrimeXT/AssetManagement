@@ -56,9 +56,15 @@ async def get_my_notifications(
     unread_count = await get_unread_count(db, current_user.employee_id)
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
+    serialized_items = [
+        NotificationResponse.model_validate(n, context={"viewer_id": current_user.employee_id}).model_dump(mode='json')
+        for n in notifications
+    ]
+
     # FastAPI сам сериализует через from_attributes
     return PaginatedNotificationResponse(
-        items=list(notifications),
+        items=serialized_items,
+        # items=list(notifications),
         total=total,
         page=page,
         page_size=page_size,
@@ -185,7 +191,7 @@ async def stream_notifications(
         total_pages = math.ceil(total / 50) if total > 0 else 0
 
         return {
-            "items": [NotificationResponse.model_validate(n).model_dump(mode='json') for n in notifications],
+            "items": [NotificationResponse.model_validate(n, context={"viewer_id": employee_id}).model_dump(mode='json') for n in notifications],
             "total": total,
             "page": 1,
             "page_size": 50,

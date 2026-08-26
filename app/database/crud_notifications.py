@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Tuple, Sequence
 from datetime import datetime
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -72,6 +72,44 @@ async def get_notification_by_id(
     return result.scalar_one_or_none()
 
 
+# async def get_notifications_by_employee(
+#         db: AsyncSession,
+#         employee_id: str,
+#         page: int = 1,
+#         page_size: int = 50,
+#         only_unread: bool = False,
+#         asset_id: Optional[int] = None,
+# ) -> Tuple[Sequence[Notification], int]:
+#     # Подсчёт
+#     count_query = (
+#         select(func.count(Notification.notification_id))
+#         .where(Notification.employee_id == employee_id)
+#     )
+#     if only_unread:
+#         count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
+#     if asset_id is not None:
+#         count_query = count_query.where(Notification.asset_id == asset_id)
+#     total = (await db.execute(count_query)).scalar_one()
+#
+#     # Данные
+#     query = (
+#         select(Notification)
+#         .options(
+#             selectinload(Notification.asset),
+#             selectinload(Notification.initiator),
+#         )
+#         .where(Notification.employee_id == employee_id)
+#     )
+#     if only_unread:
+#         query = query.where(Notification.status == NotificationStatus.UNREAD)
+#     if asset_id is not None:
+#         query = query.where(Notification.asset_id == asset_id)
+#     query = query.order_by(Notification.created_at.desc())
+#     query = query.offset((page - 1) * page_size).limit(page_size)
+#
+#     result = await db.execute(query)
+#     return result.scalars().all(), total
+
 async def get_notifications_by_employee(
         db: AsyncSession,
         employee_id: str,
@@ -80,15 +118,21 @@ async def get_notifications_by_employee(
         only_unread: bool = False,
         asset_id: Optional[int] = None,
 ) -> Tuple[Sequence[Notification], int]:
-    # Подсчёт
-    count_query = (
-        select(func.count(Notification.notification_id))
-        .where(Notification.employee_id == employee_id)
+
+    # Базовое условие: пользователь является получателем ИЛИ инициатором
+    base_condition = or_(
+        Notification.employee_id == employee_id,
+        Notification.initiator_id == employee_id
     )
+
+    # Подсчёт
+    count_query = select(func.count(Notification.notification_id)).where(base_condition)
     if only_unread:
-        count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
+        # Важно: непрочитанными считаем только те, где пользователь является получателем
+        count_query = count_query.where(Notification.employee_id == employee_id, Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         count_query = count_query.where(Notification.asset_id == asset_id)
+
     total = (await db.execute(count_query)).scalar_one()
 
     # Данные
@@ -98,18 +142,30 @@ async def get_notifications_by_employee(
             selectinload(Notification.asset),
             selectinload(Notification.initiator),
         )
-        .where(Notification.employee_id == employee_id)
+        .where(base_condition) # <-- Используем or_ здесь
     )
+
     if only_unread:
-        query = query.where(Notification.status == NotificationStatus.UNREAD)
+        query = query.where(Notification.employee_id == employee_id, Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         query = query.where(Notification.asset_id == asset_id)
+
     query = query.order_by(Notification.created_at.desc())
     query = query.offset((page - 1) * page_size).limit(page_size)
 
     result = await db.execute(query)
     return result.scalars().all(), total
 
+# Также обновите get_unread_count, чтобы он считал только входящие (где пользователь - получатель):
+async def get_unread_count(db: AsyncSession, employee_id: str) -> int:
+    result = await db.execute(
+        select(func.count(Notification.notification_id))
+        .where(
+            Notification.employee_id == employee_id, # Только как получатель
+            Notification.status == NotificationStatus.UNREAD,
+            )
+    )
+    return result.scalar_one()
 
 async def get_notifications_grouped_by_asset(
         db: AsyncSession,

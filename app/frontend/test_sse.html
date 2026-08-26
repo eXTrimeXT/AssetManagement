@@ -40,8 +40,8 @@
         document.getElementById('status').textContent = 'Подключение...';
 
         try {
-            // const response = await fetch('http://127.0.0.1:8800/api/notifications/stream', {
-            const response = await fetch('http://10.168.143.7:8800/api/notifications/stream', {
+            const response = await fetch('http://127.0.0.1:8800/api/notifications/stream', {
+            // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'text/event-stream'

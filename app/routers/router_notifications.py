@@ -44,9 +44,11 @@ async def get_my_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
+    employee_id = current_user.employee_id
+
     notifications, total = await get_notifications_by_employee(
         db=db,
-        employee_id=current_user.employee_id,
+        employee_id=employee_id,
         page=page,
         page_size=page_size,
         only_unread=only_unread,
@@ -54,11 +56,11 @@ async def get_my_notifications(
         direction=direction,
     )
 
-    counts = await get_notification_counts(db, current_user.employee_id)
+    counts = await get_notification_counts(db, employee_id)
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
     serialized_items = [
-        NotificationResponse.model_validate(n, context={"viewer_id": current_user.employee_id}).model_dump(mode='json')
+        NotificationResponse.model_validate(n, context={"viewer_id": employee_id, "direction": direction}).model_dump(mode='json')
         for n in notifications
     ]
 

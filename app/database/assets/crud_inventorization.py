@@ -1,5 +1,7 @@
 from datetime import datetime
 from typing import Optional, Sequence
+
+import logging
 from sqlalchemy import select, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -9,6 +11,7 @@ from app.models.assets.AssetType import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.database.crud_notifications import notify_inventory_started, notify_inventory_completed
 
+logger = logging.getLogger(__name__)
 
 async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
     result = await db.execute(
@@ -180,6 +183,15 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
             db=db,
             employee_id=emp_id,
             session_id=session_id,
+            initiator_id=updated_by,
+        )
+
+    if not responsible_employees:
+        logger.debug(f"Ответственные не найдены для сессии {session.session_id}. Уведомляем создателя.")
+        await notify_inventory_started(
+            db=db,
+            employee_id=updated_by,
+            session_id=session.session_id,
             initiator_id=updated_by,
         )
 

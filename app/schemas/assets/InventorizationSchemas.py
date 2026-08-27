@@ -44,7 +44,7 @@ class InventorizationItemDiscrepancy(BaseModel):
     serial_number: Optional[str] = None
     quantity: Optional[int] = None
     quantity_fact: Optional[int] = None
-    difference: Optional[int] = None  # quantity_fact - quantity
+    difference: Optional[int] = None  # quantity_fact - quantity, на сколько расхождение?
     discrepancy_type: str  # "missing" | "surplus" | "match" | "not_checked"
 
 

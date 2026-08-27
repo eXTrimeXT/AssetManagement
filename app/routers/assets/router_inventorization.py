@@ -20,7 +20,6 @@ from app.services.auth.auth_service import require_authorized_user
 
 router_inventorization = APIRouter(prefix="/inventorization", tags=["Assets Inventorization"])
 
-
 @router_inventorization.get("/sessions/", response_model=List[InventorizationSessionResponse])
 async def get_sessions(
         skip: int = 0,
@@ -30,7 +29,6 @@ async def get_sessions(
 ):
     return await get_inventory_sessions_list(db, skip, limit)
 
-
 @router_inventorization.get("/sessions/{session_id}/items/", response_model=List[InventorizationItemResponse])
 async def get_session_items(
         session_id: int,
@@ -39,7 +37,6 @@ async def get_session_items(
 ):
     return await get_inventory_items_by_session_id(db, session_id)
 
-
 @router_inventorization.post("/sessions/", response_model=InventorizationSessionResponse)
 async def start_session(
         data: InventorizationSessionCreate,
@@ -47,7 +44,6 @@ async def start_session(
         current_user=Depends(require_authorized_user)
 ):
     return await create_inventory_session(db, data.asset_type_id, current_user.employee_id)
-
 
 @router_inventorization.post("/sessions/{session_id}/check")
 async def check_item(
@@ -74,7 +70,6 @@ async def check_item(
     if not success:
         raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
     return {"message": "success"}
-
 
 @router_inventorization.post("/sessions/{session_id}/complete", response_model=InventorizationSessionResponse)
 async def complete_session(
@@ -107,7 +102,6 @@ from app.database.assets.crud_inventorization import (
     get_inventorization_discrepancies,
 )
 
-
 @router_inventorization.get(
     "/sessions/{session_id}/report",
     response_model=InventorizationReportResponse,
@@ -123,7 +117,6 @@ async def get_session_report(
     if not report:
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return report
-
 
 @router_inventorization.get(
     "/sessions/{session_id}/report/discrepancies",

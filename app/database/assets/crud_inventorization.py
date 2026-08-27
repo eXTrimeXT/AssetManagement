@@ -30,59 +30,6 @@ async def get_inventory_items_by_session_id(db: AsyncSession, session_id: int) -
     )
     return result.scalars().all()
 
-# async def create_inventory_session(db: AsyncSession, asset_type_id: int, employee_id: str) -> InventorizationSession:
-#     # Получаем информацию о типе актива
-#     asset_type_result = await db.execute(
-#         select(AssetType).where(AssetType.asset_type_id == asset_type_id)
-#     )
-#     asset_type = asset_type_result.scalar_one_or_none()
-#
-#     if not asset_type:
-#         raise ValueError(f"Asset type with id {asset_type_id} not found")
-#
-#     # Создаем сессию с денормализованными данными типа
-#     session = InventorizationSession(
-#         asset_type_id=asset_type_id,
-#         asset_type_name=asset_type.name,
-#         asset_type_en_name=asset_type.en_name,
-#         status="in_progress"
-#     )
-#     db.add(session)
-#     await db.flush()
-#
-#     # Копируем все активы нужного типа с денормализованными полями
-#     result = await db.execute(
-#         select(Asset).where(Asset.asset_type_id == asset_type_id)
-#     )
-#     assets = result.scalars().all()
-#
-#     items = [
-#         InventorizationItem(
-#             session_id=session.session_id,
-#             asset_id=asset.asset_id,
-#             asset_name=asset.name,
-#             is_checked=False,
-#             serial_number=asset.serial_number, # Копируем серийный номер для будущего поиска по сканированию для Android
-#             quantity=asset.quantity,        # копируем количество из актива
-#             quantity_fact=None,             # ставим None - значит кол-во факт не известно
-#         )
-#         for asset in assets
-#     ]
-#
-#     db.add_all(items)
-#
-#     for item in items:
-#         await notify_inventory_started(
-#             db=db,
-#             employee_id=employee_id,
-#             asset_id=item.asset_id,
-#             initiator_id=employee_id,
-#         )
-#
-#     await db.commit()
-#     await db.refresh(session)
-#     return session
-
 async def create_inventory_session(db: AsyncSession, asset_type_id: int, creator_employee_id: str) -> InventorizationSession:
     asset_type_result = await db.execute(
         select(AssetType).where(AssetType.asset_type_id == asset_type_id)
@@ -183,62 +130,14 @@ async def check_inventory_item(
     return False
 
 
-# async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[InventorizationSession]:
-#     session = await get_inventory_session_by_id(db, session_id)
-#     if not session:
-#         return None
-#
-#     # === ПРОВЕРКА: нельзя завершить уже завершенную сессию ===
-#     if session.status == "completed":
-#         raise ValueError("Сессия уже завершена.")
-#     # =========================================================
-#
-#     # Находим все asset_id, которые НЕ были проверены (is_checked == False)
-#     result = await db.execute(
-#         select(InventorizationItem.asset_id).where(
-#             InventorizationItem.session_id == session_id,
-#             InventorizationItem.is_checked == False
-#         )
-#     )
-#     unchecked_items = result.all()
-#
-#     # === при завершении меняем quantity на quantity_fact ===
-#     result = await db.execute(
-#         select(InventorizationItem).where(
-#             InventorizationItem.session_id == session_id,
-#             InventorizationItem.is_checked == True,
-#             InventorizationItem.quantity_fact.isnot(None)
-#         )
-#     )
-#     checked_items = result.scalars().all()
-#
-#     for item in checked_items:
-#         await db.execute(
-#             update(Asset)
-#             .where(Asset.asset_id == item.asset_id)
-#             .values(quantity=item.quantity_fact, updated_by=updated_by)
-#         )
-#
-#     session.status = "completed"
-#     await db.commit()
-#     await db.refresh(session)
-#     return session
-
-
 async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[InventorizationSession]:
     session = await get_inventory_session_by_id(db, session_id)
-    if not session or session.status == "completed":
-        raise ValueError("Сессия не найдена или уже завершена.")
+    if not session:
+        raise ValueError("Сессия не найдена.")
+    if session.status == "completed":
+        raise ValueError("Сессия уже завершена.")
 
-    # Находим все asset_id, которые НЕ были проверены (is_checked == False)
-    result = await db.execute(
-        select(InventorizationItem.asset_id).where(
-            InventorizationItem.session_id == session_id,
-            InventorizationItem.is_checked == False
-        )
-    )
-    unchecked_items = result.all()
-
+    # Обновляем количества в активах
     result = await db.execute(
         select(InventorizationItem).where(
             InventorizationItem.session_id == session_id,
@@ -255,34 +154,39 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
             .values(quantity=item.quantity_fact, updated_by=updated_by)
         )
 
+    # Меняем статус сессии
     session.status = "completed"
     session.completed_at = datetime.now()
-    await db.commit()
 
-    # === УВЕДОМЛЕНИЕ О ЗАВЕРШЕНИИ ===
-    # Находим тех же ответственных сотрудников и уведомляем их о завершении
+    # Находим всех ответственных для уведомлений
     result_assets = await db.execute(
         select(InventorizationItem.asset_id).where(InventorizationItem.session_id == session_id)
     )
     asset_ids = [row[0] for row in result_assets.all()]
 
+    responsible_employees = []
     if asset_ids:
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
-                AssetAssignment.end_date.is_(None)
+                AssetAssignment.end_date.is_(None) # Только активные назначения
             )
         )
         responsible_employees = [row[0] for row in employees_result.all()]
 
-        for emp_id in responsible_employees:
-            await notify_inventory_completed(
-                db=db,
-                employee_id=emp_id,
-                session_id=session_id,
-                initiator_id=updated_by,
-            )
+    # Создаем уведомления (они пока только в состоянии flush)
+    for emp_id in responsible_employees:
+        await notify_inventory_completed(
+            db=db,
+            employee_id=emp_id,
+            session_id=session_id,
+            initiator_id=updated_by,
+        )
 
+    # Сохраняем и сессию, и созданные уведомления в БД!
+    await db.commit()
+
+    # Обновляем объект сессии для возврата
     await db.refresh(session)
     return session
 

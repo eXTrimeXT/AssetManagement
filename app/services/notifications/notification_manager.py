@@ -22,20 +22,6 @@ class NotificationManager:
             if not self.active_connections[employee_id]:
                 del self.active_connections[employee_id]
 
-    # async def broadcast(self, payload: dict):
-    #     target_employee_id = payload.get("employee_id")
-    #     logger.debug(f"Получен сигнал обновления для employee_id: {target_employee_id}")
-    #
-    #     if target_employee_id and target_employee_id in self.active_connections:
-    #         queues = self.active_connections[target_employee_id]
-    #         logger.debug(f"Отправляем сигнал обновления в {len(queues)} вкладок(ки)")
-    #         for q in queues:
-    #             await q.put(payload)
-    #     elif target_employee_id == "all":
-    #         for queues in self.active_connections.values():
-    #             for q in queues:
-    #                 await q.put(payload)
-
     async def broadcast(self, payload: dict):
         # Собираем всех, кого касается это уведомление
         targets = set()

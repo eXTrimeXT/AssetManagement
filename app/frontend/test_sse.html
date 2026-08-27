@@ -32,7 +32,7 @@
 
     async function connect() {
         // const token = document.getElementById('token').value.trim();
-        const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODc3MjAzNjEsImV4cCI6MTc4Nzc2MzU2MSwibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjEwLjE2OC4xNTQuNDIiLCJsYXN0X3RpbWUiOiIwNTo0MDo0OCAyNS4wOC4yMDI2IiwiZGVwYXJ0bWVudCI6IlJEQyIsInBlcm1pc3Npb25zIjpbeyJuYW1lX2dyb3VwIjoiY29tcHV0ZXIiLCJyZWFkIjpmYWxzZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJtZXNfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InBvd2VyX2FkYXB0ZXIiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiZGF0YV9jb2xsZWN0aW9uX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJBY2Nlc3NvcmllcyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJuZXR3b3JrX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJwcmludGluZ19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoic2VydmVyX2hhcmR3YXJlIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InVzZXJzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImFuZHJvaWRfZGF0YSIsInJlYWQiOnRydWUsIndyaXRlIjpmYWxzZX1dLCJhc3NldHNfaXNfYWRtaW4iOnRydWUsInVzZXJfZGF0YSI6eyJlbWFpbCI6IlRpbXVyLk1hbHlzaGV2QGhtbXIucnUiLCJmdWxsbmFtZSI6IlRpbXVyIE1hbHlzaGV2IiwiZGVwYXJ0bWVudCI6IlJEQyIsImRpc3Rpbmd1aXNoZWROYW1lIjoiQ049VGltdXIgTWFseXNoZXYsT1U9U09GVFdBUkUgREVWRUxPUE1FTlQgR1JPVVAgKFNERyksT1U9SU5GT1JNQVRJT04gU1lTVEVNUyBTVVBQT1JUIFNFQ1RJT04gKElTU1MpLE9VPVJ1c3NpYW4gRGlnaXRhbCBDZW50ZXIgKFJEQyksT1U9VXNlcnMsT1U9SE1NUixEQz1sb2NhbCxEQz1obW1yLERDPXJ1IiwiZ3JvdXBzIjpbXX19.dlvvoq57NF6OGXUxKKT-hDmV0NyNn5C8W4g2XTME3rM"
+        const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3ODc4MDgxMTIsImV4cCI6MTc4Nzg1MTMxMiwibG9naW4iOiJndzA3MDE1MzcwIiwibGFzdF9pcCI6IjEwLjE2OC4xNTQuNDIiLCJsYXN0X3RpbWUiOiIwNDo1OToyMSAyNi4wOC4yMDI2IiwiZGVwYXJ0bWVudCI6IlJEQyIsInBlcm1pc3Npb25zIjpbeyJuYW1lX2dyb3VwIjoiY29tcHV0ZXIiLCJyZWFkIjpmYWxzZSwid3JpdGUiOmZhbHNlfSx7Im5hbWVfZ3JvdXAiOiJtZXNfZXF1aXBtZW50IiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InN1cHBsaWVzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InBvd2VyX2FkYXB0ZXIiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoiZGF0YV9jb2xsZWN0aW9uX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJBY2Nlc3NvcmllcyIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJuZXR3b3JrX2VxdWlwbWVudCIsInJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSx7Im5hbWVfZ3JvdXAiOiJwcmludGluZ19lcXVpcG1lbnQiLCJyZWFkIjp0cnVlLCJ3cml0ZSI6dHJ1ZX0seyJuYW1lX2dyb3VwIjoic2VydmVyX2hhcmR3YXJlIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6InVzZXJzIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6IkFzc2V0c01VIiwicmVhZCI6dHJ1ZSwid3JpdGUiOnRydWV9LHsibmFtZV9ncm91cCI6ImFuZHJvaWRfZGF0YSIsInJlYWQiOnRydWUsIndyaXRlIjpmYWxzZX1dLCJhc3NldHNfaXNfYWRtaW4iOnRydWUsInVzZXJfZGF0YSI6eyJlbWFpbCI6IlRpbXVyLk1hbHlzaGV2QGhtbXIucnUiLCJmdWxsbmFtZSI6IlRpbXVyIE1hbHlzaGV2IiwiZGVwYXJ0bWVudCI6IlJEQyIsImRpc3Rpbmd1aXNoZWROYW1lIjoiQ049VGltdXIgTWFseXNoZXYsT1U9U09GVFdBUkUgREVWRUxPUE1FTlQgR1JPVVAgKFNERyksT1U9SU5GT1JNQVRJT04gU1lTVEVNUyBTVVBQT1JUIFNFQ1RJT04gKElTU1MpLE9VPVJ1c3NpYW4gRGlnaXRhbCBDZW50ZXIgKFJEQyksT1U9VXNlcnMsT1U9SE1NUixEQz1sb2NhbCxEQz1obW1yLERDPXJ1IiwiZ3JvdXBzIjpbXX19.9a0hn50aDMnWXdV19jfNl05U1H083QcWiBOYxnH6mrQ"
         if (!token) return alert('Введите токен!');
 
         if (abortController) abortController.abort();
@@ -40,9 +40,12 @@
         document.getElementById('status').textContent = 'Подключение...';
 
         try {
+            // incoming - Входящее, outgoing - Исходящее
+            // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream?direction=incoming', {
+            // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream?direction=outgoing', {
+
             const response = await fetch('http://127.0.0.1:8800/api/notifications/stream?direction=incoming', {
             // const response = await fetch('http://127.0.0.1:8800/api/notifications/stream?direction=outgoing', {
-            // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'text/event-stream'

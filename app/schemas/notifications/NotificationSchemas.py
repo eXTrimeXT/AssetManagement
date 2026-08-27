@@ -27,7 +27,8 @@ class NotificationResponse(BaseModel):
     initiator_full_name: Optional[str] = None
 
     # Поле для внутреннего использования (не попадет в JSON)
-    viewer_id: Optional[str] = Field(default=None, exclude=True)
+    # viewer_id: Optional[str] = Field(default=None, exclude=True)
+    viewer_id: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,7 +41,7 @@ class NotificationResponse(BaseModel):
 
         # Кортеж: (текст_для_инициатора, текст_для_получателя)
         messages = {
-            "assigned_responsible": ("Вы назначили сотрудника ответственным за актив", "Вы назначены ответственным за актив"),
+            "assigned_responsible": ("Исходящее", "Входящее"),
             "assigned_user": ("Вы назначили сотрудника пользователем актива", "Вы назначены пользователем актива"),
             "unassigned_responsible": ("Вы открепили сотрудника от ответственности", "Вы откреплены как ответственный"),
             "unassigned_user": ("Вы открепили сотрудника от актива", "Вы откреплены как пользователь"),
@@ -52,14 +53,21 @@ class NotificationResponse(BaseModel):
             "service_due": ("Требуется обслуживание актива", "Требуется обслуживание актива"),
         }
 
-        type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
+        type_messages = messages.get(self.event_type, ("Исходящее", "Входящее"))
 
         # Если зритель является инициатором (и не является получателем одновременно)
-        if is_initiator and not is_recipient:
+        # if is_initiator and not is_recipient:
+        # if self.initiator_id == "0000015370":
+        if self.initiator_id == self.viewer_id:
             return type_messages[0]
+        # if self.employee_id == "0000015370":
+        if self.employee_id == self.viewer_id:
+            return type_messages[1]
 
         # Во всех остальных случаях (зритель - получатель, или системное уведомление без инициатора)
-        return type_messages[1]
+        # return type_messages[1]
+        return "Ошибка..."
+
 
     @computed_field
     @property

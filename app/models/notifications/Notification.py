@@ -8,7 +8,10 @@ from app.models.Base import Base
 
 class NotificationEventType:
     """Типы событий уведомлений"""
+    # Сервисные события
     SERVICE_DUE = "service_due"
+
+    # Привязки/Отвязки пользователей и активов
     ASSIGNED_RESPONSIBLE = "assigned_responsible"
     RESPONSIBLE_DECLINED = "responsible_declined"
     ASSIGNED_USER = "assigned_user"
@@ -16,21 +19,37 @@ class NotificationEventType:
     UNASSIGNED_RESPONSIBLE = "unassigned_responsible"
     UNASSIGNED_USER = "unassigned_user"
 
+    # События по списанию
     WRITE_OFF_REQUESTED = "write_off_requested"
     WRITE_OFF_APPROVED = "write_off_approved"
     WRITE_OFF_REJECTED = "write_off_rejected"
 
+    # События по инвентаризации
+    INVENTORY_STARTED = "inventory_started"
+    INVENTORY_DISCREPANCY = "inventory_discrepancy"
+    INVENTORY_COMPLETED = "inventory_completed"
+
     RU_LABELS = {
+        # Сервисные события
         SERVICE_DUE: "Требуется обслуживание",
+
+        # Привязки/Отвязки пользователей и активов
         ASSIGNED_RESPONSIBLE: "Вы назначены ответственным за актив",
         RESPONSIBLE_DECLINED: "Ответственный отклонил назначение",
         ASSIGNED_USER: "Вы назначены пользователем актива",
         USER_DECLINED: "Пользователь отклонил назначение",
         UNASSIGNED_RESPONSIBLE: "Вы откреплены как ответственный",
         UNASSIGNED_USER: "Вы откреплены как пользователь",
+
+        # События по списанию
         WRITE_OFF_REQUESTED: "Создана заявка на списание",
         WRITE_OFF_APPROVED: "Заявка на списание утверждена",
         WRITE_OFF_REJECTED: "Заявка на списание отклонена",
+
+        # События по инвентаризации
+        INVENTORY_STARTED: "Сессия инвентаризации запущена",
+        INVENTORY_DISCREPANCY: "Обнаружено расхождение по активу",
+        INVENTORY_COMPLETED: "Сессия инвентаризации завершена",
     }
 
     @classmethod
@@ -60,7 +79,10 @@ class Notification(Base):
 
     notification_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     employee_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False, index=True)
-    asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False, index=True)
+
+    asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=True, index=True)
+    session_id = Column(Integer, nullable=True, index=True)
+
     event_type = Column(String(50), nullable=False, index=True)
     initiator_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True)
     status = Column(String(20), nullable=False, default=NotificationStatus.UNREAD, index=True)

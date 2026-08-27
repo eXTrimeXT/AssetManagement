@@ -19,14 +19,16 @@ logger = logging.getLogger(__name__)
 async def create_notification(
         db: AsyncSession,
         employee_id: str,
-        asset_id: int,
-        event_type: str,
+        asset_id: Optional[int] = None,
+        session_id: Optional[int] = None,
+        event_type: str = None,
         initiator_id: Optional[str] = None,
 ) -> Notification:
     """ Создать уведомление """
     notification = Notification(
         employee_id=employee_id,
         asset_id=asset_id,
+        session_id=session_id,
         event_type=event_type,
         initiator_id=initiator_id,
         status=NotificationStatus.UNREAD,
@@ -36,7 +38,7 @@ async def create_notification(
 
     logger.info(
         f"[Notify] {event_type}: employee={employee_id}, "
-        f"asset={asset_id}, initiator={initiator_id}"
+        f"asset={asset_id}, session_id={session_id}, initiator={initiator_id}"
     )
     return notification
 
@@ -271,30 +273,109 @@ async def decline_notification(
 # ============================================================
 # БИЗНЕС-ЛОГИКА: ОБЁРТКИ ДЛЯ КОНКРЕТНЫХ ТИПОВ УВЕДОМЛЕНИЙ
 # ============================================================
+# Привязки/Отвязки
 async def notify_assigned_responsible(db, employee_id, asset_id, initiator_id):
     """Уведомить о назначении ответственным."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.ASSIGNED_RESPONSIBLE, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.ASSIGNED_RESPONSIBLE,
+        initiator_id=initiator_id
+    )
 
 async def notify_assigned_user(db, employee_id, asset_id, initiator_id):
     """Уведомить о назначении пользователем."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.ASSIGNED_USER, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.ASSIGNED_USER,
+        initiator_id=initiator_id
+    )
 
 async def notify_unassigned_responsible(db, employee_id, asset_id, initiator_id):
     """Уведомить об отвязке ответственного."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.UNASSIGNED_RESPONSIBLE, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.UNASSIGNED_RESPONSIBLE,
+        initiator_id=initiator_id
+    )
 
 async def notify_unassigned_user(db, employee_id, asset_id, initiator_id):
     """Уведомить об отвязке пользователя."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.UNASSIGNED_USER, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.UNASSIGNED_USER,
+        initiator_id=initiator_id
+    )
 
+# Списания
 async def notify_write_off_requested(db, employee_id, asset_id, initiator_id):
     """Уведомить о создании заявки на списание."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.WRITE_OFF_REQUESTED, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.WRITE_OFF_REQUESTED,
+        initiator_id=initiator_id
+    )
 
 async def notify_write_off_approved(db, employee_id, asset_id, initiator_id):
     """Уведомить об утверждении списания."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.WRITE_OFF_APPROVED, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.WRITE_OFF_APPROVED,
+        initiator_id=initiator_id
+    )
 
 async def notify_write_off_rejected(db, employee_id, asset_id, initiator_id):
     """Уведомить об отклонении списания."""
-    await create_notification(db, employee_id, asset_id, NotificationEventType.WRITE_OFF_REJECTED, initiator_id)
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.WRITE_OFF_REJECTED,
+        initiator_id=initiator_id
+    )
+
+
+# Инвентаризация
+async def notify_inventory_started(db: AsyncSession, employee_id: str, session_id: int, initiator_id: str):
+    """Уведомить сотрудника о начале инвентаризации сессии (ОДНО уведомление на сессию)"""
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=None, # Привязка идет к сессии, а не к конкретному активу
+        session_id=session_id,
+        event_type=NotificationEventType.INVENTORY_STARTED,
+        initiator_id=initiator_id,
+    )
+
+async def notify_inventory_discrepancy(db: AsyncSession, employee_id: str, asset_id: int, session_id: int, initiator_id: str):
+    """Уведомить о расхождении по КОНКРЕТНОМУ активу в сессии"""
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        session_id=session_id,
+        event_type=NotificationEventType.INVENTORY_DISCREPANCY,
+        initiator_id=initiator_id,
+    )
+
+async def notify_inventory_completed(db: AsyncSession, employee_id: str, session_id: int, initiator_id: str):
+    """Уведомить о завершении сессии инвентаризации"""
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=None,
+        session_id=session_id,
+        event_type=NotificationEventType.INVENTORY_COMPLETED,
+        initiator_id=initiator_id,
+    )

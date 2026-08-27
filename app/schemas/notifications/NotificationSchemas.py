@@ -4,7 +4,8 @@ from typing import Optional, List
 
 class NotificationBase(BaseModel):
     employee_id: str
-    asset_id: int
+    asset_id: Optional[int] = None
+    session_id: Optional[int] = None
     event_type: str
     event_type_ru: Optional[str] = None
     initiator_id: Optional[str] = None
@@ -15,7 +16,10 @@ class NotificationResponse(BaseModel):
     notification_id: int
     employee_id: str
     employee_full_name: Optional[str] = None
-    asset_id: int
+
+    asset_id: Optional[int] = None
+    session_id: Optional[int] = None
+
     event_type: str
     initiator_id: Optional[str] = None
     status: str
@@ -50,16 +54,22 @@ class NotificationResponse(BaseModel):
 
         # Единый словарь сообщений: (текст_для_инициатора (исходящее), текст_для_получателя (входящее))
         messages = {
+            "service_due": ("Требуется обслуживание актива", "Требуется обслуживание актива"),
+
             "assigned_responsible": ("Вы назначили сотрудника ответственным за актив", "Вы назначены ответственным за актив"),
             "assigned_user": ("Вы назначили сотрудника пользователем актива", "Вы назначены пользователем актива"),
             "unassigned_responsible": ("Вы открепили сотрудника от ответственности", "Вы откреплены как ответственный"),
             "unassigned_user": ("Вы открепили сотрудника от актива", "Вы откреплены как пользователь"),
+            "responsible_declined": ("Сотрудник отклонил ваше назначение ответственным", "Вы отклонили назначение ответственным"),
+            "user_declined": ("Сотрудник отклонил ваше назначение пользователем", "Вы отклонили назначение пользователем"),
+
             "write_off_requested": ("Вы создали заявку на списание", "Создана заявка на списание актива"),
             "write_off_approved": ("Вы утвердили заявку на списание", "Ваша заявка на списание утверждена"),
             "write_off_rejected": ("Вы отклонили заявку на списание", "Ваша заявка на списание отклонена"),
-            "responsible_declined": ("Сотрудник отклонил ваше назначение ответственным", "Вы отклонили назначение ответственным"),
-            "user_declined": ("Сотрудник отклонил ваше назначение пользователем", "Вы отклонили назначение пользователем"),
-            "service_due": ("Требуется обслуживание актива", "Требуется обслуживание актива"),
+
+            "inventory_started": ("Вы запустили новую сессию инвентаризации", "Началась инвентаризация закрепленных за вами активов"),
+            "inventory_discrepancy": ("Вы зафиксировали расхождение при инвентаризации", "Обнаружено расхождение по закрепленному за вами активу при инвентаризации"),
+            "inventory_completed": ("Вы завершили сессию инвентаризации", "Сессия инвентаризации, затрагивающая ваши активы, завершена"),
         }
 
         type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
@@ -108,7 +118,9 @@ class PaginatedNotificationResponse(BaseModel):
 
 
 class NotificationGroupedItem(BaseModel):
-    asset_id: int
+    asset_id: Optional[int] = None
+    session_id: Optional[int] = None
+
     asset_name: Optional[str] = None
     asset_inventory_id: Optional[str] = None
     notifications: List[NotificationResponse]

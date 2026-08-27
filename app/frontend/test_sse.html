@@ -43,11 +43,11 @@
             // incoming - Входящее, outgoing - Исходящее
             // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream?direction=incoming', {
             // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream?direction=outgoing', {
-            const response = await fetch('http://10.168.143.7:8800/api/notifications/stream?direction=all', {
+            // const response = await fetch('http://10.168.143.7:8800/api/notifications/stream?direction=all', {
 
             // const response = await fetch('http://127.0.0.1:8800/api/notifications/stream?direction=incoming', {
             // const response = await fetch('http://127.0.0.1:8800/api/notifications/stream?direction=outgoing', {
-            // const response = await fetch('http://127.0.0.1:8800/api/notifications/stream?direction=all', {
+            const response = await fetch('http://127.0.0.1:8800/api/notifications/stream?direction=all', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'text/event-stream'

@@ -102,7 +102,7 @@ class Notification(Base):
     @property
     def initiator_full_name(self) -> Optional[str]:
         if not self.initiator:
-            return None
+            return "system"
         parts = [
             p for p in [
                 self.initiator.last_name,

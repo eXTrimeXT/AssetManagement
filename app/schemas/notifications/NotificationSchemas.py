@@ -30,6 +30,7 @@ class NotificationResponse(BaseModel):
     viewer_id: Optional[str] = Field(default=None, exclude=True)
 
     direction: Optional[str] = None
+    direction_ru: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -84,8 +85,12 @@ class NotificationResponse(BaseModel):
 
         if info.context and "direction" in info.context:
             self.direction = info.context["direction"]
-            if is_initiator and not is_recipient: self.direction = "Исходящее"
-            else: self.direction = "Входящее"
+            if is_initiator and not is_recipient:
+                self.direction = "outgoing"
+                self.direction_ru = "Исходящее"
+            else:
+                self.direction = "incoming"
+                self.direction_ru = "Входящее"
         return self
 
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, computed_field, Field
+from pydantic import BaseModel, ConfigDict, computed_field, Field, model_validator, ValidationInfo
 from datetime import datetime
 from typing import Optional, List
 
@@ -26,22 +26,30 @@ class NotificationResponse(BaseModel):
     asset_inventory_id: Optional[str] = None
     initiator_full_name: Optional[str] = None
 
-    # Поле для внутреннего использования (не попадет в JSON)
-    # viewer_id: Optional[str] = Field(default=None, exclude=True)
-    viewer_id: Optional[str] = Field(default=None)
+    # exclude=True важен: поле нужно для логики, но не должно уходить в JSON фронтенду
+    viewer_id: Optional[str] = Field(default=None, exclude=True)
+
+    direction: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode='after')
+    def inject_viewer_id_from_context(self, info: ValidationInfo):
+        """Забирает viewer_id из контекста валидации, если он был передан"""
+        if info.context and "viewer_id" in info.context:
+            self.viewer_id = info.context["viewer_id"]
+        return self
 
     @computed_field
     @property
     def event_type_ru(self) -> str:
-        """Формирование текста строго по роли зрителя"""
+        """Единая логика формирования текста строго по роли зрителя"""
         is_initiator = (self.initiator_id == self.viewer_id)
         is_recipient = (self.employee_id == self.viewer_id)
 
-        # Кортеж: (текст_для_инициатора, текст_для_получателя)
+        # Единый словарь сообщений: (текст_для_инициатора (исходящее), текст_для_получателя (входящее))
         messages = {
-            "assigned_responsible": ("Исходящее", "Входящее"),
+            "assigned_responsible": ("Вы назначили сотрудника ответственным за актив", "Вы назначены ответственным за актив"),
             "assigned_user": ("Вы назначили сотрудника пользователем актива", "Вы назначены пользователем актива"),
             "unassigned_responsible": ("Вы открепили сотрудника от ответственности", "Вы откреплены как ответственный"),
             "unassigned_user": ("Вы открепили сотрудника от актива", "Вы откреплены как пользователь"),
@@ -53,27 +61,32 @@ class NotificationResponse(BaseModel):
             "service_due": ("Требуется обслуживание актива", "Требуется обслуживание актива"),
         }
 
-        type_messages = messages.get(self.event_type, ("Исходящее", "Входящее"))
+        type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
 
         # Если зритель является инициатором (и не является получателем одновременно)
-        # if is_initiator and not is_recipient:
-        # if self.initiator_id == "0000015370":
-        if self.initiator_id == self.viewer_id:
+        if is_initiator and not is_recipient:
             return type_messages[0]
-        # if self.employee_id == "0000015370":
-        if self.employee_id == self.viewer_id:
-            return type_messages[1]
 
         # Во всех остальных случаях (зритель - получатель, или системное уведомление без инициатора)
-        # return type_messages[1]
-        return "Ошибка..."
-
+        return type_messages[1]
 
     @computed_field
     @property
     def status_ru(self) -> str:
         statuses = {"unread": "Не прочитано", "read": "Прочитано", "declined": "Отклонено"}
         return statuses.get(self.status, self.status)
+
+
+    @model_validator(mode='after')
+    def inject_direction_from_context(self, info: ValidationInfo):
+        is_initiator = (self.initiator_id == self.viewer_id)
+        is_recipient = (self.employee_id == self.viewer_id)
+
+        if info.context and "direction" in info.context:
+            self.direction = info.context["direction"]
+            if is_initiator and not is_recipient: self.direction = "Исходящее"
+            else: self.direction = "Входящее"
+        return self
 
 
 class PaginatedNotificationResponse(BaseModel):
@@ -85,8 +98,8 @@ class PaginatedNotificationResponse(BaseModel):
     has_next: bool
     has_previous: bool
     unchecked_count: int
-    checked_count: int      # НОВОЕ
-    declined_count: int     # НОВОЕ
+    checked_count: int
+    declined_count: int
 
 
 class NotificationGroupedItem(BaseModel):

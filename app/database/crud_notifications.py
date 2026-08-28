@@ -83,8 +83,10 @@ async def get_notifications_by_employee(
         count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
     if show == "asset":
         count_query = count_query.where(Notification.asset_id is not None)
+        count_query = count_query.where(Notification.session_id is None)
     if show == "session":
         count_query = count_query.where(Notification.session_id is not None)
+        count_query = count_query.where(Notification.asset_id is None)
     if asset_id is not None:
         count_query = count_query.where(Notification.asset_id == asset_id)
     if session_id is not None:

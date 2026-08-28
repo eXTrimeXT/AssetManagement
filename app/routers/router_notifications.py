@@ -93,7 +93,7 @@ async def stream_notifications(
             db=db,
             employee_id=employee_id,
             page=1,
-            page_size=100,
+            page_size=200,
             only_unread=False,
             asset_id=asset_id,
             direction=direction,

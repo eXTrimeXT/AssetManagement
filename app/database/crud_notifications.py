@@ -109,8 +109,10 @@ async def get_notifications_by_employee(
         query = query.where(Notification.status == NotificationStatus.UNREAD)
     if show == "asset":
         query = query.where(Notification.asset_id is not None)
+        query = query.where(Notification.session_id is None)
     if show == "session":
         query = query.where(Notification.session_id is not None)
+        query = query.where(Notification.asset_id is None)
     if asset_id is not None:
         query = query.where(Notification.asset_id == asset_id)
     if session_id is not None:

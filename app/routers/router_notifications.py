@@ -40,7 +40,6 @@ async def get_my_notifications(
         page_size: int = Query(200, ge=1, le=200),
         only_unread: bool = Query(False),
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
-        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("incoming", description="incoming (входящие), outgoing (исходящие) или all (все)"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),

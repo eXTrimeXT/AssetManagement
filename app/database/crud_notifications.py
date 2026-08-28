@@ -171,6 +171,8 @@ async def get_notifications_by_employee(
 
             unique_notifications.append(n)
 
+        # СОРТИРОВКА: явно сортируем итоговый список по времени (от новых к старым)
+        unique_notifications.sort(key=lambda x: x.created_at, reverse=True)
         notifications = unique_notifications
         # Примечание: total при этом останется общим, что корректно для пагинации,
         # но визуально пользователь увидит сгруппированные записи.

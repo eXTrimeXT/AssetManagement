@@ -54,7 +54,6 @@ async def get_my_notifications(
         page_size=page_size,
         only_unread=only_unread,
         asset_id=asset_id,
-        session_id=session_id,
         direction=direction,
     )
 
@@ -99,7 +98,6 @@ async def stream_notifications(
             page_size=100,
             only_unread=False,
             asset_id=asset_id,
-            session_id=session_id,
             direction=direction,
         )
 

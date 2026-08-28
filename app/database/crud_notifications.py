@@ -63,6 +63,7 @@ async def get_notifications_by_employee(
         page: int = 1,
         page_size: int = 50,
         only_unread: bool = False,
+        show: Optional[str] = None, # Что показать, None=all, asset / session
         asset_id: Optional[int] = None,
         session_id: Optional[int] = None,
         direction: Literal["incoming", "outgoing", "all"] = "incoming",
@@ -80,8 +81,14 @@ async def get_notifications_by_employee(
     count_query = select(func.count(Notification.notification_id)).where(condition)
     if only_unread and direction != "outgoing":
         count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
+    if show == "asset":
+        count_query = count_query.where(Notification.asset_id is not None)
+    if show == "session":
+        count_query = count_query.where(Notification.session_id is not None)
     if asset_id is not None:
         count_query = count_query.where(Notification.asset_id == asset_id)
+    if session_id is not None:
+        count_query = count_query.where(Notification.session_id == session_id)
 
     total = (await db.execute(count_query)).scalar_one()
 
@@ -98,6 +105,10 @@ async def get_notifications_by_employee(
 
     if only_unread and direction != "outgoing":
         query = query.where(Notification.status == NotificationStatus.UNREAD)
+    if show == "asset":
+        query = query.where(Notification.asset_id is not None)
+    if show == "session":
+        query = query.where(Notification.session_id is not None)
     if asset_id is not None:
         query = query.where(Notification.asset_id == asset_id)
     if session_id is not None:

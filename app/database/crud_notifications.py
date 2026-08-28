@@ -67,7 +67,7 @@ async def get_notifications_by_employee(
         direction: Literal["incoming", "outgoing", "all"] = "incoming",
 ) -> Tuple[Sequence[Notification], int]:
 
-    # 1. Жёсткая логика фильтрации по направлению
+    # Жёсткая логика фильтрации по направлению
     if direction == "incoming":
         condition = Notification.employee_id == employee_id
     elif direction == "outgoing":
@@ -75,7 +75,7 @@ async def get_notifications_by_employee(
     else: # "all"
         condition = or_(Notification.employee_id == employee_id, Notification.initiator_id == employee_id)
 
-    # 2. Подсчёт
+    # Подсчёт
     count_query = select(func.count(Notification.notification_id)).where(condition)
     if only_unread and direction != "outgoing":
         count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
@@ -84,7 +84,7 @@ async def get_notifications_by_employee(
 
     total = (await db.execute(count_query)).scalar_one()
 
-    # 3. Получение данных (с selectinload для предотвращения MissingGreenlet)
+    # Получение данных
     query = (
         select(Notification)
         .options(

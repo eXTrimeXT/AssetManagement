@@ -37,7 +37,7 @@ router_notifications = APIRouter(prefix="/notifications", tags=["Notifications"]
 @router_notifications.get("/my", response_model=PaginatedNotificationResponse)
 async def get_my_notifications(
         page: int = Query(1, ge=1),
-        page_size: int = Query(50, ge=1, le=200),
+        page_size: int = Query(200, ge=1, le=200),
         only_unread: bool = Query(False),
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
@@ -81,7 +81,6 @@ async def get_my_notifications(
 @router_notifications.get("/stream")
 async def stream_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
-        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming, outgoing или all"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),

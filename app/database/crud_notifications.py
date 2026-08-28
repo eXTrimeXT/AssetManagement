@@ -64,6 +64,7 @@ async def get_notifications_by_employee(
         page_size: int = 50,
         only_unread: bool = False,
         asset_id: Optional[int] = None,
+        session_id: Optional[int] = None,
         direction: Literal["incoming", "outgoing", "all"] = "incoming",
 ) -> Tuple[Sequence[Notification], int]:
 
@@ -99,6 +100,8 @@ async def get_notifications_by_employee(
         query = query.where(Notification.status == NotificationStatus.UNREAD)
     if asset_id is not None:
         query = query.where(Notification.asset_id == asset_id)
+    if session_id is not None:
+        query = query.where(Notification.session_id == session_id)
 
     query = query.order_by(Notification.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
 

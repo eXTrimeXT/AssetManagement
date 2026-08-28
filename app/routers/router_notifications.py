@@ -40,6 +40,7 @@ async def get_my_notifications(
         page_size: int = Query(50, ge=1, le=200),
         only_unread: bool = Query(False),
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("incoming", description="incoming (входящие), outgoing (исходящие) или all (все)"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -53,6 +54,7 @@ async def get_my_notifications(
         page_size=page_size,
         only_unread=only_unread,
         asset_id=asset_id,
+        session_id=session_id,
         direction=direction,
     )
 
@@ -80,6 +82,7 @@ async def get_my_notifications(
 @router_notifications.get("/stream")
 async def stream_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming, outgoing или all"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -96,6 +99,7 @@ async def stream_notifications(
             page_size=100,
             only_unread=False,
             asset_id=asset_id,
+            session_id=session_id,
             direction=direction,
         )
 

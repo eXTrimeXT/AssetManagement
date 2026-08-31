@@ -309,7 +309,7 @@ async def delete_notification(
         employee_id: str,
 ) -> bool:
     notification = await get_notification_by_id(db, notification_id)
-    if not notification or notification.employee_id != employee_id:
+    if not notification or (notification.employee_id != employee_id or notification.initiator_id != employee_id and notification.status == NotificationStatus.UNREAD):
         return False
     await db.delete(notification)
     await db.commit()

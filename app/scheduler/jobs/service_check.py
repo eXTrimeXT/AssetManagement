@@ -25,13 +25,13 @@ async def get_or_create_service_status(session) -> AssetStatus:
     status_obj = result.scalars().first()
 
     if status_obj:
-        logger.debug(f"Статус '{SERVICE_REQUIRED_STATUS}' найден: id={status_obj.id}")
+        # logger.debug(f"Статус '{SERVICE_REQUIRED_STATUS}' найден: id={status_obj.id}")
         return status_obj
 
     new_status = AssetStatus(status=SERVICE_REQUIRED_STATUS)
     session.add(new_status)
     await session.flush()
-    logger.info(f"Создан статус '{SERVICE_REQUIRED_STATUS}': id={new_status.id}")
+    # logger.info(f"Создан статус '{SERVICE_REQUIRED_STATUS}': id={new_status.id}")
     return new_status
 
 
@@ -56,7 +56,7 @@ async def check_service_assets():
     - every_week_check=False, service_period IS NULL → пропуск
     - every_week_check=False, service_period > 0 → период = service_period
     """
-    logger.info("🔧 Запуск задачи проверки активов...")
+    # logger.info("🔧 Запуск задачи проверки активов...")
     today = date.today()
 
     async with async_session() as session:
@@ -83,10 +83,10 @@ async def check_service_assets():
         assets = result.scalars().all()
 
         if not assets:
-            logger.info("Нет активов, требующих обслуживания")
+            # logger.info("Нет активов, требующих обслуживания")
             return
 
-        logger.info(f"📋 Найдено активов: {len(assets)}")
+        # logger.info(f"📋 Найдено активов: {len(assets)}")
 
         notifications_created = 0
         assets_updated = 0
@@ -94,7 +94,7 @@ async def check_service_assets():
         for asset in assets:
             period = _calculate_service_period(asset)
             if period == 0:
-                logger.debug(f"  ⊘ Актив {asset.asset_id}: пропущен (нет периода)")
+                # logger.debug(f"  ⊘ Актив {asset.asset_id}: пропущен (нет периода)")
                 continue
 
             # Находим активных ответственных
@@ -104,7 +104,7 @@ async def check_service_assets():
             ]
 
             if not responsible_users:
-                logger.debug(f"  ⊘ Актив {asset.asset_id}: нет ответственных")
+                # logger.debug(f"  ⊘ Актив {asset.asset_id}: нет ответственных")
                 continue
 
             # Создаём уведомления для каждого ответственного
@@ -127,19 +127,20 @@ async def check_service_assets():
             asset.next_service = today + timedelta(days=period)
             assets_updated += 1
 
-            logger.info(
-                f"  ✓ Актив {asset.asset_id} ({asset.name}): "
-                f"статус '{old_status}' → '{SERVICE_REQUIRED_STATUS}', "
-                f"next_service → {asset.next_service}, "
-                f"уведомлений: {len(responsible_users)}"
-            )
+            # logger.info(
+            #     f"  ✓ Актив {asset.asset_id} ({asset.name}): "
+            #     f"статус '{old_status}' → '{SERVICE_REQUIRED_STATUS}', "
+            #     f"next_service → {asset.next_service}, "
+            #     f"уведомлений: {len(responsible_users)}"
+            # )
 
         # Сохраняем изменения
         if notifications_created > 0 or assets_updated > 0:
             await session.commit()
-            logger.info(
-                f"Завершено: {notifications_created} уведомлений, "
-                f"{assets_updated} активов обновлено"
-            )
+            # logger.info(
+            #     f"Завершено: {notifications_created} уведомлений, "
+            #     f"{assets_updated} активов обновлено"
+            # )
         else:
-            logger.info("Нет изменений для сохранения")
+            pass
+            # logger.info("Нет изменений для сохранения")

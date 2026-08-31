@@ -76,7 +76,58 @@ async def get_notification_counts_grouped(
             Notification.initiator_id == employee_id
         )
 
-    # 2. Запрос для АКТИВОВ
+    # 2. Если передан фильтр по asset_id — возвращаем только группу "asset"
+    if asset_id is not None:
+        asset_query = select(
+            Notification.asset_id,
+            func.count(Notification.notification_id).label("total"),
+            func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
+            func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
+            func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
+        ).where(
+            base_condition,
+            Notification.asset_id == asset_id
+        ).group_by(Notification.asset_id)
+
+        asset_result = await db.execute(asset_query)
+        asset_counts = {}
+        for row in asset_result.all():
+            asset_counts[str(row.asset_id)] = {
+                "total": row.total,
+                "unchecked_count": row.unchecked,
+                "checked_count": row.checked,
+                "declined_count": row.declined,
+            }
+
+        return {"asset": asset_counts}
+
+    # 3. Если передан фильтр по session_id — возвращаем только группу "session"
+    if session_id is not None:
+        session_query = select(
+            Notification.session_id,
+            func.count(Notification.notification_id).label("total"),
+            func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
+            func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
+            func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
+        ).where(
+            base_condition,
+            Notification.session_id == session_id
+        ).group_by(Notification.session_id)
+
+        session_result = await db.execute(session_query)
+        session_counts = {}
+        for row in session_result.all():
+            session_counts[str(row.session_id)] = {
+                "total": row.total,
+                "unchecked_count": row.unchecked,
+                "checked_count": row.checked,
+                "declined_count": row.declined,
+            }
+
+        return {"session": session_counts}
+
+    # 4. Если оба фильтра None — возвращаем обе группы
+    # Запрос для АКТИВОВ
     asset_query = select(
         Notification.asset_id,
         func.count(Notification.notification_id).label("total"),
@@ -86,13 +137,7 @@ async def get_notification_counts_grouped(
     ).where(
         base_condition,
         Notification.asset_id.isnot(None)
-    )
-
-    # Применяем фильтр по asset_id, если он передан
-    if asset_id is not None:
-        asset_query = asset_query.where(Notification.asset_id == asset_id)
-
-    asset_query = asset_query.group_by(Notification.asset_id)
+    ).group_by(Notification.asset_id)
 
     asset_result = await db.execute(asset_query)
     asset_counts = {}
@@ -104,7 +149,7 @@ async def get_notification_counts_grouped(
             "declined_count": row.declined,
         }
 
-    # 3. Запрос для СЕССИЙ
+    # Запрос для СЕССИЙ
     session_query = select(
         Notification.session_id,
         func.count(Notification.notification_id).label("total"),
@@ -114,13 +159,7 @@ async def get_notification_counts_grouped(
     ).where(
         base_condition,
         Notification.session_id.isnot(None)
-    )
-
-    # Применяем фильтр по session_id, если он передан
-    if session_id is not None:
-        session_query = session_query.where(Notification.session_id == session_id)
-
-    session_query = session_query.group_by(Notification.session_id)
+    ).group_by(Notification.session_id)
 
     session_result = await db.execute(session_query)
     session_counts = {}
@@ -132,7 +171,6 @@ async def get_notification_counts_grouped(
             "declined_count": row.declined,
         }
 
-    # 4. Возвращаем единую вложенную структуру
     return {
         "asset": asset_counts,
         "session": session_counts

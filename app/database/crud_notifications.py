@@ -56,6 +56,46 @@ async def get_notification_counts(db: AsyncSession, employee_id: str) -> dict:
         "declined_count": declined_res.scalar_one(),
     }
 
+async def get_notification_counts_filtered(
+        db: AsyncSession,
+        employee_id: str,
+        direction: Literal["incoming", "outgoing", "all"] = "incoming",
+        asset_id: Optional[int] = None,
+) -> dict:
+    """Возвращает все счётчики уведомлений с учётом направления и фильтра по активу"""
+    # 1. Базовое условие по направлению
+    if direction == "incoming":
+        base_condition = Notification.employee_id == employee_id
+    elif direction == "outgoing":
+        base_condition = Notification.initiator_id == employee_id
+    else:  # "all"
+        base_condition = or_(
+            Notification.employee_id == employee_id,
+            Notification.initiator_id == employee_id
+        )
+
+    # 2. Дополнительный фильтр по активу
+    if asset_id is not None:
+        base_condition = base_condition & (Notification.asset_id == asset_id)
+
+    # 3. Параллельно считаем все 4 метрики одним запросом через CASE
+    count_query = select(
+        func.count(Notification.notification_id).label("total"),
+        func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
+        func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
+        func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
+    ).where(base_condition)
+
+    result = await db.execute(count_query)
+    row = result.one()
+
+    return {
+        "total": row.total,
+        "unchecked_count": row.unchecked,
+        "checked_count": row.checked,
+        "declined_count": row.declined,
+    }
+
 # ФУНКЦИЯ ПОЛУЧЕНИЯ СПИСКА
 async def get_notifications_by_employee(
         db: AsyncSession,
@@ -109,75 +149,6 @@ async def get_notifications_by_employee(
 
     result = await db.execute(query)
     return result.scalars().all(), total
-
-# async def get_notifications_by_employee(
-#         db: AsyncSession,
-#         employee_id: str,
-#         page: int = 1,
-#         page_size: int = 50,
-#         only_unread: bool = False,
-#         asset_id: Optional[int] = None,
-#         direction: Literal["incoming", "outgoing", "all"] = "incoming",
-# ) -> Tuple[Sequence[Notification], int]:
-#
-#     # Жёсткая логика фильтрации по направлению
-#     if direction == "incoming":
-#         condition = Notification.employee_id == employee_id
-#     elif direction == "outgoing":
-#         condition = Notification.initiator_id == employee_id
-#     else: # "all"
-#         condition = or_(Notification.employee_id == employee_id, Notification.initiator_id == employee_id)
-#
-#     # Подсчёт
-#     count_query = select(func.count(Notification.notification_id)).where(condition)
-#     if only_unread and direction != "outgoing":
-#         count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
-#     if asset_id is not None:
-#         count_query = count_query.where(Notification.asset_id == asset_id)
-#
-#     total = (await db.execute(count_query)).scalar_one()
-#
-#     # Получение данных
-#     query = (
-#         select(Notification)
-#         .options(
-#             selectinload(Notification.asset),
-#             selectinload(Notification.initiator),
-#             selectinload(Notification.recipient),
-#         )
-#         .where(condition)
-#     )
-#
-#     if only_unread and direction != "outgoing":
-#         query = query.where(Notification.status == NotificationStatus.UNREAD)
-#     if asset_id is not None:
-#         query = query.where(Notification.asset_id == asset_id)
-#
-#     query = query.order_by(Notification.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
-#
-#     result = await db.execute(query)
-#     notifications = list(result.scalars().all())
-#
-#     # ДЕДУПЛИКАЦИЯ: Если это исходящие или "все", убираем дубликаты session_id для инвентаризации
-#     if direction in ["outgoing", "all"]:
-#         seen_sessions = set()
-#         unique_notifications = []
-#         for n in notifications:
-#             # Если это уведомление об инвентаризации и у него есть session_id
-#             if n.event_type in ["inventory_started", "inventory_completed"] and n.session_id:
-#                 if n.session_id in seen_sessions:
-#                     continue # Пропускаем дубликат сессии
-#                 seen_sessions.add(n.session_id)
-#
-#             unique_notifications.append(n)
-#
-#         # СОРТИРОВКА: явно сортируем итоговый список по времени (от новых к старым)
-#         unique_notifications.sort(key=lambda x: x.created_at, reverse=True)
-#         notifications = unique_notifications
-#         # Примечание: total при этом останется общим, что корректно для пагинации,
-#         # но визуально пользователь увидит сгруппированные записи.
-#
-#     return notifications, total
 
 async def get_notification_by_id(db: AsyncSession, notification_id: int) -> Optional[Notification]:
     result = await db.execute(

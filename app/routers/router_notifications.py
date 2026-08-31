@@ -18,7 +18,7 @@ from app.database.crud_notifications import (
     decline_notification,
     delete_notification,
     delete_all_read,
-    get_unread_count, get_notification_counts,
+    get_unread_count, get_notification_counts, get_notification_counts_filtered
 )
 from app.schemas.notifications.NotificationSchemas import (
     NotificationResponse,
@@ -180,6 +180,28 @@ async def get_my_unread_count(
     """Количество непрочитанных уведомлений"""
     count = await get_unread_count(db, current_user.employee_id)
     return {"count": count}
+
+@router_notifications.get("/my/counts")
+async def get_my_notification_counts(
+        asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        direction: Literal["incoming", "outgoing", "all"] = Query(
+            "all",
+            description="incoming (входящие), outgoing (исходящие) или all (все)"
+        ),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user),
+):
+    """
+    Получить только счётчики уведомлений (без списка).
+    Возвращает: total, unchecked_count, checked_count, declined_count.
+    """
+    counts = await get_notification_counts_filtered(
+        db=db,
+        employee_id=current_user.employee_id,
+        direction=direction,
+        asset_id=asset_id,
+    )
+    return counts
 
 @router_notifications.patch("/{notification_id}/read", response_model=NotificationResponse)
 async def read_notification(

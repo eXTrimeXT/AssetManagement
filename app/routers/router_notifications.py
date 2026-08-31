@@ -181,7 +181,7 @@ async def get_my_unread_count(
     count = await get_unread_count(db, current_user.employee_id)
     return {"count": count}
 
-@router_notifications.get("/my/counts-grouped")
+@router_notifications.get("/my/counts")
 async def get_my_notification_counts_grouped(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),

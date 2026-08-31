@@ -250,16 +250,16 @@ async def delete_notification_endpoint(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Удалить уведомление"""
+    """Удалить уведомление (мягкое или жесткое в зависимости от роли и статуса)"""
     success = await delete_notification(db, notification_id, current_user.employee_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Уведомление не найдено")
+        raise HTTPException(status_code=404, detail="Уведомление не найдено или нет прав на удаление")
 
 @router_notifications.delete("/my/clear-read")
 async def clear_read_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Удалить все прочитанные уведомления"""
+    """Мягко удалить все прочитанные уведомления для текущего пользователя"""
     count = await delete_all_read(db, current_user.employee_id)
     return {"deleted": count}

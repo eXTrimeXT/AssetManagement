@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.models.Base import Base
 
@@ -88,6 +88,11 @@ class Notification(Base):
     status = Column(String(20), nullable=False, default=NotificationStatus.UNREAD, index=True)
     responded_at = Column(DateTime(), nullable=True)
     created_at = Column(DateTime(), default=datetime.now)
+
+    # === НОВЫЕ ПОЛЯ ДЛЯ МЯГКОГО УДАЛЕНИЯ ===
+    employee_deleted = Column(Boolean, default=False, nullable=False)   # Скрыто для получателя
+    initiator_deleted = Column(Boolean, default=False, nullable=False)  # Скрыто для инициатора
+    # ========================================
 
     # Relationships
     asset = relationship("Asset", foreign_keys=[asset_id], lazy="selectin")

@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Tuple, Sequence, Literal
 from datetime import datetime
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -67,13 +67,19 @@ async def get_notification_counts_grouped(
 
     # 1. Базовое условие по направлению
     if direction == "incoming":
-        base_condition = Notification.employee_id == employee_id
+        base_condition = and_(
+            Notification.employee_id == employee_id,
+            Notification.employee_deleted == False
+        )
     elif direction == "outgoing":
-        base_condition = Notification.initiator_id == employee_id
+        base_condition = and_(
+            Notification.initiator_id == employee_id,
+            Notification.initiator_deleted == False
+        )
     else:  # "all"
         base_condition = or_(
-            Notification.employee_id == employee_id,
-            Notification.initiator_id == employee_id
+            and_(Notification.employee_id == employee_id, Notification.employee_deleted == False),
+            and_(Notification.initiator_id == employee_id, Notification.initiator_deleted == False)
         )
 
     # 2. Если передан фильтр по asset_id — возвращаем только группу "asset"
@@ -188,13 +194,22 @@ async def get_notifications_by_employee(
         direction: Literal["incoming", "outgoing", "all"] = "all",
 ) -> Tuple[Sequence[Notification], int]:
 
-    # Жёсткая логика фильтрации по направлению
+    # Формируем базовое условие с учетом мягкого удаления
     if direction == "incoming":
-        condition = Notification.employee_id == employee_id
+        condition = and_(
+            Notification.employee_id == employee_id,
+            Notification.employee_deleted == False
+        )
     elif direction == "outgoing":
-        condition = Notification.initiator_id == employee_id
-    else: # "all"
-        condition = or_(Notification.employee_id == employee_id, Notification.initiator_id == employee_id)
+        condition = and_(
+            Notification.initiator_id == employee_id,
+            Notification.initiator_deleted == False
+        )
+    else:  # "all"
+        condition = or_(
+            and_(Notification.employee_id == employee_id, Notification.employee_deleted == False),
+            and_(Notification.initiator_id == employee_id, Notification.initiator_deleted == False)
+        )
 
     # Подсчёт
     count_query = select(func.count(Notification.notification_id)).where(condition)
@@ -306,28 +321,64 @@ async def mark_all_as_read(db: AsyncSession, employee_id: str) -> int:
 async def delete_notification(
         db: AsyncSession,
         notification_id: int,
-        employee_id: str,
+        current_user_id: str,
 ) -> bool:
+    """
+    Удаляет уведомление.
+    - Если инициатор удаляет UNREAD уведомление -> жесткое удаление из БД.
+    - В остальных случаях -> мягкое удаление (флаг deleted для конкретной роли).
+    """
     notification = await get_notification_by_id(db, notification_id)
-    if not notification or (notification.employee_id != employee_id or notification.initiator_id != employee_id and notification.status == NotificationStatus.UNREAD):
+    if not notification:
         return False
-    await db.delete(notification)
+
+    is_employee = (notification.employee_id == current_user_id)
+    is_initiator = (notification.initiator_id == current_user_id)
+
+    if not is_employee and not is_initiator:
+        return False  # Пользователь не имеет права удалять это уведомление
+
+    # Правило: Инициатор удаляет непрочитанное уведомление -> жесткое удаление
+    if is_initiator and notification.status == NotificationStatus.UNREAD:
+        await db.delete(notification)
+        await db.commit()
+        return True
+
+    # В остальных случаях -> мягкое удаление
+    if is_employee:
+        notification.employee_deleted = True
+    if is_initiator:
+        notification.initiator_deleted = True
+
     await db.commit()
     return True
 
 
-async def delete_all_read(db: AsyncSession, employee_id: str) -> int:
+async def delete_all_read(db: AsyncSession, current_user_id: str) -> int:
+    """Мягко удаляет все прочитанные уведомления для текущего пользователя"""
+
+    # Находим все уведомления, которые видны пользователю и имеют статус READ
+    visibility_condition = or_(
+        and_(Notification.employee_id == current_user_id, Notification.employee_deleted == False),
+        and_(Notification.initiator_id == current_user_id, Notification.initiator_deleted == False)
+    )
+
     result = await db.execute(
         select(Notification).where(
-            Notification.employee_id == employee_id,
-            Notification.status == NotificationStatus.READ,
-            )
+            visibility_condition,
+            Notification.status == NotificationStatus.READ
+        )
     )
     notifications = result.scalars().all()
+
     count = 0
     for n in notifications:
-        await db.delete(n)
+        if n.employee_id == current_user_id:
+            n.employee_deleted = True
+        if n.initiator_id == current_user_id:
+            n.initiator_deleted = True
         count += 1
+
     if count > 0:
         await db.commit()
     return count

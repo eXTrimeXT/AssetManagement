@@ -18,7 +18,7 @@ from app.database.crud_notifications import (
     decline_notification,
     delete_notification,
     delete_all_read,
-    get_unread_count, get_notification_counts, get_notification_counts_filtered
+    get_unread_count, get_notification_counts, get_notification_counts_grouped
 )
 from app.schemas.notifications.NotificationSchemas import (
     NotificationResponse,
@@ -181,9 +181,10 @@ async def get_my_unread_count(
     count = await get_unread_count(db, current_user.employee_id)
     return {"count": count}
 
-@router_notifications.get("/my/counts")
-async def get_my_notification_counts(
+@router_notifications.get("/my/counts-grouped")
+async def get_my_notification_counts_grouped(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query(
             "all",
             description="incoming (входящие), outgoing (исходящие) или all (все)"
@@ -192,14 +193,14 @@ async def get_my_notification_counts(
         current_user=Depends(require_authorized_user),
 ):
     """
-    Получить только счётчики уведомлений (без списка).
-    Возвращает: total, unchecked_count, checked_count, declined_count.
+    Получить счётчики уведомлений, сгруппированные по asset_id и session_id.
     """
-    counts = await get_notification_counts_filtered(
+    counts = await get_notification_counts_grouped(
         db=db,
         employee_id=current_user.employee_id,
         direction=direction,
         asset_id=asset_id,
+        session_id=session_id
     )
     return counts
 

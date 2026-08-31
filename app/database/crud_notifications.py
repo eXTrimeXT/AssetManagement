@@ -56,13 +56,15 @@ async def get_notification_counts(db: AsyncSession, employee_id: str) -> dict:
         "declined_count": declined_res.scalar_one(),
     }
 
-async def get_notification_counts_filtered(
+async def get_notification_counts_grouped(
         db: AsyncSession,
         employee_id: str,
         direction: Literal["incoming", "outgoing", "all"] = "incoming",
         asset_id: Optional[int] = None,
+        session_id: Optional[int] = None,
 ) -> dict:
-    """Возвращает все счётчики уведомлений с учётом направления и фильтра по активу"""
+    """Возвращает счётчики уведомлений, разделенные на asset и session, с фильтрами"""
+
     # 1. Базовое условие по направлению
     if direction == "incoming":
         base_condition = Notification.employee_id == employee_id
@@ -74,26 +76,66 @@ async def get_notification_counts_filtered(
             Notification.initiator_id == employee_id
         )
 
-    # 2. Дополнительный фильтр по активу
-    if asset_id is not None:
-        base_condition = base_condition & (Notification.asset_id == asset_id)
-
-    # 3. Параллельно считаем все 4 метрики одним запросом через CASE
-    count_query = select(
+    # 2. Запрос для АКТИВОВ
+    asset_query = select(
+        Notification.asset_id,
         func.count(Notification.notification_id).label("total"),
         func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
         func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
         func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
-    ).where(base_condition)
+    ).where(
+        base_condition,
+        Notification.asset_id.isnot(None)
+    )
 
-    result = await db.execute(count_query)
-    row = result.one()
+    # Применяем фильтр по asset_id, если он передан
+    if asset_id is not None:
+        asset_query = asset_query.where(Notification.asset_id == asset_id)
 
+    asset_query = asset_query.group_by(Notification.asset_id)
+
+    asset_result = await db.execute(asset_query)
+    asset_counts = {}
+    for row in asset_result.all():
+        asset_counts[str(row.asset_id)] = {
+            "total": row.total,
+            "unchecked_count": row.unchecked,
+            "checked_count": row.checked,
+            "declined_count": row.declined,
+        }
+
+    # 3. Запрос для СЕССИЙ
+    session_query = select(
+        Notification.session_id,
+        func.count(Notification.notification_id).label("total"),
+        func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
+        func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
+        func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
+    ).where(
+        base_condition,
+        Notification.session_id.isnot(None)
+    )
+
+    # Применяем фильтр по session_id, если он передан
+    if session_id is not None:
+        session_query = session_query.where(Notification.session_id == session_id)
+
+    session_query = session_query.group_by(Notification.session_id)
+
+    session_result = await db.execute(session_query)
+    session_counts = {}
+    for row in session_result.all():
+        session_counts[str(row.session_id)] = {
+            "total": row.total,
+            "unchecked_count": row.unchecked,
+            "checked_count": row.checked,
+            "declined_count": row.declined,
+        }
+
+    # 4. Возвращаем единую вложенную структуру
     return {
-        "total": row.total,
-        "unchecked_count": row.unchecked,
-        "checked_count": row.checked,
-        "declined_count": row.declined,
+        "asset": asset_counts,
+        "session": session_counts
     }
 
 # ФУНКЦИЯ ПОЛУЧЕНИЯ СПИСКА
@@ -105,7 +147,7 @@ async def get_notifications_by_employee(
         only_unread: bool = False,
         asset_id: Optional[int] = None,
         session_id: Optional[int] = None,
-        direction: Literal["incoming", "outgoing", "all"] = "incoming",
+        direction: Literal["incoming", "outgoing", "all"] = "all",
 ) -> Tuple[Sequence[Notification], int]:
 
     # Жёсткая логика фильтрации по направлению

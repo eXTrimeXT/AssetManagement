@@ -1,5 +1,8 @@
-from typing import Optional, Sequence, Tuple
+import logging
+from typing import Optional, Sequence, Tuple, List, Dict, Any
+
 from sqlalchemy import select, func, or_, inspect
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, aliased
 from app.models.zup.employee import Employee
@@ -7,6 +10,7 @@ from app.models.zup.department import ZupDepartment
 from app.models.zup.position import Position
 from app.schemas.zup.EmployeeSchemas import EmployeeCreate, EmployeeUpdate
 
+logger = logging.getLogger(__name__)
 
 async def get_employee_by_guid(db: AsyncSession, guid: str) -> Optional[Employee]:
     result = await db.execute(select(Employee).where(Employee.guid == guid))
@@ -337,3 +341,47 @@ async def upsert_employee(db: AsyncSession, employee_data: dict) -> Employee:
     await db.commit()
     await db.refresh(employee)
     return employee
+
+async def bulk_upsert_employees(db: AsyncSession, employees: List[Dict[str, Any]]) -> int:
+    """
+    Пакетная вставка/обновление сотрудников с защитой от превышения лимита asyncpg.
+    Разбивает данные на чанки по 1000 записей.
+    """
+    if not employees:
+        return 0
+
+    chunk_size = 1000  # 1000 * 16 полей = 16000 параметров (безопасно < 32767)
+    total_upserted = 0
+
+    for i in range(0, len(employees), chunk_size):
+        chunk = employees[i:i + chunk_size]
+
+        stmt = insert(Employee).values(chunk)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=['guid'],
+            set_={
+                'guid_person': stmt.excluded.guid_person,
+                'employee_id': stmt.excluded.employee_id,
+                'last_name': stmt.excluded.last_name,
+                'first_name': stmt.excluded.first_name,
+                'middle_name': stmt.excluded.middle_name,
+                'last_name_en': stmt.excluded.last_name_en,
+                'first_name_en': stmt.excluded.first_name_en,
+                'middle_name_en': stmt.excluded.middle_name_en,
+                'birth_date': stmt.excluded.birth_date,
+                'employment_date': stmt.excluded.employment_date,
+                'dismissal_date': stmt.excluded.dismissal_date,
+                'phone': stmt.excluded.phone,
+                'email': stmt.excluded.email,
+                'position_guid': stmt.excluded.position_guid,
+                'department_guid': stmt.excluded.department_guid,
+                'updated_at': func.now()
+            }
+        )
+
+        await db.execute(stmt)
+        total_upserted += len(chunk)
+        logger.debug(f"Обработан чанк сотрудников: {i + len(chunk)} из {len(employees)}")
+
+    await db.commit()
+    return total_upserted

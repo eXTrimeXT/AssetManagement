@@ -62,6 +62,7 @@ from app.scheduler.scheduler import init_scheduler, shutdown_scheduler
 
 # Импорт роутера уведомлений
 from app.routers.router_notifications import router_notifications
+from app.services.zup.zup_integration import close_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,7 @@ async def lifespan(app: FastAPI):
 
     # Завершаем выполенение планировщика задач
     shutdown_scheduler()
+    await close_http_client()
 
 async def db_notification_listener():
     try:

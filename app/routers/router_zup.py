@@ -20,8 +20,8 @@ from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
 
 logger = logging.getLogger(__name__)
-router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
 
+router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
 
 @router_zup.post("/sync", summary="Синхронизировать все данные из 1С-ЗУП")
 async def sync_zup_data(

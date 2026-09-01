@@ -25,10 +25,13 @@ def init_scheduler():
 
     scheduler.add_job(
         func=sync_zup_data_job,
-        trigger=CronTrigger(hour=2),
-        # trigger=IntervalTrigger(minutes=1),
+        # trigger=CronTrigger(hour=2),
+        trigger=IntervalTrigger(minutes=1),
         id="sync_all_data",
-        replace_existing=True
+        replace_existing=True,
+        max_instances=1,  # Запретить параллельные запуски
+        coalesce=True,    # Если пропущен запуск, выполнить только один раз
+        misfire_grace_time=3600  # Допустимая задержка запуска (1 час)
     )
 
     scheduler.start()

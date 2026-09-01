@@ -3,10 +3,12 @@ import os
 
 import httpx
 from typing import List, Dict, Any
+
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database.zup.crud_zup_employees import upsert_employee
+from app.database.zup.crud_zup_employees import upsert_employee, bulk_upsert_employees
 from app.database.zup.crud_zup_departments import upsert_department
-from app.database.zup.crud_zup_managers import upsert_manager
 from app.database.zup.crud_zup_positions import upsert_position
 
 logger = logging.getLogger(__name__)
@@ -14,19 +16,43 @@ logger = logging.getLogger(__name__)
 ZUP_BASE_URL = os.getenv("ZUP_BASE_URL", "")
 ZUP_AUTH = (os.getenv("ZUP_LOGIN", ""), os.getenv("ZUP_PASSWORD", ""))
 
+# Глобальный клиент с пулом соединений
+_http_client: httpx.AsyncClient | None = None
+
+def get_http_client():
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            verify=False,
+            timeout=30.0,
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5)
+        )
+    return _http_client
+
+async def close_http_client():
+    global _http_client
+    if _http_client and not _http_client.is_closed:
+        await _http_client.aclose()
+        _http_client = None
 
 def clean_empty_strings(data: dict) -> dict:
     """Преобразует пустые строки в None"""
     return {k: (None if v == "" else v) for k, v in data.items()}
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)),
+    reraise=True
+)
 async def fetch_from_zup(endpoint: str) -> List[Dict[str, Any]]:
-    """Получить данные из 1С-ЗУП"""
+    """Получить данные из 1С-ЗУП с повторными попытками, """
     url = f"{ZUP_BASE_URL}/{endpoint}"
+    client = get_http_client()
     try:
-        async with httpx.AsyncClient(verify=False) as client:
-            response = await client.get(url, auth=ZUP_AUTH, timeout=30.0)
-            response.raise_for_status()
-            return response.json()
+        response = await client.get(url, auth=ZUP_AUTH)
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
         logger.error(f"Ошибка при запросе к 1С-ЗУП {endpoint}: {e}")
         raise
@@ -80,7 +106,7 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
     }
 
     try:
-        # 1. Синхронизация подразделений
+        # Синхронизация подразделений
         logger.info("Синхронизация подразделений...")
         departments_data = await fetch_from_zup("departments")
         for dept in departments_data:
@@ -95,7 +121,7 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
             })
             stats["departments"] += 1
 
-        # 2. Синхронизация должностей
+        # Синхронизация должностей
         logger.info("Синхронизация должностей...")
         positions_data = await fetch_from_zup("positions")
         for pos in positions_data:
@@ -108,9 +134,11 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
             })
             stats["positions"] += 1
 
-        # 3. Синхронизация сотрудников
+        # Синхронизация сотрудников
         logger.info("Синхронизация сотрудников...")
         employees_data = await fetch_from_zup("employees")
+        employees_to_upsert = []
+
         for emp in employees_data:
             employee_data = {
                 "guid": emp["GUID"],
@@ -130,14 +158,12 @@ async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
                 "position_guid": emp.get("position"),
                 "department_guid": emp.get("department")
             }
+            employees_to_upsert.append(clean_empty_strings(employee_data))
 
-            # Очищаем пустые строки
-            employee_data = clean_empty_strings(employee_data)
-        
-            await upsert_employee(db, employee_data)
-            stats["employees"] += 1
+        # Выполняем пакетную загрузку с защитой от лимита параметров
+        stats["employees"] = await bulk_upsert_employees(db, employees_to_upsert)
 
-        # 4. Синхронизация руководителей
+        # Синхронизация руководителей
         # logger.info("Синхронизация руководителей...")
         # managers_data = await fetch_from_zup("managers")
         # for idx, mgr in enumerate(managers_data):

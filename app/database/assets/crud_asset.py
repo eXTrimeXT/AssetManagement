@@ -335,7 +335,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     # ИСПРАВЛЕНО: Исключаем asset_status_id из общего обновления, чтобы он обрабатывался только нашей специальной логикой
     update_data = data.model_dump(
         exclude_unset=True,
-        exclude={"users", "responsible_users", "asset_status", "asset_status_id", "location"}
+        exclude={"users", "responsible_users", "asset_status", "location"}
     )
 
     # Обновляем стандартные поля актива

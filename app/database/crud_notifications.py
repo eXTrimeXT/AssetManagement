@@ -48,12 +48,10 @@ async def get_notification_counts(db: AsyncSession, employee_id: str) -> dict:
 
     unread_res = await db.execute(select(func.count()).where(base_incoming, Notification.status == NotificationStatus.UNREAD))
     read_res = await db.execute(select(func.count()).where(base_incoming, Notification.status == NotificationStatus.READ))
-    declined_res = await db.execute(select(func.count()).where(base_incoming, Notification.status == NotificationStatus.DECLINED))
 
     return {
         "unchecked_count": unread_res.scalar_one(),
-        "checked_count": read_res.scalar_one(),
-        "declined_count": declined_res.scalar_one(),
+        "checked_count": read_res.scalar_one()
     }
 
 async def get_notification_counts_grouped(
@@ -63,124 +61,81 @@ async def get_notification_counts_grouped(
         asset_id: Optional[int] = None,
         session_id: Optional[int] = None,
 ) -> dict:
-    """Возвращает счётчики уведомлений, разделенные на asset и session, с фильтрами"""
-
-    # 1. Базовое условие по направлению
+    """Возвращает счётчики с общими суммами и группировкой по asset/session"""
+    # Базовое условие по направлению
     if direction == "incoming":
-        base_condition = and_(
-            Notification.employee_id == employee_id,
-            Notification.employee_deleted == False
-        )
+        base_condition = and_(Notification.employee_id == employee_id, Notification.employee_deleted == False)
     elif direction == "outgoing":
-        base_condition = and_(
-            Notification.initiator_id == employee_id,
-            Notification.initiator_deleted == False
-        )
+        base_condition = and_(Notification.initiator_id == employee_id, Notification.initiator_deleted == False)
     else:  # "all"
         base_condition = or_(
             and_(Notification.employee_id == employee_id, Notification.employee_deleted == False),
             and_(Notification.initiator_id == employee_id, Notification.initiator_deleted == False)
         )
 
-    # 2. Если передан фильтр по asset_id — возвращаем только группу "asset"
-    if asset_id is not None:
-        asset_query = select(
+    # Считаем ОБЩИЕ суммы для верхнего уровня ответа
+    total_query = select(
+        func.count(Notification.notification_id).label("total"),
+        func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
+        func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
+    ).where(base_condition)
+
+    total_res = await db.execute(total_query)
+    total_row = total_res.one()
+
+    # Логика группировки по asset (если нет фильтра по session)
+    asset_counts = {}
+    if session_id is None:
+        asset_q = select(
             Notification.asset_id,
             func.count(Notification.notification_id).label("total"),
             func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
             func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
-            func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
-        ).where(
-            base_condition,
-            Notification.asset_id == asset_id
-        ).group_by(Notification.asset_id)
+        ).where(base_condition, Notification.asset_id.isnot(None))
 
-        asset_result = await db.execute(asset_query)
-        asset_counts = {}
-        for row in asset_result.all():
-            asset_counts[str(row.asset_id)] = {
-                "total": row.total,
-                "unchecked_count": row.unchecked,
-                "checked_count": row.checked,
-                "declined_count": row.declined,
-            }
+        if asset_id is not None:
+            asset_q = asset_q.where(Notification.asset_id == asset_id)
 
-        return {"asset": asset_counts}
+        asset_res = await db.execute(asset_q.group_by(Notification.asset_id))
+        asset_counts = {str(row.asset_id): {
+            "total": row.total,
+            "unchecked_count": row.unchecked,
+            "checked_count": row.checked,
+        } for row in asset_res.all()}
 
-    # 3. Если передан фильтр по session_id — возвращаем только группу "session"
-    if session_id is not None:
-        session_query = select(
+    # Логика группировки по session (если нет фильтра по asset)
+    session_counts = {}
+    if asset_id is None:
+        session_q = select(
             Notification.session_id,
             func.count(Notification.notification_id).label("total"),
             func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
             func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
-            func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
-        ).where(
-            base_condition,
-            Notification.session_id == session_id
-        ).group_by(Notification.session_id)
+        ).where(base_condition, Notification.session_id.isnot(None))
 
-        session_result = await db.execute(session_query)
-        session_counts = {}
-        for row in session_result.all():
-            session_counts[str(row.session_id)] = {
-                "total": row.total,
-                "unchecked_count": row.unchecked,
-                "checked_count": row.checked,
-                "declined_count": row.declined,
-            }
+        if session_id is not None:
+            session_q = session_q.where(Notification.session_id == session_id)
 
-        return {"session": session_counts}
-
-    # 4. Если оба фильтра None — возвращаем обе группы
-    # Запрос для АКТИВОВ
-    asset_query = select(
-        Notification.asset_id,
-        func.count(Notification.notification_id).label("total"),
-        func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
-        func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
-        func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
-    ).where(
-        base_condition,
-        Notification.asset_id.isnot(None)
-    ).group_by(Notification.asset_id)
-
-    asset_result = await db.execute(asset_query)
-    asset_counts = {}
-    for row in asset_result.all():
-        asset_counts[str(row.asset_id)] = {
+        session_res = await db.execute(session_q.group_by(Notification.session_id))
+        session_counts = {str(row.session_id): {
             "total": row.total,
             "unchecked_count": row.unchecked,
             "checked_count": row.checked,
-            "declined_count": row.declined,
-        }
+        } for row in session_res.all()}
 
-    # Запрос для СЕССИЙ
-    session_query = select(
-        Notification.session_id,
-        func.count(Notification.notification_id).label("total"),
-        func.count().filter(Notification.status == NotificationStatus.UNREAD).label("unchecked"),
-        func.count().filter(Notification.status == NotificationStatus.READ).label("checked"),
-        func.count().filter(Notification.status == NotificationStatus.DECLINED).label("declined"),
-    ).where(
-        base_condition,
-        Notification.session_id.isnot(None)
-    ).group_by(Notification.session_id)
-
-    session_result = await db.execute(session_query)
-    session_counts = {}
-    for row in session_result.all():
-        session_counts[str(row.session_id)] = {
-            "total": row.total,
-            "unchecked_count": row.unchecked,
-            "checked_count": row.checked,
-            "declined_count": row.declined,
-        }
-
-    return {
-        "asset": asset_counts,
-        "session": session_counts
+    # Формируем итоговый ответ с общими суммами на верхнем уровне
+    result = {
+        "total": total_row.total,
+        "unchecked_count": total_row.unchecked,
+        "checked_count": total_row.checked,
     }
+
+    if session_id is None:
+        result["asset"] = asset_counts
+    if asset_id is None:
+        result["session"] = session_counts
+
+    return result
 
 # ФУНКЦИЯ ПОЛУЧЕНИЯ СПИСКА
 async def get_notifications_by_employee(
@@ -382,69 +337,6 @@ async def delete_all_read(db: AsyncSession, current_user_id: str) -> int:
     if count > 0:
         await db.commit()
     return count
-
-
-async def decline_notification(
-        db: AsyncSession,
-        notification_id: int,
-        employee_id: str,
-) -> Optional[dict]:
-    """
-    Отклонить назначение.
-    1. Помечает уведомление как declined
-    2. Закрывает привязку в asset_assignments
-    3. Создаёт ответное уведомление инициатору
-    """
-    notification = await get_notification_by_id(db, notification_id)
-    if not notification or notification.employee_id != employee_id:
-        return None
-
-    if notification.event_type not in (
-            NotificationEventType.ASSIGNED_RESPONSIBLE,
-            NotificationEventType.ASSIGNED_USER,
-    ):
-        return None
-
-    if notification.event_type == NotificationEventType.ASSIGNED_RESPONSIBLE:
-        assignment_type = "responsible"
-        decline_event = NotificationEventType.RESPONSIBLE_DECLINED
-    else:
-        assignment_type = "user"
-        decline_event = NotificationEventType.USER_DECLINED
-
-    # Закрываем привязку
-    result = await db.execute(
-        select(AssetAssignment).where(
-            AssetAssignment.asset_id == notification.asset_id,
-            AssetAssignment.employee_id == employee_id,
-            AssetAssignment.assignment_type == assignment_type,
-            AssetAssignment.end_date.is_(None),
-            )
-    )
-    assignment = result.scalars().first()
-    if assignment:
-        from datetime import date
-        assignment.end_date = date.today()
-
-    notification.status = NotificationStatus.DECLINED
-    notification.responded_at = datetime.now()
-
-    # Создаём ответное уведомление инициатору
-    if notification.initiator_id:
-        await create_notification(
-            db=db,
-            employee_id=notification.initiator_id,
-            asset_id=notification.asset_id,
-            event_type=decline_event,
-            initiator_id=employee_id,
-        )
-
-    await db.commit()
-    return {
-        "notification_id": notification.notification_id,
-        "declined": True,
-    }
-
 
 # ============================================================
 # БИЗНЕС-ЛОГИКА: ОБЁРТКИ ДЛЯ КОНКРЕТНЫХ ТИПОВ УВЕДОМЛЕНИЙ

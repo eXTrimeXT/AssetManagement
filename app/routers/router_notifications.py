@@ -15,7 +15,6 @@ from app.database.crud_notifications import (
     get_notification_by_id,
     mark_as_read,
     mark_all_as_read,
-    decline_notification,
     delete_notification,
     delete_all_read,
     get_unread_count, get_notification_counts, get_notification_counts_grouped
@@ -226,23 +225,23 @@ async def read_all_my_notifications(
     count = await mark_all_as_read(db, current_user.employee_id)
     return {"marked_as_read": count}
 
-@router_notifications.post("/{notification_id}/decline", response_model=NotificationDeclineResponse)
-async def decline_my_notification(
-        notification_id: int,
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user),
-):
-    """Отклонить назначение"""
-    result = await decline_notification(db, notification_id, current_user.employee_id)
-    if not result:
-        raise HTTPException(
-            status_code=404,
-            detail="Уведомление не найдено или не может быть отклонено"
-        )
-    return NotificationDeclineResponse(
-        message="Назначение отклонено",
-        notification_id=notification_id,
-    )
+# @router_notifications.post("/{notification_id}/decline", response_model=NotificationDeclineResponse)
+# async def decline_my_notification(
+#         notification_id: int,
+#         db: AsyncSession = Depends(get_db),
+#         current_user=Depends(require_authorized_user),
+# ):
+#     """Отклонить назначение"""
+#     result = await decline_notification(db, notification_id, current_user.employee_id)
+#     if not result:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Уведомление не найдено или не может быть отклонено"
+#         )
+#     return NotificationDeclineResponse(
+#         message="Назначение отклонено",
+#         notification_id=notification_id,
+#     )
 
 @router_notifications.delete("/{notification_id}", status_code=204)
 async def delete_notification_endpoint(

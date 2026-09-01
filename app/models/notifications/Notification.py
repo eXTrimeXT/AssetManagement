@@ -61,12 +61,12 @@ class NotificationStatus:
     """Статусы уведомлений"""
     UNREAD = "unread"
     READ = "read"
-    DECLINED = "declined"
+    # DECLINED = "declined"
 
     RU_LABELS = {
         UNREAD: "Не прочитано",
         READ: "Прочитано",
-        DECLINED: "Отклонено",
+        # DECLINED: "Отклонено",
     }
 
     @classmethod

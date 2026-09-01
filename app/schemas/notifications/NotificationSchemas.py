@@ -84,7 +84,7 @@ class NotificationResponse(BaseModel):
     @computed_field
     @property
     def status_ru(self) -> str:
-        statuses = {"unread": "Не прочитано", "read": "Прочитано", "declined": "Отклонено"}
+        statuses = {"unread": "Не прочитано", "read": "Прочитано"}
         return statuses.get(self.status, self.status)
 
 
@@ -114,7 +114,6 @@ class PaginatedNotificationResponse(BaseModel):
     has_previous: bool
     unchecked_count: int
     checked_count: int
-    declined_count: int
 
 
 class NotificationGroupedItem(BaseModel):

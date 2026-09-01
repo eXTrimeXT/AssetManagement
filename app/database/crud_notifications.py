@@ -137,7 +137,7 @@ async def get_notification_counts_grouped(
 
     return result
 
-# ФУНКЦИЯ ПОЛУЧЕНИЯ СПИСКА
+# Получение всех видов уведомлений
 async def get_notifications_by_employee(
         db: AsyncSession,
         employee_id: str,
@@ -147,9 +147,10 @@ async def get_notifications_by_employee(
         asset_id: Optional[int] = None,
         session_id: Optional[int] = None,
         direction: Literal["incoming", "outgoing", "all"] = "all",
+        notification_type: Literal["all", "asset", "session"] = "all",
 ) -> Tuple[Sequence[Notification], int]:
 
-    # Формируем базовое условие с учетом мягкого удаления
+    # Базовое условие по направлению и мягкому удалению
     if direction == "incoming":
         condition = and_(
             Notification.employee_id == employee_id,
@@ -166,15 +167,22 @@ async def get_notifications_by_employee(
             and_(Notification.initiator_id == employee_id, Notification.initiator_deleted == False)
         )
 
+    # Применяем фильтр по типу уведомления
+    if notification_type == "asset":
+        condition = and_(condition, Notification.asset_id.isnot(None))
+    elif notification_type == "session":
+        condition = and_(condition, Notification.session_id.isnot(None))
+
+    # Дополнительные фильтры (если переданы конкретные ID)
+    if asset_id is not None:
+        condition = and_(condition, Notification.asset_id == asset_id)
+    if session_id is not None:
+        condition = and_(condition, Notification.session_id == session_id)
+    if only_unread and direction != "outgoing":
+        condition = and_(condition, Notification.status == NotificationStatus.UNREAD)
+
     # Подсчёт
     count_query = select(func.count(Notification.notification_id)).where(condition)
-    if only_unread and direction != "outgoing":
-        count_query = count_query.where(Notification.status == NotificationStatus.UNREAD)
-    if asset_id is not None:
-        count_query = count_query.where(Notification.asset_id == asset_id)
-    if session_id is not None:
-        count_query = count_query.where(Notification.session_id == session_id)
-
     total = (await db.execute(count_query)).scalar_one()
 
     # Получение данных
@@ -186,16 +194,10 @@ async def get_notifications_by_employee(
             selectinload(Notification.recipient),
         )
         .where(condition)
+        .order_by(Notification.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
-
-    if only_unread and direction != "outgoing":
-        query = query.where(Notification.status == NotificationStatus.UNREAD)
-    if asset_id is not None:
-        query = query.where(Notification.asset_id == asset_id)
-    if session_id is not None:
-        query = query.where(Notification.session_id == session_id)
-
-    query = query.order_by(Notification.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
 
     result = await db.execute(query)
     return result.scalars().all(), total

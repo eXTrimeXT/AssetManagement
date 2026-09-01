@@ -39,6 +39,7 @@ async def get_my_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming (входящие), outgoing (исходящие) или all (все)"),
+        notification_type: Literal["all", "asset", "session"] = Query("all", description="Тип уведомления: all, asset или session"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
@@ -53,6 +54,7 @@ async def get_my_notifications(
         asset_id=asset_id,
         session_id=session_id,
         direction=direction,
+        notification_type=notification_type
     )
 
     counts = await get_notification_counts(db, employee_id)
@@ -80,6 +82,7 @@ async def stream_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming, outgoing или all"),
+        notification_type: Literal["all", "asset", "session"] = Query("all", description="Тип уведомления: all, asset или session"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
@@ -97,6 +100,7 @@ async def stream_notifications(
             asset_id=asset_id,
             session_id=session_id,
             direction=direction,
+            notification_type=notification_type
         )
 
         counts = await get_notification_counts(db, employee_id)

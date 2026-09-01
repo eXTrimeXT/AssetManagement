@@ -43,6 +43,7 @@ async def get_my_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
+    """Получение всех видом уведомлений с параметрами"""
     employee_id = current_user.employee_id
 
     notifications, total = await get_notifications_by_employee(

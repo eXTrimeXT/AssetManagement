@@ -35,7 +35,7 @@ router_notifications = APIRouter(prefix="/notifications", tags=["Notifications"]
 async def get_my_notifications(
         page: int = Query(1, ge=1),
         page_size: int = Query(200, ge=1, le=200),
-        only_unread: bool = Query(False),
+        only_unread: bool = Query(False, description="Показывать только прочитанные ?"),
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming (входящие), outgoing (исходящие) или all (все)"),

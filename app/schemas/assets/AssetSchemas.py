@@ -94,6 +94,7 @@ class AssetResponse(AssetBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     asset_type_name: Optional[str] = None
+    asset_status_id: Optional[int] = None
     # model: Optional["AssetModelResponse"] = None
     # location: Optional[LocationResponse] = None
 

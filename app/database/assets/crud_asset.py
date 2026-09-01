@@ -226,7 +226,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     }
 
     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
-    update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status", "location"})
+    update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status", "asset_status_id", "location"})
 
     # Обновляем поля актива
     for key, value in update_data.items():
@@ -234,7 +234,11 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     obj.updated_by = employee_id
 
     # === ОБРАБОТКА СТАТУСА ===
-    if "asset_status" in data.model_fields_set:
+    if "asset_status_id" in data.model_fields_set:
+        # Приоритет 1: Фронтенд явно передал числовой ID статуса (используем его, даже если это None)
+        obj.asset_status_id = data.asset_status_id
+    elif "asset_status" in data.model_fields_set:
+        # Приоритет 2: Фронтенд передал строковое название, ищем его в БД
         if data.asset_status is None:
             obj.asset_status_id = None
         else:
@@ -244,6 +248,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             status_obj = result.scalars().first()
             if status_obj:
                 obj.asset_status_id = status_obj.id
+            # Если статус не найден, мы просто не меняем asset_status_id (защита от поломки данных)
+
 
     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
     new_location_data = None

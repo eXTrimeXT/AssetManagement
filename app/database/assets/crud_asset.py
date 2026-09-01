@@ -340,18 +340,18 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     # === ПРЕДОБРАБОТКА СТАТУСА (до общего цикла) ===
     # Если фронтенд прислал строку asset_status — находим её ID в БД и перезаписываем asset_status_id в update_data
-    if "asset_status" in data.model_fields_set:
-        if data.asset_status is None:
-            update_data["asset_status_id"] = None
-        else:
-            result = await db.execute(
-                select(AssetStatus).where(AssetStatus.status == data.asset_status)
-            )
-            status_obj = result.scalars().first()
-            if status_obj:
-                # Перезаписываем ID, который пришёл от фронта (он может быть устаревшим)
-                update_data["asset_status_id"] = status_obj.id
-            # Если статус не найден — оставляем то, что прислал фронт (защита от поломки)
+    # if "asset_status" in data.model_fields_set:
+    #     if data.asset_status is None:
+    #         update_data["asset_status_id"] = None
+    #     else:
+    #         result = await db.execute(
+    #             select(AssetStatus).where(AssetStatus.status == data.asset_status)
+    #         )
+    #         status_obj = result.scalars().first()
+    #         if status_obj:
+    #             # Перезаписываем ID, который пришёл от фронта (он может быть устаревшим)
+    #             update_data["asset_status_id"] = status_obj.id
+    #         # Если статус не найден — оставляем то, что прислал фронт (защита от поломки)
 
     # Обновляем ВСЕ поля актива через ЕДИНУЮ общую логику
     for key, value in update_data.items():

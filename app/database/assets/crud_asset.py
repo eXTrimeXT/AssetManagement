@@ -294,6 +294,112 @@ async def get_assets_list(
 #     await db.commit()
 #     return await get_asset_by_id(db, asset_id)
 
+# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
+#     obj = await get_asset_by_id(db, asset_id)
+#     if not obj:
+#         return None
+#
+#     # === Получаем старую локацию для истории ===
+#     old_location_data = None
+#     for pos in (obj.asset_positions or []):
+#         if pos.is_active:
+#             old_location_data = {
+#                 "workshop_id": pos.workshop_id,
+#                 "place": pos.place,
+#                 "level": pos.level,
+#                 "x": pos.x,
+#                 "y": pos.y,
+#             }
+#             break
+#
+#     # Сохраняем старые значения для истории
+#     old_data = {
+#         'name': obj.name,
+#         'inventory_id': obj.inventory_id,
+#         'serial_number': obj.serial_number,
+#         'comment': obj.comment,
+#         'date_issue': obj.date_issue,
+#         'date_purchasing': obj.date_purchasing,
+#         'model_id': obj.model_id,
+#         'model_name': obj.model_name,
+#         'asset_type_id': obj.asset_type_id,
+#         'parent_id': obj.parent_id,
+#         'location': str(old_location_data) if old_location_data else None,
+#         'asset_status_id': obj.asset_status_id,
+#         'parent_name': obj.parent_name,
+#         'manufacturer_name': obj.manufacturer_name,
+#         'vendor_name': obj.vendor_name,
+#         'os_name': obj.os_name
+#     }
+#
+#     # ИСПРАВЛЕНО: asset_status_id теперь НЕ исключён — он обрабатывается через общий цикл
+#     update_data = data.model_dump(
+#         exclude_unset=True,
+#         exclude={"users", "responsible_users", "asset_status", "location"}
+#     )
+#
+#     # === ПРЕДОБРАБОТКА СТАТУСА (до общего цикла) ===
+#     # Если фронтенд прислал строку asset_status — находим её ID в БД и перезаписываем asset_status_id в update_data
+#     # if "asset_status" in data.model_fields_set:
+#     #     if data.asset_status is None:
+#     #         update_data["asset_status_id"] = None
+#     #     else:
+#     #         result = await db.execute(
+#     #             select(AssetStatus).where(AssetStatus.status == data.asset_status)
+#     #         )
+#     #         status_obj = result.scalars().first()
+#     #         if status_obj:
+#     #             # Перезаписываем ID, который пришёл от фронта (он может быть устаревшим)
+#     #             update_data["asset_status_id"] = status_obj.id
+#     #         # Если статус не найден — оставляем то, что прислал фронт (защита от поломки)
+#
+#     # Обновляем ВСЕ поля актива через ЕДИНУЮ общую логику
+#     for key, value in update_data.items():
+#         setattr(obj, key, value)
+#     obj.updated_by = employee_id
+#
+#     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
+#     new_location_data = None
+#     if "location" in data.model_fields_set and data.location is not None:
+#         new_location_data = await _sync_asset_location(db, asset_id, data.location, employee_id)
+#
+#     # === СОХРАНЕНИЕ ИСТОРИИ ИЗМЕНЕНИЙ ===
+#     new_data = {
+#         'name': obj.name,
+#         'inventory_id': obj.inventory_id,
+#         'serial_number': obj.serial_number,
+#         'comment': obj.comment,
+#         'date_issue': obj.date_issue,
+#         'date_purchasing': obj.date_purchasing,
+#         'model_id': obj.model_id,
+#         'model_name': obj.model_name,
+#         'asset_type_id': obj.asset_type_id,
+#         'parent_id': obj.parent_id,
+#         'location': str(new_location_data) if new_location_data else (
+#             str(old_location_data) if old_location_data else None
+#         ),
+#         'asset_status_id': obj.asset_status_id,
+#         'parent_name': obj.parent_name,
+#         'manufacturer_name': obj.manufacturer_name,
+#         'vendor_name': obj.vendor_name,
+#         'os_name': obj.os_name
+#     }
+#
+#     await compare_and_save_changes(
+#         db=db,
+#         asset_id=asset_id,
+#         old_data=old_data,
+#         new_data=new_data,
+#         changed_by=employee_id
+#     )
+#
+#     # Синхронизация привязок пользователей
+#     if data.users is not None or data.responsible_users is not None:
+#         await _sync_asset_users(db, asset_id, data.users or [], data.responsible_users or [], employee_id)
+#
+#     await db.commit()
+#     return await get_asset_by_id(db, asset_id)
+
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -332,26 +438,12 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'os_name': obj.os_name
     }
 
-    # ИСПРАВЛЕНО: asset_status_id теперь НЕ исключён — он обрабатывается через общий цикл
+    # ИСПРАВЛЕНО: asset_status_id обрабатывается как обычное поле, без специальной логики
+    # Строковое поле asset_status полностью игнорируется
     update_data = data.model_dump(
         exclude_unset=True,
         exclude={"users", "responsible_users", "asset_status", "location"}
     )
-
-    # === ПРЕДОБРАБОТКА СТАТУСА (до общего цикла) ===
-    # Если фронтенд прислал строку asset_status — находим её ID в БД и перезаписываем asset_status_id в update_data
-    # if "asset_status" in data.model_fields_set:
-    #     if data.asset_status is None:
-    #         update_data["asset_status_id"] = None
-    #     else:
-    #         result = await db.execute(
-    #             select(AssetStatus).where(AssetStatus.status == data.asset_status)
-    #         )
-    #         status_obj = result.scalars().first()
-    #         if status_obj:
-    #             # Перезаписываем ID, который пришёл от фронта (он может быть устаревшим)
-    #             update_data["asset_status_id"] = status_obj.id
-    #         # Если статус не найден — оставляем то, что прислал фронт (защита от поломки)
 
     # Обновляем ВСЕ поля актива через ЕДИНУЮ общую логику
     for key, value in update_data.items():
@@ -399,6 +491,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     await db.commit()
     return await get_asset_by_id(db, asset_id)
+
 def _enrich_users_from_cache(
         users_data: list,
         dept_hierarchy_cache: Dict[str, Any],

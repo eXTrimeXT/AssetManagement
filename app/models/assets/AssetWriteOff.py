@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date, func
 from sqlalchemy.orm import relationship
 from app.models.Base import Base
 
@@ -33,7 +33,7 @@ class AssetWriteOff(Base):
 
     # Процесс утверждения
     requested_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False)
-    requested_at = Column(DateTime(),  default=datetime.now, nullable=False)
+    requested_at = Column(DateTime(),  default=func.now(), nullable=False)
     approved_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True)
     approved_at = Column(DateTime(), nullable=True)
     reject_reason = Column(Text, nullable=True)

@@ -1,5 +1,5 @@
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, func
 from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 
@@ -45,8 +45,8 @@ class Workshop(Base):
     is_active = Column(Boolean, default=True, index=True)  # Активен ли цех
 
     # === Служебные поля ===
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # === Связи ===
     # assets: Mapped[list["Asset"]] = relationship(

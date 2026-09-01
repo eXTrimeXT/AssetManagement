@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Date, DateTime
+from sqlalchemy import Column, String, Date, DateTime, func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base
@@ -14,8 +14,8 @@ class Position(Base):
     creation_date = Column(Date)
     expiration_date = Column(Date, nullable=True)  # Пустая строка = активна
 
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
     employees = relationship(

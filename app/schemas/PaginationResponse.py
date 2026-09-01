@@ -5,7 +5,7 @@ T = TypeVar('T')
 
 class PaginatedResponse(BaseModel, Generic[T]):
     """Универсальная схема пагинированного ответа"""
-    items: List[T]
+    items: list[T]
     total: int = Field(..., description="Общее количество записей")
     page: int = Field(..., description="Текущая страница (начинается с 1)")
     page_size: int = Field(..., description="Размер страницы")

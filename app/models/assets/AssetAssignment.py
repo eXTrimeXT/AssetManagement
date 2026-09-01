@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.models.Base import Base
@@ -24,7 +24,7 @@ class AssetAssignment(Base):
     # Аудит
     assigned_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
     comment = Column(String(500))
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
 
     # Защита от дубликатов: нельзя назначить одного сотрудника на один актив дважды (по типу)
     __table_args__ = (

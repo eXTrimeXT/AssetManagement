@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional, Sequence, List, Any, Tuple
+from typing import Optional, Sequence, List, Any, Tuple, Dict
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,6 +12,12 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.database.assets.crud_asset_history import compare_and_save_changes
 from app.database.crud_notifications import notify_assigned_user, notify_assigned_responsible, notify_unassigned_user, \
     notify_unassigned_responsible
+
+# Импорты для оптимизации запроса связки актива и пользователя
+from app.schemas.zup import PositionResponse
+from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
+from app.database.zup import get_position_by_guid
+from app.database.zup.crud_zup_departments import get_hierarchy_departments
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -281,6 +287,74 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     await db.commit()
     return await get_asset_by_id(db, asset_id)
+
+def _enrich_users_from_cache(
+        users_data: list,
+        dept_hierarchy_cache: Dict[str, Any],
+        pos_cache: Dict[str, Any]
+) -> list:
+    """Обогащает данные пользователей, используя кэш иерархий и должностей (без запросов к БД)."""
+    enriched = []
+    for user in users_data:
+        user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
+
+        # 1. Обогащаем иерархией подразделения из кэша
+        dept_guid = user_dict.get("department_guid")
+        if dept_guid and dept_guid in dept_hierarchy_cache:
+            hierarchy = dept_hierarchy_cache[dept_guid]
+            if hierarchy:
+                user_dict["society"] = hierarchy.society
+                user_dict["department"] = hierarchy.department
+                user_dict["division"] = hierarchy.division
+                user_dict["group"] = hierarchy.group
+
+        # 2. Обогащаем должностью из кэша
+        pos_guid = user_dict.get("position_guid")
+        if pos_guid and pos_guid in pos_cache:
+            pos = pos_cache[pos_guid]
+            if pos:
+                user_dict["position"] = PositionResponse.model_validate(pos)
+
+        enriched.append(AssetUserFullResponse(**user_dict))
+
+    return enriched
+
+
+async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
+    """
+    Оптимизированное обогащение с кэшированием.
+    Решает проблему N+1, вызывая тяжелые функции только для УНИКАЛЬНЫХ guid.
+    """
+    # 1. Собираем уникальные GUID'ы со всех пользователей всех активов
+    unique_dept_guids = set()
+    unique_pos_guids = set()
+
+    for asset in assets:
+        for user in (asset.users or []) + (asset.responsible_users or []):
+            user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
+            if user_dict.get("department_guid"):
+                unique_dept_guids.add(user_dict["department_guid"])
+            if user_dict.get("position_guid"):
+                unique_pos_guids.add(user_dict["position_guid"])
+
+    # 2. Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
+    dept_hierarchy_cache = {}
+    for guid in unique_dept_guids:
+        hierarchy = await get_hierarchy_departments(db, guid)
+        dept_hierarchy_cache[guid] = hierarchy
+
+    # 3. Кэшируем должности
+    pos_cache = {}
+    for guid in unique_pos_guids:
+        position = await get_position_by_guid(db, guid)
+        pos_cache[guid] = position
+
+    # 4. Обогащаем данные в памяти, используя готовые кэши
+    for asset in assets:
+        if asset.users:
+            asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
+        if asset.responsible_users:
+            asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
 
 async def _sync_asset_users(
         db: AsyncSession,

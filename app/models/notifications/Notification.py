@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, func
 from sqlalchemy.orm import relationship
 from app.models.Base import Base
 
@@ -87,7 +87,7 @@ class Notification(Base):
     initiator_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True)
     status = Column(String(20), nullable=False, default=NotificationStatus.UNREAD, index=True)
     responded_at = Column(DateTime(), nullable=True)
-    created_at = Column(DateTime(), default=datetime.now)
+    created_at = Column(DateTime(), default=func.now())
 
     # === НОВЫЕ ПОЛЯ ДЛЯ МЯГКОГО УДАЛЕНИЯ ===
     employee_deleted = Column(Boolean, default=False, nullable=False)   # Скрыто для получателя

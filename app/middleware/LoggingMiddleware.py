@@ -30,10 +30,6 @@ ANSI_ESCAPE = re.compile(r'\x1b\[[0-9;]*m')
 def _strip_ansi(text: str) -> str:
     return ANSI_ESCAPE.sub('', text)
 
-def _strip_ansi(text: str) -> str:
-    return ANSI_ESCAPE.sub('', text)
-
-
 def _sanitize_data(data: any, sensitive_keys: set = None) -> any:
     """
     Рекурсивно маскирует чувствительные поля в dict/list.
@@ -231,13 +227,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         try:
             response: Response = await call_next(request)
             if user_login is not None and user_login != "android_data":
-                async with async_session() as db:
-                    await create_audit_log(
-                        db=db,
-                        user_login=user_login,
-                        action=f"{method} {route_path}",
-                        request_data=dict(request.query_params) if request_body is None else request_body
-                    )
+                if method in ("POST", "PUT", "PATCH", "DELETE"):
+                    async with async_session() as db:
+                        await create_audit_log(
+                            db=db,
+                            user_login=user_login,
+                            action=f"{method} {route_path}",
+                            request_data=dict(request.query_params) if request_body is None else request_body
+                        )
 
             process_time = time.time() - start_time
             response_status_code = response.status_code

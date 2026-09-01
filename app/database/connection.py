@@ -31,15 +31,5 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 AsyncGenerator[AsyncSession, Any]: Подсказка типа для генератора.
 """
 async def get_db() -> AsyncGenerator[AsyncSession, Any]:
-    # Создаем новую сессию из фабрики.
     async with async_session() as session:
-        try:
-            # Возвращаем сессию в эндпоинт.
-            # Код эндпоина выполняется здесь.
-            yield session
-        finally:
-            # Гарантированно закрываем сессию после завершения запроса (даже если была ошибка),
-            # возвращая соединение обратно в пул.
-            pass
-            # Примечание: async with сам закроет сессию при выходе из блока,
-            # но явная структура try/finally часто добавляется для логирования ошибок или отката транзакций.
+        yield session

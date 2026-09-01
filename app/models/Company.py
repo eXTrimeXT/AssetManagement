@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.Base import Base
@@ -17,8 +17,8 @@ class Company(Base):
 
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
     location_obj = relationship("Location", foreign_keys=[location_id])

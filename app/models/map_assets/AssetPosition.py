@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean, CheckConstraint, String
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean, CheckConstraint, String, func
 from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 
@@ -44,8 +44,8 @@ class AssetPosition(Base):
     level = Column(Integer, default=0)          # Этаж (2 Этаж)
 
     # === Служебные поля ===
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # === Связи ===
     asset: Mapped[Optional["Asset"]] = relationship(

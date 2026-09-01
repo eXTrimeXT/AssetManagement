@@ -7,7 +7,7 @@ from typing import List, Optional
 from app.database.connection import get_db
 from app.database.assets.crud_asset import (
     create_asset, get_asset_by_id, get_assets_list,
-    update_asset, delete_asset, get_asset_children
+    update_asset, delete_asset, get_asset_children, bulk_enrich_assets
 )
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse
 from app.services.auth.auth_service import (
@@ -63,68 +63,6 @@ async def enrich_users_data(db: AsyncSession, users_data: list) -> list:
 
     return enriched
 
-# @router_assets.get(
-#     "/",
-#     response_model=PaginatedResponse[AssetResponse],
-#     summary="Получить список активов (с пагинацией)"
-# )
-# async def get_assets(
-#         request: Request,
-#         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
-#         page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
-#         name: Optional[str] = Query(None),
-#         inventory_id: Optional[str] = Query(None),
-#         serial_number: Optional[str] = Query(None),
-#         asset_status: Optional[str] = Query(None),
-#         model_id: Optional[int] = Query(None),
-#         asset_type_id: Optional[int] = Query(None),
-#         parent_id: Optional[int] = Query(None),
-#         # location_id: Optional[int] = Query(None),
-#         db: AsyncSession = Depends(get_db),
-#         current_user=Depends(require_authorized_user)
-# ):
-#     """Получить страницу активов с фильтрацией по правам."""
-#     token = await get_token_from_request(request)
-#
-#     # Исключение для админов активов: доступ ко всем типам
-#     if check_assets_is_admin(token):
-#         allowed_type_en_names = None  # None означает без фильтрации по типам
-#     else:
-#         user_data = get_user_from_token(token)
-#         permissions = user_data.permissions
-#
-#         allowed_type_en_names = [
-#             en_name for en_name, perms in permissions.items()
-#             if perms.get("read", False)
-#         ]
-#
-#     assets, total = await get_assets_list(
-#         db=db,
-#         page=page,
-#         page_size=page_size,
-#         name=name,
-#         inventory_id=inventory_id,
-#         serial_number=serial_number,
-#         asset_status=asset_status,
-#         model_id=model_id,
-#         asset_type_id=asset_type_id,
-#         parent_id=parent_id,
-#         # location_id=location_id,
-#         allowed_type_en_names=allowed_type_en_names,
-#     )
-#
-#     total_pages = math.ceil(total / page_size) if total > 0 else 0
-#
-#     return PaginatedResponse(
-#         items=list(assets),
-#         total=total,
-#         page=page,
-#         page_size=page_size,
-#         total_pages=total_pages,
-#         has_next=page < total_pages,
-#         has_previous=page > 1,
-#     )
-
 @router_assets.get(
     "/",
     response_model=PaginatedResponse[AssetResponse],
@@ -172,11 +110,13 @@ async def get_assets(
     )
 
     # === Дополняем данные о пользователях ===
-    for asset in assets:
-        if asset.users:
-            asset.users = await enrich_users_data(db, asset.users)
-        if asset.responsible_users:
-            asset.responsible_users = await enrich_users_data(db, asset.responsible_users)
+    # for asset in assets:
+    #     if asset.users:
+    #         asset.users = await enrich_users_data(db, asset.users)
+    #     if asset.responsible_users:
+    #         asset.responsible_users = await enrich_users_data(db, asset.responsible_users)
+    # === Дополняем данные о пользователях (Bulk Fetch) ===
+    await bulk_enrich_assets(db, list(assets))
 
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 

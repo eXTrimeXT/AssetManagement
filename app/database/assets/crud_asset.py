@@ -187,6 +187,113 @@ async def get_assets_list(
 
     return assets, total
 
+# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
+#     obj = await get_asset_by_id(db, asset_id)
+#     if not obj:
+#         return None
+#
+#     # === Получаем старую локацию для истории ===
+#     old_location_data = None
+#     for pos in (obj.asset_positions or []):
+#         if pos.is_active:
+#             old_location_data = {
+#                 "workshop_id": pos.workshop_id,
+#                 "place": pos.place,
+#                 "level": pos.level,
+#                 "x": pos.x,
+#                 "y": pos.y,
+#             }
+#             break
+#
+#     # Сохраняем старые значения для истории
+#     old_data = {
+#         'name': obj.name,
+#         'inventory_id': obj.inventory_id,
+#         'serial_number': obj.serial_number,
+#         'comment': obj.comment,
+#         'date_issue': obj.date_issue,
+#         'date_purchasing': obj.date_purchasing,
+#         'model_id': obj.model_id,
+#         'model_name': obj.model_name,
+#         'asset_type_id': obj.asset_type_id,
+#         'parent_id': obj.parent_id,
+#         'location': str(old_location_data) if old_location_data else None,
+#         'asset_status_id': obj.asset_status_id,
+#         'parent_name': obj.parent_name,
+#         'manufacturer_name': obj.manufacturer_name,
+#         'vendor_name': obj.vendor_name,
+#         'os_name': obj.os_name
+#     }
+#
+#     # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
+#     update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status", "asset_status_id", "location"})
+#
+#     # Обновляем поля актива
+#     for key, value in update_data.items():
+#         setattr(obj, key, value)
+#     obj.updated_by = employee_id
+#
+#     # === ОБРАБОТКА СТАТУСА ===
+#     if "asset_status_id" in data.model_fields_set:
+#         # Приоритет 1: Фронтенд явно передал числовой ID статуса (используем его, даже если это None)
+#         obj.asset_status_id = data.asset_status_id
+#     elif "asset_status" in data.model_fields_set:
+#         # Приоритет 2: Фронтенд передал строковое название, ищем его в БД
+#         if data.asset_status is None:
+#             obj.asset_status_id = None
+#         else:
+#             result = await db.execute(
+#                 select(AssetStatus).where(AssetStatus.status == data.asset_status)
+#             )
+#             status_obj = result.scalars().first()
+#             if status_obj:
+#                 obj.asset_status_id = status_obj.id
+#             # Если статус не найден, мы просто не меняем asset_status_id (защита от поломки данных)
+#
+#
+#     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
+#     new_location_data = None
+#     if "location" in data.model_fields_set and data.location is not None:
+#         new_location_data = await _sync_asset_location(db, asset_id, data.location, employee_id)
+#
+#
+#     # === СОХРАНЕНИЕ ИСТОРИИ ИЗМЕНЕНИЙ ===
+#     new_data = {
+#         'name': obj.name,
+#         'inventory_id': obj.inventory_id,
+#         'serial_number': obj.serial_number,
+#         'comment': obj.comment,
+#         'date_issue': obj.date_issue,
+#         'date_purchasing': obj.date_purchasing,
+#         'model_id': obj.model_id,
+#         'model_name': obj.model_name,
+#         'asset_type_id': obj.asset_type_id,
+#         'parent_id': obj.parent_id,
+#         'location': str(new_location_data) if new_location_data else (
+#             str(old_location_data) if old_location_data else None
+#         ),
+#         'asset_status_id': obj.asset_status_id,
+#         'parent_name': obj.parent_name,
+#         'manufacturer_name': obj.manufacturer_name,
+#         'vendor_name': obj.vendor_name,
+#         'os_name': obj.os_name
+#     }
+#
+#     await compare_and_save_changes(
+#         db=db,
+#         asset_id=asset_id,
+#         old_data=old_data,
+#         new_data=new_data,
+#         changed_by=employee_id
+#     )
+#
+#     # Синхронизация привязок пользователей
+#     if data.users is not None or data.responsible_users is not None:
+#         await _sync_asset_users(db, asset_id, data.users or [], data.responsible_users or [], employee_id)
+#
+#     await db.commit()
+#     return await get_asset_by_id(db, asset_id)
+
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -218,22 +325,25 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'asset_type_id': obj.asset_type_id,
         'parent_id': obj.parent_id,
         'location': str(old_location_data) if old_location_data else None,
-        'asset_status_id': obj.asset_status_id,
+        'asset_status_id': obj.asset_status_id,  # Старый статус для истории
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
         'os_name': obj.os_name
     }
 
-    # ИСКЛЮЧАЕМ users и asset_status из прямого обновления
-    update_data = data.model_dump(exclude_unset=True, exclude={"users", "responsible_users", "asset_status", "asset_status_id", "location"})
+    # ИСПРАВЛЕНО: Исключаем asset_status_id из общего обновления, чтобы он обрабатывался только нашей специальной логикой
+    update_data = data.model_dump(
+        exclude_unset=True,
+        exclude={"users", "responsible_users", "asset_status", "asset_status_id", "location"}
+    )
 
-    # Обновляем поля актива
+    # Обновляем стандартные поля актива
     for key, value in update_data.items():
         setattr(obj, key, value)
     obj.updated_by = employee_id
 
-    # === ОБРАБОТКА СТАТУСА ===
+    # === ОБРАБОТКА СТАТУСА (ИСПРАВЛЕНО: единая и приоритетная логика) ===
     if "asset_status_id" in data.model_fields_set:
         # Приоритет 1: Фронтенд явно передал числовой ID статуса (используем его, даже если это None)
         obj.asset_status_id = data.asset_status_id
@@ -250,12 +360,10 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
                 obj.asset_status_id = status_obj.id
             # Если статус не найден, мы просто не меняем asset_status_id (защита от поломки данных)
 
-
     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
     new_location_data = None
     if "location" in data.model_fields_set and data.location is not None:
         new_location_data = await _sync_asset_location(db, asset_id, data.location, employee_id)
-
 
     # === СОХРАНЕНИЕ ИСТОРИИ ИЗМЕНЕНИЙ ===
     new_data = {
@@ -272,7 +380,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'location': str(new_location_data) if new_location_data else (
             str(old_location_data) if old_location_data else None
         ),
-        'asset_status_id': obj.asset_status_id,
+        'asset_status_id': obj.asset_status_id,  # Новый статус для истории
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,

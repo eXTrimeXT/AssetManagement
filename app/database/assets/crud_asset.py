@@ -325,45 +325,38 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'asset_type_id': obj.asset_type_id,
         'parent_id': obj.parent_id,
         'location': str(old_location_data) if old_location_data else None,
-        'asset_status_id': obj.asset_status_id,  # Старый статус для истории
+        'asset_status_id': obj.asset_status_id,
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
         'os_name': obj.os_name
     }
 
-    # ИСПРАВЛЕНО: Исключаем asset_status_id из общего обновления, чтобы он обрабатывался только нашей специальной логикой
+    # ИСПРАВЛЕНО: asset_status_id теперь НЕ исключён — он обрабатывается через общий цикл
     update_data = data.model_dump(
         exclude_unset=True,
         exclude={"users", "responsible_users", "asset_status", "location"}
     )
 
-    # Обновляем стандартные поля актива
-    for key, value in update_data.items():
-        setattr(obj, key, value)
-    obj.updated_by = employee_id
-
-    # === ОБРАБОТКА СТАТУСА (ИСПРАВЛЕНО: единая и приоритетная логика) ===
+    # === ПРЕДОБРАБОТКА СТАТУСА (до общего цикла) ===
+    # Если фронтенд прислал строку asset_status — находим её ID в БД и перезаписываем asset_status_id в update_data
     if "asset_status" in data.model_fields_set:
-        # Приоритет 1: Фронтенд передал строковое название — ищем в БД
         if data.asset_status is None:
-            obj.asset_status_id = None
+            update_data["asset_status_id"] = None
         else:
             result = await db.execute(
                 select(AssetStatus).where(AssetStatus.status == data.asset_status)
             )
             status_obj = result.scalars().first()
             if status_obj:
-                obj.asset_status_id = status_obj.id
-            # else:
-                # Защита от поломки данных: если статус не найден, не меняем
-                # logger.warning(
-                #     f"Статус '{data.asset_status}' не найден в БД. "
-                #     f"asset_status_id не изменён."
-                # )
-    elif "asset_status_id" in data.model_fields_set:
-        # Приоритет 2: Строки нет, но есть явный ID — используем его
-        obj.asset_status_id = data.asset_status_id
+                # Перезаписываем ID, который пришёл от фронта (он может быть устаревшим)
+                update_data["asset_status_id"] = status_obj.id
+            # Если статус не найден — оставляем то, что прислал фронт (защита от поломки)
+
+    # Обновляем ВСЕ поля актива через ЕДИНУЮ общую логику
+    for key, value in update_data.items():
+        setattr(obj, key, value)
+    obj.updated_by = employee_id
 
     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
     new_location_data = None
@@ -385,7 +378,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'location': str(new_location_data) if new_location_data else (
             str(old_location_data) if old_location_data else None
         ),
-        'asset_status_id': obj.asset_status_id,  # Новый статус для истории
+        'asset_status_id': obj.asset_status_id,
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
@@ -406,7 +399,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     await db.commit()
     return await get_asset_by_id(db, asset_id)
-
 def _enrich_users_from_cache(
         users_data: list,
         dept_hierarchy_cache: Dict[str, Any],

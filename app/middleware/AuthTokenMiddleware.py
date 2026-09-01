@@ -18,6 +18,10 @@ EXCLUDED_PATHS = {
 
 class AuthTokenMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        # Пропускаем все методы OPTIONS чтобы не засорять логи
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         path = request.url.path
         method = request.method
 

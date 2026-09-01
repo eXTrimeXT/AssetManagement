@@ -37,6 +37,7 @@ async def get_my_notifications(
         page_size: int = Query(200, ge=1, le=200),
         only_unread: bool = Query(False),
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming (входящие), outgoing (исходящие) или all (все)"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -50,6 +51,7 @@ async def get_my_notifications(
         page_size=page_size,
         only_unread=only_unread,
         asset_id=asset_id,
+        session_id=session_id,
         direction=direction,
     )
 
@@ -71,12 +73,12 @@ async def get_my_notifications(
         has_previous=page > 1,
         unchecked_count=counts["unchecked_count"],
         checked_count=counts["checked_count"]
-        # declined_count=counts["declined_count"],
     )
 
 @router_notifications.get("/stream")
 async def stream_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming, outgoing или all"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -93,6 +95,7 @@ async def stream_notifications(
             page_size=200,
             only_unread=False,
             asset_id=asset_id,
+            session_id=session_id,
             direction=direction,
         )
 
@@ -115,7 +118,6 @@ async def stream_notifications(
             "has_previous": False,
             "unchecked_count": counts["unchecked_count"],
             "checked_count": counts["checked_count"]
-            # "declined_count": counts["declined_count"]
         }
 
     async def event_generator():
@@ -222,24 +224,6 @@ async def read_all_my_notifications(
     """Пометить все уведомления как прочитанные"""
     count = await mark_all_as_read(db, current_user.employee_id)
     return {"marked_as_read": count}
-
-# @router_notifications.post("/{notification_id}/decline", response_model=NotificationDeclineResponse)
-# async def decline_my_notification(
-#         notification_id: int,
-#         db: AsyncSession = Depends(get_db),
-#         current_user=Depends(require_authorized_user),
-# ):
-#     """Отклонить назначение"""
-#     result = await decline_notification(db, notification_id, current_user.employee_id)
-#     if not result:
-#         raise HTTPException(
-#             status_code=404,
-#             detail="Уведомление не найдено или не может быть отклонено"
-#         )
-#     return NotificationDeclineResponse(
-#         message="Назначение отклонено",
-#         notification_id=notification_id,
-#     )
 
 @router_notifications.delete("/{notification_id}", status_code=204)
 async def delete_notification_endpoint(

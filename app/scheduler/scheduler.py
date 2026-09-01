@@ -18,15 +18,15 @@ def init_scheduler():
         check_service_assets,
         # trigger=CronTrigger(hour=9, minute=0),
         # для быстрой проверки
-        trigger=IntervalTrigger(minutes=5),
+        trigger=IntervalTrigger(minutes=20),
         id="asset_service_check",
         replace_existing=True,
     )
 
     scheduler.add_job(
         func=sync_zup_data_job,
-        # trigger=CronTrigger(hour=2),
-        trigger=IntervalTrigger(minutes=1),
+        trigger=CronTrigger(hour=2),
+        # trigger=IntervalTrigger(minutes=1),
         id="sync_all_data",
         replace_existing=True,
         max_instances=1,  # Запретить параллельные запуски

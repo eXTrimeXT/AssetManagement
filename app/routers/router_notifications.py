@@ -70,8 +70,8 @@ async def get_my_notifications(
         has_next=page < total_pages,
         has_previous=page > 1,
         unchecked_count=counts["unchecked_count"],
-        checked_count=counts["checked_count"],
-        declined_count=counts["declined_count"],
+        checked_count=counts["checked_count"]
+        # declined_count=counts["declined_count"],
     )
 
 @router_notifications.get("/stream")
@@ -114,8 +114,8 @@ async def stream_notifications(
             "has_next": 1 < total_pages,
             "has_previous": False,
             "unchecked_count": counts["unchecked_count"],
-            "checked_count": counts["checked_count"],
-            "declined_count": counts["declined_count"],
+            "checked_count": counts["checked_count"]
+            # "declined_count": counts["declined_count"]
         }
 
     async def event_generator():

@@ -344,11 +344,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     obj.updated_by = employee_id
 
     # === ОБРАБОТКА СТАТУСА (ИСПРАВЛЕНО: единая и приоритетная логика) ===
-    if "asset_status_id" in data.model_fields_set:
-        # Приоритет 1: Фронтенд явно передал числовой ID статуса (используем его, даже если это None)
-        obj.asset_status_id = data.asset_status_id
-    elif "asset_status" in data.model_fields_set:
-        # Приоритет 2: Фронтенд передал строковое название, ищем его в БД
+    if "asset_status" in data.model_fields_set:
+        # Приоритет 1: Фронтенд передал строковое название — ищем в БД
         if data.asset_status is None:
             obj.asset_status_id = None
         else:
@@ -358,7 +355,15 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             status_obj = result.scalars().first()
             if status_obj:
                 obj.asset_status_id = status_obj.id
-            # Если статус не найден, мы просто не меняем asset_status_id (защита от поломки данных)
+            # else:
+                # Защита от поломки данных: если статус не найден, не меняем
+                # logger.warning(
+                #     f"Статус '{data.asset_status}' не найден в БД. "
+                #     f"asset_status_id не изменён."
+                # )
+    elif "asset_status_id" in data.model_fields_set:
+        # Приоритет 2: Строки нет, но есть явный ID — используем его
+        obj.asset_status_id = data.asset_status_id
 
     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
     new_location_data = None

@@ -125,8 +125,3 @@ class NotificationGroupedItem(BaseModel):
     notifications: List[NotificationResponse]
     total: int
     unread_count: int
-
-
-class NotificationDeclineResponse(BaseModel):
-    message: str
-    notification_id: int

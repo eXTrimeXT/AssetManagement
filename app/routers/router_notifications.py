@@ -12,7 +12,6 @@ from app.database.connection import get_db
 from app.database.crud_notifications import (
     get_notifications_by_employee,
     get_notifications_grouped_by_asset,
-    get_notification_by_id,
     mark_as_read,
     mark_all_as_read,
     delete_notification,
@@ -23,7 +22,6 @@ from app.schemas.notifications.NotificationSchemas import (
     NotificationResponse,
     PaginatedNotificationResponse,
     NotificationGroupedItem,
-    NotificationDeclineResponse,
 )
 from app.services.auth.auth_service import require_authorized_user
 from app.services.notifications import notification_manager

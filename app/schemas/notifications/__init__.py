@@ -3,5 +3,4 @@ from app.schemas.notifications.NotificationSchemas import (
     NotificationResponse,
     PaginatedNotificationResponse,
     NotificationGroupedItem,
-    NotificationDeclineResponse
 )

@@ -99,8 +99,8 @@ async def get_notification_counts_grouped(
         asset_res = await db.execute(asset_q.group_by(Notification.asset_id))
         asset_counts = {str(row.asset_id): {
             "total": row.total,
-            "unchecked_count": row.unchecked,
-            "checked_count": row.checked,
+            "total_unchecked_count": row.unchecked,
+            "total_checked_count": row.checked,
         } for row in asset_res.all()}
 
     # Логика группировки по session (если нет фильтра по asset)

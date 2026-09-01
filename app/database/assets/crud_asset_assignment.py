@@ -9,6 +9,7 @@ from app.database.crud_notifications import (
     notify_assigned_responsible,
     notify_unassigned_user,
     notify_unassigned_responsible,
+    notify_assignment_declined,
 )
 
 
@@ -223,6 +224,46 @@ async def close_assignment(
             asset_id=assignment.asset_id,
             initiator_id=initiator,
         )
+
+    await db.commit()
+    await db.refresh(assignment)
+    return assignment
+
+async def decline_assignment(
+        db: AsyncSession,
+        asset_id: int,
+        employee_id: str,
+) -> Optional[AssetAssignment]:
+    """
+    Отказаться от актива: закрывает активную привязку (end_date = сегодня)
+    и создает уведомление для того, кто её создал (assigned_by).
+    """
+    # Ищем активную привязку текущего пользователя к этому активу
+    result = await db.execute(
+        select(AssetAssignment).where(
+            and_(
+                AssetAssignment.asset_id == asset_id,
+                AssetAssignment.employee_id == employee_id,
+                AssetAssignment.end_date.is_(None)
+            )
+        )
+    )
+    assignment = result.scalar_one_or_none()
+
+    if not assignment:
+        return None # Активной привязки не найдено
+
+    # Закрываем привязку
+    assignment.end_date = date.today()
+
+    # Создаем уведомление для инициатора привязки (assigned_by)
+    await notify_assignment_declined(
+        db=db,
+        asset_id=asset_id,
+        initiator_id=employee_id,          # Тот, кто отказался (current_user)
+        target_employee_id=assignment.assigned_by, # Тот, кто назначал
+        assignment_type=assignment.assignment_type
+    )
 
     await db.commit()
     await db.refresh(assignment)

@@ -9,7 +9,7 @@ from app.database.assets.crud_asset_assignment import (
     get_assignments_by_employee,
     delete_assignment,
     close_assignment,
-    get_assignment_by_id, get_all_assignments
+    get_assignment_by_id, get_all_assignments, decline_assignment
 )
 from app.database.assets.crud_asset import get_asset_by_id, get_active_assets_by_employee
 from app.database.crud_pc_data import get_all_pc_data
@@ -71,11 +71,6 @@ async def endpoint_get_all_assignments(
         return await get_assignments_by_employee(db, employee_id, active_only)
 
     return await get_all_assignments(db, active_only)
-    # raise HTTPException(
-    #     status_code=400,
-    #     detail="Укажите хотя бы один фильтр: asset_id или employee_id"
-    # )
-
 
 @router_asset_assignments.get(
     "/{asset_id}/assignments",
@@ -118,7 +113,7 @@ async def endpoint_close_assignment_endpoint(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    """Закрыть активную привязку (установить end_date = сегодня)."""
+    """Закрыть активную привязку (установить end_date = сегодня) и отправить уведомление админу"""
     assignment = await get_assignment_by_id(db, assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Привязка не найдена")
@@ -134,6 +129,40 @@ async def endpoint_close_assignment_endpoint(
         closed_by=current_user.employee_id,
     )
 
+@router_asset_assignments.post(
+    "/assignments/{asset_id}/decline",
+    response_model=AssetAssignmentResponse,
+    summary="Отказаться от актива"
+)
+async def endpoint_decline_assignment(
+        asset_id: int,
+        request: Request,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Сотрудник отказывается от привязанного к нему актива.
+    Привязка закрывается (end_date = сегодня), инициатору (assigned_by)
+    отправляется уведомление об отказе.
+    """
+    # Проверяем существование актива (опционально, но полезно для валидации)
+    asset = await get_asset_by_id(db, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Актив не найден")
+
+    if asset:
+        await check_asset_permission(db, request, asset.asset_type_id, "write")
+
+    # Пытаемся закрыть привязку
+    assignment = await decline_assignment(db, asset_id, current_user.employee_id)
+
+    if not assignment:
+        raise HTTPException(
+            status_code=404,
+            detail="Активная привязка к данному активу для текущего сотрудника не найдена"
+        )
+
+    return assignment
 
 @router_asset_assignments.delete(
     "/assignments/{assignment_id}",

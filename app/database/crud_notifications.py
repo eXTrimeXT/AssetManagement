@@ -415,6 +415,24 @@ async def notify_write_off_rejected(db, employee_id, asset_id, initiator_id):
     )
 
 
+async def notify_assignment_declined(db, employee_id, asset_id, initiator_id, assignment_type) -> None:
+    """
+    Создает уведомление для assigned_by о том, что сотрудник отказался от актива.
+    """
+    # Определяем тип события в зависимости от типа привязки
+    event_type = "responsible_declined" if assignment_type == "responsible" else "user_declined"
+
+    new_notification = Notification(
+        employee_id=employee_id,      # Кому: тот, кто назначал (assigned_by)
+        initiator_id=initiator_id,    # От кого: тот, кто отказался (current_user)
+        asset_id=asset_id,
+        event_type=event_type,
+        status="unread",
+    )
+
+    db.add(new_notification)
+    await db.commit()
+
 # Инвентаризация
 async def notify_inventory_started(db: AsyncSession, employee_id: str, session_id: int, initiator_id: str):
     """Уведомить сотрудника о начале инвентаризации сессии (ОДНО уведомление на сессию)"""
@@ -448,34 +466,3 @@ async def notify_inventory_completed(db: AsyncSession, employee_id: str, session
         event_type=NotificationEventType.INVENTORY_COMPLETED,
         initiator_id=initiator_id,
     )
-
-async def notify_assignment_declined(
-        db: AsyncSession,
-        asset_id: int,
-        initiator_id: str,
-        target_employee_id: str,
-        assignment_type: str
-) -> None:
-    """
-    Создает уведомление для assigned_by о том, что сотрудник отказался от актива.
-    """
-    # Получаем название актива для контекста уведомления
-    asset_result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
-    asset = asset_result.scalar_one_or_none()
-    asset_name = asset.name if asset else f"Актив #{asset_id}"
-
-    # Определяем тип события в зависимости от типа привязки
-    event_type = "responsible_declined" if assignment_type == "responsible" else "user_declined"
-
-    new_notification = Notification(
-        employee_id=target_employee_id,      # Кому: тот, кто назначал (assigned_by)
-        initiator_id=initiator_id,           # От кого: тот, кто отказался (current_user)
-        asset_id=asset_id,
-        event_type=event_type,
-        status="unread",
-        # Если в вашей модели Notification есть поле message/text, раскомментируйте строку ниже:
-        # message=f"Сотрудник отказался от актива: {asset_name}"
-    )
-
-    db.add(new_notification)
-    await db.commit()

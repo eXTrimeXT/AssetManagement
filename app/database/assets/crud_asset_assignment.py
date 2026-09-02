@@ -259,9 +259,9 @@ async def decline_assignment(
     # Создаем уведомление для инициатора привязки (assigned_by)
     await notify_assignment_declined(
         db=db,
+        employee_id=assignment.assigned_by, # Тот, кто назначал
         asset_id=asset_id,
         initiator_id=employee_id,          # Тот, кто отказался (current_user)
-        target_employee_id=assignment.assigned_by, # Тот, кто назначал
         assignment_type=assignment.assignment_type
     )
 

@@ -225,11 +225,9 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'os_name': obj.os_name
     }
 
-    # ИСПРАВЛЕНО: asset_status_id обрабатывается как обычное поле, без специальной логики
-    # Строковое поле asset_status полностью игнорируется
     update_data = data.model_dump(
         exclude_unset=True,
-        exclude={"users", "responsible_users", "asset_status", "location"}
+        exclude={"users", "responsible_users", "location"}
     )
 
     # Обновляем ВСЕ поля актива через ЕДИНУЮ общую логику

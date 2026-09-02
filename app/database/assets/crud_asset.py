@@ -20,7 +20,7 @@ from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.database.crud_notifications import notify_unassigned_serving
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
-from database.crud_notifications import notify_assigned_serving
+from app.database.crud_notifications import notify_assigned_serving
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:

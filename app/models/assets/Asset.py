@@ -7,7 +7,6 @@ from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.schemas.assets.AssetSchemas import AssetLocationResponse
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
-from models.map_assets.Workshop import Workshop
 
 
 class Asset(Base):

@@ -60,7 +60,6 @@ class AssetUpdate(BaseModel):
     name: Optional[str] = None
     inventory_id: Optional[str] = None
     serial_number: Optional[str] = None
-    # asset_status: Optional[str] = None
     asset_status_id: Optional[int] = None
     quantity: Optional[int] = None
     comment: Optional[str] = None

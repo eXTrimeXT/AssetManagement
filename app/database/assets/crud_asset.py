@@ -534,10 +534,10 @@ async def _update_primary_assignment(
         target_employee_id: Optional[str]
 ) -> None:
     """
-    Устанавливает is_primary=True для указанной связки и сбрасывает для остальных.
-    Если target_employee_id is None, просто сбрасывает is_primary у всех активных связок этого типа.
+    Устанавливает is_current=True для указанной связки и сбрасывает для остальных.
+    Если target_employee_id is None, просто сбрасывает is_current у всех активных связок этого типа.
     """
-    # Сбрасываем флаг is_primary у всех текущих активных привязок этого типа для данного актива
+    # Сбрасываем флаг is_current у всех текущих активных привязок этого типа для данного актива
     await db.execute(
         update(AssetAssignment)
         .where(
@@ -546,7 +546,7 @@ async def _update_primary_assignment(
             AssetAssignment.end_date.is_(None),
             AssetAssignment.is_current == True
         )
-        .values(is_primary=False)
+        .values(is_current=False)
     )
 
     # Если передан конкретный сотрудник, ищем его активную связку и ставим флаг
@@ -563,7 +563,7 @@ async def _update_primary_assignment(
 
         # Если есть связка изменяем флаг у записи
         if assignment:
-            assignment.is_primary = True
+            assignment.is_current = True
 
 async def _sync_asset_location(
         db: AsyncSession,

@@ -57,7 +57,7 @@ async def create_assignment(
         result = await db.execute(reset_query)
         old_primary_assignments = result.scalars().all()
         for old_assignment in old_primary_assignments:
-            old_assignment.is_primary = False
+            old_assignment.is_current = False
 
     # Создаём новое назначение
     db_assignment = AssetAssignment(

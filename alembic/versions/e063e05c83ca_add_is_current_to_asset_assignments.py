@@ -1,4 +1,4 @@
-"""add is_primary to asset_assignments
+"""add is_current to asset_assignments
 
 Revision ID: e063e05c83ca
 Revises: 327098fa4f45

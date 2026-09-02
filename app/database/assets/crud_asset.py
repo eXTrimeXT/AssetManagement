@@ -20,6 +20,7 @@ from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.database.crud_notifications import notify_unassigned_serving
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
+from database.crud_notifications import notify_assigned_serving
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -420,7 +421,7 @@ async def _sync_asset_users(
         new_assignment = AssetAssignment(
             asset_id=asset_id,
             employee_id=employee_id,
-            assignment_type="user",
+            assignment_type=AssignmentTypeEnum.USER,
             start_date=date.today(),
             end_date=None,
             assigned_by=assigned_by
@@ -444,7 +445,7 @@ async def _sync_asset_users(
         new_assignment = AssetAssignment(
             asset_id=asset_id,
             employee_id=employee_id,
-            assignment_type="responsible",
+            assignment_type=AssignmentTypeEnum.RESPONSIBLE,
             start_date=date.today(),
             end_date=None,
             assigned_by=assigned_by
@@ -468,7 +469,7 @@ async def _sync_asset_users(
         new_assignment = AssetAssignment(
             asset_id=asset_id,
             employee_id=employee_id,
-            assignment_type="responsible",
+            assignment_type=AssignmentTypeEnum.SERVING,
             start_date=date.today(),
             end_date=None,
             assigned_by=assigned_by
@@ -476,7 +477,7 @@ async def _sync_asset_users(
         db.add(new_assignment)
 
         # Уведомление только для НОВОГО ответственного
-        await notify_assigned_responsible(
+        await notify_assigned_serving(
             db=db,
             employee_id=employee_id,
             asset_id=asset_id,

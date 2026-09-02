@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.models.Base import Base
@@ -21,7 +21,7 @@ class AssetAssignment(Base):
 
     # Тип назначения: AssignmentTypeEnum
     assignment_type = Column(String(20), nullable=False, default=AssignmentTypeEnum.USER, index=True)
-
+    is_current = Column(Boolean, default=False, nullable=False)
 
     # Временные рамки
     start_date = Column(Date, nullable=False, default=date.today, index=True)

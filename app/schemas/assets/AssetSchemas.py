@@ -107,6 +107,8 @@ class AssetResponse(AssetBase):
     responsible_users: Optional[List[AssetUserFullResponse]] = None
     serving_users: Optional[List[AssetUserFullResponse]] = None
 
+    current_user: Optional[str] = None
+
     parent: Optional["AssetParentResponse"] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -41,6 +41,24 @@ async def create_assignment(
         # Уже существует активная привязка того же типа — возвращаем её без изменений
         return existing
 
+    # Сброс флага is_current у старых записей
+    if data.is_current:
+        reset_query = (
+            select(AssetAssignment)
+            .where(
+                and_(
+                    AssetAssignment.asset_id == data.asset_id,
+                    AssetAssignment.assignment_type == data.assignment_type,
+                    AssetAssignment.end_date.is_(None), # Только активные
+                    AssetAssignment.is_current == True
+                )
+            )
+        )
+        result = await db.execute(reset_query)
+        old_primary_assignments = result.scalars().all()
+        for old_assignment in old_primary_assignments:
+            old_assignment.is_primary = False
+
     # Создаём новое назначение
     db_assignment = AssetAssignment(
         asset_id=data.asset_id,

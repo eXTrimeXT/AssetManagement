@@ -342,7 +342,7 @@ async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
     unique_pos_guids = set()
 
     for asset in assets:
-        for user in (asset.users or []) + (asset.responsible_users or []):
+        for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
             user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
             if user_dict.get("department_guid"):
                 unique_dept_guids.add(user_dict["department_guid"])

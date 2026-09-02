@@ -121,6 +121,15 @@ class Asset(Base):
 
     @computed_field
     @property
+    def current_user(self):
+        """Возвращает ОДНУ активную привязку текущего пользователя"""
+        for assignment in self.assignments:
+            if assignment.end_date is None and assignment.is_current:
+                return assignment.employee_id
+        return None
+
+    @computed_field
+    @property
     def users(self) -> List[AssetUserFullResponse]:
         """Список обычных пользователей с полной информацией"""
         result = []

@@ -9,6 +9,7 @@ class AssetAssignmentCreate(BaseModel):
     employee_id: str = Field(..., max_length=20, description="Табельный номер сотрудника")
     assignment_type: Optional[str] = Field("user", max_length=20, description="Тип привязки")
     comment: Optional[str] = Field(None, max_length=500, description="Комментарий")
+    is_current: bool = Field(False, description="Флаг является ли этот пользователь текущим пользователем")
 
 class AssetAssignmentResponse(BaseModel):
     """Плоский ответ — без вложенностей"""
@@ -21,6 +22,7 @@ class AssetAssignmentResponse(BaseModel):
     assignment_type: Optional[str] = None
     comment: Optional[str] = None
     created_at: datetime
+    is_current: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,5 +65,6 @@ class AssetUserFullResponse(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     assignment_type: Optional[str] = None
+    # is_current: bool
 
     model_config = ConfigDict(from_attributes=True)

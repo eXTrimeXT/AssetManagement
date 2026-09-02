@@ -3,10 +3,10 @@ from typing import Optional, List
 from pydantic import computed_field
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func
 from sqlalchemy.orm import relationship, backref, Mapped
-from datetime import datetime
 from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.schemas.assets.AssetSchemas import AssetLocationResponse
+from app.models.assets.AssetAssignment import AssignmentTypeEnum
 
 
 class Asset(Base):
@@ -177,6 +177,55 @@ class Asset(Base):
             if a.end_date is not None:
                 continue
             if a.assignment_type != "responsible":
+                continue
+            emp = a.employee
+            if not emp:
+                continue
+
+            parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+            parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
+
+            result.append(AssetUserFullResponse(
+                # Базовые поля
+                guid=emp.guid,
+                employee_id=emp.employee_id,
+                # last_name=emp.last_name,
+                # first_name=emp.first_name,
+                # middle_name=emp.middle_name,
+                # last_name_en=emp.last_name_en,
+                # first_name_en=emp.first_name_en,
+                # middle_name_en=emp.middle_name_en,
+                birth_date=emp.birth_date,
+                employment_date=emp.employment_date,
+                dismissal_date=emp.dismissal_date,
+                phone=emp.phone,
+                email=emp.email,
+                comment=emp.comment,
+                position_guid=emp.position_guid,
+                department_guid=emp.department_guid,
+                created_at=emp.created_at,
+                updated_at=emp.updated_at,
+
+                # Вычисляемые поля
+                full_name_ru=" ".join(parts_ru) if parts_ru else None,
+                full_name_en=" ".join(parts_en) if parts_en else None,
+
+                # Поля из AssetAssignment
+                start_date=a.start_date,
+                end_date=a.end_date,
+                assignment_type=a.assignment_type,
+            ))
+        return result
+
+    @computed_field
+    @property
+    def serving_users(self) -> List[AssetUserFullResponse]:
+        """Список обслуживающих пользователей с полной информацией"""
+        result = []
+        for a in self.assignments:
+            if a.end_date is not None:
+                continue
+            if a.assignment_type != AssignmentTypeEnum.SERVING:
                 continue
             emp = a.employee
             if not emp:

@@ -7,6 +7,7 @@ from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.schemas.assets.AssetSchemas import AssetLocationResponse
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
+from models.map_assets.Workshop import Workshop
 
 
 class Asset(Base):
@@ -113,6 +114,7 @@ class Asset(Base):
 
         return AssetLocationResponse(
             workshop_id=workshop.workshop_id,
+            workshop_name=workshop.name,
             place=active_position.place,
             level=active_position.level,
             x=active_position.x,

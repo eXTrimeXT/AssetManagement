@@ -33,8 +33,8 @@ class AssetPosition(Base):
     # === Координаты на карте ===
     x = Column(Integer, nullable=False)  # Координата X (пиксели)
     y = Column(Integer, nullable=False)  # Координата Y (пиксели)
-    rotation = Column(Integer, default=0, nullable=False)  # Угол поворота (0-360 градусов)
-    scale = Column(Integer, default=100, nullable=False)  # Масштаб иконки (проценты, 50-200)
+    rotation = Column(Integer, default=0, nullable=False)   # Угол поворота (0-360 градусов)
+    scale = Column(Integer, default=100, nullable=False)    # Масштаб иконки (проценты, 50-200)
 
     # === Статус ===
     is_active = Column(Boolean, default=True, index=True)  # Текущая позиция (для истории)

@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, computed_field, Field, model_validat
 from datetime import datetime
 from typing import Optional, List
 
-from models.notifications.Notification import NotificationEventType
+from app.models.notifications.Notification import NotificationEventType
 
 
 class NotificationBase(BaseModel):

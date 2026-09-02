@@ -84,6 +84,7 @@ class AssetUpdate(BaseModel):
     vendor_name: Optional[str] = None
     os_name: Optional[str] = None
 
+    current_user: Optional[str] = None
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
     responsible_users: Optional[List[AssetUserUpdate]] = None
@@ -108,6 +109,7 @@ class AssetResponse(AssetBase):
     serving_users: Optional[List[AssetUserFullResponse]] = None
 
     current_user: Optional[str] = None
+    current_user_full_name: Optional[str] = None
 
     parent: Optional["AssetParentResponse"] = None
 

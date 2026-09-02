@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional, Sequence, List, Any, Tuple, Dict
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
@@ -285,6 +285,11 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         changed_by=employee_id
     )
 
+    # === ОБРАБОТКА ПЕРВИЧНЫХ ПОЛЬЗОВАТЕЛЕЙ (is_current) ===
+    # Проверяем, прислал ли фронтенд поле current_user
+    if "current_user" in data.model_fields_set:
+        await _update_primary_assignment(db, asset_id, "user", data.current_user)
+
     # Синхронизация привязок пользователей
     if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
         await _sync_asset_users(
@@ -521,6 +526,44 @@ async def _sync_asset_users(
                     initiator_id=assigned_by,
                 )
 
+
+async def _update_primary_assignment(
+        db: AsyncSession,
+        asset_id: int,
+        assignment_type: str,
+        target_employee_id: Optional[str]
+) -> None:
+    """
+    Устанавливает is_primary=True для указанной связки и сбрасывает для остальных.
+    Если target_employee_id is None, просто сбрасывает is_primary у всех активных связок этого типа.
+    """
+    # Сбрасываем флаг is_primary у всех текущих активных привязок этого типа для данного актива
+    await db.execute(
+        update(AssetAssignment)
+        .where(
+            AssetAssignment.asset_id == asset_id,
+            AssetAssignment.assignment_type == assignment_type,
+            AssetAssignment.end_date.is_(None),
+            AssetAssignment.is_current == True
+        )
+        .values(is_primary=False)
+    )
+
+    # Если передан конкретный сотрудник, ищем его активную связку и ставим флаг
+    if target_employee_id:
+        result = await db.execute(
+            select(AssetAssignment).where(
+                AssetAssignment.asset_id == asset_id,
+                AssetAssignment.employee_id == target_employee_id,
+                AssetAssignment.assignment_type == assignment_type,
+                AssetAssignment.end_date.is_(None)
+            )
+        )
+        assignment = result.scalar_one_or_none()
+
+        # Если есть связка изменяем флаг у записи
+        if assignment:
+            assignment.is_primary = True
 
 async def _sync_asset_location(
         db: AsyncSession,

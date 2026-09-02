@@ -130,6 +130,18 @@ class Asset(Base):
 
     @computed_field
     @property
+    def current_user_full_name(self):
+        """Возвращает ФИО текущего пользователя"""
+        full_name_ru = ""
+        for assignment in self.assignments:
+            emp = assignment.employee
+            if assignment.end_date is None and assignment.is_current:
+                parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+                full_name_ru=" ".join(parts_ru) if parts_ru else None
+        return full_name_ru
+
+    @computed_field
+    @property
     def users(self) -> List[AssetUserFullResponse]:
         """Список обычных пользователей с полной информацией"""
         result = []

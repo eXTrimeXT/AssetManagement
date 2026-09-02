@@ -89,11 +89,11 @@ def _apply_assets_filters(
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:
-        # query = query.where(Asset.inventory_id == inventory_id)
-        query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
+        query = query.where(Asset.inventory_id == inventory_id)
+        # query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
     if serial_number:
-        # query = query.where(Asset.serial_number == serial_number)
-        query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
+        query = query.where(Asset.serial_number == serial_number)
+        # query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
     # if asset_status:
     #     query = query.where(Asset.asset_status == asset_status)
     if asset_status:

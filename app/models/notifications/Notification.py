@@ -10,6 +10,7 @@ class NotificationEventType:
     """Типы событий уведомлений"""
     # Сервисные события
     SERVICE_DUE = "service_due"
+    ASSET_STATUS_CHANGED = "asset_status_changed"
 
     # Привязки/Отвязки пользователей и активов
     ASSIGNED_USER = "assigned_user"
@@ -36,6 +37,7 @@ class NotificationEventType:
     RU_LABELS = {
         # Сервисные события
         SERVICE_DUE: "Требуется обслуживание",
+        ASSET_STATUS_CHANGED: "Изменение статуса актива",
 
         # Привязки/Отвязки пользователей и активов
         ASSIGNED_USER: "Вы назначены пользователем актива",

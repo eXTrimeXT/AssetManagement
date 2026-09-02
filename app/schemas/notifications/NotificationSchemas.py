@@ -58,6 +58,7 @@ class NotificationResponse(BaseModel):
         # Единый словарь сообщений: (текст_для_инициатора (исходящее), текст_для_получателя (входящее))
         messages = {
             NotificationEventType.SERVICE_DUE: ("Требуется обслуживание актива", "Требуется обслуживание актива"),
+            NotificationEventType.ASSET_STATUS_CHANGED: ("Изменение статуса актива", "Изменение статуса актива"),
 
             NotificationEventType.ASSIGNED_RESPONSIBLE: ("Вы назначили сотрудника ответственным за актив", "Вас назначили ответственным за актив"),
             NotificationEventType.ASSIGNED_USER: ("Вы назначили сотрудника пользователем актива", "Вас назначили пользователем актива"),

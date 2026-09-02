@@ -18,6 +18,8 @@ from app.schemas.zup import PositionResponse
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
+from database.crud_notifications import notify_unassigned_serving
+from models.assets.AssetAssignment import AssignmentTypeEnum
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -350,6 +352,7 @@ async def _sync_asset_users(
         asset_id: int,
         users: list,
         responsible_users: list,
+        serving_users: list,
         assigned_by: str,
 ) -> None:
     """
@@ -362,6 +365,7 @@ async def _sync_asset_users(
     """
     requested_user_ids = {user.employee_id for user in (users or [])}
     requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
+    requested_serving_ids = {user.employee_id for user in (serving_users or [])}
 
     # Получаем все активные привязки
     result = await db.execute(
@@ -375,11 +379,15 @@ async def _sync_asset_users(
     # Мапы для быстрого поиска
     active_user_ids = {
         a.employee_id for a in active_assignments
-        if a.assignment_type == "user"
+        if a.assignment_type == AssignmentTypeEnum.USER
     }
     active_responsible_ids = {
         a.employee_id for a in active_assignments
-        if a.assignment_type == "responsible"
+        if a.assignment_type == AssignmentTypeEnum.RESPONSIBLE
+    }
+    active_serving_ids = {
+        a.employee_id for a in active_assignments
+        if a.assignment_type == AssignmentTypeEnum.SERVING
     }
 
     # === НОВЫЕ обычные пользователи (привязка + уведомление) ===
@@ -430,28 +438,61 @@ async def _sync_asset_users(
             initiator_id=assigned_by,
         )
 
+    # === НОВЫЕ обслуживающие пользователи (привязка + уведомление) ===
+    for employee_id in requested_serving_ids:
+        if employee_id in active_serving_ids:
+            # Уже привязан — пропускаем без уведомления
+            continue
+
+        new_assignment = AssetAssignment(
+            asset_id=asset_id,
+            employee_id=employee_id,
+            assignment_type="responsible",
+            start_date=date.today(),
+            end_date=None,
+            assigned_by=assigned_by
+        )
+        db.add(new_assignment)
+
+        # Уведомление только для НОВОГО ответственного
+        await notify_assigned_responsible(
+            db=db,
+            employee_id=employee_id,
+            asset_id=asset_id,
+            initiator_id=assigned_by,
+        )
+
     # === Отвязка пользователей (которых нет в запросе) ===
     for assignment in active_assignments:
         should_unassign = False
 
-        if assignment.assignment_type == "user":
+        if assignment.assignment_type == AssignmentTypeEnum.USER:
             should_unassign = assignment.employee_id not in requested_user_ids
-        elif assignment.assignment_type == "responsible":
+        elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
             should_unassign = assignment.employee_id not in requested_responsible_ids
+        elif assignment.assignment_type == AssignmentTypeEnum.SERVING:
+            should_unassign = assignment.employee_id not in requested_serving_ids
 
         if should_unassign:
             assignment.end_date = date.today()
 
             # Уведомление об отвязке
-            if assignment.assignment_type == "user":
+            if assignment.assignment_type == AssignmentTypeEnum.USER:
                 await notify_unassigned_user(
                     db=db,
                     employee_id=assignment.employee_id,
                     asset_id=asset_id,
                     initiator_id=assigned_by,
                 )
-            else:
+            elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
                 await notify_unassigned_responsible(
+                    db=db,
+                    employee_id=assignment.employee_id,
+                    asset_id=asset_id,
+                    initiator_id=assigned_by,
+                )
+            elif assignment.assignment_type == AssignmentTypeEnum.SERVING:
+                await notify_unassigned_serving(
                     db=db,
                     employee_id=assignment.employee_id,
                     asset_id=asset_id,

@@ -105,6 +105,7 @@ class AssetResponse(AssetBase):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserFullResponse]] = None
     responsible_users: Optional[List[AssetUserFullResponse]] = None
+    serving_users: Optional[List[AssetUserFullResponse]] = None
 
     parent: Optional["AssetParentResponse"] = None
 

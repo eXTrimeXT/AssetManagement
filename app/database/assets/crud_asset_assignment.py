@@ -2,13 +2,15 @@ from typing import Optional, Sequence
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
-from app.models.assets.AssetAssignment import AssetAssignment
+from app.models.assets.AssetAssignment import AssetAssignment, AssignmentTypeEnum
 from app.schemas.assets.AssetAssignmentSchemas import AssetAssignmentCreate
 from app.database.crud_notifications import (
     notify_assigned_user,
     notify_assigned_responsible,
+    notify_assigned_serving,
     notify_unassigned_user,
     notify_unassigned_responsible,
+    notify_unassigned_serving,
     notify_assignment_declined,
 )
 
@@ -39,7 +41,7 @@ async def create_assignment(
         # Уже существует активная привязка того же типа — возвращаем её без изменений
         return existing
 
-    # 2. Создаём новое назначение
+    # Создаём новое назначение
     db_assignment = AssetAssignment(
         asset_id=data.asset_id,
         employee_id=data.employee_id,
@@ -52,16 +54,23 @@ async def create_assignment(
     db.add(db_assignment)
     await db.flush()
 
-    # 3. Создаём уведомление сотруднику о назначении
-    if data.assignment_type == "user":
+    # Создаём уведомление сотруднику о назначении
+    if data.assignment_type == AssignmentTypeEnum.USER:
         await notify_assigned_user(
             db=db,
             employee_id=data.employee_id,
             asset_id=data.asset_id,
             initiator_id=assigned_by,
         )
-    elif data.assignment_type == "responsible":
+    elif data.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
         await notify_assigned_responsible(
+            db=db,
+            employee_id=data.employee_id,
+            asset_id=data.asset_id,
+            initiator_id=assigned_by,
+        )
+    elif data.assignment_type == AssignmentTypeEnum.SERVING:
+        await notify_assigned_serving(
             db=db,
             employee_id=data.employee_id,
             asset_id=data.asset_id,
@@ -107,21 +116,27 @@ async def close_active_assignments(
         closed_count += 1
 
         # Уведомление об отвязке
-        if assignment.assignment_type == "user":
+        if assignment.assignment_type == AssignmentTypeEnum.USER:
             await notify_unassigned_user(
                 db=db,
                 employee_id=assignment.employee_id,
                 asset_id=assignment.asset_id,
                 initiator_id=closed_by or assignment.assigned_by,
             )
-        elif assignment.assignment_type == "responsible":
+        elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
             await notify_unassigned_responsible(
                 db=db,
                 employee_id=assignment.employee_id,
                 asset_id=assignment.asset_id,
                 initiator_id=closed_by or assignment.assigned_by,
             )
-
+        elif assignment.assignment_type == AssignmentTypeEnum.SERVING:
+            await notify_unassigned_serving(
+                db=db,
+                employee_id=assignment.employee_id,
+                asset_id=assignment.asset_id,
+                initiator_id=closed_by or assignment.assigned_by,
+            )
     return closed_count
 
 

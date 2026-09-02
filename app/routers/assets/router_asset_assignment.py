@@ -29,7 +29,7 @@ router_asset_assignments = APIRouter(prefix="/assets", tags=["Asset Assignments"
 @router_asset_assignments.post(
     "/assignments",
     response_model=AssetAssignmentResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     summary="Привязать актив к сотруднику"
 )
 async def endpoint_assign_asset_to_employee(

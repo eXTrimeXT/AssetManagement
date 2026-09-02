@@ -1,7 +1,13 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.models.Base import Base
+
+class AssignmentTypeEnum(str, Enum):
+    USER = "user"
+    RESPONSIBLE = "responsible"
+    SERVING = "serving"
+    USER_DECLINED = "user_declined"
 
 class AssetAssignment(Base):
     """Связь актива с пользователем (история назначений)"""
@@ -13,8 +19,8 @@ class AssetAssignment(Base):
     asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False, index=True)
     employee_id = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=False, index=True)
 
-    # Тип назначения: "user" или "responsible"
-    assignment_type = Column(String(20), nullable=False, default="user", index=True)
+    # Тип назначения: AssignmentTypeEnum
+    assignment_type = Column(String(20), nullable=False, default=AssignmentTypeEnum.USER, index=True)
 
 
     # Временные рамки

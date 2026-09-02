@@ -48,6 +48,7 @@ class AssetCreate(AssetBase):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
     responsible_users: Optional[List[AssetUserUpdate]] = None
+    serving_users: Optional[List[AssetUserUpdate]] = None
     # Локация на карте
     location: Optional[AssetLocationUpdate] = None
 
@@ -86,6 +87,7 @@ class AssetUpdate(BaseModel):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
     responsible_users: Optional[List[AssetUserUpdate]] = None
+    serving_users: Optional[List[AssetUserUpdate]] = None
 
 class AssetResponse(AssetBase):
     asset_id: int

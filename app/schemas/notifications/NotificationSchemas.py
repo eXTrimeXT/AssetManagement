@@ -2,6 +2,9 @@ from pydantic import BaseModel, ConfigDict, computed_field, Field, model_validat
 from datetime import datetime
 from typing import Optional, List
 
+from models.notifications.Notification import NotificationEventType
+
+
 class NotificationBase(BaseModel):
     employee_id: str
     asset_id: Optional[int] = None
@@ -54,22 +57,25 @@ class NotificationResponse(BaseModel):
 
         # Единый словарь сообщений: (текст_для_инициатора (исходящее), текст_для_получателя (входящее))
         messages = {
-            "service_due": ("Требуется обслуживание актива", "Требуется обслуживание актива"),
+            NotificationEventType.SERVICE_DUE: ("Требуется обслуживание актива", "Требуется обслуживание актива"),
 
-            "assigned_responsible": ("Вы назначили сотрудника ответственным за актив", "Вы назначены ответственным за актив"),
-            "assigned_user": ("Вы назначили сотрудника пользователем актива", "Вы назначены пользователем актива"),
-            "unassigned_responsible": ("Вы открепили сотрудника от ответственности", "Вы откреплены как ответственный"),
-            "unassigned_user": ("Вы открепили сотрудника от актива", "Вы откреплены как пользователь"),
-            "responsible_declined": ("Сотрудник отклонил ваше назначение ответственным", "Вы отклонили назначение ответственным"),
-            "user_declined": ("Сотрудник отклонил ваше назначение пользователем", "Вы отклонили назначение пользователем"),
+            NotificationEventType.ASSIGNED_RESPONSIBLE: ("Вы назначили сотрудника ответственным за актив", "Вас назначили ответственным за актив"),
+            NotificationEventType.ASSIGNED_USER: ("Вы назначили сотрудника пользователем актива", "Вас назначили пользователем актива"),
+            NotificationEventType.UNASSIGNED_RESPONSIBLE: ("Вы открепили сотрудника от ответственности", "Вас открепили как ответственного за актив"),
+            NotificationEventType.UNASSIGNED_USER: ("Вы открепили сотрудника от актива", "Вас открепили как пользователя активом"),
+            NotificationEventType.RESPONSIBLE_DECLINED: ("Сотрудник отклонил ваше назначение ответственным", "Вы отклонили назначение ответственным"),
+            NotificationEventType.USER_DECLINED: ("Сотрудник отклонил ваше назначение пользователем", "Вы отклонили назначение пользователем"),
 
-            "write_off_requested": ("Вы создали заявку на списание", "Создана заявка на списание актива"),
-            "write_off_approved": ("Вы утвердили заявку на списание", "Ваша заявка на списание утверждена"),
-            "write_off_rejected": ("Вы отклонили заявку на списание", "Ваша заявка на списание отклонена"),
+            NotificationEventType.ASSIGNED_SERVING: ("Вы назначали сотрудника обслуживать актив", "Вас назначили обслуживать актив "),
+            NotificationEventType.UNASSIGNED_SERVING: ("Вы открепили сотрудника обслуживающего актив", "Вас открепили обслуживать актив "),
 
-            "inventory_started": ("Вы запустили новую сессию инвентаризации", "Началась инвентаризация закрепленных за вами активов"),
-            "inventory_discrepancy": ("Вы зафиксировали расхождение при инвентаризации", "Обнаружено расхождение по закрепленному за вами активу при инвентаризации"),
-            "inventory_completed": ("Вы завершили сессию инвентаризации", "Сессия инвентаризации, затрагивающая ваши активы, завершена"),
+            NotificationEventType.WRITE_OFF_REQUESTED: ("Вы создали заявку на списание", "Создана заявка на списание актива"),
+            NotificationEventType.WRITE_OFF_APPROVED: ("Вы утвердили заявку на списание", "Ваша заявка на списание утверждена"),
+            NotificationEventType.WRITE_OFF_REJECTED: ("Вы отклонили заявку на списание", "Ваша заявка на списание отклонена"),
+
+            NotificationEventType.INVENTORY_STARTED: ("Вы запустили новую сессию инвентаризации", "Началась инвентаризация закрепленных за вами активов"),
+            NotificationEventType.INVENTORY_DISCREPANCY: ("Вы зафиксировали расхождение при инвентаризации", "Обнаружено расхождение по закрепленному за вами активу при инвентаризации"),
+            NotificationEventType.INVENTORY_COMPLETED: ("Вы завершили сессию инвентаризации", "Сессия инвентаризации, затрагивающая ваши активы, завершена"),
         }
 
         type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))

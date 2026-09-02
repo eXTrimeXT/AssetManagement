@@ -12,12 +12,16 @@ class NotificationEventType:
     SERVICE_DUE = "service_due"
 
     # Привязки/Отвязки пользователей и активов
-    ASSIGNED_RESPONSIBLE = "assigned_responsible"
-    RESPONSIBLE_DECLINED = "responsible_declined"
     ASSIGNED_USER = "assigned_user"
+    ASSIGNED_RESPONSIBLE = "assigned_responsible"
+    ASSIGNED_SERVING = "assigned_serving_user"
+
+    RESPONSIBLE_DECLINED = "responsible_declined"
     USER_DECLINED = "user_declined"
-    UNASSIGNED_RESPONSIBLE = "unassigned_responsible"
+
     UNASSIGNED_USER = "unassigned_user"
+    UNASSIGNED_RESPONSIBLE = "unassigned_responsible"
+    UNASSIGNED_SERVING = "unassigned_serving_user"
 
     # События по списанию
     WRITE_OFF_REQUESTED = "write_off_requested"
@@ -34,12 +38,17 @@ class NotificationEventType:
         SERVICE_DUE: "Требуется обслуживание",
 
         # Привязки/Отвязки пользователей и активов
-        ASSIGNED_RESPONSIBLE: "Вы назначены ответственным за актив",
-        RESPONSIBLE_DECLINED: "Ответственный отклонил назначение",
         ASSIGNED_USER: "Вы назначены пользователем актива",
+        ASSIGNED_RESPONSIBLE: "Вы назначены ответственным за актив",
+        ASSIGNED_SERVING: "Вы назначены обслуживающим за актив",
+
         USER_DECLINED: "Пользователь отклонил назначение",
-        UNASSIGNED_RESPONSIBLE: "Вы откреплены как ответственный",
+        RESPONSIBLE_DECLINED: "Ответственный отклонил назначение",
+
         UNASSIGNED_USER: "Вы откреплены как пользователь",
+        UNASSIGNED_RESPONSIBLE: "Вы откреплены как ответственный",
+        UNASSIGNED_SERVING: "Вы откреплены как обслуживающий",
+
 
         # События по списанию
         WRITE_OFF_REQUESTED: "Создана заявка на списание",

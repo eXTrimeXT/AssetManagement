@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.models.notifications.Notification import (
     Notification, NotificationEventType, NotificationStatus
 )
-from app.models.assets import Asset
+from app.models.assets.AssetAssignment import AssignmentTypeEnum
 
 logger = logging.getLogger(__name__)
 
@@ -343,6 +343,16 @@ async def delete_all_read(db: AsyncSession, current_user_id: str) -> int:
 # БИЗНЕС-ЛОГИКА: ОБЁРТКИ ДЛЯ КОНКРЕТНЫХ ТИПОВ УВЕДОМЛЕНИЙ
 # ============================================================
 # Привязки/Отвязки
+async def notify_assigned_user(db, employee_id, asset_id, initiator_id):
+    """Уведомить о назначении пользователем."""
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.ASSIGNED_USER,
+        initiator_id=initiator_id
+    )
+
 async def notify_assigned_responsible(db, employee_id, asset_id, initiator_id):
     """Уведомить о назначении ответственным."""
     await create_notification(
@@ -353,13 +363,13 @@ async def notify_assigned_responsible(db, employee_id, asset_id, initiator_id):
         initiator_id=initiator_id
     )
 
-async def notify_assigned_user(db, employee_id, asset_id, initiator_id):
-    """Уведомить о назначении пользователем."""
+async def notify_assigned_serving(db, employee_id, asset_id, initiator_id):
+    """Уведомить о назначении обслуживающего."""
     await create_notification(
         db=db,
         employee_id=employee_id,
         asset_id=asset_id,
-        event_type=NotificationEventType.ASSIGNED_USER,
+        event_type=NotificationEventType.ASSIGNED_SERVING,
         initiator_id=initiator_id
     )
 
@@ -380,6 +390,16 @@ async def notify_unassigned_user(db, employee_id, asset_id, initiator_id):
         employee_id=employee_id,
         asset_id=asset_id,
         event_type=NotificationEventType.UNASSIGNED_USER,
+        initiator_id=initiator_id
+    )
+
+async def notify_unassigned_serving(db, employee_id, asset_id, initiator_id):
+    """Уведомить об отвязке обслуживающего."""
+    await create_notification(
+        db=db,
+        employee_id=employee_id,
+        asset_id=asset_id,
+        event_type=NotificationEventType.UNASSIGNED_SERVING,
         initiator_id=initiator_id
     )
 
@@ -420,7 +440,8 @@ async def notify_assignment_declined(db, employee_id, asset_id, initiator_id, as
     Создает уведомление для assigned_by о том, что сотрудник отказался от актива.
     """
     # Определяем тип события в зависимости от типа привязки
-    event_type = "responsible_declined" if assignment_type == "responsible" else "user_declined"
+    # event_type = "responsible_declined" if assignment_type == "responsible" else "user_declined"
+    event_type = NotificationEventType.RESPONSIBLE_DECLINED if assignment_type == AssignmentTypeEnum.RESPONSIBLE else AssignmentTypeEnum.USER_DECLINED
 
     new_notification = Notification(
         employee_id=employee_id,      # Кому: тот, кто назначал (assigned_by)

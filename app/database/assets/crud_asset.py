@@ -45,7 +45,14 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
 
     # Синхронизация привязок пользователей, если они переданы
     if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
-        await _sync_asset_users(db, db_obj.asset_id, data.users or [], data.responsible_users or [], employee_id)
+        await _sync_asset_users(
+            db=db,
+            asset_id=db_obj.asset_id,
+            users = data.users or [],
+            responsible_users = data.responsible_users or [],
+            serving_users = data.serving_users or [],
+            assigned_by=employee_id
+        )
         await db.commit()
 
     # === НОВОЕ: Создание локации на карте ===
@@ -54,6 +61,7 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
 
     # Возвращаем актив с загруженными связями
     return await get_asset_by_id(db, db_obj.asset_id)
+
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(
@@ -82,6 +90,7 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         )
     )
     return result.scalar_one_or_none()
+
 
 def _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
@@ -116,6 +125,7 @@ def _apply_assets_filters(
 
     return query
 
+
 async def get_assets_count(
         db: AsyncSession,
         name: Optional[str] = None,
@@ -138,6 +148,7 @@ async def get_assets_count(
     )
     result = await db.execute(query)
     return result.scalar_one()
+
 
 async def get_assets_list(
         db: AsyncSession,
@@ -188,6 +199,7 @@ async def get_assets_list(
     assets = result.scalars().all()
 
     return assets, total
+
 
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     obj = await get_asset_by_id(db, asset_id)
@@ -274,10 +286,18 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     # Синхронизация привязок пользователей
     if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
-        await _sync_asset_users(db, asset_id, data.users or [], data.responsible_users or [], employee_id)
+        await _sync_asset_users(
+            db=db,
+            asset_id=asset_id,
+            users = data.users or [],
+            responsible_users = data.responsible_users or [],
+            serving_users = data.serving_users or [],
+            assigned_by=employee_id
+        )
 
     await db.commit()
     return await get_asset_by_id(db, asset_id)
+
 
 def _enrich_users_from_cache(
         users_data: list,
@@ -346,6 +366,7 @@ async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
             asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
         if asset.responsible_users:
             asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
+
 
 async def _sync_asset_users(
         db: AsyncSession,
@@ -499,6 +520,7 @@ async def _sync_asset_users(
                     initiator_id=assigned_by,
                 )
 
+
 async def _sync_asset_location(
         db: AsyncSession,
         asset_id: int,
@@ -544,6 +566,7 @@ async def _sync_asset_location(
         "y": new_position.y,
     }
 
+
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -552,6 +575,7 @@ async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     await db.delete(obj)
     await db.commit()
     return True
+
 
 async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
     result = await db.execute(
@@ -566,6 +590,7 @@ async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
         .where(Asset.parent_id == asset_id)
     )
     return result.scalars().all()
+
 
 async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> Sequence[Asset]:
     """Получить все текущие (активные) активы сотрудника."""

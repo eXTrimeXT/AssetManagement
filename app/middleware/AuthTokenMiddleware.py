@@ -12,6 +12,7 @@ EXCLUDED_PATHS = {
     "/api/login",
     "/api/logout",
     "/api/pc-data",
+    "/api/notifications/my/counts",
     "/openapi.json",
     "/",
 }

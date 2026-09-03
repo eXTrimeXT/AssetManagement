@@ -288,7 +288,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     # === ОБРАБОТКА ПЕРВИЧНЫХ ПОЛЬЗОВАТЕЛЕЙ (is_current) ===
     # Проверяем, прислал ли фронтенд поле current_user
     if "current_user" in data.model_fields_set:
-        await _update_primary_assignment(db, asset_id, "user", data.current_user)
+        # await _update_primary_assignment(db, asset_id, "user", data.current_user)
+        await _update_primary_assignment(db, asset_id, data.current_user)
 
     # Синхронизация привязок пользователей
     if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
@@ -530,7 +531,7 @@ async def _sync_asset_users(
 async def _update_primary_assignment(
         db: AsyncSession,
         asset_id: int,
-        assignment_type: str,
+        # assignment_type: str,
         target_employee_id: Optional[str]
 ) -> None:
     """
@@ -542,7 +543,7 @@ async def _update_primary_assignment(
         update(AssetAssignment)
         .where(
             AssetAssignment.asset_id == asset_id,
-            AssetAssignment.assignment_type == assignment_type,
+            # AssetAssignment.assignment_type == assignment_type,
             AssetAssignment.end_date.is_(None),
             AssetAssignment.is_current == True
         )
@@ -555,7 +556,7 @@ async def _update_primary_assignment(
             select(AssetAssignment).where(
                 AssetAssignment.asset_id == asset_id,
                 AssetAssignment.employee_id == target_employee_id,
-                AssetAssignment.assignment_type == assignment_type,
+                # AssetAssignment.assignment_type == assignment_type,
                 AssetAssignment.end_date.is_(None)
             )
         )

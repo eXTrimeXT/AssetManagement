@@ -19,7 +19,7 @@ class InventorizationItemResponse(BaseModel):
     quantity: Optional[int] = None
     quantity_fact: Optional[int] = None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 class InventorizationSessionResponse(BaseModel):
     session_id: int

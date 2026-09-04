@@ -1,5 +1,6 @@
+import math
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
 from app.schemas.inventorization.InventorizationSchemas import (
@@ -21,6 +22,7 @@ from app.database.inventorization.crud_inventorization import (
     get_inventorization_discrepancies
 )
 from app.services.auth.auth_service import require_authorized_user
+from app.schemas.PaginationResponse import PaginatedResponse
 
 router_inventorization = APIRouter(prefix="/inventorization", tags=["Assets Inventorization"])
 
@@ -33,13 +35,34 @@ async def get_sessions(
 ):
     return await get_inventory_sessions_list(db, skip, limit)
 
-@router_inventorization.get("/sessions/{session_id}/items/", response_model=List[InventorizationItemResponse])
+@router_inventorization.get(
+    "/sessions/{session_id}/items/",
+    response_model=PaginatedResponse[InventorizationItemResponse]
+)
 async def get_session_items(
         session_id: int,
+        page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
+        page_size: int = Query(50, ge=1, le=200, description="Размер страницы"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    return await get_inventory_items_by_session_id(db, session_id)
+    """Получить список элементов инвентаризации сессии с пагинацией."""
+
+    # Получаем данные и общее количество из CRUD
+    items, total = await get_inventory_items_by_session_id(db, session_id, page, page_size)
+
+    # Рассчитываем метаданные пагинации
+    total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+    return PaginatedResponse(
+        items=list(items),
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        has_next=page < total_pages,
+        has_previous=page > 1,
+    )
 
 @router_inventorization.post("/sessions/", response_model=InventorizationSessionResponse)
 async def start_session(

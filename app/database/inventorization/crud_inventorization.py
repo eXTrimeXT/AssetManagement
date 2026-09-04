@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 import logging
-from sqlalchemy import select, update, distinct
+from sqlalchemy import select, update, distinct, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.inventorization.Inventorization import InventorizationSession, InventorizationItem
@@ -30,12 +30,34 @@ async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: in
     return result.scalars().all()
 
 
-async def get_inventory_items_by_session_id(db: AsyncSession, session_id: int) -> Sequence[InventorizationItem]:
-    result = await db.execute(
+async def get_inventory_items_by_session_id(
+        db: AsyncSession,
+        session_id: int,
+        page: int = 1,
+        page_size: int = 50
+) -> Tuple[Sequence[InventorizationItem], int]:
+    """Получить элементы сессии инвентаризации с пагинацией. Возвращает (items, total_count)"""
+
+    # 1. Получаем общее количество записей для этой сессии
+    count_query = select(func.count(InventorizationItem.inventorization_id)).where(
+        InventorizationItem.session_id == session_id
+    )
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    # 2. Получаем пагинированный список элементов
+    offset = (page - 1) * page_size
+    items_query = (
         select(InventorizationItem)
         .where(InventorizationItem.session_id == session_id)
+        .order_by(InventorizationItem.inventorization_id) # Добавляем порядок для стабильной пагинации
+        .offset(offset)
+        .limit(page_size)
     )
-    return result.scalars().all()
+    items_result = await db.execute(items_query)
+    items = items_result.scalars().all()
+
+    return items, total
 
 
 async def create_inventory_session(

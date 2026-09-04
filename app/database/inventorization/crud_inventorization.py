@@ -174,7 +174,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
 
     # Меняем статус сессии
     session.status = "completed"
-    session.completed_at = datetime.now()
+    session.end_date = datetime.now()
 
     # Находим всех ответственных для уведомлений
     result_assets = await db.execute(

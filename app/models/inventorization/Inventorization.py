@@ -10,13 +10,12 @@ class InventorizationSession(Base):
     asset_type_name = Column(String(100), nullable=False)
     asset_type_en_name = Column(String(100), nullable=False)
     status = Column(String(50), default="in_progress")  # in_progress, completed
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    start_date = Column(DateTime(timezone=True), nullable=True)
-    end_date = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now()) # Дата и время создания заявки*
+    start_date = Column(DateTime(timezone=True), nullable=True) # Дата и время начала ивентаризации
+    end_date = Column(DateTime(timezone=True), nullable=True)   # Дата и время завершения инвентаризации
 
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто создал
-    completed_at = Column(DateTime(timezone=True), nullable=True) # Время завершения
 
     items = relationship("InventorizationItem", back_populates="session")
     asset_type = relationship("AssetType", foreign_keys=[asset_type_id])

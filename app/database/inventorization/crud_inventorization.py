@@ -5,13 +5,14 @@ import logging
 from sqlalchemy import select, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.models.assets.Inventorization import InventorizationSession, InventorizationItem
+from app.models.inventorization.Inventorization import InventorizationSession, InventorizationItem
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetType import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.database.crud_notifications import notify_inventory_started, notify_inventory_completed
 
 logger = logging.getLogger(__name__)
+
 
 async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
     result = await db.execute(
@@ -21,10 +22,13 @@ async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Opti
     )
     return result.scalar_one_or_none()
 
-async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[InventorizationSession]:
+
+async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[
+    InventorizationSession]:
     query = select(InventorizationSession).options(selectinload(InventorizationSession.items)).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
+
 
 async def get_inventory_items_by_session_id(db: AsyncSession, session_id: int) -> Sequence[InventorizationItem]:
     result = await db.execute(
@@ -33,7 +37,14 @@ async def get_inventory_items_by_session_id(db: AsyncSession, session_id: int) -
     )
     return result.scalars().all()
 
-async def create_inventory_session(db: AsyncSession, asset_type_id: int, creator_employee_id: str) -> InventorizationSession:
+
+async def create_inventory_session(
+        db: AsyncSession,
+        asset_type_id: int,
+        creator_employee_id: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+) -> InventorizationSession:
     asset_type_result = await db.execute(
         select(AssetType).where(AssetType.asset_type_id == asset_type_id)
     )
@@ -48,6 +59,8 @@ async def create_inventory_session(db: AsyncSession, asset_type_id: int, creator
         asset_type_en_name=asset_type.en_name,
         status="in_progress",
         created_by=creator_employee_id,
+        start_date=start_date,
+        end_date=end_date
     )
     db.add(session)
     await db.flush()
@@ -70,18 +83,18 @@ async def create_inventory_session(db: AsyncSession, asset_type_id: int, creator
         for asset in assets
     ]
     db.add_all(items)
-    await db.flush() # Важно сделать flush, чтобы получить session_id и asset_ids
+    await db.flush()  # Важно сделать flush, чтобы получить session_id и asset_ids
 
     # === НОВАЯ ЛОГИКА УВЕДОМЛЕНИЙ ===
     # Находим всех уникальных сотрудников, которые имеют активы из этой сессии
     asset_ids = [item.asset_id for item in items]
 
     if asset_ids:
-    # Ищем активных ответственных или пользователей этих активов
+        # Ищем активных ответственных или пользователей этих активов
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
-                AssetAssignment.end_date.is_(None) # Только активные назначения
+                AssetAssignment.end_date.is_(None)  # Только активные назначения
             )
         )
     responsible_employees = [row[0] for row in employees_result.all()]
@@ -98,6 +111,7 @@ async def create_inventory_session(db: AsyncSession, asset_type_id: int, creator
     await db.commit()
     await db.refresh(session)
     return session
+
 
 async def check_inventory_item(
         db: AsyncSession,
@@ -133,7 +147,8 @@ async def check_inventory_item(
     return False
 
 
-async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[InventorizationSession]:
+async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[
+    InventorizationSession]:
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         raise ValueError("Сессия не найдена.")
@@ -172,7 +187,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
-                AssetAssignment.end_date.is_(None) # Только активные назначения
+                AssetAssignment.end_date.is_(None)  # Только активные назначения
             )
         )
         responsible_employees = [row[0] for row in employees_result.all()]
@@ -202,7 +217,10 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
     await db.refresh(session)
     return session
 
+
 """ Списание """
+
+
 async def get_inventorization_report(
         db: AsyncSession,
         session_id: int,
@@ -251,6 +269,8 @@ async def get_inventorization_report(
         "asset_type_name": session.asset_type_name,
         "status": session.status,
         "created_at": session.created_at,
+        "start_date": session.start_date,
+        "end_date": session.end_date,
         "total_items": total,
         "checked_items": checked,
         "unchecked_items": unchecked,

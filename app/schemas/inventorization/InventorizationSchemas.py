@@ -4,6 +4,8 @@ from typing import Optional, List
 
 class InventorizationSessionCreate(BaseModel):
     asset_type_id: int
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
 class InventorizationItemResponse(BaseModel):
     inventorization_id: int
@@ -27,6 +29,8 @@ class InventorizationSessionResponse(BaseModel):
     status: str
     created_at: datetime
     # items: List[InventorizationItemResponse] = []
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,6 +59,8 @@ class InventorizationReportResponse(BaseModel):
     asset_type_name: str
     status: str
     created_at: datetime
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
     # Общая статистика
     total_items: int

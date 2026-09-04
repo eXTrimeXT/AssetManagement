@@ -41,10 +41,12 @@ from app.routers.assets import (
     router_asset_models,        # Модель зависим от класса
     router_assets,              # Зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
     router_asset_assignments,   # Каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
-    router_inventorization,     # Инвентаризация активов
     router_asset_history,       # История актива
     router_asset_write_off,     # Списание актива
 )
+
+# Роутер инвентаризации
+from app.routers.router_inventorization import router_inventorization
 
 # Импорт роутеров карты цехов и позиций активов
 from app.routers.map_assets.router_workshop import router_workshop
@@ -177,9 +179,10 @@ app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
 app.include_router(router_assets, prefix="/api")            # Assets
 app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
-app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
 app.include_router(router_asset_history, prefix="/api")     # История активов
 app.include_router(router_asset_write_off, prefix="/api")   # Списание активов
+
+app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
 
 app.include_router(router_analytics, prefix="/api")         # Аналитика
 

@@ -2,19 +2,23 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
-from app.schemas.assets.InventorizationSchemas import (
+from app.schemas.inventorization.InventorizationSchemas import (
     InventorizationSessionCreate,
     InventorizationSessionResponse,
     CheckItemRequest,
-    InventorizationItemResponse
+    InventorizationItemResponse,
+    InventorizationReportResponse,
+    InventorizationDiscrepanciesResponse,
 )
-from app.database.assets.crud_inventorization import (
+from app.database.inventorization.crud_inventorization import (
     create_inventory_session,
     check_inventory_item,
     complete_inventory_session,
     get_inventory_sessions_list,
     get_inventory_items_by_session_id,
-    get_inventory_session_by_id
+    get_inventory_session_by_id,
+    get_inventorization_report,
+    get_inventorization_discrepancies
 )
 from app.services.auth.auth_service import require_authorized_user
 
@@ -43,7 +47,13 @@ async def start_session(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    return await create_inventory_session(db, data.asset_type_id, current_user.employee_id)
+    return await create_inventory_session(
+        db,
+        data.asset_type_id,
+        current_user.employee_id,
+        data.start_date,
+        data.end_date
+    )
 
 @router_inventorization.post("/sessions/{session_id}/check")
 async def check_item(
@@ -91,16 +101,6 @@ async def complete_session(
         raise HTTPException(status_code=404, detail="Сессия не найдена")
     return session
 
-
-""" Списание """
-from app.schemas.assets.InventorizationSchemas import (
-    InventorizationReportResponse,
-    InventorizationDiscrepanciesResponse,
-)
-from app.database.assets.crud_inventorization import (
-    get_inventorization_report,
-    get_inventorization_discrepancies,
-)
 
 @router_inventorization.get(
     "/sessions/{session_id}/report",

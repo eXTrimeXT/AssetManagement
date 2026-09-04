@@ -12,6 +12,9 @@ class InventorizationSession(Base):
     status = Column(String(50), default="in_progress")  # in_progress, completed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
+
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто создал
     completed_at = Column(DateTime(timezone=True), nullable=True) # Время завершения
 

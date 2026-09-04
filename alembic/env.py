@@ -10,29 +10,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.models.Base import Base
 # ВАЖНО: импортируем все модели, чтобы Alembic их увидел
-from app.models.assets.AssetStatus import AssetStatus
-from app.models.assets.Asset import Asset
-from app.models.assets.AssetModel import AssetModel
-from app.models.assets.AssetType import AssetType
-from app.models.assets.AssetAssignment import AssetAssignment
-from app.models.assets.Inventorization import InventorizationItem, InventorizationSession
-from app.models.assets.AssetWriteOff import AssetWriteOff
-
-from app.models.map_assets.AssetPosition import AssetPosition
-from app.models.map_assets.Workshop import Workshop
-
-from app.models.zup.department import ZupDepartment
-from app.models.zup.employee import Employee
-from app.models.zup.manager import Manager
-from app.models.zup.position import Position
-
-from app.models.AndroidData import AndroidData
-from app.models.Company import Company
-from app.models.Location import Location
-from app.models.PCData import PCData
-from app.models.UserJWTData import UserJWTData
-from app.models.Vendor import Vendor
-from app.models.VendorClass import VendorClass
 
 
 # Загружаем .env (если используешь python-dotenv)

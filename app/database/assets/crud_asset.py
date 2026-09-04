@@ -21,6 +21,7 @@ from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.database.crud_notifications import notify_unassigned_serving
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
 from app.database.crud_notifications import notify_assigned_serving
+from models.assets import Asset
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -373,7 +374,8 @@ async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
             asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
         if asset.responsible_users:
             asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
-
+        if asset.serving_users:
+            asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
 
 async def _sync_asset_users(
         db: AsyncSession,

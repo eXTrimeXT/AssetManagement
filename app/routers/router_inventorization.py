@@ -158,7 +158,7 @@ async def get_session_discrepancies(
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return result
 
-@router_inventorization.delete("/{session_id}", response_model=InventorizationSessionResponse)
+@router_inventorization.delete("/sessions/{session_id}", response_model=InventorizationSessionResponse)
 async def delete_status(
         session_id: int,
         db: AsyncSession = Depends(get_db),

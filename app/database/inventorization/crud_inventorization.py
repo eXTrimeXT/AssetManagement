@@ -365,3 +365,12 @@ async def get_inventorization_discrepancies(
         "total_discrepancies": len(discrepancies),
         "items": discrepancies,
     }
+
+async def delete_inventorization_session(db: AsyncSession, session_id: int) -> bool:
+    obj = await get_inventory_session_by_id(db, session_id)
+    if not obj:
+        return False
+
+    await db.delete(obj)
+    await db.commit()
+    return True

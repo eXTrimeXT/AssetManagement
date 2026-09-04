@@ -19,7 +19,8 @@ from app.database.inventorization.crud_inventorization import (
     get_inventory_items_by_session_id,
     get_inventory_session_by_id,
     get_inventorization_report,
-    get_inventorization_discrepancies
+    get_inventorization_discrepancies,
+    delete_inventorization_session
 )
 from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
@@ -156,3 +157,14 @@ async def get_session_discrepancies(
     if not result:
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return result
+
+@router_inventorization.delete("/{status_id}", response_model=InventorizationSessionResponse)
+async def delete_status(
+        session_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    db_status = await delete_inventorization_session(db, session_id)
+    if not db_status:
+        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
+    return db_status

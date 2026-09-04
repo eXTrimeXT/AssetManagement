@@ -143,6 +143,9 @@ async def get_asset(
 
     # Проверка прав напрямую через asset_type_id
     await check_asset_permission(db, request, obj.asset_type_id, "read")
+
+    await bulk_enrich_assets(db, [obj])
+    
     return obj
 
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)

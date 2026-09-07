@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum, Boolean
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum, Boolean, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.models.Base import Base
@@ -32,9 +32,15 @@ class AssetAssignment(Base):
     comment = Column(String(500))
     created_at = Column(DateTime, default=func.now(), nullable=False)
 
-    # Защита от дубликатов: нельзя назначить одного сотрудника на один актив дважды (по типу)
+    # === Частичный уникальный индекс вместо UniqueConstraint ===
     __table_args__ = (
-        UniqueConstraint('asset_id', 'employee_id', 'assignment_type', 'end_date', name='uq_asset_employee_type_active'),
+        Index(
+            'uq_active_asset_assignment',
+            'asset_id', 'employee_id', 'assignment_type',
+            unique=True,
+            # Этот параметр говорит PostgreSQL проверять уникальность ТОЛЬКО если end_date равен NULL
+            postgresql_where=(end_date.is_(None))
+        ),
     )
 
     # Relationships

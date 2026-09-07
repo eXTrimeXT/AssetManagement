@@ -2,6 +2,8 @@ import math
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
+
 from app.database.connection import get_db
 from app.schemas.inventorization.InventorizationSchemas import (
     InventorizationSessionCreate,
@@ -158,7 +160,7 @@ async def get_session_discrepancies(
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return result
 
-@router_inventorization.delete("/sessions/{session_id}", response_model=InventorizationSessionResponse)
+@router_inventorization.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
 async def delete_status(
         session_id: int,
         db: AsyncSession = Depends(get_db),
@@ -167,4 +169,4 @@ async def delete_status(
     db_status = await delete_inventorization_session(db, session_id)
     if not db_status:
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
-    return db_status
+    return {"message": "success"}

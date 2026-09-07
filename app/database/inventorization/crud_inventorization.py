@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Sequence, Tuple
 
 import logging
-from sqlalchemy import select, update, distinct, func
+from sqlalchemy import select, update, distinct, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.inventorization.Inventorization import InventorizationSession, InventorizationItem
@@ -366,11 +366,16 @@ async def get_inventorization_discrepancies(
         "items": discrepancies,
     }
 
-async def delete_inventorization_session(db: AsyncSession, session_id: int) -> bool:
+async def delete_inventorization_session(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
     obj = await get_inventory_session_by_id(db, session_id)
     if not obj:
-        return False
+        return None
 
+    # Сначала удаляем все связанные элементы (items)
+    # Используем прямой DELETE-запрос для эффективности
+    await db.execute(
+        delete(InventorizationItem).where(InventorizationItem.session_id == session_id)
+    )
     await db.delete(obj)
     await db.commit()
-    return True
+    return obj

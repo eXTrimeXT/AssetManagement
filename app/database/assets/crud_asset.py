@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional, Sequence, List, Any, Tuple, Dict
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
@@ -118,10 +118,20 @@ def _apply_assets_filters(
     if parent_id is not None:
         query = query.where(Asset.parent_id == parent_id)
 
+    # if allowed_type_en_names is not None:
+    #     query = (
+    #         query.outerjoin(Asset.asset_type)
+    #         .where(AssetType.en_name.in_(allowed_type_en_names))
+    #     )
     if allowed_type_en_names is not None:
         query = (
             query.outerjoin(Asset.asset_type)
-            .where(AssetType.en_name.in_(allowed_type_en_names))
+            .where(
+                or_(
+                    AssetType.en_name.in_(allowed_type_en_names),
+                    Asset.asset_type_id.is_(None)  # <-- Явно разрешаем активы без типа
+                )
+            )
         )
 
     return query

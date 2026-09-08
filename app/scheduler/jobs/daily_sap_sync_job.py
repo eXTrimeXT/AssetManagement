@@ -1,5 +1,6 @@
 import logging
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import or_
 import httpx
 from app.database.connection import async_session
 from app.models.assets import Asset
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 async def daily_sap_sync_job():
     """
     Плановая задача синхронизации активов из SAP API.
-    Выполняется ежедневно в 01:00 по расписанию планировщика.
+    Выполняет upsert, но пропускает обновление, если данные в БД полностью идентичны.
     """
     logger.info("[SAP SYNC] Запуск плановой синхронизации активов из SAP...")
 
@@ -68,13 +69,27 @@ async def daily_sap_sync_job():
 
                     # PostgreSQL bulk upsert
                     stmt = insert(Asset).values(records)
+
+                    # Определяем условие: обновляем строку ТОЛЬКО если данные изменились.
+                    # isnot_distinct_from корректно обрабатывает NULL значения в serial_number
+                    condition_name_changed = Asset.name != stmt.excluded.name
+                    condition_serial_changed = ~Asset.serial_number.isnot_distinct_from(stmt.excluded.serial_number)
+                    condition_quantity_changed = Asset.quantity != stmt.excluded.quantity
+
+                    update_where_clause = or_(
+                        condition_name_changed,
+                        condition_serial_changed,
+                        condition_quantity_changed
+                    )
+
                     stmt = stmt.on_conflict_do_update(
                         index_elements=["inventory_id"],
                         set_={
                             "name": stmt.excluded.name,
                             "serial_number": stmt.excluded.serial_number,
                             "quantity": stmt.excluded.quantity
-                        }
+                        },
+                        where=update_where_clause  # <-- Ключевое условие пропуска идентичных строк
                     )
 
                     await db.execute(stmt)
@@ -88,7 +103,7 @@ async def daily_sap_sync_job():
 
                     offset += limit
 
-        logger.info(f"[SAP SYNC] Плановая синхронизация завершена. Всего обработано записей: {total_synced}")
+        logger.info(f"[SAP SYNC] Плановая синхронизация завершена. Всего проверено/обновлено записей: {total_synced}")
 
     except Exception as e:
         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)

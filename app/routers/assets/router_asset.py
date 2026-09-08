@@ -109,12 +109,6 @@ async def get_assets(
         allowed_type_en_names=allowed_type_en_names,
     )
 
-    # === Дополняем данные о пользователях ===
-    # for asset in assets:
-    #     if asset.users:
-    #         asset.users = await enrich_users_data(db, asset.users)
-    #     if asset.responsible_users:
-    #         asset.responsible_users = await enrich_users_data(db, asset.responsible_users)
     # === Дополняем данные о пользователях (Bulk Fetch) ===
     await bulk_enrich_assets(db, list(assets))
 

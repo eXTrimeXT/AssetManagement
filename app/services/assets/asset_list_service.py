@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import zlib
 from typing import List, Dict, Optional, Any, Sequence
@@ -236,6 +235,7 @@ async def get_assets_list_with_sap(
 
     # Массовая загрузка сотрудников и департаментов
     employee_ids = set()
+    employee_ids.add("0000015370")
     department_codes = set()
     for item in sap_items:
         if item.get("employee_id"):
@@ -464,10 +464,10 @@ async def _get_employees_by_ids(
 
     # Нормализуем ID: убираем ведущие нули.
     # Например: "0000015370" -> "15370". Если строка была "0000", станет "0".
-    normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
+    # normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
 
     # ЛОГИРУЕМ данные, которые реально пойдут в SQL-запрос
-    logger.info(f"[DEBUG EMP] Нормализованные employee_id для запроса в БД: {normalized_ids}")
+    logger.info(f"[DEBUG EMP] Нормализованные employee_id для запроса в БД: {employee_ids}")
 
     query = (
         select(Employee)
@@ -481,8 +481,7 @@ async def _get_employees_by_ids(
                 )
             )
         )
-        # ВАЖНО: используем normalized_ids, иначе поиск по "0000015370" не найдет "15370" в БД
-        .where(Employee.employee_id.in_(normalized_ids))
+        .where(Employee.employee_id.in_(employee_ids))
     )
 
     result = await db.execute(query)
@@ -495,7 +494,7 @@ async def _get_employees_by_ids(
         logger.info(f"[DEBUG EMP] Реально найденные employee_id в БД: {found_ids}")
 
         # Дополнительно можно вывести, кого именно НЕ нашли
-        missing_ids = set(normalized_ids) - set(found_ids)
+        missing_ids = set(employee_ids) - set(found_ids)
         if missing_ids:
             logger.warning(f"[DEBUG EMP] НЕ НАЙДЕНЫ в БД (после нормализации): {missing_ids}")
 
@@ -549,7 +548,7 @@ def _build_virtual_asset(
     employee = employees_map.get(employee_id) if employee_id else None
 
     if employee_id and not employee:
-        logger.warning(f"[SAP VIRTUAL] Сотрудник {employee_id} не найден в локальной БД для актива {sap_item.get('inventory_number')}")
+        logger.warning(f"[SAP VIRTUAL] Сотрудник '{employee_id}' не найден в локальной БД для актива {sap_item.get('inventory_number')}")
 
     users = []
     if employee:

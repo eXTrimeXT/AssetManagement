@@ -86,8 +86,6 @@ async def get_employees(
     - **page_size**: количество записей на странице (по умолчанию 50)
     """
 
-    # 0000000705 - ошибка: максимум 200 символов!!!
-
     employees, total = await get_employees_list(
         db=db,
         page=page,

@@ -544,11 +544,7 @@ def _build_virtual_asset(
         departments_map: Dict[str, ZupDepartment],
 ) -> Dict[str, Any]:
     employee_id = sap_item.get("employee_id")
-    employee_id = "0000015370"
     employee = employees_map.get(employee_id) if employee_id else None
-
-    if employee_id and not employee:
-        logger.warning(f"[SAP VIRTUAL] Сотрудник '{employee_id}' не найден в локальной БД для актива {sap_item.get('inventory_number')}")
 
     users = []
     if employee:
@@ -559,26 +555,31 @@ def _build_virtual_asset(
         parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
         current_user_full_name = " ".join(parts) if parts else None
 
-    # Если SAP API еще не отдает material_id (возвращает null), генерируем стабильный хеш.
+    # Теперь material_id - это строка из SAP.
+    # Для схемы ответа (где asset_id должен быть int) мы можем использовать хеш,
+    # но в БД мы сохраним именно строковый material_id.
     raw_material_id = sap_item.get("material_id")
+
+    # Для ответа фронтенду (если schema требует int для asset_id)
     if raw_material_id is not None:
-        asset_id_val = int(raw_material_id)
+        # Пытаемся преобразовать в int, если не получается (слишком длинное), используем хеш
+        try:
+            asset_id_val = int(raw_material_id)
+        except (ValueError, OverflowError):
+            import zlib
+            asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
     else:
+        import zlib
         inv = str(sap_item.get("inventory_number", ""))
         serial = str(sap_item.get("serial_number", ""))
-
-        # zlib.crc32 возвращает беззнаковое 32-битное число.
-        # Битовое И (&) с 0x7FFFFFFF (2147483647) гарантирует, что число
-        # всегда поместится в знаковый INTEGER PostgreSQL и не вызовет переполнения.
         asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
 
-    asset_id = sap_item.get("material_id")
     return {
-        "asset_id": asset_id,  # <-- Теперь здесь гарантированно int
+        "asset_id": asset_id_val,  # Для схемы ответа (int)
         "name": sap_item.get("base_material_name"),
         "inventory_id": sap_item.get("inventory_number"),
         "serial_number": sap_item.get("serial_number"),
-        "quantity": int(sap_item.get("quantity", 0)),  # <-- Гарантируем int
+        "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
         "asset_status": None,
         "asset_status_id": None,
         "comment": None,
@@ -607,6 +608,7 @@ def _build_virtual_asset(
         "current_user": employee_id,
         "current_user_full_name": current_user_full_name,
         "parent": None,
+        "material_id": raw_material_id
     }
 
 

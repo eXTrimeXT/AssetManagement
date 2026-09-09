@@ -334,9 +334,10 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             # Нет данных для создания, возвращаем None
             return None
 
+        material_id_to_save = data.material_id if data.material_id else str(asset_id)
         # Создаем новый актив
         obj = Asset(
-            material_id=asset_id,  # Используем asset_id как material_id из SAP
+            material_id=material_id_to_save,  # Используем asset_id как material_id из SAP
             **update_data
         )
         obj.created_by = employee_id

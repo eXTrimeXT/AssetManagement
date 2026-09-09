@@ -15,7 +15,7 @@ class Asset(Base):
     asset_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # Уникальный идентификатор из SAP API для сопоставления
-    material_id = Column(Integer, unique=True, index=True, nullable=True)
+    material_id = Column(String(50), unique=True, index=True, nullable=True)
 
     # Основные поля
     name = Column(String(150), nullable=False, index=True)

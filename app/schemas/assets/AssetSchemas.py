@@ -73,6 +73,8 @@ class AssetUpdate(BaseModel):
     # location_id: Optional[int] = None
     location: Optional[AssetLocationUpdate] = None
 
+    material_id: Optional[str] = None
+
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False # true/false
     next_service: Optional[date] = None  # datetime

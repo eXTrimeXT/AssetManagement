@@ -2,7 +2,7 @@ import hashlib
 import logging
 import zlib
 from typing import List, Dict, Optional, Any, Sequence
-from sqlalchemy import select, func
+from sqlalchemy import select, func, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -455,13 +455,59 @@ async def _get_employees_by_ids(
         db: AsyncSession,
         employee_ids: List[str],
 ) -> list[Any] | Sequence[Any]:
-    """Массовая загрузка сотрудников по employee_id."""
+    """Массовая загрузка сотрудников по employee_id с учетом формата SAP (ведущие нули)."""
     if not employee_ids:
         return []
 
-    query = select(Employee).where(Employee.employee_id.in_(employee_ids))
+    # ХАК ДЛЯ SAP: SAP присылает "0000015370", а в БД 1С часто хранится "15370".
+    # Нормализуем ID, убирая ведущие нули, чтобы поиск сработал.
+    # normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
+
+    query = (
+        select(Employee)
+        .options(
+            selectinload(Employee.position),
+            selectinload(Employee.group).options(
+                selectinload(ZupDepartment.parent).options(
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent)
+                    )
+                )
+            )
+        )
+        # .where(Employee.employee_id.in_(normalized_ids))
+        .where(Employee.employee_id.in_(employee_ids))
+    )
+
     result = await db.execute(query)
-    return result.scalars().all()
+    employees = result.scalars().all()
+
+    # Восстанавливаем иерархию подразделений, как в вашем рабочем get_employees_list
+    for emp in employees:
+        hierarchy_chain = []
+        current = emp.group
+
+        while current is not None:
+            hierarchy_chain.append(current)
+            if not current.parent_guid or current.parent_guid == "00000000-0000-0000-0000-000000000000":
+                break
+
+            insp = inspect(current)
+            parent_attr = insp.attrs.get('parent')
+            if parent_attr is None or parent_attr.loaded_value is None:
+                break
+
+            current = parent_attr.loaded_value
+
+        hierarchy_chain.reverse()
+
+        # Динамически добавляем атрибуты к объекту, как в рабочем коде
+        emp.society = hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None
+        emp.department = hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None
+        emp.division = hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None
+        emp.group = hierarchy_chain[3] if len(hierarchy_chain) >= 4 else None
+
+    return employees
 
 
 async def _get_departments_by_codes(
@@ -549,9 +595,31 @@ def _build_virtual_asset(
 
 
 def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, Any]:
-    """Формирование ответа пользователя для виртуального актива."""
+    """Формирование ответа пользователя для виртуального актива с полной иерархией."""
     parts_ru = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
     parts_en = [p for p in [employee.last_name_en, employee.first_name_en, employee.middle_name_en] if p]
+
+    # Формируем данные о должности, если она есть
+    position_data = None
+    if getattr(employee, 'position', None):
+        position_data = {
+            "name": employee.position.name,
+            "name_en": employee.position.name_en
+        }
+
+    # Вспомогательная функция для безопасного извлечения полей подразделения
+    def _get_dept_dict(dept_obj):
+        if not dept_obj:
+            return None
+        return {
+            "guid": dept_obj.guid,
+            "name": dept_obj.name,
+            "name_en": getattr(dept_obj, 'name_en', None),
+            "short_name": getattr(dept_obj, 'short_name', None),
+            "creation_date": getattr(dept_obj, 'creation_date', None),
+            "closure_date": getattr(dept_obj, 'closure_date', None),
+            "parent_guid": getattr(dept_obj, 'parent_guid', None),
+        }
 
     return {
         "guid": employee.guid,
@@ -568,11 +636,14 @@ def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, 
         "updated_at": employee.updated_at,
         "full_name_ru": " ".join(parts_ru) if parts_ru else None,
         "full_name_en": " ".join(parts_en) if parts_en else None,
-        "society": None,
-        "department": None,
-        "division": None,
-        "group": None,
-        "position": None,
+
+        # Заполняем иерархию из атрибутов, которые мы добавили в _get_employees_by_ids
+        "society": _get_dept_dict(getattr(employee, 'society', None)),
+        "department": _get_dept_dict(getattr(employee, 'department', None)),
+        "division": _get_dept_dict(getattr(employee, 'division', None)),
+        "group": _get_dept_dict(getattr(employee, 'group', None)),
+        "position": position_data,
+
         "start_date": None,
         "end_date": None,
         "assignment_type": assignment_type,

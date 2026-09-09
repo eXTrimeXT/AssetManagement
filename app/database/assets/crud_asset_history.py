@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from datetime import datetime, timedelta
@@ -101,7 +101,7 @@ async def get_history_with_filters(
         session_id: Optional[str] = None,
         skip: int = 0,
         limit: int = 100
-) -> List[AssetHistory]:
+) -> Sequence[Any]:
     """Получить историю с фильтрами"""
     query = select(AssetHistory)
 

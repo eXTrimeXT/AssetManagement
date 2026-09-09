@@ -486,6 +486,9 @@ def _build_virtual_asset(
     employee_id = "0000015370"
     employee = employees_map.get(employee_id) if employee_id else None
 
+    if employee_id and not employee:
+        logger.warning(f"[SAP VIRTUAL] Сотрудник {employee_id} не найден в локальной БД для актива {sap_item.get('inventory_number')}")
+
     users = []
     if employee:
         users.append(_build_user_response(employee, "user"))
@@ -495,7 +498,6 @@ def _build_virtual_asset(
         parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
         current_user_full_name = " ".join(parts) if parts else None
 
-    # ГАРАНТИЯ: asset_id всегда должен быть int для Pydantic.
     # Если SAP API еще не отдает material_id (возвращает null), генерируем стабильный хеш.
     raw_material_id = sap_item.get("material_id")
     if raw_material_id is not None:

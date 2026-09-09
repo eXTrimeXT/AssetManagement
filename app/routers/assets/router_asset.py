@@ -183,6 +183,24 @@ async def get_asset(
     
     return obj
 
+# @router_assets.patch("/{asset_id}", response_model=AssetResponse)
+# async def update_asset_endpoint(
+#         request: Request,
+#         asset_id: int,
+#         data: AssetUpdate,
+#         db: AsyncSession = Depends(get_db),
+#         current_user=Depends(require_authorized_user)
+# ):
+#     obj = await get_asset_by_id(db, asset_id)
+#     if not obj:
+#         raise HTTPException(status_code=404, detail="Актив не найден")
+#
+#     # Итоговый asset_type_id после обновления
+#     final_asset_type_id = data.asset_type_id if data.asset_type_id is not None else obj.asset_type_id
+#     await check_asset_permission(db, request, final_asset_type_id, "write")
+#     updated = await update_asset(db, asset_id, data, current_user.employee_id)
+#     return updated
+
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset_endpoint(
         request: Request,
@@ -191,14 +209,21 @@ async def update_asset_endpoint(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
+    # Проверяем существование актива (но не блокируем, если его нет)
     obj = await get_asset_by_id(db, asset_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Актив не найден")
 
-    # Итоговый asset_type_id после обновления
-    final_asset_type_id = data.asset_type_id if data.asset_type_id is not None else obj.asset_type_id
-    await check_asset_permission(db, request, final_asset_type_id, "write")
+    # Проверка прав доступа (только если актив существует)
+    if obj:
+        final_asset_type_id = data.asset_type_id if data.asset_type_id is not None else obj.asset_type_id
+        if final_asset_type_id:
+            await check_asset_permission(db, request, final_asset_type_id, "write")
+
+    # Обновляем или создаем актив
     updated = await update_asset(db, asset_id, data, current_user.employee_id)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Не удалось создать или обновить актив")
+
     return updated
 
 @router_assets.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)

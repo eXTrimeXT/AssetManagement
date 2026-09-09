@@ -94,7 +94,7 @@ class AssetResponse(AssetBase):
     asset_id: int
     created_by: Optional[str] = None
     updated_by: Optional[str] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     asset_type_name: Optional[str] = None
     asset_status_id: Optional[int] = None

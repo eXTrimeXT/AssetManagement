@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
 from app.services.auth.auth_service import require_authorized_user
-from app.services.sap_sync_service.sync_sap_assets import sync_sap_assets
+from app.services.sap.sync_sap_assets import sync_sap_assets
 
 router_from_sap = APIRouter(prefix="/assets", tags=["Assets"])
 

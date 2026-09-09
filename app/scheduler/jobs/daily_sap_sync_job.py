@@ -1,6 +1,6 @@
 import logging
 from app.database.connection import async_session
-from app.services.sap_sync_service.sync_sap_assets import sync_sap_assets
+from app.services.sap.sync_sap_assets import sync_sap_assets
 
 logger = logging.getLogger(__name__)
 

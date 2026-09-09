@@ -3,7 +3,7 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import List, Optional, Literal
 from app.database.connection import get_db
 from app.database.assets.crud_asset import (
     create_asset, get_asset_by_id, get_assets_list,
@@ -20,6 +20,7 @@ from app.schemas.PaginationResponse import PaginatedResponse
 from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
+from app.services.assets.asset_list_service import get_assets_list_with_sap
 
 logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])
@@ -63,39 +64,91 @@ async def enrich_users_data(db: AsyncSession, users_data: list) -> list:
 
     return enriched
 
+# Старая версия без SAP API
+# @router_assets.get(
+#     "/",
+#     response_model=PaginatedResponse[AssetResponse],
+#     summary="Получить список активов (с пагинацией)"
+# )
+# async def get_assets(
+#         request: Request,
+#         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
+#         page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
+#         name: Optional[str] = Query(None),
+#         inventory_id: Optional[str] = Query(None),
+#         serial_number: Optional[str] = Query(None),
+#         asset_status: Optional[str] = Query(None),
+#         model_id: Optional[int] = Query(None),
+#         asset_type_id: Optional[int] = Query(None),
+#         parent_id: Optional[int] = Query(None),
+#         db: AsyncSession = Depends(get_db),
+#         current_user=Depends(require_authorized_user)
+# ):
+#     """Получить страницу активов с фильтрацией по правам."""
+#     token = await get_token_from_request(request)
+#
+#     if check_assets_is_admin(token):
+#         allowed_type_en_names = None
+#     else:
+#         user_data = get_user_from_token(token)
+#         permissions = user_data.permissions
+#         allowed_type_en_names = [
+#             en_name for en_name, perms in permissions.items()
+#             if perms.get("read", False)
+#         ]
+#
+#     assets, total = await get_assets_list(
+#         db=db,
+#         page=page,
+#         page_size=page_size,
+#         name=name,
+#         inventory_id=inventory_id,
+#         serial_number=serial_number,
+#         asset_status=asset_status,
+#         model_id=model_id,
+#         asset_type_id=asset_type_id,
+#         parent_id=parent_id,
+#         allowed_type_en_names=allowed_type_en_names,
+#     )
+#
+#     # === Дополняем данные о пользователях (Bulk Fetch) ===
+#     await bulk_enrich_assets(db, list(assets))
+#
+#     total_pages = math.ceil(total / page_size) if total > 0 else 0
+#
+#     return PaginatedResponse(
+#         items=list(assets),
+#         total=total,
+#         page=page,
+#         page_size=page_size,
+#         total_pages=total_pages,
+#         has_next=page < total_pages,
+#         has_previous=page > 1,
+#     )
+
+
+# Новая версия с SAP API
 @router_assets.get(
-    "/",
+    "",
     response_model=PaginatedResponse[AssetResponse],
-    summary="Получить список активов (с пагинацией)"
+    summary="Получить список активов с слиянием данных из SAP и локальной БД"
 )
 async def get_assets(
-        request: Request,
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
         page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
-        name: Optional[str] = Query(None),
-        inventory_id: Optional[str] = Query(None),
-        serial_number: Optional[str] = Query(None),
-        asset_status: Optional[str] = Query(None),
-        model_id: Optional[int] = Query(None),
-        asset_type_id: Optional[int] = Query(None),
-        parent_id: Optional[int] = Query(None),
+        name: Optional[str] = Query(None, description="Поиск по названию актива"),
+        inventory_id: Optional[str] = Query(None, description="Инвентарный номер"),
+        serial_number: Optional[str] = Query(None, description="Серийный номер"),
+        asset_status: Optional[str] = Query(None, description="Статус актива"),
+        model_id: Optional[int] = Query(None, description="ID модели"),
+        asset_type_id: Optional[int] = Query(None, description="ID типа актива"),
+        parent_id: Optional[int] = Query(None, description="ID родительского актива"),
+        employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),  # <-- ДОБАВЛЕНО
+        search_mode: Literal["all", "nulls", "not_nulls"] = Query("not_nulls", description="Режим поиска SAP: all, not_nulls, nulls"),
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user),
 ):
-    """Получить страницу активов с фильтрацией по правам."""
-    token = await get_token_from_request(request)
-
-    if check_assets_is_admin(token):
-        allowed_type_en_names = None
-    else:
-        user_data = get_user_from_token(token)
-        permissions = user_data.permissions
-        allowed_type_en_names = [
-            en_name for en_name, perms in permissions.items()
-            if perms.get("read", False)
-        ]
-
-    assets, total = await get_assets_list(
+    result = await get_assets_list_with_sap(
         db=db,
         page=page,
         page_size=page_size,
@@ -106,23 +159,11 @@ async def get_assets(
         model_id=model_id,
         asset_type_id=asset_type_id,
         parent_id=parent_id,
-        allowed_type_en_names=allowed_type_en_names,
+        search_mode=search_mode,
+        employee_id=employee_id,
     )
 
-    # === Дополняем данные о пользователях (Bulk Fetch) ===
-    await bulk_enrich_assets(db, list(assets))
-
-    total_pages = math.ceil(total / page_size) if total > 0 else 0
-
-    return PaginatedResponse(
-        items=list(assets),
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
-        has_next=page < total_pages,
-        has_previous=page > 1,
-    )
+    return PaginatedResponse(**result)
 
 @router_assets.get("/{asset_id}", response_model=AssetResponse)
 async def get_asset(

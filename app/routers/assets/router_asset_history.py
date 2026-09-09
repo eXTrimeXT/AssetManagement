@@ -39,7 +39,7 @@ async def read_history_with_filters(
         current_user=Depends(require_authorized_user)
 ):
     """Получить историю изменений с различными фильтрами"""
-    return await get_history_with_filters(
+    history = await get_history_with_filters(
         db=db,
         asset_id=asset_id,
         changed_by=changed_by,
@@ -50,6 +50,11 @@ async def read_history_with_filters(
         skip=skip,
         limit=limit
     )
+
+    if not history:
+        raise HTTPException(status_code=404, detail="У актива нет истории изменений")
+
+    return history
 
 
 @router_asset_history.get(

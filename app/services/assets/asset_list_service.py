@@ -572,8 +572,9 @@ def _build_virtual_asset(
         # всегда поместится в знаковый INTEGER PostgreSQL и не вызовет переполнения.
         asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
 
+    asset_id = sap_item.get("material_id")
     return {
-        "asset_id": asset_id_val,  # <-- Теперь здесь гарантированно int
+        "asset_id": asset_id,  # <-- Теперь здесь гарантированно int
         "name": sap_item.get("base_material_name"),
         "inventory_id": sap_item.get("inventory_number"),
         "serial_number": sap_item.get("serial_number"),

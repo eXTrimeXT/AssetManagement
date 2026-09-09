@@ -1,7 +1,6 @@
 import logging
-import zlib
-from typing import List, Dict, Optional, Any, Sequence, cast
-from sqlalchemy import select, func, inspect, Integer, or_
+from typing import List, Dict, Optional, Any, Sequence
+from sqlalchemy import select, func, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -333,104 +332,18 @@ async def _get_local_assets_by_material_ids(
     return result.scalars().all()
 
 
-# async def _get_employees_by_ids(
-#         db: AsyncSession,
-#         employee_ids: List[str],
-# ) -> list[Any] | Sequence[Any]:
-#     """Массовая загрузка сотрудников по employee_id с учетом формата SAP (ведущие нули)."""
-#     if not employee_ids:
-#         return []
-#
-#     # ЛОГИРУЕМ исходные данные, пришедшие из SAP
-#     logger.info(f"[DEBUG EMP] Исходные employee_id из SAP API: {employee_ids}")
-#
-#     # ЛОГИРУЕМ данные, которые реально пойдут в SQL-запрос
-#     logger.info(f"[DEBUG EMP] Нормализованные employee_id для запроса в БД: {employee_ids}")
-#
-#     query = (
-#         select(Employee)
-#         .options(
-#             selectinload(Employee.position),
-#             selectinload(Employee.group).options(
-#                 selectinload(ZupDepartment.parent).options(
-#                     selectinload(ZupDepartment.parent).options(
-#                         selectinload(ZupDepartment.parent)
-#                     )
-#                 )
-#             )
-#         )
-#         .where(Employee.employee_id.in_(employee_ids))
-#     )
-#
-#     result = await db.execute(query)
-#     employees = result.scalars().all()
-#
-#     # ЛОГИРУЕМ результат запроса
-#     logger.info(f"[DEBUG EMP] Найдено сотрудников в БД: {len(employees)}")
-#     if employees:
-#         found_ids = [emp.employee_id for emp in employees]
-#         logger.info(f"[DEBUG EMP] Реально найденные employee_id в БД: {found_ids}")
-#
-#         # Дополнительно можно вывести, кого именно НЕ нашли
-#         missing_ids = set(employee_ids) - set(found_ids)
-#         if missing_ids:
-#             logger.warning(f"[DEBUG EMP] НЕ НАЙДЕНЫ в БД (после нормализации): {missing_ids}")
-#
-#     # Восстанавливаем иерархию подразделений для найденных сотрудников
-#     for emp in employees:
-#         hierarchy_chain = []
-#         current = emp.group
-#
-#         while current is not None:
-#             hierarchy_chain.append(current)
-#             if not current.parent_guid or current.parent_guid == "00000000-0000-0000-0000-000000000000":
-#                 break
-#
-#             insp = inspect(current)
-#             parent_attr = insp.attrs.get('parent')
-#             if parent_attr is None or parent_attr.loaded_value is None:
-#                 break
-#
-#             current = parent_attr.loaded_value
-#
-#         hierarchy_chain.reverse()
-#
-#         emp.society = hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None
-#         emp.department = hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None
-#         emp.division = hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None
-#         emp.group = hierarchy_chain[3] if len(hierarchy_chain) >= 4 else None
-#
-#     return employees
-
 async def _get_employees_by_ids(
         db: AsyncSession,
         employee_ids: List[str],
 ) -> list[Any] | Sequence[Any]:
-    """Массовая загрузка сотрудников по employee_id с учетом разного количества ведущих нулей."""
+    """Массовая загрузка сотрудников по employee_id с учетом формата SAP (ведущие нули)."""
     if not employee_ids:
         return []
 
+    # ЛОГИРУЕМ исходные данные, пришедшие из SAP
     logger.info(f"[DEBUG EMP] Исходные employee_id из SAP API: {employee_ids}")
 
-    # Разделяем ID на числовые и строковые для надежного поиска
-    numeric_ids = []
-    string_ids = []
-
-    for eid in employee_ids:
-        try:
-            # Преобразуем в int: "00002347" -> 2347, "000002347" -> 2347
-            numeric_ids.append(int(eid))
-        except (ValueError, TypeError):
-            # Если ID содержит буквы или спецсимволы, оставляем как строку
-            string_ids.append(eid)
-
-    # Формируем условия для WHERE
-    conditions = []
-    if numeric_ids:
-        # Сравниваем числовое значение колонки БД с нашими числами
-        conditions.append(cast(Employee.employee_id, Integer).in_(numeric_ids))
-    if string_ids:
-        conditions.append(Employee.employee_id.in_(string_ids))
+    logger.info(f"[DEBUG EMP] Нормализованные employee_id для запроса в БД: {employee_ids}")
 
     query = (
         select(Employee)
@@ -444,16 +357,22 @@ async def _get_employees_by_ids(
                 )
             )
         )
-        .where(or_(*conditions)) # Используем OR для объединения условий
+        .where(Employee.employee_id.in_(employee_ids))
     )
 
     result = await db.execute(query)
     employees = result.scalars().all()
 
+    # ЛОГИРУЕМ результат запроса
     logger.info(f"[DEBUG EMP] Найдено сотрудников в БД: {len(employees)}")
     if employees:
         found_ids = [emp.employee_id for emp in employees]
         logger.info(f"[DEBUG EMP] Реально найденные employee_id в БД: {found_ids}")
+
+        # Дополнительно можно вывести, кого именно НЕ нашли
+        missing_ids = set(employee_ids) - set(found_ids)
+        if missing_ids:
+            logger.warning(f"[DEBUG EMP] НЕ НАЙДЕНЫ в БД (после нормализации): {missing_ids}")
 
     # Восстанавливаем иерархию подразделений для найденных сотрудников
     for emp in employees:
@@ -481,6 +400,7 @@ async def _get_employees_by_ids(
 
     return employees
 
+
 async def _get_departments_by_codes(
         db: AsyncSession,
         department_codes: List[str],
@@ -494,101 +414,13 @@ async def _get_departments_by_codes(
     return result.scalars().all()
 
 
-# def _build_virtual_asset(
-#         sap_item: Dict[str, Any],
-#         employees_map: Dict[str, Employee],
-#         departments_map: Dict[str, ZupDepartment],
-# ) -> Dict[str, Any]:
-#     employee_id = sap_item.get("employee_id")
-#     employee = employees_map.get(employee_id) if employee_id else None
-#
-#     users = []
-#     if employee:
-#         users.append(_build_user_response(employee, "user"))
-#
-#     current_user_full_name = None
-#     if employee:
-#         parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
-#         current_user_full_name = " ".join(parts) if parts else None
-#
-#     # Теперь material_id - это строка из SAP.
-#     # Для схемы ответа (где asset_id должен быть int) мы можем использовать хеш,
-#     # но в БД мы сохраним именно строковый material_id.
-#     raw_material_id = sap_item.get("material_id")
-#
-#     # Для ответа фронтенду (если schema требует int для asset_id)
-#     if raw_material_id is not None:
-#         # Пытаемся преобразовать в int, если не получается (слишком длинное), используем хеш
-#         try:
-#             asset_id_val = int(raw_material_id)
-#         except (ValueError, OverflowError):
-#             import zlib
-#             asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
-#     else:
-#         import zlib
-#         inv = str(sap_item.get("inventory_number", ""))
-#         serial = str(sap_item.get("serial_number", ""))
-#         asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
-#
-#     return {
-#         "asset_id": None,
-#         "name": sap_item.get("base_material_name"),
-#         "inventory_id": sap_item.get("inventory_number"),
-#         "serial_number": sap_item.get("serial_number"),
-#         "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
-#         "asset_status": None,
-#         "asset_status_id": None,
-#         "comment": None,
-#         "date_issue": None,
-#         "date_purchasing": None,
-#         "model_id": None,
-#         "model_name": None,
-#         "asset_type_id": None,
-#         "parent_id": None,
-#         "every_week_check": False,
-#         "next_service": None,
-#         "service_period": 0,
-#         "parent_name": None,
-#         "manufacturer_name": None,
-#         "vendor_name": None,
-#         "os_name": None,
-#         "created_by": None,
-#         "updated_by": None,
-#         "created_at": None,
-#         "updated_at": None,
-#         "asset_type_name": None,
-#         "location": None,
-#         "users": users,
-#         "responsible_users": [],
-#         "serving_users": [],
-#         "current_user": employee_id,
-#         "current_user_full_name": current_user_full_name,
-#         "parent": None,
-#         "material_id": raw_material_id
-#     }
-
 def _build_virtual_asset(
         sap_item: Dict[str, Any],
         employees_map: Dict[str, Employee],
         departments_map: Dict[str, ZupDepartment],
 ) -> Dict[str, Any]:
-    raw_employee_id = sap_item.get("employee_id")
-    employee = None
-
-    if raw_employee_id:
-        # 1. Сначала пробуем найти по точному совпадению строки
-        employee = employees_map.get(raw_employee_id)
-
-        # 2. Если не нашли, пробуем найти по числовому значению
-        if not employee:
-            try:
-                num_key = int(raw_employee_id)
-                employee = employees_map.get(num_key)
-            except (ValueError, TypeError):
-                pass
-
-    if raw_employee_id and not employee:
-        logger.warning(f"[SAP VIRTUAL] Сотрудник '{raw_employee_id}' не найден в локальной БД для актива {sap_item.get('inventory_number')}")
+    employee_id = sap_item.get("employee_id")
+    employee = employees_map.get(employee_id) if employee_id else None
 
     users = []
     if employee:
@@ -600,21 +432,26 @@ def _build_virtual_asset(
         current_user_full_name = " ".join(parts) if parts else None
 
     # Теперь material_id - это строка из SAP.
+    # Для схемы ответа (где asset_id должен быть int) мы можем использовать хеш,
+    # но в БД мы сохраним именно строковый material_id.
     raw_material_id = sap_item.get("material_id")
 
     # Для ответа фронтенду (если schema требует int для asset_id)
     if raw_material_id is not None:
+        # Пытаемся преобразовать в int, если не получается (слишком длинное), используем хеш
         try:
             asset_id_val = int(raw_material_id)
         except (ValueError, OverflowError):
+            import zlib
             asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
     else:
+        import zlib
         inv = str(sap_item.get("inventory_number", ""))
         serial = str(sap_item.get("serial_number", ""))
         asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
 
     return {
-        "asset_id": asset_id_val, # <-- Вернул asset_id_val вместо None, чтобы схема не падала
+        "asset_id": None,
         "name": sap_item.get("base_material_name"),
         "inventory_id": sap_item.get("inventory_number"),
         "serial_number": sap_item.get("serial_number"),
@@ -644,11 +481,12 @@ def _build_virtual_asset(
         "users": users,
         "responsible_users": [],
         "serving_users": [],
-        "current_user": raw_employee_id,
+        "current_user": employee_id,
         "current_user_full_name": current_user_full_name,
         "parent": None,
         "material_id": raw_material_id
     }
+
 
 def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, Any]:
     """Формирование ответа пользователя для виртуального актива с полной иерархией."""

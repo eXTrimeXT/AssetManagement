@@ -459,7 +459,6 @@ async def _get_employees_by_ids(
     if not employee_ids:
         return []
 
-    # ХАК ДЛЯ SAP: SAP присылает "0000015370", а в БД 1С часто хранится "15370".
     # Нормализуем ID, убирая ведущие нули, чтобы поиск сработал.
     # normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
 
@@ -486,6 +485,8 @@ async def _get_employees_by_ids(
     for emp in employees:
         hierarchy_chain = []
         current = emp.group
+
+        logger.debug(f"_get_employees_by_ids = {emp.employee_id}")
 
         while current is not None:
             hierarchy_chain.append(current)

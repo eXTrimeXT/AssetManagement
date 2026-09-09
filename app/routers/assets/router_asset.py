@@ -129,7 +129,7 @@ async def enrich_users_data(db: AsyncSession, users_data: list) -> list:
 
 # Новая версия с SAP API
 @router_assets.get(
-    "",
+    "/",
     response_model=PaginatedResponse[AssetResponse],
     summary="Получить список активов с слиянием данных из SAP и локальной БД"
 )

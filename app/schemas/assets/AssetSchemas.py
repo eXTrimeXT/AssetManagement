@@ -52,6 +52,8 @@ class AssetCreate(AssetBase):
     # Локация на карте
     location: Optional[AssetLocationUpdate] = None
 
+    material_id: Optional[str] = None
+
 # Схема для обновления привязок пользователей
 class AssetUserUpdate(BaseModel):
     """Схема для привязки/отвязки пользователя от актива"""

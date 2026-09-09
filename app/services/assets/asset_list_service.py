@@ -18,6 +18,123 @@ logger = logging.getLogger(__name__)
 SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
 
+# async def get_assets_list_with_sap(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         name: Optional[str] = None,
+#         inventory_id: Optional[str] = None,
+#         serial_number: Optional[str] = None,
+#         asset_status: Optional[str] = None,
+#         model_id: Optional[int] = None,
+#         asset_type_id: Optional[int] = None,
+#         parent_id: Optional[int] = None,
+#         search_mode: str = "not_nulls",
+#         employee_id: Optional[str] = None,
+# ) -> Dict[str, Any]:
+#     """
+#     Получение списка активов с слиянием данных из SAP API и локальной БД.
+#     При ошибке SAP API — возвращаются только локальные данные.
+#     """
+#
+#     # Шаг 1: Попытка получить данные из SAP API
+#     sap_items = None
+#     sap_total = None
+#     try:
+#         sap_response = await _fetch_sap_materials(
+#             page=page,
+#             page_size=page_size,
+#             search_mode=search_mode,
+#             base_material_name_like=name,
+#             inventory_number=inventory_id,
+#             serial_number=serial_number,
+#             employee_id=employee_id,
+#         )
+#
+#         if not sap_response.get("success") or "response" not in sap_response or "data" not in sap_response["response"]:
+#             logger.error(f"[SAP FALLBACK] Неверная структура ответа SAP API: {sap_response}")
+#             raise ValueError("Неверная структура ответа SAP API")
+#
+#         sap_data = sap_response.get("response", {})
+#         sap_items = sap_data.get("data", [])
+#         sap_total = sap_data.get("total", 0)
+#         logger.info(f"[SAP] Получено {len(sap_items)} записей из SAP API")
+#
+#     except Exception as e:
+#         logger.error(f"[SAP FALLBACK] Ошибка при запросе к SAP API, переключаемся на локальные данные: {e}", exc_info=True)
+#         sap_items = None
+#         sap_total = None
+#
+#     # Шаг 2: Если SAP упал — возвращаем только локальные данные
+#     if sap_items is None:
+#         return await _get_local_assets_only(
+#             db=db,
+#             page=page,
+#             page_size=page_size,
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#         )
+#
+#     # Шаг 3: Если SAP вернул пустой список
+#     if not sap_items:
+#         return _build_paginated_response([], sap_total, page, page_size)
+#
+#     # Шаг 4: Массовая загрузка локальных активов по material_id
+#     material_ids = [item["material_id"] for item in sap_items if item.get("material_id")]
+#     local_assets = await _get_local_assets_by_material_ids(db, material_ids)
+#     local_assets_map = {asset.material_id: asset for asset in local_assets}
+#
+#     # Шаг 5: Массовая загрузка сотрудников и департаментов
+#     employee_ids = set()
+#     department_codes = set()
+#     for item in sap_items:
+#         if item.get("employee_id"):
+#             employee_ids.add(item["employee_id"])
+#         if item.get("department_code"):
+#             department_codes.add(item["department_code"])
+#
+#     employees_map = {}
+#     if employee_ids:
+#         employees = await _get_employees_by_ids(db, list(employee_ids))
+#         employees_map = {emp.employee_id: emp for emp in employees}
+#
+#     departments_map = {}
+#     if department_codes:
+#         departments = await _get_departments_by_codes(db, list(department_codes))
+#         departments_map = {dept.short_name: dept for dept in departments}
+#
+#     # Шаг 6: Слияние данных
+#     result_items = []
+#     for sap_item in sap_items:
+#         material_id = sap_item.get("material_id")
+#
+#         if material_id in local_assets_map:
+#             result_items.append(local_assets_map[material_id])
+#         else:
+#             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
+#             result_items.append(virtual_asset)
+#
+#     # Шаг 7: Применяем "локальные" фильтры постфактум
+#     has_local_filters = any([
+#         asset_status is not None,
+#         model_id is not None,
+#         asset_type_id is not None,
+#         parent_id is not None,
+#         ])
+#     if has_local_filters:
+#         result_items = _apply_local_filters(
+#             result_items, asset_status, model_id, asset_type_id, parent_id
+#         )
+#
+#     return _build_paginated_response(result_items, sap_total, page, page_size)
+
+
 async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
@@ -29,15 +146,41 @@ async def get_assets_list_with_sap(
         model_id: Optional[int] = None,
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
-        search_mode: str = "not_nulls",
         employee_id: Optional[str] = None,
+        search_mode: str = "not_nulls",
 ) -> Dict[str, Any]:
     """
     Получение списка активов с слиянием данных из SAP API и локальной БД.
-    При ошибке SAP API — возвращаются только локальные данные.
     """
 
-    # Шаг 1: Попытка получить данные из SAP API
+    # 1. Проверяем, есть ли фильтры, которые существуют ТОЛЬКО в локальной БД
+    has_local_only_filters = any([
+        asset_status is not None,
+        model_id is not None,
+        asset_type_id is not None,
+        parent_id is not None,
+        ])
+
+    # 2. Если есть локальные фильтры, виртуальные активы из SAP всё равно не подойдут
+    # (у них эти поля равны None). Поэтому сразу идём в локальную БД.
+    # Это решает проблему пустых страниц при фильтрации по типу, модели и т.д.
+    if has_local_only_filters:
+        logger.info(f"[LOCAL FILTER] Обнаружен локальный фильтр (asset_type_id={asset_type_id}, model_id={model_id}), запрос идёт напрямую в БД.")
+        return await _get_local_assets_only(
+            db=db,
+            page=page,
+            page_size=page_size,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+        )
+
+    # 3. Если локальных фильтров нет, работаем по стандартной схеме с SAP API
     sap_items = None
     sap_total = None
     try:
@@ -65,7 +208,7 @@ async def get_assets_list_with_sap(
         sap_items = None
         sap_total = None
 
-    # Шаг 2: Если SAP упал — возвращаем только локальные данные
+    # Шаг 4: Если SAP упал — возвращаем только локальные данные
     if sap_items is None:
         return await _get_local_assets_only(
             db=db,
@@ -81,16 +224,16 @@ async def get_assets_list_with_sap(
             employee_id=employee_id,
         )
 
-    # Шаг 3: Если SAP вернул пустой список
+    # Шаг 5: Если SAP вернул пустой список
     if not sap_items:
         return _build_paginated_response([], sap_total, page, page_size)
 
-    # Шаг 4: Массовая загрузка локальных активов по material_id
+    # Шаг 6: Массовая загрузка локальных активов по material_id
     material_ids = [item["material_id"] for item in sap_items if item.get("material_id")]
     local_assets = await _get_local_assets_by_material_ids(db, material_ids)
     local_assets_map = {asset.material_id: asset for asset in local_assets}
 
-    # Шаг 5: Массовая загрузка сотрудников и департаментов
+    # Шаг 7: Массовая загрузка сотрудников и департаментов
     employee_ids = set()
     department_codes = set()
     for item in sap_items:
@@ -109,7 +252,7 @@ async def get_assets_list_with_sap(
         departments = await _get_departments_by_codes(db, list(department_codes))
         departments_map = {dept.short_name: dept for dept in departments}
 
-    # Шаг 6: Слияние данных
+    # Шаг 8: Слияние данных
     result_items = []
     for sap_item in sap_items:
         material_id = sap_item.get("material_id")
@@ -120,20 +263,7 @@ async def get_assets_list_with_sap(
             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
             result_items.append(virtual_asset)
 
-    # Шаг 7: Применяем "локальные" фильтры постфактум
-    has_local_filters = any([
-        asset_status is not None,
-        model_id is not None,
-        asset_type_id is not None,
-        parent_id is not None,
-        ])
-    if has_local_filters:
-        result_items = _apply_local_filters(
-            result_items, asset_status, model_id, asset_type_id, parent_id
-        )
-
     return _build_paginated_response(result_items, sap_total, page, page_size)
-
 
 async def _get_local_assets_only(
         db: AsyncSession,

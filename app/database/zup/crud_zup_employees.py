@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Sequence, Tuple, List, Dict, Any
 
-from sqlalchemy import select, func, or_, inspect
+from sqlalchemy import select, func, or_, inspect, and_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, aliased
@@ -122,6 +122,7 @@ async def update_employee_comment(
 async def get_employees_count(
         db: AsyncSession,
         employee_id: Optional[str] = None,
+        search_name: Optional[str] = None,
         last_name: Optional[str] = None,
         first_name: Optional[str] = None,
         middle_name: Optional[str] = None,
@@ -138,6 +139,8 @@ async def get_employees_count(
     if employee_id:
         # query = query.where(Employee.employee_id == employee_id)
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
+    if search_name:
+        query = _apply_name_search(query, search_name)
     if last_name:
         query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
     if first_name:
@@ -218,11 +221,48 @@ def _apply_position_search(query, search_position: str):
     )
     return query
 
+# Поиск пользователя по ФИО
+def _apply_name_search(query, search_name: str):
+    """
+    Применяет поиск по ФИО в любом порядке.
+    Разбивает строку на слова и требует, чтобы каждое слово
+    встречалось в любом из полей имени (рус или англ).
+    """
+    if not search_name:
+        return query
+
+    # Разбиваем на слова и убираем пустые
+    words = [w.strip() for w in search_name.split() if w.strip()]
+    if not words:
+        return query
+
+    word_conditions = []
+    for word in words:
+        like_pattern = f"%{word}%"
+        # Слово должно быть в любом из полей имени
+        word_conditions.append(
+            or_(
+                Employee.last_name.ilike(like_pattern),
+                Employee.first_name.ilike(like_pattern),
+                Employee.middle_name.ilike(like_pattern),
+                Employee.last_name_en.ilike(like_pattern),
+                Employee.first_name_en.ilike(like_pattern),
+                Employee.middle_name_en.ilike(like_pattern)
+            )
+        )
+
+    # Все слова должны присутствовать в записи (логическое AND)
+    if word_conditions:
+        query = query.where(and_(*word_conditions))
+
+    return query
+
 async def get_employees_list(
         db: AsyncSession,
         page: int = 1,
         page_size: int = 50,
         employee_id: Optional[str] = None,
+        search_name: Optional[str] = None,
         last_name: Optional[str] = None,
         first_name: Optional[str] = None,
         middle_name: Optional[str] = None,
@@ -237,7 +277,7 @@ async def get_employees_list(
 ) -> Tuple[Sequence[Employee], int]:
 
     total = await get_employees_count(
-        db, employee_id, last_name, first_name, middle_name,
+        db, employee_id, search_name, last_name, first_name, middle_name,
         last_name_en, first_name_en, middle_name_en,
         department_guid, position_guid, is_active, search_department, search_position
     )
@@ -262,6 +302,8 @@ async def get_employees_list(
     if employee_id:
         # query = query.where(Employee.employee_id == employee_id)
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
+    if search_name:
+        query = _apply_name_search(query, search_name)
     if last_name:
         query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
     if first_name:

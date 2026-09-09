@@ -483,6 +483,7 @@ def _build_virtual_asset(
         departments_map: Dict[str, ZupDepartment],
 ) -> Dict[str, Any]:
     employee_id = sap_item.get("employee_id")
+    employee_id = "0000015370"
     employee = employees_map.get(employee_id) if employee_id else None
 
     users = []
@@ -502,8 +503,6 @@ def _build_virtual_asset(
     else:
         inv = str(sap_item.get("inventory_number", ""))
         serial = str(sap_item.get("serial_number", ""))
-        # Создаем стабильное 32-битное целое число из строки (всегда будет int)
-        # asset_id_val = int(hashlib.md5(f"{inv}_{serial}".encode()).hexdigest()[:8], 16)
 
         # zlib.crc32 возвращает беззнаковое 32-битное число.
         # Битовое И (&) с 0x7FFFFFFF (2147483647) гарантирует, что число
@@ -534,8 +533,8 @@ def _build_virtual_asset(
         "os_name": None,
         "created_by": None,
         "updated_by": None,
-        "created_at": None,  # <-- Теперь схема разрешает None
-        "updated_at": None,  # <-- Теперь схема разрешает None
+        "created_at": None,
+        "updated_at": None,
         "asset_type_name": None,
         "location": None,
         "users": users,

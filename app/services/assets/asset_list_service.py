@@ -457,12 +457,17 @@ async def _get_employees_by_ids(
 ) -> list[Any] | Sequence[Any]:
     """Массовая загрузка сотрудников по employee_id с учетом формата SAP (ведущие нули)."""
     if not employee_ids:
-        for emp in employee_ids:
-            logger.debug(f"Список employee_ids: {emp}")
         return []
 
-    # Нормализуем ID, убирая ведущие нули, чтобы поиск сработал.
-    # normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
+    # ЛОГИРУЕМ исходные данные, пришедшие из SAP
+    logger.info(f"[DEBUG EMP] Исходные employee_id из SAP API: {employee_ids}")
+
+    # Нормализуем ID: убираем ведущие нули.
+    # Например: "0000015370" -> "15370". Если строка была "0000", станет "0".
+    normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
+
+    # ЛОГИРУЕМ данные, которые реально пойдут в SQL-запрос
+    logger.info(f"[DEBUG EMP] Нормализованные employee_id для запроса в БД: {normalized_ids}")
 
     query = (
         select(Employee)
@@ -476,19 +481,28 @@ async def _get_employees_by_ids(
                 )
             )
         )
-        # .where(Employee.employee_id.in_(normalized_ids))
-        .where(Employee.employee_id.in_(employee_ids))
+        # ВАЖНО: используем normalized_ids, иначе поиск по "0000015370" не найдет "15370" в БД
+        .where(Employee.employee_id.in_(normalized_ids))
     )
 
     result = await db.execute(query)
     employees = result.scalars().all()
 
-    # Восстанавливаем иерархию подразделений, как в вашем рабочем get_employees_list
+    # ЛОГИРУЕМ результат запроса
+    logger.info(f"[DEBUG EMP] Найдено сотрудников в БД: {len(employees)}")
+    if employees:
+        found_ids = [emp.employee_id for emp in employees]
+        logger.info(f"[DEBUG EMP] Реально найденные employee_id в БД: {found_ids}")
+
+        # Дополнительно можно вывести, кого именно НЕ нашли
+        missing_ids = set(normalized_ids) - set(found_ids)
+        if missing_ids:
+            logger.warning(f"[DEBUG EMP] НЕ НАЙДЕНЫ в БД (после нормализации): {missing_ids}")
+
+    # Восстанавливаем иерархию подразделений для найденных сотрудников
     for emp in employees:
         hierarchy_chain = []
         current = emp.group
-
-        logger.debug(f"_get_employees_by_ids = {emp.employee_id}")
 
         while current is not None:
             hierarchy_chain.append(current)
@@ -504,7 +518,6 @@ async def _get_employees_by_ids(
 
         hierarchy_chain.reverse()
 
-        # Динамически добавляем атрибуты к объекту, как в рабочем коде
         emp.society = hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None
         emp.department = hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None
         emp.division = hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None

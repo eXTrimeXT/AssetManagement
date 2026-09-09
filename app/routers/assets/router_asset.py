@@ -143,7 +143,7 @@ async def get_assets(
         model_id: Optional[int] = Query(None, description="ID модели"),
         asset_type_id: Optional[int] = Query(None, description="ID типа актива"),
         parent_id: Optional[int] = Query(None, description="ID родительского актива"),
-        employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),  # <-- ДОБАВЛЕНО
+        employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),
         search_mode: Literal["all", "nulls", "not_nulls"] = Query("not_nulls", description="Режим поиска SAP: all, not_nulls, nulls"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -157,7 +157,7 @@ async def get_assets(
         serial_number=serial_number,
         asset_status=asset_status,
         model_id=model_id,
-        asset_type_id=asset_type_id,
+        # asset_type_id=asset_type_id,
         parent_id=parent_id,
         search_mode=search_mode,
         employee_id=employee_id,

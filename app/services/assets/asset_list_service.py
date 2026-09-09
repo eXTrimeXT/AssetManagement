@@ -153,7 +153,7 @@ async def get_assets_list_with_sap(
     Получение списка активов с слиянием данных из SAP API и локальной БД.
     """
 
-    # 1. Проверяем, есть ли фильтры, которые существуют ТОЛЬКО в локальной БД
+    # Проверяем, есть ли фильтры, которые существуют ТОЛЬКО в локальной БД
     has_local_only_filters = any([
         asset_status is not None,
         model_id is not None,
@@ -161,7 +161,7 @@ async def get_assets_list_with_sap(
         parent_id is not None,
         ])
 
-    # 2. Если есть локальные фильтры, виртуальные активы из SAP всё равно не подойдут
+    # Если есть локальные фильтры, виртуальные активы из SAP всё равно не подойдут
     # (у них эти поля равны None). Поэтому сразу идём в локальную БД.
     # Это решает проблему пустых страниц при фильтрации по типу, модели и т.д.
     if has_local_only_filters:
@@ -180,7 +180,7 @@ async def get_assets_list_with_sap(
             employee_id=employee_id,
         )
 
-    # 3. Если локальных фильтров нет, работаем по стандартной схеме с SAP API
+    # Если локальных фильтров нет, работаем по стандартной схеме с SAP API
     sap_items = None
     sap_total = None
     try:
@@ -208,7 +208,7 @@ async def get_assets_list_with_sap(
         sap_items = None
         sap_total = None
 
-    # Шаг 4: Если SAP упал — возвращаем только локальные данные
+    # Если SAP упал — возвращаем только локальные данные
     if sap_items is None:
         return await _get_local_assets_only(
             db=db,
@@ -224,16 +224,16 @@ async def get_assets_list_with_sap(
             employee_id=employee_id,
         )
 
-    # Шаг 5: Если SAP вернул пустой список
+    # Если SAP вернул пустой список
     if not sap_items:
         return _build_paginated_response([], sap_total, page, page_size)
 
-    # Шаг 6: Массовая загрузка локальных активов по material_id
+    # Массовая загрузка локальных активов по material_id
     material_ids = [item["material_id"] for item in sap_items if item.get("material_id")]
     local_assets = await _get_local_assets_by_material_ids(db, material_ids)
     local_assets_map = {asset.material_id: asset for asset in local_assets}
 
-    # Шаг 7: Массовая загрузка сотрудников и департаментов
+    # Массовая загрузка сотрудников и департаментов
     employee_ids = set()
     department_codes = set()
     for item in sap_items:
@@ -252,7 +252,7 @@ async def get_assets_list_with_sap(
         departments = await _get_departments_by_codes(db, list(department_codes))
         departments_map = {dept.short_name: dept for dept in departments}
 
-    # Шаг 8: Слияние данных
+    # Слияние данных
     result_items = []
     for sap_item in sap_items:
         material_id = sap_item.get("material_id")

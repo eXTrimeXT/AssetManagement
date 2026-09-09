@@ -123,14 +123,14 @@ async def get_employees_count(
         db: AsyncSession,
         employee_id: Optional[str] = None,
         search_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        first_name: Optional[str] = None,
-        middle_name: Optional[str] = None,
-        last_name_en: Optional[str] = None,
-        first_name_en: Optional[str] = None,
-        middle_name_en: Optional[str] = None,
-        department_guid: Optional[str] = None,
-        position_guid: Optional[str] = None,
+        # last_name: Optional[str] = None,
+        # first_name: Optional[str] = None,
+        # middle_name: Optional[str] = None,
+        # last_name_en: Optional[str] = None,
+        # first_name_en: Optional[str] = None,
+        # middle_name_en: Optional[str] = None,
+        # department_guid: Optional[str] = None,
+        # position_guid: Optional[str] = None,
         is_active: Optional[bool] = None,
         search_department: Optional[str] = None,
         search_position: Optional[str] = None
@@ -141,24 +141,22 @@ async def get_employees_count(
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if search_name:
         query = _apply_name_search(query, search_name)
-    if last_name:
-        query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
-    if first_name:
-        query = query.where(Employee.first_name.ilike(f"%{first_name}%"))
-    if middle_name:
-        query = query.where(Employee.middle_name.ilike(f"%{middle_name}%"))
-    if last_name_en:
-        query = query.where(Employee.last_name_en.ilike(f"%{last_name_en}%"))
-    if first_name_en:
-        query = query.where(Employee.first_name_en.ilike(f"%{first_name_en}%"))
-    if middle_name_en:
-        query = query.where(Employee.middle_name_en.ilike(f"%{middle_name_en}%"))
-    if department_guid:
-        query = query.where(Employee.department_guid == department_guid)
-    if position_guid:
-        query = query.where(Employee.position_guid == position_guid)
-    if search_position:
-        query = _apply_position_search(query, search_position)
+    # if last_name:
+    #     query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
+    # if first_name:
+    #     query = query.where(Employee.first_name.ilike(f"%{first_name}%"))
+    # if middle_name:
+    #     query = query.where(Employee.middle_name.ilike(f"%{middle_name}%"))
+    # if last_name_en:
+    #     query = query.where(Employee.last_name_en.ilike(f"%{last_name_en}%"))
+    # if first_name_en:
+    #     query = query.where(Employee.first_name_en.ilike(f"%{first_name_en}%"))
+    # if middle_name_en:
+    #     query = query.where(Employee.middle_name_en.ilike(f"%{middle_name_en}%"))
+    # if department_guid:
+    #     query = query.where(Employee.department_guid == department_guid)
+    # if position_guid:
+    #     query = query.where(Employee.position_guid == position_guid)
     if is_active is not None:
         if is_active:
             query = query.where(Employee.dismissal_date.is_(None))
@@ -166,6 +164,8 @@ async def get_employees_count(
             query = query.where(Employee.dismissal_date.isnot(None))
     if search_department:
         query = _apply_department_search(query, search_department)
+    if search_position:
+        query = _apply_position_search(query, search_position)
 
     result = await db.execute(query)
     return result.scalar() or 0
@@ -263,23 +263,34 @@ async def get_employees_list(
         page_size: int = 50,
         employee_id: Optional[str] = None,
         search_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        first_name: Optional[str] = None,
-        middle_name: Optional[str] = None,
-        last_name_en: Optional[str] = None,
-        first_name_en: Optional[str] = None,
-        middle_name_en: Optional[str] = None,
-        department_guid: Optional[str] = None,
-        position_guid: Optional[str] = None,
+        # last_name: Optional[str] = None,
+        # first_name: Optional[str] = None,
+        # middle_name: Optional[str] = None,
+        # last_name_en: Optional[str] = None,
+        # first_name_en: Optional[str] = None,
+        # middle_name_en: Optional[str] = None,
+        # department_guid: Optional[str] = None,
+        # position_guid: Optional[str] = None,
         is_active: Optional[bool] = None,
         search_department: Optional[str] = None,
         search_position: Optional[str] = None
 ) -> Tuple[Sequence[Employee], int]:
 
     total = await get_employees_count(
-        db, employee_id, search_name, last_name, first_name, middle_name,
-        last_name_en, first_name_en, middle_name_en,
-        department_guid, position_guid, is_active, search_department, search_position
+        db,
+        employee_id,
+        search_name,
+        # last_name,
+        # first_name,
+        # middle_name,
+        # last_name_en,
+        # first_name_en,
+        # middle_name_en,
+        # department_guid,
+        # position_guid,
+        is_active,
+        search_department,
+        search_position
     )
 
     skip = (page - 1) * page_size
@@ -304,32 +315,31 @@ async def get_employees_list(
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if search_name:
         query = _apply_name_search(query, search_name)
-    if last_name:
-        query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
-    if first_name:
-        query = query.where(Employee.first_name.ilike(f"%{first_name}%"))
-    if middle_name:
-        query = query.where(Employee.middle_name.ilike(f"%{middle_name}%"))
-    if last_name_en:
-        query = query.where(Employee.last_name_en.ilike(f"%{last_name_en}%"))
-    if first_name_en:
-        query = query.where(Employee.first_name_en.ilike(f"%{first_name_en}%"))
-    if middle_name_en:
-        query = query.where(Employee.middle_name_en.ilike(f"%{middle_name_en}%"))
-    if department_guid:
-        query = query.where(Employee.department_guid == department_guid)
-    if position_guid:
-        query = query.where(Employee.position_guid == position_guid)
-    if search_position:
-        query = _apply_position_search(query, search_position)
+    # if last_name:
+    #     query = query.where(Employee.last_name.ilike(f"%{last_name}%"))
+    # if first_name:
+    #     query = query.where(Employee.first_name.ilike(f"%{first_name}%"))
+    # if middle_name:
+    #     query = query.where(Employee.middle_name.ilike(f"%{middle_name}%"))
+    # if last_name_en:
+    #     query = query.where(Employee.last_name_en.ilike(f"%{last_name_en}%"))
+    # if first_name_en:
+    #     query = query.where(Employee.first_name_en.ilike(f"%{first_name_en}%"))
+    # if middle_name_en:
+    #     query = query.where(Employee.middle_name_en.ilike(f"%{middle_name_en}%"))
+    # if department_guid:
+    #     query = query.where(Employee.department_guid == department_guid)
+    # if position_guid:
+    #     query = query.where(Employee.position_guid == position_guid)
     if is_active is not None:
         if is_active:
             query = query.where(Employee.dismissal_date.is_(None))
         else:
             query = query.where(Employee.dismissal_date.isnot(None))
-    # Применяем поиск по подразделениям
     if search_department:
         query = _apply_department_search(query, search_department)
+    if search_position:
+        query = _apply_position_search(query, search_position)
 
     query = query.order_by(Employee.employee_id).offset(skip).limit(page_size)
 

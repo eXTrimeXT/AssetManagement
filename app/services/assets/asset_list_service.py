@@ -457,6 +457,8 @@ async def _get_employees_by_ids(
 ) -> list[Any] | Sequence[Any]:
     """Массовая загрузка сотрудников по employee_id с учетом формата SAP (ведущие нули)."""
     if not employee_ids:
+        for emp in employee_ids:
+            logger.debug(f"Список employee_ids: {emp}")
         return []
 
     # Нормализуем ID, убирая ведущие нули, чтобы поиск сработал.

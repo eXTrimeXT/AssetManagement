@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import zlib
 from typing import List, Dict, Optional, Any, Sequence
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -502,7 +503,12 @@ def _build_virtual_asset(
         inv = str(sap_item.get("inventory_number", ""))
         serial = str(sap_item.get("serial_number", ""))
         # Создаем стабильное 32-битное целое число из строки (всегда будет int)
-        asset_id_val = int(hashlib.md5(f"{inv}_{serial}".encode()).hexdigest()[:8], 16)
+        # asset_id_val = int(hashlib.md5(f"{inv}_{serial}".encode()).hexdigest()[:8], 16)
+
+        # zlib.crc32 возвращает беззнаковое 32-битное число.
+        # Битовое И (&) с 0x7FFFFFFF (2147483647) гарантирует, что число
+        # всегда поместится в знаковый INTEGER PostgreSQL и не вызовет переполнения.
+        asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
 
     return {
         "asset_id": asset_id_val,  # <-- Теперь здесь гарантированно int

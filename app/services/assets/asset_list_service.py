@@ -235,7 +235,6 @@ async def get_assets_list_with_sap(
 
     # Массовая загрузка сотрудников и департаментов
     employee_ids = set()
-    employee_ids.add("0000015370")
     department_codes = set()
     for item in sap_items:
         if item.get("employee_id"):
@@ -465,6 +464,7 @@ async def _get_employees_by_ids(
     # Нормализуем ID: убираем ведущие нули.
     # Например: "0000015370" -> "15370". Если строка была "0000", станет "0".
     # normalized_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
+    employee_ids = list(set(eid.lstrip('0') or '0' for eid in employee_ids))
 
     # ЛОГИРУЕМ данные, которые реально пойдут в SQL-запрос
     logger.info(f"[DEBUG EMP] Нормализованные employee_id для запроса в БД: {employee_ids}")

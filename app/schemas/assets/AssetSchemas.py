@@ -93,7 +93,8 @@ class AssetUpdate(BaseModel):
     serving_users: Optional[List[AssetUserUpdate]] = None
 
 class AssetResponse(AssetBase):
-    asset_id: int
+    asset_id: Optional[int] = None
+    material_id: Optional[str] = None
     created_by: Optional[str] = None
     updated_by: Optional[str] = None
     created_at: Optional[datetime] = None

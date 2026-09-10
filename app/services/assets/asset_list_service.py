@@ -126,7 +126,7 @@ async def get_assets_list_with_sap(
     if skip < local_total:
         # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
         local_orm_items = await _get_local_assets_slice(
-            db, skip, page_size, asset_id, name, inventory_id, serial_number,
+            db, skip, page_size, name, inventory_id, serial_number,
             asset_status, model_id, asset_type_id, parent_id, employee_id
         )
 

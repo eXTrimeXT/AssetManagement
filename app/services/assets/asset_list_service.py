@@ -46,8 +46,8 @@ async def get_assets_list_with_sap(
     # Если есть локальные фильтры, виртуальные активы из SAP всё равно не подойдут
     # (у них эти поля равны None). Поэтому сразу идём в локальную БД.
     # Это решает проблему пустых страниц при фильтрации по типу, модели и т.д.
-    if asset_status is not None or model_id is not None or asset_type_id is not None or parent_id is not None:
-    # if has_local_only_filters:
+    # if asset_status is not None or model_id is not None or asset_type_id is not None or parent_id is not None:
+    if has_local_only_filters:
         logger.info(f"[LOCAL FILTER] Обнаружен локальный фильтр (asset_type_id={asset_type_id}, model_id={model_id}), запрос идёт напрямую в БД.")
         return await _get_local_assets_only(
             db=db,

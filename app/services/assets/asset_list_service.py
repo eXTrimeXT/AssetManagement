@@ -42,24 +42,23 @@ async def get_assets_list_with_sap(
     Список дополняется данными из SAP API, если локальных записей недостаточно.
     """
     skip = (page - 1) * page_size
-    local_total = 0
     result_items: List[Any] = []
     sap_total = 0
 
-    if asset_id is not None or material_id is None:
-        # 1. Получаем общее количество локальных активов, подходящих под фильтры
-        local_total = await _get_local_assets_count(
-            db=db,
-            asset_id=asset_id,
-            name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            asset_status=asset_status,
-            model_id=model_id,
-            asset_type_id=asset_type_id,
-            parent_id=parent_id,
-            employee_id=employee_id
-        )
+    # 1. Получаем общее количество локальных активов, подходящих под фильтры
+    local_total = await _get_local_assets_count(
+        db=db,
+        asset_id=asset_id,
+        material_id=material_id,
+        name=name,
+        inventory_id=inventory_id,
+        serial_number=serial_number,
+        asset_status=asset_status,
+        model_id=model_id,
+        asset_type_id=asset_type_id,
+        parent_id=parent_id,
+        employee_id=employee_id
+    )
 
     if skip < local_total:
         # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
@@ -103,6 +102,7 @@ async def get_assets_list_with_sap(
             )
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера (это словари, Pydantic их валидирует)
             sap_total = fetched_sap_total
+
     if asset_id is None or material_id is not None:
         # 4. Локальные активы закончились. Запрашиваем только SAP со смещением
         sap_offset = skip - local_total
@@ -129,6 +129,7 @@ async def get_assets_list_with_sap(
 async def _get_local_assets_count(
         db: AsyncSession,
         asset_id: Optional[int],
+        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -143,6 +144,8 @@ async def _get_local_assets_count(
 
     if asset_id:
         query = query.where(Asset.asset_id == asset_id)
+    if material_id:
+        query = query.where(Asset.material_id == material_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:

@@ -528,6 +528,62 @@ def _build_virtual_asset(
         "material_id": raw_material_id
     }
 
+# def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, Any]:
+#     """Формирование ответа пользователя для виртуального актива с полной иерархией."""
+#     parts_ru = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
+#     parts_en = [p for p in [employee.last_name_en, employee.first_name_en, employee.middle_name_en] if p]
+#
+#     # Формируем данные о должности, если она есть
+#     position_data = None
+#     if getattr(employee, 'position', None):
+#         position_data = {
+#             "name": employee.position.name,
+#             "name_en": employee.position.name_en
+#         }
+#
+#     # Вспомогательная функция для безопасного извлечения полей подразделения
+#     def _get_dept_dict(dept_obj):
+#         if not dept_obj:
+#             return None
+#         return {
+#             "guid": dept_obj.guid,
+#             "name": dept_obj.name,
+#             "name_en": getattr(dept_obj, 'name_en', None),
+#             "short_name": getattr(dept_obj, 'short_name', None),
+#             "creation_date": getattr(dept_obj, 'creation_date', None),
+#             "closure_date": getattr(dept_obj, 'closure_date', None),
+#             "parent_guid": getattr(dept_obj, 'parent_guid', None),
+#         }
+#
+#     return {
+#         "guid": employee.guid,
+#         "employee_id": employee.employee_id,
+#         "birth_date": employee.birth_date,
+#         "employment_date": employee.employment_date,
+#         "dismissal_date": employee.dismissal_date,
+#         "phone": employee.phone,
+#         "email": employee.email,
+#         "comment": employee.comment,
+#         "position_guid": employee.position_guid,
+#         "department_guid": employee.department_guid,
+#         "created_at": employee.created_at,
+#         # "updated_at": employee.updated_at,
+#         "updated_at": None,
+#         "full_name_ru": " ".join(parts_ru) if parts_ru else None,
+#         "full_name_en": " ".join(parts_en) if parts_en else None,
+#
+#         # Заполняем иерархию из атрибутов, которые мы добавили в _get_employees_by_ids
+#         "society": _get_dept_dict(getattr(employee, 'society', None)),
+#         "department": _get_dept_dict(getattr(employee, 'department', None)),
+#         "division": _get_dept_dict(getattr(employee, 'division', None)),
+#         "group": _get_dept_dict(getattr(employee, 'group', None)),
+#         "position": position_data,
+#
+#         "start_date": None,
+#         "end_date": None,
+#         "assignment_type": assignment_type,
+#     }
+
 def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, Any]:
     """Формирование ответа пользователя для виртуального актива с полной иерархией."""
     parts_ru = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
@@ -555,6 +611,11 @@ def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, 
             "parent_guid": getattr(dept_obj, 'parent_guid', None),
         }
 
+    # БЕЗОПАСНОЕ чтение атрибутов напрямую из __dict__, чтобы избежать MissingGreenlet
+    # Это читает уже загруженные данные из памяти, не обращаясь к БД
+    created_at = employee.__dict__.get('created_at')
+    updated_at = employee.__dict__.get('updated_at')
+
     return {
         "guid": employee.guid,
         "employee_id": employee.employee_id,
@@ -566,9 +627,11 @@ def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, 
         "comment": employee.comment,
         "position_guid": employee.position_guid,
         "department_guid": employee.department_guid,
-        "created_at": employee.created_at,
-        # "updated_at": employee.updated_at,
-        "updated_at": None,
+
+        # Используем значения из __dict__
+        "created_at": created_at,
+        "updated_at": updated_at,
+
         "full_name_ru": " ".join(parts_ru) if parts_ru else None,
         "full_name_en": " ".join(parts_en) if parts_en else None,
 

@@ -137,11 +137,11 @@ class AssetShortResponse(AssetBase):
 
 class AssetLocationUpdate(BaseModel):
     """Схема для обновления позиции актива на карте"""
-    workshop_id: int
+    workshop_id: Optional[int] = None
     place: Optional[str] = None
     level: Optional[int] = None
-    x: int
-    y: int
+    x: Optional[int] = None
+    y: Optional[int] = None
     rotation: Optional[int] = 0
     scale: Optional[int] = 100
 

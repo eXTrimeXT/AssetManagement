@@ -32,9 +32,9 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
     db_obj = Asset(**asset_data, created_by=employee_id, updated_by=employee_id)
 
     # === ОБРАБОТКА СТАТУСА ===
-    if data.asset_status:
+    if data.asset_status_id:
         result = await db.execute(
-            select(AssetStatus).where(AssetStatus.status == data.asset_status)
+            select(AssetStatus).where(AssetStatus.id == data.asset_status_id)
         )
         status_obj = result.scalars().first()
         if status_obj:

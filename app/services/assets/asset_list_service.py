@@ -142,8 +142,6 @@ async def get_assets_list_with_sap(
     for sap_item in sap_items:
         material_id = sap_item.get("material_id")
 
-        # добавляем '00' для поиска из 1С
-        sap_item['employee_id'] = "00" + sap_item['employee_id']
         if material_id in local_assets_map:
             result_items.append(local_assets_map[material_id])
         else:

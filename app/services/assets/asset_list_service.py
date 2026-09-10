@@ -122,7 +122,7 @@ async def get_assets_list_with_sap(
         if item.get("employee_id"):
             # Добавляем '00' для будущего поиска сотрудников из 1С (ZUP)
             emp_id = "00" + item["employee_id"]
-            employee_ids.add("00" + item["employee_id"])
+            employee_ids.add(emp_id)
             logger.debug(f"emp_id = {emp_id}")
         if item.get("department_code"):
             department_codes.add(item["department_code"])
@@ -142,6 +142,8 @@ async def get_assets_list_with_sap(
     for sap_item in sap_items:
         material_id = sap_item.get("material_id")
 
+        # добавляем '00' для поиска из 1С
+        sap_item['employee_id'] = "00" + sap_item['employee_id']
         if material_id in local_assets_map:
             result_items.append(local_assets_map[material_id])
         else:

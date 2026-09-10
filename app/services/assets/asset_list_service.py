@@ -805,6 +805,7 @@ async def _get_local_assets_slice(
         selectinload(Asset.model),
         selectinload(Asset.parent).options(
             selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
         ),
         selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),

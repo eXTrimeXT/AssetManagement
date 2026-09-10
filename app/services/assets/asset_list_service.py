@@ -98,6 +98,7 @@ async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
         page_size: int = 50,
+        asset_id: Optional[int] = None,
         name: Optional[str] = None,
         inventory_id: Optional[str] = None,
         serial_number: Optional[str] = None,
@@ -116,7 +117,7 @@ async def get_assets_list_with_sap(
 
     # 1. Получаем общее количество локальных активов, подходящих под фильтры
     local_total = await _get_local_assets_count(
-        db, name, inventory_id, serial_number, asset_status, model_id, asset_type_id, parent_id, employee_id
+        db, asset_id, name, inventory_id, serial_number, asset_status, model_id, asset_type_id, parent_id, employee_id
     )
 
     result_items: List[Any] = []
@@ -125,7 +126,7 @@ async def get_assets_list_with_sap(
     if skip < local_total:
         # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
         local_orm_items = await _get_local_assets_slice(
-            db, skip, page_size, name, inventory_id, serial_number,
+            db, skip, page_size, asset_id, name, inventory_id, serial_number,
             asset_status, model_id, asset_type_id, parent_id, employee_id
         )
 
@@ -177,6 +178,7 @@ async def get_assets_list_with_sap(
 
 async def _get_local_assets_count(
         db: AsyncSession,
+        asset_id: Optional[int],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -189,6 +191,8 @@ async def _get_local_assets_count(
     """Подсчет количества локальных активов по всем фильтрам."""
     query = select(func.count(Asset.asset_id))
 
+    if asset_id:
+        query = query.where(Asset.asset_id == asset_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:
@@ -220,6 +224,7 @@ async def _get_local_assets_slice(
         db: AsyncSession,
         skip: int,
         limit: int,
+        asset_id: Optional[int],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -254,6 +259,8 @@ async def _get_local_assets_slice(
         ),
     )
 
+    if asset_id:
+        query = query.where(Asset.asset_id == asset_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:

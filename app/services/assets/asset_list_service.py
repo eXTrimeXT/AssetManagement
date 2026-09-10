@@ -62,8 +62,19 @@ async def get_assets_list_with_sap(
     if skip < local_total:
         # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
         local_orm_items = await _get_local_assets_slice(
-            db, skip, page_size, name, inventory_id, serial_number,
-            asset_status, model_id, asset_type_id, parent_id, employee_id
+            db=db,
+            skip=skip,
+            limit=page_size,
+            asset_id=asset_id,
+            material_id=material_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id
         )
 
         # === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ===
@@ -164,6 +175,8 @@ async def _get_local_assets_slice(
         db: AsyncSession,
         skip: int,
         limit: int,
+        asset_id: Optional[int],
+        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -198,6 +211,10 @@ async def _get_local_assets_slice(
         ),
     )
 
+    if asset_id:
+        query = query.where(Asset.asset_id == asset_id)
+    if material_id:
+        query = query.where(Asset.material_id == material_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:

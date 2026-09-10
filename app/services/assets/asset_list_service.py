@@ -431,6 +431,7 @@ def _build_virtual_asset(
         departments_map: Dict[str, ZupDepartment],
 ) -> Dict[str, Any]:
     raw_employee_id = sap_item.get("employee_id")
+    logger.debug(f"raw_employee_id = {raw_employee_id}")
     employee = None
 
     if raw_employee_id:

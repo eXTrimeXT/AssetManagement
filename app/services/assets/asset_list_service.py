@@ -45,7 +45,6 @@ async def get_assets_list_with_sap(
     local_total = await _get_local_assets_count(
         db=db,
         asset_id=asset_id,
-        material_id=material_id,
         name=name,
         inventory_id=inventory_id,
         serial_number=serial_number,
@@ -66,7 +65,6 @@ async def get_assets_list_with_sap(
             skip=skip,
             limit=page_size,
             asset_id=asset_id,
-            material_id=material_id,
             name=name,
             inventory_id=inventory_id,
             serial_number=serial_number,
@@ -92,6 +90,7 @@ async def get_assets_list_with_sap(
                 db=db,
                 limit=remaining_slots * 2,  # Берем с запасом для фильтрации дубликатов в Python
                 offset=0,  # SAP всегда начинаем с начала, так как мы фильтруем дубликаты
+                material_id=material_id,
                 name=name,
                 inventory_id=inventory_id,
                 serial_number=serial_number,
@@ -127,7 +126,6 @@ async def get_assets_list_with_sap(
 async def _get_local_assets_count(
         db: AsyncSession,
         asset_id: Optional[int],
-        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -142,8 +140,6 @@ async def _get_local_assets_count(
 
     if asset_id:
         query = query.where(Asset.asset_id == asset_id)
-    if material_id:
-        query = query.where(Asset.material_id == material_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:
@@ -176,7 +172,6 @@ async def _get_local_assets_slice(
         skip: int,
         limit: int,
         asset_id: Optional[int],
-        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -213,8 +208,6 @@ async def _get_local_assets_slice(
 
     if asset_id:
         query = query.where(Asset.asset_id == asset_id)
-    if material_id:
-        query = query.where(Asset.material_id == material_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:
@@ -247,6 +240,7 @@ async def _fetch_and_merge_sap_assets(
         db: AsyncSession,
         limit: int,
         offset: int,
+        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -259,6 +253,7 @@ async def _fetch_and_merge_sap_assets(
         sap_response = await _fetch_sap_materials(
             page=1, # Мы управляем пагинацией через limit/offset вручную
             page_size=limit,
+            material_id=material_id,
             search_mode=search_mode,
             base_material_name_like=name,
             inventory_number=inventory_id,
@@ -316,6 +311,7 @@ async def _fetch_and_merge_sap_assets(
 async def _fetch_sap_materials(
         page: int,
         page_size: int,
+        material_id: Optional[str],
         search_mode: str = "not_nulls",
         base_material_name_like: Optional[str] = None,
         inventory_number: Optional[str] = None,
@@ -329,6 +325,9 @@ async def _fetch_sap_materials(
         "offset": offset,
         "search_mode": search_mode,
     }
+
+    if material_id:
+        params["material_id"] = material_id
     if base_material_name_like:
         params["base_material_name_like"] = base_material_name_like
     if inventory_number:

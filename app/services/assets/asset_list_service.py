@@ -431,7 +431,6 @@ def _build_virtual_asset(
         departments_map: Dict[str, ZupDepartment],
 ) -> Dict[str, Any]:
     raw_employee_id = sap_item.get("employee_id")
-    raw_employee_id = "00" + str(raw_employee_id)
     logger.debug(f"raw_employee_id = {raw_employee_id}")
     employee = None
 
@@ -443,7 +442,7 @@ def _build_virtual_asset(
         if not employee:
             try:
                 num_key = int(raw_employee_id)
-                employee = employees_map.get(str(num_key))
+                employee = employees_map.get(num_key)
             except (ValueError, TypeError):
                 pass
 

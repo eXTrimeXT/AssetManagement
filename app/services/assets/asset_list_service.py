@@ -67,6 +67,7 @@ async def get_assets_list_with_sap(
             skip=skip,
             limit=page_size,
             asset_id=asset_id,
+            material_id=material_id,
             name=name,
             inventory_id=inventory_id,
             serial_number=serial_number,
@@ -178,6 +179,7 @@ async def _get_local_assets_slice(
         skip: int,
         limit: int,
         asset_id: Optional[int],
+        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -214,6 +216,8 @@ async def _get_local_assets_slice(
 
     if asset_id:
         query = query.where(Asset.asset_id == asset_id)
+    if material_id:
+        query = query.where(Asset.material_id == material_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:

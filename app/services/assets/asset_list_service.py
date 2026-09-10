@@ -127,51 +127,6 @@ _COMMON_LOAD_OPTIONS = [
 #
 #     return _build_paginated_response(result_items, final_total, page, page_size)
 
-import logging
-import zlib
-from typing import List, Dict, Optional, Any, Sequence, Tuple
-from sqlalchemy import select, func, inspect, Integer, or_, cast
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-import httpx
-
-from app.models.assets.Asset import Asset
-from app.models.assets.AssetAssignment import AssetAssignment
-from app.models.assets.AssetStatus import AssetStatus
-from app.models.map_assets.AssetPosition import AssetPosition
-from app.models.zup.employee import Employee
-from app.models.zup.department import ZupDepartment
-from app.schemas.assets.AssetSchemas import AssetResponse
-
-logger = logging.getLogger(__name__)
-
-SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
-
-# Общий набор опций для загрузки связей, чтобы не дублировать код
-_COMMON_LOAD_OPTIONS = [
-    selectinload(Asset.asset_type),
-    selectinload(Asset.asset_status),
-    selectinload(Asset.model),
-    selectinload(Asset.parent).options(
-        selectinload(Asset.asset_type),
-        selectinload(Asset.asset_status),
-        selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-    ),
-    selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-    selectinload(Asset.assignments).options(
-        selectinload(AssetAssignment.employee).options(
-            selectinload(Employee.position),
-            selectinload(Employee.group).options(
-                selectinload(ZupDepartment.parent).options(
-                    selectinload(ZupDepartment.parent).options(
-                        selectinload(ZupDepartment.parent)
-                    )
-                )
-            )
-        )
-    ),
-]
-
 
 async def get_assets_list_with_sap(
         db: AsyncSession,
@@ -288,7 +243,7 @@ async def get_assets_list_with_sap(
 
 async def _get_local_assets_count(
         db: AsyncSession,
-        asset_id: Optional[int],
+        # asset_id: Optional[int],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -301,8 +256,8 @@ async def _get_local_assets_count(
     """Подсчет количества локальных активов по всем фильтрам."""
     query = select(func.count(Asset.asset_id))
 
-    if asset_id:
-        query = query.where(Asset.asset_id == asset_id)
+    # if asset_id:
+    #     query = query.where(Asset.asset_id == asset_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:

@@ -26,7 +26,7 @@ from app.models.zup import Employee, ZupDepartment
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
     # ИСКЛЮЧАЕМ чтобы не передать в relationship
-    asset_data = data.model_dump(exclude={"users", "responsible_users", "serving_users"})
+    asset_data = data.model_dump(exclude={"users", "responsible_users", "serving_users", "location", "asset_status"})
 
     # Создаем актив
     db_obj = Asset(**asset_data, created_by=employee_id, updated_by=employee_id)
@@ -340,7 +340,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         # Проверяем, есть ли данные для создания
         update_data = data.model_dump(
             exclude_unset=True,
-            exclude={"users", "responsible_users", "serving_users", "location"}
+            exclude={"users", "responsible_users", "serving_users", "location", "asset_status"}
         )
 
         if not update_data:

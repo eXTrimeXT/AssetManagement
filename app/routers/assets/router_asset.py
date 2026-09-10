@@ -135,7 +135,7 @@ async def enrich_users_data(db: AsyncSession, users_data: list) -> list:
 )
 async def get_assets(
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
-        page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
+        page_size: int = Query(12, ge=1, le=100, description="Размер страницы"),
         name: Optional[str] = Query(None, description="Поиск по названию актива"),
         inventory_id: Optional[str] = Query(None, description="Инвентарный номер"),
         serial_number: Optional[str] = Query(None, description="Серийный номер"),

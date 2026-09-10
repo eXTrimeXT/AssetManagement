@@ -120,7 +120,8 @@ async def get_assets_list_with_sap(
     department_codes = set()
     for item in sap_items:
         if item.get("employee_id"):
-            employee_ids.add(item["employee_id"])
+            # Добавляем '00' для будущего поиска сотрудников из 1С (ZUP)
+            employee_ids.add("00" + item["employee_id"])
         if item.get("department_code"):
             department_codes.add(item["department_code"])
 
@@ -294,8 +295,7 @@ async def _fetch_sap_materials(
     if serial_number:
         params["serial_number"] = serial_number
     if employee_id:
-        # добавляем 00 чтобы был нормальный поиск сотрудников по ZUP
-        params["employee_id"] = "00" + employee_id
+        params["employee_id"] = employee_id
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(SAP_API_URL, params=params)

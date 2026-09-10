@@ -104,7 +104,7 @@ async def get_assets_list_with_sap(
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера (это словари, Pydantic их валидирует)
             sap_total = fetched_sap_total
 
-    if asset_id is None or material_id is not None:
+    if asset_id is None or material_id is not None and local_total != 0:
         # 4. Локальные активы закончились. Запрашиваем только SAP со смещением
         sap_offset = skip - local_total
         sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(

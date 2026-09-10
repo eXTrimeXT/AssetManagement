@@ -36,13 +36,13 @@ def init_scheduler():
         misfire_grace_time=3600  # Допустимая задержка запуска (1 час)
     )
 
-    scheduler.add_job(
-        daily_sap_sync_job,
-        trigger=CronTrigger(hour=1),
-        id="daily_sap_sync",
-        replace_existing=True,
-        max_instances=1 # Гарантирует, что новая задача не запустится, пока не закончится предыдущая
-    )
+    # scheduler.add_job(
+    #     daily_sap_sync_job,
+    #     trigger=CronTrigger(hour=1),
+    #     id="daily_sap_sync",
+    #     replace_existing=True,
+    #     max_instances=1 # Гарантирует, что новая задача не запустится, пока не закончится предыдущая
+    # )
 
     scheduler.start()
     logger.info("Планировщик запущен.")

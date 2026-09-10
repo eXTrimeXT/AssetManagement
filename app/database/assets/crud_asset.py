@@ -19,8 +19,9 @@ from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.database.crud_notifications import notify_unassigned_serving
-from app.models.assets.AssetAssignment import AssignmentTypeEnum
 from app.database.crud_notifications import notify_assigned_serving
+from app.models.assets.AssetAssignment import AssignmentTypeEnum
+from app.models.zup import Employee, ZupDepartment
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
@@ -83,8 +84,20 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
             ),
             # загрузка asset_positions для основного актива
             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+            # selectinload(Asset.assignments).options(
+            #     selectinload(AssetAssignment.employee)
+            # ),
             selectinload(Asset.assignments).options(
-                selectinload(AssetAssignment.employee)
+                selectinload(AssetAssignment.employee).options(
+                    selectinload(Employee.position),
+                    selectinload(Employee.group).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent).options(
+                                selectinload(ZupDepartment.parent)
+                            )
+                        )
+                    )
+                )
             ),
             selectinload(Asset.creator),
             selectinload(Asset.updater),

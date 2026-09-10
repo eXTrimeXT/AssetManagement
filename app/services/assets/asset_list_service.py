@@ -24,6 +24,7 @@ async def get_assets_list_with_sap(
         page: int = 1,
         page_size: int = 50,
         asset_id: Optional[int] = None,
+        material_id: Optional[str] = None,
         name: Optional[str] = None,
         inventory_id: Optional[str] = None,
         serial_number: Optional[str] = None,
@@ -42,7 +43,17 @@ async def get_assets_list_with_sap(
 
     # 1. Получаем общее количество локальных активов, подходящих под фильтры
     local_total = await _get_local_assets_count(
-        db, asset_id, name, inventory_id, serial_number, asset_status, model_id, asset_type_id, parent_id, employee_id
+        db=db,
+        asset_id=asset_id,
+        material_id=material_id,
+        name=name,
+        inventory_id=inventory_id,
+        serial_number=serial_number,
+        asset_status=asset_status,
+        model_id=model_id,
+        asset_type_id=asset_type_id,
+        parent_id=parent_id,
+        employee_id=employee_id
     )
 
     result_items: List[Any] = []
@@ -104,6 +115,7 @@ async def get_assets_list_with_sap(
 async def _get_local_assets_count(
         db: AsyncSession,
         asset_id: Optional[int],
+        material_id: Optional[str],
         name: Optional[str],
         inventory_id: Optional[str],
         serial_number: Optional[str],
@@ -118,6 +130,8 @@ async def _get_local_assets_count(
 
     if asset_id:
         query = query.where(Asset.asset_id == asset_id)
+    if material_id:
+        query = query.where(Asset.material_id == material_id)
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:

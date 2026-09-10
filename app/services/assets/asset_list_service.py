@@ -1,6 +1,8 @@
 import logging
 import zlib
 from typing import List, Dict, Optional, Any, Sequence, Tuple
+
+from numpy.matrixlib.defmatrix import matrix
 from sqlalchemy import select, func, inspect, Integer, or_, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -40,23 +42,24 @@ async def get_assets_list_with_sap(
     Список дополняется данными из SAP API, если локальных записей недостаточно.
     """
     skip = (page - 1) * page_size
-
-    # 1. Получаем общее количество локальных активов, подходящих под фильтры
-    local_total = await _get_local_assets_count(
-        db=db,
-        asset_id=asset_id,
-        name=name,
-        inventory_id=inventory_id,
-        serial_number=serial_number,
-        asset_status=asset_status,
-        model_id=model_id,
-        asset_type_id=asset_type_id,
-        parent_id=parent_id,
-        employee_id=employee_id
-    )
-
+    local_total = 0
     result_items: List[Any] = []
     sap_total = 0
+
+    if asset_id is not None or material_id is None:
+        # 1. Получаем общее количество локальных активов, подходящих под фильтры
+        local_total = await _get_local_assets_count(
+            db=db,
+            asset_id=asset_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id
+        )
 
     if skip < local_total:
         # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
@@ -100,23 +103,23 @@ async def get_assets_list_with_sap(
             )
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера (это словари, Pydantic их валидирует)
             sap_total = fetched_sap_total
-    else:
+    if asset_id is None or material_id is not None:
         # 4. Локальные активы закончились. Запрашиваем только SAP со смещением
-        if asset_id is None:
-            sap_offset = skip - local_total
-            sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-                db=db,
-                limit=page_size,
-                offset=sap_offset,
-                name=name,
-                inventory_id=inventory_id,
-                serial_number=serial_number,
-                employee_id=employee_id,
-                search_mode=search_mode,
-                exclude_inventory_ids=[]
-            )
-            result_items.extend(sap_items)
-            sap_total = fetched_sap_total
+        sap_offset = skip - local_total
+        sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
+            db=db,
+            limit=page_size,
+            offset=sap_offset,
+            material_id=material_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            employee_id=employee_id,
+            search_mode=search_mode,
+            exclude_inventory_ids=[]
+        )
+        result_items.extend(sap_items)
+        sap_total = fetched_sap_total
 
     # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
     final_total = local_total + sap_total

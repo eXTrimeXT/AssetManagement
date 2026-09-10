@@ -74,7 +74,7 @@ async def get_assets_list_with_sap(
         result_items.extend(local_items)
 
         remaining_slots = page_size - len(result_items)
-        if remaining_slots > 0:
+        if remaining_slots > 0 and asset_id is None:
             # 3. Дополняем недостающее количество из SAP, исключая уже найденные локальные inventory_id
             exclude_inv_ids = [item.inventory_id for item in result_items]
             sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(

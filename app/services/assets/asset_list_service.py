@@ -121,7 +121,9 @@ async def get_assets_list_with_sap(
     for item in sap_items:
         if item.get("employee_id"):
             # Добавляем '00' для будущего поиска сотрудников из 1С (ZUP)
+            emp_id = "00" + item["employee_id"]
             employee_ids.add("00" + item["employee_id"])
+            logger.debug(f"emp_id = {emp_id}")
         if item.get("department_code"):
             department_codes.add(item["department_code"])
 
@@ -422,80 +424,6 @@ async def _get_departments_by_codes(
     query = select(ZupDepartment).where(ZupDepartment.short_name.in_(department_codes))
     result = await db.execute(query)
     return result.scalars().all()
-
-
-# def _build_virtual_asset(
-#         sap_item: Dict[str, Any],
-#         employees_map: Dict[str, Employee],
-#         departments_map: Dict[str, ZupDepartment],
-# ) -> Dict[str, Any]:
-#     employee_id = sap_item.get("employee_id")
-#     employee = employees_map.get(employee_id) if employee_id else None
-#
-#     users = []
-#     if employee:
-#         users.append(_build_user_response(employee, "user"))
-#
-#     current_user_full_name = None
-#     if employee:
-#         parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
-#         current_user_full_name = " ".join(parts) if parts else None
-#
-#     # Теперь material_id - это строка из SAP.
-#     # Для схемы ответа (где asset_id должен быть int) мы можем использовать хеш,
-#     # но в БД мы сохраним именно строковый material_id.
-#     raw_material_id = sap_item.get("material_id")
-#
-#     # Для ответа фронтенду (если schema требует int для asset_id)
-#     if raw_material_id is not None:
-#         # Пытаемся преобразовать в int, если не получается (слишком длинное), используем хеш
-#         try:
-#             asset_id_val = int(raw_material_id)
-#         except (ValueError, OverflowError):
-#             import zlib
-#             asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
-#     else:
-#         import zlib
-#         inv = str(sap_item.get("inventory_number", ""))
-#         serial = str(sap_item.get("serial_number", ""))
-#         asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
-#
-#     return {
-#         "asset_id": None,
-#         "name": sap_item.get("base_material_name"),
-#         "inventory_id": sap_item.get("inventory_number"),
-#         "serial_number": sap_item.get("serial_number"),
-#         "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
-#         "asset_status": None,
-#         "asset_status_id": None,
-#         "comment": None,
-#         "date_issue": None,
-#         "date_purchasing": None,
-#         "model_id": None,
-#         "model_name": None,
-#         "asset_type_id": None,
-#         "parent_id": None,
-#         "every_week_check": False,
-#         "next_service": None,
-#         "service_period": 0,
-#         "parent_name": None,
-#         "manufacturer_name": None,
-#         "vendor_name": None,
-#         "os_name": None,
-#         "created_by": None,
-#         "updated_by": None,
-#         "created_at": None,
-#         "updated_at": None,
-#         "asset_type_name": None,
-#         "location": None,
-#         "users": users,
-#         "responsible_users": [],
-#         "serving_users": [],
-#         "current_user": employee_id,
-#         "current_user_full_name": current_user_full_name,
-#         "parent": None,
-#         "material_id": raw_material_id
-#     }
 
 def _build_virtual_asset(
         sap_item: Dict[str, Any],

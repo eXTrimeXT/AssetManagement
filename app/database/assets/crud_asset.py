@@ -353,6 +353,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             material_id=material_id_to_save,  # Используем asset_id как material_id из SAP
             **update_data
         )
+        obj.asset_status_id = data.asset_status_id
         obj.created_by = employee_id
         obj.updated_by = employee_id
 

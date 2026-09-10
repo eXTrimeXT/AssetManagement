@@ -430,7 +430,7 @@ def _build_virtual_asset(
         employees_map: Dict[str, Employee],
         departments_map: Dict[str, ZupDepartment],
 ) -> Dict[str, Any]:
-    raw_employee_id = sap_item.get("employee_id")
+    raw_employee_id = "00" + str(sap_item.get("employee_id"))
     logger.debug(f"raw_employee_id = {raw_employee_id}")
     employee = None
 
@@ -439,12 +439,12 @@ def _build_virtual_asset(
         employee = employees_map.get(raw_employee_id)
 
         # 2. Если не нашли, пробуем найти по числовому значению
-        if not employee:
-            try:
-                num_key = int(raw_employee_id)
-                employee = employees_map.get(num_key)
-            except (ValueError, TypeError):
-                pass
+        # if not employee:
+        #     try:
+        #         num_key = int(raw_employee_id)
+        #         employee = employees_map.get(num_key)
+        #     except (ValueError, TypeError):
+        #         pass
 
     if raw_employee_id and not employee:
         logger.warning(f"[SAP VIRTUAL] Сотрудник '{raw_employee_id}' не найден в локальной БД для актива {sap_item.get('inventory_number')}")

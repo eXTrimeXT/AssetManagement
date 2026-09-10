@@ -180,7 +180,16 @@ async def _get_local_assets_only(
         ),
         selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
         selectinload(Asset.assignments).options(
-            selectinload(AssetAssignment.employee)
+            selectinload(AssetAssignment.employee).options(
+                selectinload(Employee.position),
+                selectinload(Employee.group).options(
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent)
+                        )
+                    )
+                )
+            )
         ),
     )
 
@@ -325,7 +334,16 @@ async def _get_local_assets_by_material_ids(
             ),
             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
             selectinload(Asset.assignments).options(
-                selectinload(AssetAssignment.employee)
+                selectinload(AssetAssignment.employee).options(
+                    selectinload(Employee.position),
+                    selectinload(Employee.group).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent).options(
+                                selectinload(ZupDepartment.parent)
+                            )
+                        )
+                    )
+                )
             ),
         )
         .where(Asset.material_id.in_(material_ids))
@@ -548,8 +566,8 @@ def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, 
         "position_guid": employee.position_guid,
         "department_guid": employee.department_guid,
         "created_at": employee.created_at,
-        "updated_at": employee.updated_at,
-        # "updated_at": None,
+        # "updated_at": employee.updated_at,
+        "updated_at": None,
         "full_name_ru": " ".join(parts_ru) if parts_ru else None,
         "full_name_en": " ".join(parts_en) if parts_en else None,
 

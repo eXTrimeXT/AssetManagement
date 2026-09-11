@@ -350,7 +350,7 @@ async def _fetch_sap_materials(
         page: int,
         page_size: int,
         material_id: Optional[str],
-        search_mode: str = "not_nulls",
+        search_mode: str = "ALL",
         base_material_name_like: Optional[str] = None,
         inventory_number: Optional[str] = None,
         serial_number: Optional[str] = None,
@@ -361,7 +361,7 @@ async def _fetch_sap_materials(
     params = {
         "limit": page_size,
         "offset": offset,
-        "search_mode": search_mode,
+        "employee_id_search_mode": search_mode,
     }
 
     if material_id:
@@ -461,9 +461,11 @@ def _build_virtual_asset(
     raw_employee_id = "00" + str(sap_item.get("employee_id")) if sap_item.get("employee_id") else None
     employee = employees_map.get(raw_employee_id) if raw_employee_id else None
 
+    start_date = sap_item.get("changed_date") if sap_item.get("changed_date") else None
+
     users = []
     if employee:
-        users.append(_build_user_response(employee, "user"))
+        users.append(_build_user_response(employee, "user", start_date))
 
     current_user_full_name = None
     if employee:
@@ -520,9 +522,11 @@ def _build_virtual_asset(
     }
 
 
-def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, Any]:
+def _build_user_response(employee: Employee, assignment_type: str, start_date: str) -> Dict[str, Any]:
     parts_ru = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
     parts_en = [p for p in [employee.last_name_en, employee.first_name_en, employee.middle_name_en] if p]
+
+    format_start_date = start_date[:4] + "-" + start_date[4:6] + "-" + start_date[6:]
 
     position_data = None
     if getattr(employee, 'position', None):
@@ -568,7 +572,7 @@ def _build_user_response(employee: Employee, assignment_type: str) -> Dict[str, 
         "division": _get_dept_dict(getattr(employee, 'division', None)),
         "group": _get_dept_dict(getattr(employee, 'group', None)),
         "position": position_data,
-        "start_date": None,
+        "start_date": format_start_date,
         "end_date": None,
         "assignment_type": assignment_type,
     }

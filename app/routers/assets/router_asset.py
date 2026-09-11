@@ -147,7 +147,7 @@ async def get_assets(
         asset_type_id: Optional[int] = Query(None, description="ID типа актива"),
         parent_id: Optional[int] = Query(None, description="ID родительского актива"),
         employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),
-        search_mode: Literal["all", "nulls", "not_nulls"] = Query("not_nulls", description="Режим поиска SAP: all, not_nulls, nulls"),
+        search_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL", description="Режим поиска SAP: all, not_nulls, nulls"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):

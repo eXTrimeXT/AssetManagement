@@ -128,7 +128,8 @@ async def get_assets_list_with_sap(
                 serial_number=serial_number,
                 employee_id=employee_id,
                 search_mode=search_mode,
-                exclude_inventory_ids=exclude_inv_ids
+                exclude_inventory_ids=exclude_inv_ids,
+                asset_type_id=asset_type_id
             )
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера
             sap_total = fetched_sap_total
@@ -145,7 +146,8 @@ async def get_assets_list_with_sap(
             serial_number=serial_number,
             employee_id=employee_id,
             search_mode=search_mode,
-            exclude_inventory_ids=[]
+            exclude_inventory_ids=[],
+            asset_type_id=asset_type_id
         )
         result_items.extend(sap_items)
         sap_total = fetched_sap_total

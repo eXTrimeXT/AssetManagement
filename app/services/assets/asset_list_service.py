@@ -20,113 +20,6 @@ logger = logging.getLogger(__name__)
 
 SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
-
-# async def get_assets_list_with_sap(
-#         db: AsyncSession,
-#         page: int = 1,
-#         page_size: int = 50,
-#         asset_id: Optional[int] = None,
-#         material_id: Optional[str] = None,
-#         name: Optional[str] = None,
-#         inventory_id: Optional[str] = None,
-#         serial_number: Optional[str] = None,
-#         asset_status: Optional[str] = None,
-#         model_id: Optional[int] = None,
-#         asset_type_id: Optional[int] = None,
-#         parent_id: Optional[int] = None,
-#         employee_id: Optional[str] = None,
-#         search_mode: str = "not_nulls",
-# ) -> Dict[str, Any]:
-#     """
-#     Получение списка активов: Локальные данные имеют абсолютный приоритет.
-#     Список дополняется данными из SAP API, если локальных записей недостаточно.
-#     """
-#     skip = (page - 1) * page_size
-#     result_items: List[Any] = []
-#     sap_total = 0
-#
-#     # 1. Получаем общее количество локальных активов, подходящих под фильтры
-#     local_total = await _get_local_assets_count(
-#         db=db,
-#         asset_id=asset_id,
-#         material_id=material_id,
-#         name=name,
-#         inventory_id=inventory_id,
-#         serial_number=serial_number,
-#         asset_status=asset_status,
-#         model_id=model_id,
-#         asset_type_id=asset_type_id,
-#         parent_id=parent_id,
-#         employee_id=employee_id
-#     )
-#
-#     if skip < local_total:
-#         # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
-#         local_orm_items = await _get_local_assets_slice(
-#             db=db,
-#             skip=skip,
-#             limit=page_size,
-#             asset_id=asset_id,
-#             material_id=material_id,
-#             name=name,
-#             inventory_id=inventory_id,
-#             serial_number=serial_number,
-#             asset_status=asset_status,
-#             model_id=model_id,
-#             asset_type_id=asset_type_id,
-#             parent_id=parent_id,
-#             employee_id=employee_id
-#         )
-#
-#         # === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ===
-#         # Немедленно преобразуем ORM-объекты в Pydantic-модели.
-#         # Это "запекает" данные, включая вычисляемые поля (users), и отвязывает их от сессии.
-#         # Теперь никакая ленивая загрузка не сможет сработать при асинхронных вызовах или сериализации.
-#         local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
-#         result_items.extend(local_items)
-#
-#         remaining_slots = page_size - len(result_items)
-#         if remaining_slots > 0 and asset_id is None:
-#             # 3. Дополняем недостающее количество из SAP, исключая уже найденные локальные inventory_id
-#             exclude_inv_ids = [item.inventory_id for item in result_items]
-#             sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-#                 db=db,
-#                 limit=remaining_slots * 2,  # Берем с запасом для фильтрации дубликатов в Python
-#                 offset=0,  # SAP всегда начинаем с начала, так как мы фильтруем дубликаты
-#                 material_id=material_id,
-#                 name=name,
-#                 inventory_id=inventory_id,
-#                 serial_number=serial_number,
-#                 employee_id=employee_id,
-#                 search_mode=search_mode,
-#                 exclude_inventory_ids=exclude_inv_ids
-#             )
-#             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера (это словари, Pydantic их валидирует)
-#             sap_total = fetched_sap_total
-#
-#     if asset_id is None or material_id is not None:
-#         # 4. Локальные активы закончились. Запрашиваем только SAP со смещением
-#         sap_offset = skip - local_total
-#         sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-#             db=db,
-#             limit=page_size,
-#             offset=sap_offset,
-#             material_id=material_id,
-#             name=name,
-#             inventory_id=inventory_id,
-#             serial_number=serial_number,
-#             employee_id=employee_id,
-#             search_mode=search_mode,
-#             exclude_inventory_ids=[]
-#         )
-#         result_items.extend(sap_items)
-#         sap_total = fetched_sap_total
-#
-#     # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
-#     final_total = local_total + sap_total
-#
-#     return _build_paginated_response(result_items, final_total, page, page_size)
-
 async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
@@ -172,7 +65,7 @@ async def get_assets_list_with_sap(
             # "Запекаем" в Pydantic для безопасной сериализации
             local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
-        else:
+        # else:
             # Если в локальной БД нет, возвращаем пустой результат.
             # (Поиск по material_id в SAP API не поддерживается параметрами фильтрации)
             return _build_paginated_response([], total=0, page=1, page_size=1)

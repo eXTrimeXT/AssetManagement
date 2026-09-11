@@ -285,6 +285,7 @@ async def _fetch_and_merge_sap_assets(
         employee_id: Optional[str],
         search_mode: str,
         exclude_inventory_ids: List[str],
+        asset_type_id: Optional[int]
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Запрос к SAP и слияние с исключением дубликатов."""
     try:
@@ -337,7 +338,9 @@ async def _fetch_and_merge_sap_assets(
         # Сборка виртуальных активов
         virtual_assets = []
         for sap_item in filtered_sap_items:
-            virtual_assets.append(_build_virtual_asset(sap_item, employees_map, departments_map))
+            virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
+            if asset_type_id and virtual_asset.get("asset_type_id") == asset_type_id or asset_type_id is None:
+                virtual_assets.append(virtual_asset)
 
         return virtual_assets, sap_total
 

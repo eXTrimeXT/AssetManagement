@@ -162,7 +162,7 @@ async def get_assets(
         serial_number=serial_number,
         asset_status=asset_status,
         model_id=model_id,
-        # asset_type_id=asset_type_id,
+        asset_type_id=asset_type_id,
         parent_id=parent_id,
         search_mode=search_mode,
         employee_id=employee_id,

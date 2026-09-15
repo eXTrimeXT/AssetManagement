@@ -419,9 +419,6 @@ async def generate_qr_code(request: QRCodeRequest):
   <text x="165" y="130" class="text-label">Серийный номер</text>
   <text x="165" y="148" class="text-label">Serial number</text>
   <text x="370" y="140" class="text-value">{serial_number}</text>
-  
-  <!-- Зеленая метка (галочка) в углу ячейки -->
-  <path d="M 355 60 L 360 65 L 360 60 Z" fill="#4CAF50" />
 </svg>"""
 
     final_svg = svg_template.format(

@@ -1,0 +1,63 @@
+<svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .border { fill: none; stroke: black; stroke-width: 2; }
+      .text-label { font-family: Arial, sans-serif; font-size: 14px; fill: black; }
+      .text-value { font-family: Arial, sans-serif; font-size: 16px; fill: black; }
+      .text-header { font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }
+    </style>
+  </defs>
+
+  <!-- Основной контейнер -->
+  <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+
+  <!-- Левая колонка (QR-код) -->
+  <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
+  
+  <!-- Стилизованный QR-код (упрощенный) -->
+  <g transform="translate(15, 15)">
+    <!-- Верхний левый маркер -->
+    <rect x="0" y="0" width="45" height="45" fill="none" stroke="black" stroke-width="8"/>
+    <rect x="10" y="10" width="25" height="25" fill="black"/>
+    
+    <!-- Верхний правый маркер -->
+    <rect x="75" y="0" width="45" height="45" fill="none" stroke="black" stroke-width="8"/>
+    <rect x="85" y="10" width="25" height="25" fill="black"/>
+
+    <!-- Нижний левый маркер -->
+    <rect x="0" y="75" width="45" height="45" fill="none" stroke="black" stroke-width="8"/>
+    <rect x="10" y="85" width="25" height="25" fill="black"/>
+
+    <!-- Шум / Данные QR -->
+    <path d="M 10 60 L 20 60 L 20 70 L 10 70 Z M 30 50 L 40 50 L 40 60 L 30 60 Z M 50 10 L 60 10 L 60 20 L 50 20 Z M 50 30 L 60 30 L 60 40 L 50 40 Z M 70 60 L 80 60 L 80 70 L 70 70 Z M 90 60 L 100 60 L 100 70 L 90 70 Z M 110 10 L 120 10 L 120 20 L 110 20 Z M 110 30 L 120 30 L 120 40 L 110 40 Z M 60 70 L 70 70 L 70 80 L 60 80 Z M 60 90 L 70 90 L 70 100 L 60 100 Z M 80 80 L 90 80 L 90 90 L 80 90 Z M 110 80 L 120 80 L 120 90 L 110 90 Z M 110 100 L 120 100 L 120 110 L 110 110 Z M 10 100 L 20 100 L 20 110 L 10 110 Z M 30 120 L 40 120 L 40 130 L 30 130 Z M 50 110 L 60 110 L 60 120 L 50 120 Z M 70 120 L 80 120 L 80 130 L 70 130 Z M 90 110 L 100 110 L 100 120 L 90 120 Z M 40 70 L 50 70 L 50 80 L 40 80 Z M 20 80 L 30 80 L 30 90 L 20 90 Z M 100 50 L 110 50 L 110 60 L 100 60 Z M 80 40 L 90 40 L 90 50 L 80 50 Z" fill="black"/>
+  </g>
+
+  <!-- Правая часть: Таблица -->
+  
+  <!-- Горизонтальные разделители -->
+  <!-- Строка 1 -->
+  <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
+  <!-- Строка 2 -->
+  <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+
+  <!-- Вертикальный разделитель между названиями и значениями -->
+  <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+
+  <!-- Текст: Строка 1 (Наименование) -->
+  <text x="165" y="30" class="text-label">Наименование ОС</text>
+  <text x="165" y="48" class="text-label">Fixed asset name</text>
+  <text x="370" y="40" class="text-value">XXXXXXXX XXXXXXXXX XXXXXXXXXX XXXXXXXXXX</text>
+
+  <!-- Текст: Строка 2 (Инвентарный номер) -->
+  <text x="165" y="80" class="text-label">Инвентарный номер</text>
+  <text x="165" y="98" class="text-label">Inventory number</text>
+  <text x="370" y="90" class="text-value">10000005351</text>
+
+  <!-- Текст: Строка 3 (Серийный номер) -->
+  <text x="165" y="130" class="text-label">Серийный номер</text>
+  <text x="165" y="148" class="text-label">Serial number</text>
+  <text x="370" y="140" class="text-value">XXXXXXXXX (optional)</text>
+  
+  <!-- Зеленая метка (галочка) в углу ячейки -->
+  <path d="M 355 60 L 360 65 L 360 60 Z" fill="#4CAF50" />
+</svg>

@@ -189,24 +189,6 @@ async def get_asset(
     
     return obj
 
-# @router_assets.patch("/{asset_id}", response_model=AssetResponse)
-# async def update_asset_endpoint(
-#         request: Request,
-#         asset_id: int,
-#         data: AssetUpdate,
-#         db: AsyncSession = Depends(get_db),
-#         current_user=Depends(require_authorized_user)
-# ):
-#     obj = await get_asset_by_id(db, asset_id)
-#     if not obj:
-#         raise HTTPException(status_code=404, detail="Актив не найден")
-#
-#     # Итоговый asset_type_id после обновления
-#     final_asset_type_id = data.asset_type_id if data.asset_type_id is not None else obj.asset_type_id
-#     await check_asset_permission(db, request, final_asset_type_id, "write")
-#     updated = await update_asset(db, asset_id, data, current_user.employee_id)
-#     return updated
-
 @router_assets.patch("/{asset_id}", response_model=AssetResponse)
 async def update_asset_endpoint(
         request: Request,

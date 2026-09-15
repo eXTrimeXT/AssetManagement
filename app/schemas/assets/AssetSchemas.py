@@ -160,4 +160,4 @@ class AssetLocationResponse(BaseModel):
 class QRCodeRequest(BaseModel):
     name: Optional[str] = None
     serial_number: Optional[str] = None
-    inventory_id: str
+    inventory_id: Optional[str] = None

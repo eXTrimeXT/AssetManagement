@@ -155,3 +155,9 @@ class AssetLocationResponse(BaseModel):
     y: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class QRCodeRequest(BaseModel):
+    name: Optional[str] = None
+    serial_number: Optional[str] = None
+    inventory_id: str

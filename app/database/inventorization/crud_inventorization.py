@@ -99,6 +99,7 @@ async def create_inventory_session(
             asset_name=asset.name,
             is_checked=False,
             serial_number=asset.serial_number,
+            inventory_id=asset.inventory_id,
             quantity=asset.quantity,
             quantity_fact=None,
         )

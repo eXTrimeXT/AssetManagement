@@ -1,7 +1,7 @@
 import logging
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Literal
 from app.database.connection import get_db
@@ -9,7 +9,7 @@ from app.database.assets.crud_asset import (
     create_asset, get_asset_by_id, get_assets_list,
     update_asset, delete_asset, get_asset_children, bulk_enrich_assets
 )
-from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse
+from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse, QRCodeRequest
 from app.services.auth.auth_service import (
     require_authorized_user,
     get_token_from_request,
@@ -21,6 +21,11 @@ from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.services.assets.asset_list_service import get_assets_list_with_sap
+
+# for QR-code
+import qrcode
+from qrcode.image.svg import SvgPathImage
+import re
 
 logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])
@@ -249,3 +254,182 @@ async def get_asset_children_endpoint(
 
     children = await get_asset_children(db, asset_id)
     return children
+
+# @router_assets.post("/generate-qr")
+# async def generate_qr_code(
+#         request: QRCodeRequest,
+#         current_user=Depends(require_authorized_user)
+# ):
+#     # Данные для кодирования: серийный номер, либо инвентарный, если серийного нет
+#     qr_data = request.serial_number if request.serial_number else request.inventory_id
+#
+#     # Генерация настоящего QR-кода для встраивания в шаблон
+#     qr = qrcode.QRCode(
+#         version=1,
+#         error_correction=qrcode.constants.ERROR_CORRECT_L,
+#         box_size=4,  # Размер модуля, подобран для корректного отображения в области 120x120
+#         border=0,
+#         image_factory=SvgPathImage
+#     )
+#     qr.add_data(qr_data)
+#     qr.make(fit=True)
+#
+#     img = qr.make_image(fill_color="black", back_color="white")
+#     svg_content = img.to_string().decode('utf-8')
+#
+#     # Извлекаем путь из сгенерированного SVG для чистой вставки в шаблон
+#     match = re.search(r'<path[^>]*d="([^"]*)"[^>]*>', svg_content)
+#     qr_path = f'<path d="{match.group(1)}" fill="black" />' if match else '<rect x="0" y="0" width="120" height="120" fill="black" />'
+#
+#     serial_display = request.serial_number if request.serial_number else "Не указан"
+#
+#     # SVG-шаблон
+#     svg_template = """<svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
+#       <defs>
+#         <style>
+#           .border {{ fill: none; stroke: black; stroke-width: 2; }}
+#           .text-label {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; }}
+#           .text-value {{ font-family: Arial, sans-serif; font-size: 16px; fill: black; }}
+#           .text-header {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }}
+#         </style>
+#       </defs>
+#
+#       <!-- Основной контейнер -->
+#       <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+#
+#       <!-- Левая колонка (QR-код) -->
+#       <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
+#
+#       <!-- Сгенерированный QR-код -->
+#       <g transform="translate(15, 15)">
+#         {qr_code_path}
+#       </g>
+#
+#       <!-- Правая часть: Таблица -->
+#
+#       <!-- Горизонтальные разделители -->
+#       <!-- Строка 1 -->
+#       <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
+#       <!-- Строка 2 -->
+#       <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+#
+#       <!-- Вертикальный разделитель между названиями и значениями -->
+#       <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+#
+#       <!-- Текст: Строка 1 (Наименование) -->
+#       <text x="165" y="30" class="text-label">Наименование ОС</text>
+#       <text x="165" y="48" class="text-label">Fixed asset name</text>
+#       <text x="370" y="40" class="text-value">{name}</text>
+#
+#       <!-- Текст: Строка 2 (Инвентарный номер) -->
+#       <text x="165" y="80" class="text-label">Инвентарный номер</text>
+#       <text x="165" y="98" class="text-label">Inventory number</text>
+#       <text x="370" y="90" class="text-value">{inventory_id}</text>
+#
+#       <!-- Текст: Строка 3 (Серийный номер) -->
+#       <text x="165" y="130" class="text-label">Серийный номер</text>
+#       <text x="165" y="148" class="text-label">Serial number</text>
+#       <text x="370" y="140" class="text-value">{serial_number}</text>
+#     </svg>"""
+#
+#
+#     final_svg = svg_template.format(
+#         qr_code_path=qr_path,
+#         name=request.name,
+#         inventory_id=request.inventory_id,
+#         serial_number=serial_display
+#     )
+#
+#     # Возвращаем готовый SVG как изображение
+#     return Response(content=final_svg, media_type="image/svg+xml")
+
+@router_assets.post("/generate-qr")
+async def generate_qr_code(request: QRCodeRequest):
+    # Данные для кодирования: серийный номер, либо инвентарный, если серийного нет
+    qr_data = request.serial_number if request.serial_number else request.inventory_id
+
+    # Генерация матрицы QR-кода и создание SVG path вручную
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=5,  # Размер одного модуля в пикселях. 21x21 модулей * 5 = 105x105 пикселей (влезает в 120x130)
+        border=0,
+    )
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+    matrix = qr.get_matrix()
+
+    paths = []
+    for y, row in enumerate(matrix):
+        for x, cell in enumerate(row):
+            if cell:
+                # Для каждого черного модуля создаем команду рисования прямоугольника в path
+                paths.append(f'M {x * 5} {y * 5} h 5 v 5 h -5 Z')
+
+    # Собираем все в один тег <path>
+    qr_path_svg = f'<path d="{" ".join(paths)}" fill="black" />'
+
+    serial_display = request.serial_number if request.serial_number else "Не указан"
+
+    # Ваш SVG-шаблон с заменой динамических значений.
+    # Фигурные скобки в CSS экранированы двойными скобками {{ }}, чтобы str.format() их игнорировал.
+    svg_template = """<svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .border {{ fill: none; stroke: black; stroke-width: 2; }}
+      .text-label {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; }}
+      .text-value {{ font-family: Arial, sans-serif; font-size: 16px; fill: black; }}
+      .text-header {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }}
+    </style>
+  </defs>
+
+  <!-- Основной контейнер -->
+  <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+
+  <!-- Левая колонка (QR-код) -->
+  <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
+  
+  <!-- Сгенерированный QR-код -->
+  <g transform="translate(15, 15)">
+    {qr_code_path}
+  </g>
+
+  <!-- Правая часть: Таблица -->
+  
+  <!-- Горизонтальные разделители -->
+  <!-- Строка 1 -->
+  <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
+  <!-- Строка 2 -->
+  <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+
+  <!-- Вертикальный разделитель между названиями и значениями -->
+  <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+
+  <!-- Текст: Строка 1 (Наименование) -->
+  <text x="165" y="30" class="text-label">Наименование ОС</text>
+  <text x="165" y="48" class="text-label">Fixed asset name</text>
+  <text x="370" y="40" class="text-value">{name}</text>
+
+  <!-- Текст: Строка 2 (Инвентарный номер) -->
+  <text x="165" y="80" class="text-label">Инвентарный номер</text>
+  <text x="165" y="98" class="text-label">Inventory number</text>
+  <text x="370" y="90" class="text-value">{inventory_id}</text>
+
+  <!-- Текст: Строка 3 (Серийный номер) -->
+  <text x="165" y="130" class="text-label">Серийный номер</text>
+  <text x="165" y="148" class="text-label">Serial number</text>
+  <text x="370" y="140" class="text-value">{serial_number}</text>
+  
+  <!-- Зеленая метка (галочка) в углу ячейки -->
+  <path d="M 355 60 L 360 65 L 360 60 Z" fill="#4CAF50" />
+</svg>"""
+
+    final_svg = svg_template.format(
+        qr_code_path=qr_path_svg,
+        name=request.name,
+        inventory_id=request.inventory_id,
+        serial_number=serial_display
+    )
+
+    # Возвращаем готовый SVG как изображение
+    return Response(content=final_svg, media_type="image/svg+xml")

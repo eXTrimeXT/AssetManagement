@@ -1,0 +1,40 @@
+<svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <style>
+            .border { fill: none; stroke: black; stroke-width: 2; }
+            .text-label { font-family: Arial, sans-serif; font-size: 14px; fill: black; }
+            .text-value { font-family: Arial, sans-serif; font-size: 16px; fill: black; }
+            .text-header { font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }
+        </style>
+    </defs>
+    <!-- Основной контейнер -->
+    <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+    <!-- Левая колонка (QR-код) -->
+    <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
+    <!-- Сгенерированный QR-код -->
+    <g transform="translate(15, 15)">
+        <path d="M 0 0 h 5 v 5 h -5 Z M 5 0 h 5 v 5 h -5 Z M 10 0 h 5 v 5 h -5 Z M 15 0 h 5 v 5 h -5 Z M 20 0 h 5 v 5 h -5 Z M 25 0 h 5 v 5 h -5 Z M 30 0 h 5 v 5 h -5 Z M 40 0 h 5 v 5 h -5 Z M 45 0 h 5 v 5 h -5 Z M 50 0 h 5 v 5 h -5 Z M 55 0 h 5 v 5 h -5 Z M 60 0 h 5 v 5 h -5 Z M 70 0 h 5 v 5 h -5 Z M 75 0 h 5 v 5 h -5 Z M 80 0 h 5 v 5 h -5 Z M 85 0 h 5 v 5 h -5 Z M 90 0 h 5 v 5 h -5 Z M 95 0 h 5 v 5 h -5 Z M 100 0 h 5 v 5 h -5 Z M 0 5 h 5 v 5 h -5 Z M 30 5 h 5 v 5 h -5 Z M 40 5 h 5 v 5 h -5 Z M 45 5 h 5 v 5 h -5 Z M 55 5 h 5 v 5 h -5 Z M 60 5 h 5 v 5 h -5 Z M 70 5 h 5 v 5 h -5 Z M 100 5 h 5 v 5 h -5 Z M 0 10 h 5 v 5 h -5 Z M 10 10 h 5 v 5 h -5 Z M 15 10 h 5 v 5 h -5 Z M 20 10 h 5 v 5 h -5 Z M 30 10 h 5 v 5 h -5 Z M 45 10 h 5 v 5 h -5 Z M 50 10 h 5 v 5 h -5 Z M 55 10 h 5 v 5 h -5 Z M 70 10 h 5 v 5 h -5 Z M 80 10 h 5 v 5 h -5 Z M 85 10 h 5 v 5 h -5 Z M 90 10 h 5 v 5 h -5 Z M 100 10 h 5 v 5 h -5 Z M 0 15 h 5 v 5 h -5 Z M 10 15 h 5 v 5 h -5 Z M 15 15 h 5 v 5 h -5 Z M 20 15 h 5 v 5 h -5 Z M 30 15 h 5 v 5 h -5 Z M 45 15 h 5 v 5 h -5 Z M 55 15 h 5 v 5 h -5 Z M 60 15 h 5 v 5 h -5 Z M 70 15 h 5 v 5 h -5 Z M 80 15 h 5 v 5 h -5 Z M 85 15 h 5 v 5 h -5 Z M 90 15 h 5 v 5 h -5 Z M 100 15 h 5 v 5 h -5 Z M 0 20 h 5 v 5 h -5 Z M 10 20 h 5 v 5 h -5 Z M 15 20 h 5 v 5 h -5 Z M 20 20 h 5 v 5 h -5 Z M 30 20 h 5 v 5 h -5 Z M 40 20 h 5 v 5 h -5 Z M 60 20 h 5 v 5 h -5 Z M 70 20 h 5 v 5 h -5 Z M 80 20 h 5 v 5 h -5 Z M 85 20 h 5 v 5 h -5 Z M 90 20 h 5 v 5 h -5 Z M 100 20 h 5 v 5 h -5 Z M 0 25 h 5 v 5 h -5 Z M 30 25 h 5 v 5 h -5 Z M 40 25 h 5 v 5 h -5 Z M 50 25 h 5 v 5 h -5 Z M 70 25 h 5 v 5 h -5 Z M 100 25 h 5 v 5 h -5 Z M 0 30 h 5 v 5 h -5 Z M 5 30 h 5 v 5 h -5 Z M 10 30 h 5 v 5 h -5 Z M 15 30 h 5 v 5 h -5 Z M 20 30 h 5 v 5 h -5 Z M 25 30 h 5 v 5 h -5 Z M 30 30 h 5 v 5 h -5 Z M 40 30 h 5 v 5 h -5 Z M 50 30 h 5 v 5 h -5 Z M 60 30 h 5 v 5 h -5 Z M 70 30 h 5 v 5 h -5 Z M 75 30 h 5 v 5 h -5 Z M 80 30 h 5 v 5 h -5 Z M 85 30 h 5 v 5 h -5 Z M 90 30 h 5 v 5 h -5 Z M 95 30 h 5 v 5 h -5 Z M 100 30 h 5 v 5 h -5 Z M 40 35 h 5 v 5 h -5 Z M 45 35 h 5 v 5 h -5 Z M 50 35 h 5 v 5 h -5 Z M 55 35 h 5 v 5 h -5 Z M 0 40 h 5 v 5 h -5 Z M 5 40 h 5 v 5 h -5 Z M 10 40 h 5 v 5 h -5 Z M 25 40 h 5 v 5 h -5 Z M 30 40 h 5 v 5 h -5 Z M 40 40 h 5 v 5 h -5 Z M 45 40 h 5 v 5 h -5 Z M 50 40 h 5 v 5 h -5 Z M 55 40 h 5 v 5 h -5 Z M 60 40 h 5 v 5 h -5 Z M 65 40 h 5 v 5 h -5 Z M 70 40 h 5 v 5 h -5 Z M 75 40 h 5 v 5 h -5 Z M 80 40 h 5 v 5 h -5 Z M 95 40 h 5 v 5 h -5 Z M 100 40 h 5 v 5 h -5 Z M 0 45 h 5 v 5 h -5 Z M 10 45 h 5 v 5 h -5 Z M 20 45 h 5 v 5 h -5 Z M 25 45 h 5 v 5 h -5 Z M 35 45 h 5 v 5 h -5 Z M 50 45 h 5 v 5 h -5 Z M 65 45 h 5 v 5 h -5 Z M 70 45 h 5 v 5 h -5 Z M 75 45 h 5 v 5 h -5 Z M 85 45 h 5 v 5 h -5 Z M 90 45 h 5 v 5 h -5 Z M 100 45 h 5 v 5 h -5 Z M 0 50 h 5 v 5 h -5 Z M 5 50 h 5 v 5 h -5 Z M 10 50 h 5 v 5 h -5 Z M 30 50 h 5 v 5 h -5 Z M 40 50 h 5 v 5 h -5 Z M 45 50 h 5 v 5 h -5 Z M 80 50 h 5 v 5 h -5 Z M 85 50 h 5 v 5 h -5 Z M 100 50 h 5 v 5 h -5 Z M 0 55 h 5 v 5 h -5 Z M 5 55 h 5 v 5 h -5 Z M 10 55 h 5 v 5 h -5 Z M 20 55 h 5 v 5 h -5 Z M 35 55 h 5 v 5 h -5 Z M 45 55 h 5 v 5 h -5 Z M 50 55 h 5 v 5 h -5 Z M 60 55 h 5 v 5 h -5 Z M 75 55 h 5 v 5 h -5 Z M 85 55 h 5 v 5 h -5 Z M 95 55 h 5 v 5 h -5 Z M 5 60 h 5 v 5 h -5 Z M 15 60 h 5 v 5 h -5 Z M 20 60 h 5 v 5 h -5 Z M 25 60 h 5 v 5 h -5 Z M 30 60 h 5 v 5 h -5 Z M 40 60 h 5 v 5 h -5 Z M 45 60 h 5 v 5 h -5 Z M 95 60 h 5 v 5 h -5 Z M 40 65 h 5 v 5 h -5 Z M 55 65 h 5 v 5 h -5 Z M 65 65 h 5 v 5 h -5 Z M 80 65 h 5 v 5 h -5 Z M 85 65 h 5 v 5 h -5 Z M 100 65 h 5 v 5 h -5 Z M 0 70 h 5 v 5 h -5 Z M 5 70 h 5 v 5 h -5 Z M 10 70 h 5 v 5 h -5 Z M 15 70 h 5 v 5 h -5 Z M 20 70 h 5 v 5 h -5 Z M 25 70 h 5 v 5 h -5 Z M 30 70 h 5 v 5 h -5 Z M 50 70 h 5 v 5 h -5 Z M 55 70 h 5 v 5 h -5 Z M 60 70 h 5 v 5 h -5 Z M 65 70 h 5 v 5 h -5 Z M 70 70 h 5 v 5 h -5 Z M 80 70 h 5 v 5 h -5 Z M 85 70 h 5 v 5 h -5 Z M 100 70 h 5 v 5 h -5 Z M 0 75 h 5 v 5 h -5 Z M 30 75 h 5 v 5 h -5 Z M 40 75 h 5 v 5 h -5 Z M 45 75 h 5 v 5 h -5 Z M 55 75 h 5 v 5 h -5 Z M 75 75 h 5 v 5 h -5 Z M 85 75 h 5 v 5 h -5 Z M 100 75 h 5 v 5 h -5 Z M 0 80 h 5 v 5 h -5 Z M 10 80 h 5 v 5 h -5 Z M 15 80 h 5 v 5 h -5 Z M 20 80 h 5 v 5 h -5 Z M 30 80 h 5 v 5 h -5 Z M 45 80 h 5 v 5 h -5 Z M 50 80 h 5 v 5 h -5 Z M 55 80 h 5 v 5 h -5 Z M 60 80 h 5 v 5 h -5 Z M 80 80 h 5 v 5 h -5 Z M 90 80 h 5 v 5 h -5 Z M 95 80 h 5 v 5 h -5 Z M 0 85 h 5 v 5 h -5 Z M 10 85 h 5 v 5 h -5 Z M 15 85 h 5 v 5 h -5 Z M 20 85 h 5 v 5 h -5 Z M 30 85 h 5 v 5 h -5 Z M 45 85 h 5 v 5 h -5 Z M 70 85 h 5 v 5 h -5 Z M 75 85 h 5 v 5 h -5 Z M 80 85 h 5 v 5 h -5 Z M 85 85 h 5 v 5 h -5 Z M 90 85 h 5 v 5 h -5 Z M 0 90 h 5 v 5 h -5 Z M 10 90 h 5 v 5 h -5 Z M 15 90 h 5 v 5 h -5 Z M 20 90 h 5 v 5 h -5 Z M 30 90 h 5 v 5 h -5 Z M 40 90 h 5 v 5 h -5 Z M 45 90 h 5 v 5 h -5 Z M 50 90 h 5 v 5 h -5 Z M 65 90 h 5 v 5 h -5 Z M 70 90 h 5 v 5 h -5 Z M 80 90 h 5 v 5 h -5 Z M 95 90 h 5 v 5 h -5 Z M 100 90 h 5 v 5 h -5 Z M 0 95 h 5 v 5 h -5 Z M 30 95 h 5 v 5 h -5 Z M 40 95 h 5 v 5 h -5 Z M 45 95 h 5 v 5 h -5 Z M 50 95 h 5 v 5 h -5 Z M 60 95 h 5 v 5 h -5 Z M 80 95 h 5 v 5 h -5 Z M 85 95 h 5 v 5 h -5 Z M 0 100 h 5 v 5 h -5 Z M 5 100 h 5 v 5 h -5 Z M 10 100 h 5 v 5 h -5 Z M 15 100 h 5 v 5 h -5 Z M 20 100 h 5 v 5 h -5 Z M 25 100 h 5 v 5 h -5 Z M 30 100 h 5 v 5 h -5 Z M 40 100 h 5 v 5 h -5 Z M 45 100 h 5 v 5 h -5 Z M 65 100 h 5 v 5 h -5 Z M 70 100 h 5 v 5 h -5 Z M 85 100 h 5 v 5 h -5 Z M 100 100 h 5 v 5 h -5 Z" fill="black" />
+    </g>
+    <!-- Правая часть: Таблица -->
+    <!-- Горизонтальные разделители -->
+    <!-- Строка 1 -->
+    <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
+    <!-- Строка 2 -->
+    <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+    <!-- Вертикальный разделитель между названиями и значениями -->
+    <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+    <!-- Текст: Строка 1 (Наименование) -->
+    <text x="165" y="30" class="text-label">Наименование ОС</text>
+    <text x="165" y="48" class="text-label">Fixed asset name</text>
+    <text x="370" y="40" class="text-value">Актив 2</text>
+    <!-- Текст: Строка 2 (Инвентарный номер) -->
+    <text x="165" y="80" class="text-label">Инвентарный номер</text>
+    <text x="165" y="98" class="text-label">Inventory number</text>
+    <text x="370" y="90" class="text-value">ser_num_48</text>
+    <!-- Текст: Строка 3 (Серийный номер) -->
+    <text x="165" y="130" class="text-label">Серийный номер</text>
+    <text x="165" y="148" class="text-label">Serial number</text>
+    <text x="370" y="140" class="text-value">inv_num_48</text>
+    <!-- Зеленая метка (галочка) в углу ячейки -->
+    <path d="M 355 60 L 360 65 L 360 60 Z" fill="#4CAF50" />
+</svg>

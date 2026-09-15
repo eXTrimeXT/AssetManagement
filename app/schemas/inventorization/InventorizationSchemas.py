@@ -15,6 +15,7 @@ class InventorizationItemResponse(BaseModel):
     is_checked: bool
 
     serial_number: Optional[str] = None
+    inventory_id: Optional[str] = None
 
     quantity: Optional[int] = None
     quantity_fact: Optional[int] = None

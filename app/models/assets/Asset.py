@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 from pydantic import computed_field
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func, inspect
 from sqlalchemy.orm import relationship, backref, Mapped
 from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
@@ -305,11 +305,22 @@ class Asset(Base):
             parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
 
-            # Иерархия подразделений (уже загружена в память через selectinload)
-            g4 = emp.group
-            g3 = g4.parent if g4 else None
-            g2 = g3.parent if g3 else None
-            g1 = g2.parent if g2 else None
+            # === ПРАВИЛЬНОЕ ПОСТРОЕНИЕ ИЕРАРХИИ (как в /employees) ===
+            hierarchy_chain = []
+            current = emp.group
+            while current is not None:
+                hierarchy_chain.append(current)
+                if not current.parent_guid or current.parent_guid == "00000000-0000-0000-0000-000000000000":
+                    break
+
+                # Безопасная проверка, чтобы не вызвать lazy-load (MissingGreenlet)
+                insp = inspect(current)
+                parent_attr = insp.attrs.get('parent')
+                if parent_attr is None or parent_attr.loaded_value is None:
+                    break
+                current = parent_attr.loaded_value
+
+            hierarchy_chain.reverse()
 
             def _get_dept_dict(dept_obj):
                 if not dept_obj:
@@ -346,10 +357,13 @@ class Asset(Base):
                 updated_at=emp.updated_at,
                 full_name_ru=" ".join(parts_ru) if parts_ru else None,
                 full_name_en=" ".join(parts_en) if parts_en else None,
-                society=_get_dept_dict(g1),
-                department=_get_dept_dict(g2),
-                division=_get_dept_dict(g3),
-                group=_get_dept_dict(g4),
+
+                # Строгое распределение по уровням после reverse()
+                society=_get_dept_dict(hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None),
+                department=_get_dept_dict(hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None),
+                division=_get_dept_dict(hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None),
+                group=_get_dept_dict(hierarchy_chain[3] if len(hierarchy_chain) >= 4 else None),
+
                 position=position_data,
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
@@ -371,10 +385,19 @@ class Asset(Base):
             parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
 
-            g4 = emp.group
-            g3 = g4.parent if g4 else None
-            g2 = g3.parent if g3 else None
-            g1 = g2.parent if g2 else None
+            hierarchy_chain = []
+            current = emp.group
+            while current is not None:
+                hierarchy_chain.append(current)
+                if not current.parent_guid or current.parent_guid == "00000000-0000-0000-0000-000000000000":
+                    break
+                insp = inspect(current)
+                parent_attr = insp.attrs.get('parent')
+                if parent_attr is None or parent_attr.loaded_value is None:
+                    break
+                current = parent_attr.loaded_value
+
+            hierarchy_chain.reverse()
 
             def _get_dept_dict(dept_obj):
                 if not dept_obj:
@@ -411,10 +434,10 @@ class Asset(Base):
                 updated_at=emp.updated_at,
                 full_name_ru=" ".join(parts_ru) if parts_ru else None,
                 full_name_en=" ".join(parts_en) if parts_en else None,
-                society=_get_dept_dict(g1),
-                department=_get_dept_dict(g2),
-                division=_get_dept_dict(g3),
-                group=_get_dept_dict(g4),
+                society=_get_dept_dict(hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None),
+                department=_get_dept_dict(hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None),
+                division=_get_dept_dict(hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None),
+                group=_get_dept_dict(hierarchy_chain[3] if len(hierarchy_chain) >= 4 else None),
                 position=position_data,
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
@@ -436,10 +459,19 @@ class Asset(Base):
             parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
 
-            g4 = emp.group
-            g3 = g4.parent if g4 else None
-            g2 = g3.parent if g3 else None
-            g1 = g2.parent if g2 else None
+            hierarchy_chain = []
+            current = emp.group
+            while current is not None:
+                hierarchy_chain.append(current)
+                if not current.parent_guid or current.parent_guid == "00000000-0000-0000-0000-000000000000":
+                    break
+                insp = inspect(current)
+                parent_attr = insp.attrs.get('parent')
+                if parent_attr is None or parent_attr.loaded_value is None:
+                    break
+                current = parent_attr.loaded_value
+
+            hierarchy_chain.reverse()
 
             def _get_dept_dict(dept_obj):
                 if not dept_obj:
@@ -476,10 +508,10 @@ class Asset(Base):
                 updated_at=emp.updated_at,
                 full_name_ru=" ".join(parts_ru) if parts_ru else None,
                 full_name_en=" ".join(parts_en) if parts_en else None,
-                society=_get_dept_dict(g1),
-                department=_get_dept_dict(g2),
-                division=_get_dept_dict(g3),
-                group=_get_dept_dict(g4),
+                society=_get_dept_dict(hierarchy_chain[0] if len(hierarchy_chain) >= 1 else None),
+                department=_get_dept_dict(hierarchy_chain[1] if len(hierarchy_chain) >= 2 else None),
+                division=_get_dept_dict(hierarchy_chain[2] if len(hierarchy_chain) >= 3 else None),
+                group=_get_dept_dict(hierarchy_chain[3] if len(hierarchy_chain) >= 4 else None),
                 position=position_data,
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,

@@ -75,7 +75,7 @@ async def get_assets_list_with_sap(
     result_items: List[Any] = []
     sap_total = 0
 
-    # 1. Получаем общее количество локальных активов, подходящих под фильтры
+    # Получаем общее количество локальных активов, подходящих под фильтры
     local_total = await _get_local_assets_count(
         db=db,
         asset_id=asset_id,
@@ -91,7 +91,7 @@ async def get_assets_list_with_sap(
     )
 
     if skip < local_total:
-        # 2. На этой странице есть локальные активы. Забираем их (как ORM-объекты).
+        # На этой странице есть локальные активы. Забираем их (как ORM-объекты).
         local_orm_items = await _get_local_assets_slice(
             db=db,
             skip=skip,
@@ -116,7 +116,7 @@ async def get_assets_list_with_sap(
 
         remaining_slots = page_size - len(result_items)
         if remaining_slots > 0:
-            # 3. Дополняем недостающее количество из SAP, исключая уже найденные локальные inventory_id
+            # Дополняем недостающее количество из SAP, исключая уже найденные локальные inventory_id
             exclude_inv_ids = [item.inventory_id for item in result_items]
             sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
                 db=db,
@@ -134,7 +134,7 @@ async def get_assets_list_with_sap(
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера
             sap_total = fetched_sap_total
     else:
-        # 4. Локальные активы закончились. Запрашиваем только SAP со смещением
+        # Локальные активы закончились. Запрашиваем только SAP со смещением
         sap_offset = skip - local_total
         sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
             db=db,
@@ -575,7 +575,8 @@ def _build_user_response(employee: Employee, assignment_type: str, start_date: s
         "society": _get_dept_dict(getattr(employee, 'society', None)),
         "department": _get_dept_dict(getattr(employee, 'department', None)),
         "division": _get_dept_dict(getattr(employee, 'division', None)),
-        "group": _get_dept_dict(getattr(employee, 'group', None)),
+        # "group": _get_dept_dict(getattr(employee, 'group', None)),
+        "group": employee.__dict__.get('group'),
         "position": position_data,
         "start_date": format_start_date,
         "end_date": None,

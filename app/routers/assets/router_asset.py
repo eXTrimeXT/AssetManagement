@@ -24,8 +24,6 @@ from app.services.assets.asset_list_service import get_assets_list_with_sap
 
 # for QR-code
 import qrcode
-from qrcode.image.svg import SvgPathImage
-import re
 
 logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])

@@ -1,60 +1,38 @@
 <svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <style>
-      .border { fill: none; stroke: black; stroke-width: 2; }
-      .text-label { font-family: Arial, sans-serif; font-size: 14px; fill: black; }
-      .text-value { font-family: Arial, sans-serif; font-size: 16px; fill: black; }
-      .text-header { font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }
-    </style>
-  </defs>
-
-  <!-- Основной контейнер -->
-  <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
-
-  <!-- Левая колонка (QR-код) -->
-  <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
-  
-  <!-- Стилизованный QR-код (упрощенный) -->
-  <g transform="translate(15, 15)">
-    <!-- Верхний левый маркер -->
-    <rect x="0" y="0" width="45" height="45" fill="none" stroke="black" stroke-width="8"/>
-    <rect x="10" y="10" width="25" height="25" fill="black"/>
-    
-    <!-- Верхний правый маркер -->
-    <rect x="75" y="0" width="45" height="45" fill="none" stroke="black" stroke-width="8"/>
-    <rect x="85" y="10" width="25" height="25" fill="black"/>
-
-    <!-- Нижний левый маркер -->
-    <rect x="0" y="75" width="45" height="45" fill="none" stroke="black" stroke-width="8"/>
-    <rect x="10" y="85" width="25" height="25" fill="black"/>
-
-    <!-- Шум / Данные QR -->
-    <path d="M 10 60 L 20 60 L 20 70 L 10 70 Z M 30 50 L 40 50 L 40 60 L 30 60 Z M 50 10 L 60 10 L 60 20 L 50 20 Z M 50 30 L 60 30 L 60 40 L 50 40 Z M 70 60 L 80 60 L 80 70 L 70 70 Z M 90 60 L 100 60 L 100 70 L 90 70 Z M 110 10 L 120 10 L 120 20 L 110 20 Z M 110 30 L 120 30 L 120 40 L 110 40 Z M 60 70 L 70 70 L 70 80 L 60 80 Z M 60 90 L 70 90 L 70 100 L 60 100 Z M 80 80 L 90 80 L 90 90 L 80 90 Z M 110 80 L 120 80 L 120 90 L 110 90 Z M 110 100 L 120 100 L 120 110 L 110 110 Z M 10 100 L 20 100 L 20 110 L 10 110 Z M 30 120 L 40 120 L 40 130 L 30 130 Z M 50 110 L 60 110 L 60 120 L 50 120 Z M 70 120 L 80 120 L 80 130 L 70 130 Z M 90 110 L 100 110 L 100 120 L 90 120 Z M 40 70 L 50 70 L 50 80 L 40 80 Z M 20 80 L 30 80 L 30 90 L 20 90 Z M 100 50 L 110 50 L 110 60 L 100 60 Z M 80 40 L 90 40 L 90 50 L 80 50 Z" fill="black"/>
-  </g>
-
-  <!-- Правая часть: Таблица -->
-  
-  <!-- Горизонтальные разделители -->
-  <!-- Строка 1 -->
-  <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
-  <!-- Строка 2 -->
-  <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
-
-  <!-- Вертикальный разделитель между названиями и значениями -->
-  <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
-
-  <!-- Текст: Строка 1 (Наименование) -->
-  <text x="165" y="30" class="text-label">Наименование ОС</text>
-  <text x="165" y="48" class="text-label">Fixed asset name</text>
-  <text x="370" y="40" class="text-value">XXXXXXXX XXXXXXXXX XXXXXXXXXX XXXXXXXXXX</text>
-
-  <!-- Текст: Строка 2 (Инвентарный номер) -->
-  <text x="165" y="80" class="text-label">Инвентарный номер</text>
-  <text x="165" y="98" class="text-label">Inventory number</text>
-  <text x="370" y="90" class="text-value">10000005351</text>
-
-  <!-- Текст: Строка 3 (Серийный номер) -->
-  <text x="165" y="130" class="text-label">Серийный номер</text>
-  <text x="165" y="148" class="text-label">Serial number</text>
-  <text x="370" y="140" class="text-value">XXXXXXXXX (optional)</text>
+    <defs>
+        <style>
+            .border { fill: none; stroke: black; stroke-width: 2; }
+            .text-label { font-family: Arial, sans-serif; font-size: 14px; fill: black; }
+            .text-value { font-family: Arial, sans-serif; font-size: 16px; fill: black; }
+            .text-header { font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }
+        </style>
+    </defs>
+    <!-- Основной контейнер -->
+    <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+    <!-- Левая колонка (QR-код) -->
+    <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
+    <!-- Сгенерированный QR-код -->
+    <g transform="translate(15, 15)">
+        <path d="M 0 0 h 5 v 5 h -5 Z M 5 0 h 5 v 5 h -5 Z M 10 0 h 5 v 5 h -5 Z M 15 0 h 5 v 5 h -5 Z M 20 0 h 5 v 5 h -5 Z M 25 0 h 5 v 5 h -5 Z M 30 0 h 5 v 5 h -5 Z M 40 0 h 5 v 5 h -5 Z M 60 0 h 5 v 5 h -5 Z M 70 0 h 5 v 5 h -5 Z M 75 0 h 5 v 5 h -5 Z M 80 0 h 5 v 5 h -5 Z M 85 0 h 5 v 5 h -5 Z M 90 0 h 5 v 5 h -5 Z M 95 0 h 5 v 5 h -5 Z M 100 0 h 5 v 5 h -5 Z M 0 5 h 5 v 5 h -5 Z M 30 5 h 5 v 5 h -5 Z M 40 5 h 5 v 5 h -5 Z M 45 5 h 5 v 5 h -5 Z M 55 5 h 5 v 5 h -5 Z M 70 5 h 5 v 5 h -5 Z M 100 5 h 5 v 5 h -5 Z M 0 10 h 5 v 5 h -5 Z M 10 10 h 5 v 5 h -5 Z M 15 10 h 5 v 5 h -5 Z M 20 10 h 5 v 5 h -5 Z M 30 10 h 5 v 5 h -5 Z M 40 10 h 5 v 5 h -5 Z M 45 10 h 5 v 5 h -5 Z M 50 10 h 5 v 5 h -5 Z M 55 10 h 5 v 5 h -5 Z M 60 10 h 5 v 5 h -5 Z M 70 10 h 5 v 5 h -5 Z M 80 10 h 5 v 5 h -5 Z M 85 10 h 5 v 5 h -5 Z M 90 10 h 5 v 5 h -5 Z M 100 10 h 5 v 5 h -5 Z M 0 15 h 5 v 5 h -5 Z M 10 15 h 5 v 5 h -5 Z M 15 15 h 5 v 5 h -5 Z M 20 15 h 5 v 5 h -5 Z M 30 15 h 5 v 5 h -5 Z M 40 15 h 5 v 5 h -5 Z M 50 15 h 5 v 5 h -5 Z M 60 15 h 5 v 5 h -5 Z M 70 15 h 5 v 5 h -5 Z M 80 15 h 5 v 5 h -5 Z M 85 15 h 5 v 5 h -5 Z M 90 15 h 5 v 5 h -5 Z M 100 15 h 5 v 5 h -5 Z M 0 20 h 5 v 5 h -5 Z M 10 20 h 5 v 5 h -5 Z M 15 20 h 5 v 5 h -5 Z M 20 20 h 5 v 5 h -5 Z M 30 20 h 5 v 5 h -5 Z M 45 20 h 5 v 5 h -5 Z M 50 20 h 5 v 5 h -5 Z M 55 20 h 5 v 5 h -5 Z M 60 20 h 5 v 5 h -5 Z M 70 20 h 5 v 5 h -5 Z M 80 20 h 5 v 5 h -5 Z M 85 20 h 5 v 5 h -5 Z M 90 20 h 5 v 5 h -5 Z M 100 20 h 5 v 5 h -5 Z M 0 25 h 5 v 5 h -5 Z M 30 25 h 5 v 5 h -5 Z M 40 25 h 5 v 5 h -5 Z M 50 25 h 5 v 5 h -5 Z M 60 25 h 5 v 5 h -5 Z M 70 25 h 5 v 5 h -5 Z M 100 25 h 5 v 5 h -5 Z M 0 30 h 5 v 5 h -5 Z M 5 30 h 5 v 5 h -5 Z M 10 30 h 5 v 5 h -5 Z M 15 30 h 5 v 5 h -5 Z M 20 30 h 5 v 5 h -5 Z M 25 30 h 5 v 5 h -5 Z M 30 30 h 5 v 5 h -5 Z M 40 30 h 5 v 5 h -5 Z M 50 30 h 5 v 5 h -5 Z M 60 30 h 5 v 5 h -5 Z M 70 30 h 5 v 5 h -5 Z M 75 30 h 5 v 5 h -5 Z M 80 30 h 5 v 5 h -5 Z M 85 30 h 5 v 5 h -5 Z M 90 30 h 5 v 5 h -5 Z M 95 30 h 5 v 5 h -5 Z M 100 30 h 5 v 5 h -5 Z M 0 40 h 5 v 5 h -5 Z M 5 40 h 5 v 5 h -5 Z M 20 40 h 5 v 5 h -5 Z M 25 40 h 5 v 5 h -5 Z M 30 40 h 5 v 5 h -5 Z M 60 40 h 5 v 5 h -5 Z M 75 40 h 5 v 5 h -5 Z M 85 40 h 5 v 5 h -5 Z M 90 40 h 5 v 5 h -5 Z M 95 40 h 5 v 5 h -5 Z M 100 40 h 5 v 5 h -5 Z M 10 45 h 5 v 5 h -5 Z M 15 45 h 5 v 5 h -5 Z M 20 45 h 5 v 5 h -5 Z M 25 45 h 5 v 5 h -5 Z M 40 45 h 5 v 5 h -5 Z M 45 45 h 5 v 5 h -5 Z M 50 45 h 5 v 5 h -5 Z M 60 45 h 5 v 5 h -5 Z M 65 45 h 5 v 5 h -5 Z M 70 45 h 5 v 5 h -5 Z M 90 45 h 5 v 5 h -5 Z M 95 45 h 5 v 5 h -5 Z M 0 50 h 5 v 5 h -5 Z M 10 50 h 5 v 5 h -5 Z M 15 50 h 5 v 5 h -5 Z M 20 50 h 5 v 5 h -5 Z M 30 50 h 5 v 5 h -5 Z M 35 50 h 5 v 5 h -5 Z M 40 50 h 5 v 5 h -5 Z M 60 50 h 5 v 5 h -5 Z M 75 50 h 5 v 5 h -5 Z M 80 50 h 5 v 5 h -5 Z M 95 50 h 5 v 5 h -5 Z M 100 50 h 5 v 5 h -5 Z M 20 55 h 5 v 5 h -5 Z M 25 55 h 5 v 5 h -5 Z M 40 55 h 5 v 5 h -5 Z M 55 55 h 5 v 5 h -5 Z M 60 55 h 5 v 5 h -5 Z M 90 55 h 5 v 5 h -5 Z M 95 55 h 5 v 5 h -5 Z M 5 60 h 5 v 5 h -5 Z M 10 60 h 5 v 5 h -5 Z M 20 60 h 5 v 5 h -5 Z M 30 60 h 5 v 5 h -5 Z M 35 60 h 5 v 5 h -5 Z M 55 60 h 5 v 5 h -5 Z M 65 60 h 5 v 5 h -5 Z M 90 60 h 5 v 5 h -5 Z M 95 60 h 5 v 5 h -5 Z M 100 60 h 5 v 5 h -5 Z M 40 65 h 5 v 5 h -5 Z M 50 65 h 5 v 5 h -5 Z M 55 65 h 5 v 5 h -5 Z M 60 65 h 5 v 5 h -5 Z M 65 65 h 5 v 5 h -5 Z M 70 65 h 5 v 5 h -5 Z M 90 65 h 5 v 5 h -5 Z M 95 65 h 5 v 5 h -5 Z M 0 70 h 5 v 5 h -5 Z M 5 70 h 5 v 5 h -5 Z M 10 70 h 5 v 5 h -5 Z M 15 70 h 5 v 5 h -5 Z M 20 70 h 5 v 5 h -5 Z M 25 70 h 5 v 5 h -5 Z M 30 70 h 5 v 5 h -5 Z M 45 70 h 5 v 5 h -5 Z M 50 70 h 5 v 5 h -5 Z M 55 70 h 5 v 5 h -5 Z M 65 70 h 5 v 5 h -5 Z M 75 70 h 5 v 5 h -5 Z M 80 70 h 5 v 5 h -5 Z M 85 70 h 5 v 5 h -5 Z M 90 70 h 5 v 5 h -5 Z M 100 70 h 5 v 5 h -5 Z M 0 75 h 5 v 5 h -5 Z M 30 75 h 5 v 5 h -5 Z M 40 75 h 5 v 5 h -5 Z M 45 75 h 5 v 5 h -5 Z M 50 75 h 5 v 5 h -5 Z M 75 75 h 5 v 5 h -5 Z M 80 75 h 5 v 5 h -5 Z M 100 75 h 5 v 5 h -5 Z M 0 80 h 5 v 5 h -5 Z M 10 80 h 5 v 5 h -5 Z M 15 80 h 5 v 5 h -5 Z M 20 80 h 5 v 5 h -5 Z M 30 80 h 5 v 5 h -5 Z M 40 80 h 5 v 5 h -5 Z M 45 80 h 5 v 5 h -5 Z M 60 80 h 5 v 5 h -5 Z M 65 80 h 5 v 5 h -5 Z M 70 80 h 5 v 5 h -5 Z M 85 80 h 5 v 5 h -5 Z M 90 80 h 5 v 5 h -5 Z M 100 80 h 5 v 5 h -5 Z M 0 85 h 5 v 5 h -5 Z M 10 85 h 5 v 5 h -5 Z M 15 85 h 5 v 5 h -5 Z M 20 85 h 5 v 5 h -5 Z M 30 85 h 5 v 5 h -5 Z M 45 85 h 5 v 5 h -5 Z M 50 85 h 5 v 5 h -5 Z M 60 85 h 5 v 5 h -5 Z M 65 85 h 5 v 5 h -5 Z M 70 85 h 5 v 5 h -5 Z M 85 85 h 5 v 5 h -5 Z M 90 85 h 5 v 5 h -5 Z M 95 85 h 5 v 5 h -5 Z M 100 85 h 5 v 5 h -5 Z M 0 90 h 5 v 5 h -5 Z M 10 90 h 5 v 5 h -5 Z M 15 90 h 5 v 5 h -5 Z M 20 90 h 5 v 5 h -5 Z M 30 90 h 5 v 5 h -5 Z M 50 90 h 5 v 5 h -5 Z M 60 90 h 5 v 5 h -5 Z M 75 90 h 5 v 5 h -5 Z M 80 90 h 5 v 5 h -5 Z M 85 90 h 5 v 5 h -5 Z M 0 95 h 5 v 5 h -5 Z M 30 95 h 5 v 5 h -5 Z M 40 95 h 5 v 5 h -5 Z M 45 95 h 5 v 5 h -5 Z M 50 95 h 5 v 5 h -5 Z M 55 95 h 5 v 5 h -5 Z M 60 95 h 5 v 5 h -5 Z M 75 95 h 5 v 5 h -5 Z M 80 95 h 5 v 5 h -5 Z M 85 95 h 5 v 5 h -5 Z M 90 95 h 5 v 5 h -5 Z M 100 95 h 5 v 5 h -5 Z M 0 100 h 5 v 5 h -5 Z M 5 100 h 5 v 5 h -5 Z M 10 100 h 5 v 5 h -5 Z M 15 100 h 5 v 5 h -5 Z M 20 100 h 5 v 5 h -5 Z M 25 100 h 5 v 5 h -5 Z M 30 100 h 5 v 5 h -5 Z M 40 100 h 5 v 5 h -5 Z M 55 100 h 5 v 5 h -5 Z M 65 100 h 5 v 5 h -5 Z M 70 100 h 5 v 5 h -5 Z M 90 100 h 5 v 5 h -5 Z M 95 100 h 5 v 5 h -5 Z M 100 100 h 5 v 5 h -5 Z" fill="black" />
+    </g>
+    <!-- Правая часть: Таблица -->
+    <!-- Горизонтальные разделители -->
+    <!-- Строка 1 -->
+    <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
+    <!-- Строка 2 -->
+    <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+    <!-- Вертикальный разделитель между названиями и значениями -->
+    <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+    <!-- Текст: Строка 1 (Наименование) -->
+    <text x="165" y="30" class="text-label">Наименование ОС</text>
+    <text x="165" y="48" class="text-label">Fixed asset name</text>
+    <text x="370" y="40" class="text-value">Ноутбук Lenovo ThinkBook 16 G7 ARP 3</text>
+    <!-- Текст: Строка 2 (Инвентарный номер) -->
+    <text x="165" y="80" class="text-label">Инвентарный номер</text>
+    <text x="165" y="98" class="text-label">Inventory number</text>
+    <text x="370" y="90" class="text-value">100000006527</text>
+    <!-- Текст: Строка 3 (Серийный номер) -->
+    <text x="165" y="130" class="text-label">Серийный номер</text>
+    <text x="165" y="148" class="text-label">Serial number</text>
+    <text x="370" y="140" class="text-value">C2507N0003012</text>
 </svg>

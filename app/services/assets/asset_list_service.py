@@ -637,7 +637,6 @@ logger = logging.getLogger(__name__)
 
 SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
-
 async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
@@ -658,13 +657,12 @@ async def get_assets_list_with_sap(
     Получение списка активов: локальные данные имеют приоритет,
     список дополняется данными из SAP, если локальных записей недостаточно.
 
-    Пагинация честная: total = local_total + sap_total, где sap_total — это
-    количество записей, которое SAP реально отдаёт под наши фильтры.
-    Если на первой странице ничего нет — total = 0, has_next = False.
+    ВАЖНО: SAP API возвращает некорректный total (общее количество материалов
+    без учёта фильтров). Поэтому для определения has_next используем факт:
+    пришло ли на текущей странице ровно page_size элементов.
     """
 
     # === Прямой поиск по уникальным идентификаторам (asset_id / material_id) ===
-    # Ищем только в локальной БД, SAP не трогаем.
     if material_id is not None or asset_id is not None:
         local_orm_items = await _get_local_assets_slice(
             db=db,
@@ -688,7 +686,6 @@ async def get_assets_list_with_sap(
             ]
             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
 
-        # В локальной БД нет — возвращаем пустой результат.
         return _build_paginated_response([], total=0, page=1, page_size=1)
 
     # === Обычный поиск с пагинацией ===
@@ -710,7 +707,7 @@ async def get_assets_list_with_sap(
     )
 
     result_items: List[Any] = []
-    sap_total = 0
+    sap_total: Optional[int] = None  # None = неизвестно
 
     if skip < local_total:
         # На этой странице есть локальные записи — забираем их
@@ -742,7 +739,7 @@ async def get_assets_list_with_sap(
             sap_items, sap_total = await _fetch_and_merge_sap_assets(
                 db=db,
                 limit=remaining_slots,
-                offset=0,  # SAP начинаем с начала, т.к. фильтруем дубликаты
+                offset=0,
                 material_id=material_id,
                 name=name,
                 inventory_id=inventory_id,
@@ -771,18 +768,41 @@ async def get_assets_list_with_sap(
         )
         result_items.extend(sap_items)
 
-    final_total = local_total + sap_total
+    # === Определяем total и has_next ===
+    # Если SAP не вызывался (все слоты заняты локальными) — total = local_total.
+    # Если SAP вызывался — доверять его total нельзя, поэтому считаем total неизвестным
+    # и используем эвристику по количеству элементов на странице.
+    # if sap_total is None:
+    #     final_total = local_total
+    #     has_next = (skip + len(result_items)) < local_total
+    # else:
+    #     # SAP вызывался. Его total врёт (не учитывает фильтры).
+    #     # Используем local_total как нижнюю границу и факт заполнения страницы.
+    #     final_total = local_total + sap_total if sap_total > 0 else local_total
+    #     # has_next = true только если страница заполнена целиком
+    #     has_next = len(result_items) == page_size
 
-    # Защита от «фантомных» страниц: если на первой странице ничего нет,
-    # значит, фильтры не дали результатов — total должен быть 0.
+    if local_total > 0:
+        final_total = local_total
+        has_next = (skip + len(result_items)) < local_total
+    else:
+        final_total = sap_total or 0
+        has_next = len(result_items) == page_size
+
+    # Защита от «фантомных» страниц
     if page == 1 and not result_items:
         return _build_paginated_response([], total=0, page=page, page_size=page_size)
 
-    # Защита от выхода за пределы: если страница за пределами — пусто и has_next=false
     if not result_items and skip >= final_total:
-        return _build_paginated_response([], total=final_total, page=page, page_size=page_size)
+        return _build_paginated_response(
+            [], total=final_total, page=page, page_size=page_size,
+            force_has_next=False,
+        )
 
-    return _build_paginated_response(result_items, final_total, page, page_size)
+    return _build_paginated_response(
+        result_items, final_total, page, page_size,
+        force_has_next=has_next,
+    )
 
 
 async def _get_local_assets_count(
@@ -1214,15 +1234,29 @@ def _build_user_response(employee: Employee, assignment_type: str, start_date: s
 
 
 def _build_paginated_response(
-        items: List[Any], total: int, page: int, page_size: int
+        items: List[Any],
+        total: int,
+        page: int,
+        page_size: int,
+        force_has_next: Optional[bool] = None,
 ) -> Dict[str, Any]:
+    """
+    Собирает ответ пагинации.
+
+    Если force_has_next передан — используется он.
+    Иначе has_next вычисляется по формуле page < total_pages.
+    """
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    if force_has_next is None:
+        has_next = page < total_pages
+    else:
+        has_next = force_has_next
     return {
         "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
-        "has_next": page < total_pages,
+        "has_next": has_next,
         "has_previous": page > 1,
     }

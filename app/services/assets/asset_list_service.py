@@ -636,6 +636,182 @@ logger = logging.getLogger(__name__)
 
 SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
+# async def get_assets_list_with_sap(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         asset_id: Optional[int] = None,
+#         material_id: Optional[str] = None,
+#         name: Optional[str] = None,
+#         inventory_id: Optional[str] = None,
+#         serial_number: Optional[str] = None,
+#         asset_status: Optional[str] = None,
+#         model_id: Optional[int] = None,
+#         asset_type_id: Optional[int] = None,
+#         parent_id: Optional[int] = None,
+#         employee_id: Optional[str] = None,
+#         search_mode: str = "ALL",
+# ) -> Dict[str, Any]:
+#     """
+#     Получение списка активов: локальные данные имеют приоритет,
+#     список дополняется данными из SAP, если локальных записей недостаточно.
+#
+#     ВАЖНО: SAP API возвращает некорректный total (общее количество материалов
+#     без учёта фильтров). Поэтому для определения has_next используем факт:
+#     пришло ли на текущей странице ровно page_size элементов.
+#     """
+#
+#     # === Прямой поиск по уникальным идентификаторам (asset_id / material_id) ===
+#     if material_id is not None or asset_id is not None:
+#         local_orm_items = await _get_local_assets_slice(
+#             db=db,
+#             skip=0,
+#             limit=1,
+#             asset_id=asset_id,
+#             material_id=material_id,
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#         )
+#         if local_orm_items:
+#             local_items = [
+#                 AssetResponse.model_validate(item, from_attributes=True)
+#                 for item in local_orm_items
+#             ]
+#             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
+#
+#         return _build_paginated_response([], total=0, page=1, page_size=1)
+#
+#     # === Обычный поиск с пагинацией ===
+#     skip = (page - 1) * page_size
+#
+#     # 1. Локальная часть
+#     local_total = await _get_local_assets_count(
+#         db=db,
+#         asset_id=asset_id,
+#         material_id=material_id,
+#         name=name,
+#         inventory_id=inventory_id,
+#         serial_number=serial_number,
+#         asset_status=asset_status,
+#         model_id=model_id,
+#         asset_type_id=asset_type_id,
+#         parent_id=parent_id,
+#         employee_id=employee_id,
+#     )
+#
+#     result_items: List[Any] = []
+#     sap_total: Optional[int] = None  # None = неизвестно
+#
+#     if skip < local_total:
+#         # На этой странице есть локальные записи — забираем их
+#         local_orm_items = await _get_local_assets_slice(
+#             db=db,
+#             skip=skip,
+#             limit=page_size,
+#             asset_id=asset_id,
+#             material_id=material_id,
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#         )
+#         local_items = [
+#             AssetResponse.model_validate(item, from_attributes=True)
+#             for item in local_orm_items
+#         ]
+#         result_items.extend(local_items)
+#
+#         remaining_slots = page_size - len(result_items)
+#         if remaining_slots > 0:
+#             # Дополняем из SAP, исключая уже найденные локальные inventory_id
+#             exclude_inv_ids = [item.inventory_id for item in result_items if item.inventory_id]
+#             sap_items, sap_total = await _fetch_and_merge_sap_assets(
+#                 db=db,
+#                 limit=remaining_slots,
+#                 offset=0,
+#                 material_id=material_id,
+#                 name=name,
+#                 inventory_id=inventory_id,
+#                 serial_number=serial_number,
+#                 employee_id=employee_id,
+#                 search_mode=search_mode,
+#                 exclude_inventory_ids=exclude_inv_ids,
+#                 asset_type_id=asset_type_id,
+#             )
+#             result_items.extend(sap_items[:remaining_slots])
+#     else:
+#         # Локальные записи закончились — берём только SAP
+#         sap_offset = skip - local_total
+#         sap_items, sap_total = await _fetch_and_merge_sap_assets(
+#             db=db,
+#             limit=page_size,
+#             offset=sap_offset,
+#             material_id=material_id,
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             employee_id=employee_id,
+#             search_mode=search_mode,
+#             exclude_inventory_ids=[],
+#             asset_type_id=asset_type_id,
+#         )
+#         result_items.extend(sap_items)
+#
+#     # === Определяем total и has_next ===
+#     # Если SAP не вызывался (все слоты заняты локальными) — total = local_total.
+#     # Если SAP вызывался — доверять его total нельзя, поэтому считаем total неизвестным
+#     # и используем эвристику по количеству элементов на странице.
+#     # if sap_total is None:
+#     #     final_total = local_total
+#     #     has_next = (skip + len(result_items)) < local_total
+#     # else:
+#     #     # SAP вызывался. Его total врёт (не учитывает фильтры).
+#     #     # Используем local_total как нижнюю границу и факт заполнения страницы.
+#     #     final_total = local_total + sap_total if sap_total > 0 else local_total
+#     #     # has_next = true только если страница заполнена целиком
+#     #     has_next = len(result_items) == page_size
+#
+#     # === Определяем total и has_next ===
+#     # SAP API возвращает некорректный total (размер всей своей таблицы,
+#     # без учёта наших фильтров), поэтому его нельзя складывать с local_total.
+#     #
+#     # Логика:
+#     # - Если есть локальные записи (local_total > 0) — пагинация идёт
+#     #   по локальным, SAP лишь добивает текущую страницу. total = local_total.
+#     # - Если локальных нет — работаем только с SAP, используем его total
+#     #   и определяем has_next по факту заполнения страницы.
+#     if local_total > 0:
+#         final_total = local_total
+#         has_next = (skip + len(result_items)) < local_total
+#     else:
+#         final_total = sap_total or 0
+#         has_next = len(result_items) == page_size
+#
+#     # Защита от «фантомных» страниц
+#     if page == 1 and not result_items:
+#         return _build_paginated_response([], total=0, page=page, page_size=page_size)
+#
+#     if not result_items and skip >= final_total:
+#         return _build_paginated_response(
+#             [], total=final_total, page=page, page_size=page_size,
+#             force_has_next=False,
+#         )
+#
+#     return _build_paginated_response(
+#         result_items, final_total, page, page_size,
+#         force_has_next=has_next,
+#     )
+
 async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
@@ -653,13 +829,24 @@ async def get_assets_list_with_sap(
         search_mode: str = "ALL",
 ) -> Dict[str, Any]:
     """
-    Получение списка активов: локальные данные имеют приоритет,
-    список дополняется данными из SAP, если локальных записей недостаточно.
+    Получение списка активов.
+
+    Логика:
+    - Если asset_type_id == 10 или None → показываем все активы: локальные + SAP.
+    - Если asset_type_id != 10 → показываем ТОЛЬКО локальные активы.
+
+    Локальные данные имеют приоритет. Список дополняется данными из SAP,
+    если локальных записей недостаточно (только в режиме use_sap=True).
 
     ВАЖНО: SAP API возвращает некорректный total (общее количество материалов
-    без учёта фильтров). Поэтому для определения has_next используем факт:
-    пришло ли на текущей странице ровно page_size элементов.
+    без учёта фильтров). Поэтому его total используется только как нижняя
+    граница, а has_next определяется по факту заполнения страницы.
     """
+
+    # === Определяем, работаем ли мы с SAP ===
+    # SAP подключается только для типа "Оборудование M&U" (asset_type_id == 10)
+    # или когда тип не задан (None).
+    use_sap = (asset_type_id is None) or (asset_type_id == 10)
 
     # === Прямой поиск по уникальным идентификаторам (asset_id / material_id) ===
     if material_id is not None or asset_id is not None:
@@ -706,7 +893,7 @@ async def get_assets_list_with_sap(
     )
 
     result_items: List[Any] = []
-    sap_total: Optional[int] = None  # None = неизвестно
+    sap_total: Optional[int] = None  # None = SAP не вызывался
 
     if skip < local_total:
         # На этой странице есть локальные записи — забираем их
@@ -731,9 +918,9 @@ async def get_assets_list_with_sap(
         ]
         result_items.extend(local_items)
 
+        # Добиваем страницу из SAP — только если SAP разрешён
         remaining_slots = page_size - len(result_items)
-        if remaining_slots > 0:
-            # Дополняем из SAP, исключая уже найденные локальные inventory_id
+        if use_sap and remaining_slots > 0:
             exclude_inv_ids = [item.inventory_id for item in result_items if item.inventory_id]
             sap_items, sap_total = await _fetch_and_merge_sap_assets(
                 db=db,
@@ -750,47 +937,37 @@ async def get_assets_list_with_sap(
             )
             result_items.extend(sap_items[:remaining_slots])
     else:
-        # Локальные записи закончились — берём только SAP
-        sap_offset = skip - local_total
-        sap_items, sap_total = await _fetch_and_merge_sap_assets(
-            db=db,
-            limit=page_size,
-            offset=sap_offset,
-            material_id=material_id,
-            name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            employee_id=employee_id,
-            search_mode=search_mode,
-            exclude_inventory_ids=[],
-            asset_type_id=asset_type_id,
-        )
-        result_items.extend(sap_items)
-
-    # === Определяем total и has_next ===
-    # Если SAP не вызывался (все слоты заняты локальными) — total = local_total.
-    # Если SAP вызывался — доверять его total нельзя, поэтому считаем total неизвестным
-    # и используем эвристику по количеству элементов на странице.
-    # if sap_total is None:
-    #     final_total = local_total
-    #     has_next = (skip + len(result_items)) < local_total
-    # else:
-    #     # SAP вызывался. Его total врёт (не учитывает фильтры).
-    #     # Используем local_total как нижнюю границу и факт заполнения страницы.
-    #     final_total = local_total + sap_total if sap_total > 0 else local_total
-    #     # has_next = true только если страница заполнена целиком
-    #     has_next = len(result_items) == page_size
+        # Локальные записи закончились.
+        # Если SAP разрешён — берём только SAP; иначе — пустой результат.
+        if use_sap:
+            sap_offset = skip - local_total
+            sap_items, sap_total = await _fetch_and_merge_sap_assets(
+                db=db,
+                limit=page_size,
+                offset=sap_offset,
+                material_id=material_id,
+                name=name,
+                inventory_id=inventory_id,
+                serial_number=serial_number,
+                employee_id=employee_id,
+                search_mode=search_mode,
+                exclude_inventory_ids=[],
+                asset_type_id=asset_type_id,
+            )
+            result_items.extend(sap_items)
 
     # === Определяем total и has_next ===
     # SAP API возвращает некорректный total (размер всей своей таблицы,
     # без учёта наших фильтров), поэтому его нельзя складывать с local_total.
     #
     # Логика:
-    # - Если есть локальные записи (local_total > 0) — пагинация идёт
-    #   по локальным, SAP лишь добивает текущую страницу. total = local_total.
-    # - Если локальных нет — работаем только с SAP, используем его total
-    #   и определяем has_next по факту заполнения страницы.
-    if local_total > 0:
+    # - Если SAP не использовался (use_sap=False или все слоты заняли локальные) —
+    #   пагинация чисто по локальным: total = local_total.
+    # - Если есть локальные записи (local_total > 0) — пагинация идёт по локальным,
+    #   SAP лишь добивает текущую страницу. total = local_total.
+    # - Если локальных нет и SAP использовался — используем sap_total,
+    #   has_next определяем по факту заполнения страницы.
+    if local_total > 0 or not use_sap:
         final_total = local_total
         has_next = (skip + len(result_items)) < local_total
     else:
@@ -811,7 +988,6 @@ async def get_assets_list_with_sap(
         result_items, final_total, page, page_size,
         force_has_next=has_next,
     )
-
 
 async def _get_local_assets_count(
         db: AsyncSession,

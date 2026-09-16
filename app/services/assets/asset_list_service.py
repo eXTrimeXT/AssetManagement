@@ -89,6 +89,7 @@ async def get_assets_list_with_sap(
         parent_id=parent_id,
         employee_id=employee_id
     )
+    final_total = local_total
 
     if skip < local_total:
         # На этой странице есть локальные активы. Забираем их (как ORM-объекты).
@@ -153,8 +154,8 @@ async def get_assets_list_with_sap(
             result_items.extend(sap_items)
             sap_total = fetched_sap_total
 
-    # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
-    final_total = local_total + sap_total
+            # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
+            final_total = local_total + sap_total
 
     return _build_paginated_response(result_items, final_total, page, page_size)
 

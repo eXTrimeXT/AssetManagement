@@ -359,7 +359,8 @@ async def _fetch_and_merge_sap_assets(
         virtual_assets = []
         for sap_item in filtered_sap_items:
             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
-            if asset_type_id and virtual_asset.get("asset_type_id") == asset_type_id or asset_type_id is None:
+            if asset_type_id and virtual_asset.get("asset_type_id") == asset_type_id:
+                # or asset_type_id is None:
                 virtual_assets.append(virtual_asset)
 
         return virtual_assets, sap_total

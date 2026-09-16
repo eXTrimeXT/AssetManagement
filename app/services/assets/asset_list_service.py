@@ -44,7 +44,7 @@ async def get_assets_list_with_sap(
     # === ОПТИМИЗАЦИЯ: Прямой поиск по уникальным идентификаторам ===
     # Если запрошен конкретный material_id или asset_id, мы ищем его ТОЛЬКО в локальной БД.
     # Если он там есть, мы сразу возвращаем результат, полностью игнорируя SAP API и пагинацию.
-    if material_id is not None or asset_id is not None:
+    if material_id is not None or asset_id is not None or asset_type_id != 10:
         local_orm_items = await _get_local_assets_slice(
             db=db,
             skip=0, # Игнорируем пагинацию, нам нужен конкретный элемент
@@ -89,7 +89,6 @@ async def get_assets_list_with_sap(
         parent_id=parent_id,
         employee_id=employee_id
     )
-    final_total = local_total
 
     if skip < local_total:
         # На этой странице есть локальные активы. Забираем их (как ORM-объекты).
@@ -135,27 +134,26 @@ async def get_assets_list_with_sap(
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера
             sap_total = fetched_sap_total
     else:
-        if asset_type_id == 10 or asset_type_id is None:
-            # Локальные активы закончились. Запрашиваем только SAP со смещением
-            sap_offset = skip - local_total
-            sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-                db=db,
-                limit=page_size,
-                offset=sap_offset,
-                material_id=material_id,
-                name=name,
-                inventory_id=inventory_id,
-                serial_number=serial_number,
-                employee_id=employee_id,
-                search_mode=search_mode,
-                exclude_inventory_ids=[],
-                asset_type_id=asset_type_id
-            )
-            result_items.extend(sap_items)
-            sap_total = fetched_sap_total
+        # Локальные активы закончились. Запрашиваем только SAP со смещением
+        sap_offset = skip - local_total
+        sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
+            db=db,
+            limit=page_size,
+            offset=sap_offset,
+            material_id=material_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            employee_id=employee_id,
+            search_mode=search_mode,
+            exclude_inventory_ids=[],
+            asset_type_id=asset_type_id
+        )
+        result_items.extend(sap_items)
+        sap_total = fetched_sap_total
 
-            # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
-            final_total = local_total + sap_total
+    # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
+    final_total = local_total + sap_total
 
     return _build_paginated_response(result_items, final_total, page, page_size)
 
@@ -361,8 +359,7 @@ async def _fetch_and_merge_sap_assets(
         virtual_assets = []
         for sap_item in filtered_sap_items:
             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
-            if asset_type_id and virtual_asset.get("asset_type_id") == asset_type_id:
-                # or asset_type_id is None:
+            if asset_type_id and virtual_asset.get("asset_type_id") == asset_type_id or asset_type_id is None:
                 virtual_assets.append(virtual_asset)
 
         return virtual_assets, sap_total

@@ -772,21 +772,14 @@ async def get_assets_list_with_sap(
     # Если SAP не вызывался (все слоты заняты локальными) — total = local_total.
     # Если SAP вызывался — доверять его total нельзя, поэтому считаем total неизвестным
     # и используем эвристику по количеству элементов на странице.
-    # if sap_total is None:
-    #     final_total = local_total
-    #     has_next = (skip + len(result_items)) < local_total
-    # else:
-    #     # SAP вызывался. Его total врёт (не учитывает фильтры).
-    #     # Используем local_total как нижнюю границу и факт заполнения страницы.
-    #     final_total = local_total + sap_total if sap_total > 0 else local_total
-    #     # has_next = true только если страница заполнена целиком
-    #     has_next = len(result_items) == page_size
-
-    if local_total > 0:
+    if sap_total is None:
         final_total = local_total
         has_next = (skip + len(result_items)) < local_total
     else:
-        final_total = sap_total or 0
+        # SAP вызывался. Его total врёт (не учитывает фильтры).
+        # Используем local_total как нижнюю границу и факт заполнения страницы.
+        final_total = local_total + sap_total if sap_total > 0 else local_total
+        # has_next = true только если страница заполнена целиком
         has_next = len(result_items) == page_size
 
     # Защита от «фантомных» страниц

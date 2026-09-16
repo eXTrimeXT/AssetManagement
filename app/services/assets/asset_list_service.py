@@ -617,7 +617,6 @@
 #     }
 
 import logging
-import zlib
 from typing import List, Dict, Optional, Any, Sequence, Tuple
 
 from sqlalchemy import select, func, inspect, Integer, or_, cast
@@ -772,14 +771,30 @@ async def get_assets_list_with_sap(
     # Если SAP не вызывался (все слоты заняты локальными) — total = local_total.
     # Если SAP вызывался — доверять его total нельзя, поэтому считаем total неизвестным
     # и используем эвристику по количеству элементов на странице.
-    if sap_total is None:
+    # if sap_total is None:
+    #     final_total = local_total
+    #     has_next = (skip + len(result_items)) < local_total
+    # else:
+    #     # SAP вызывался. Его total врёт (не учитывает фильтры).
+    #     # Используем local_total как нижнюю границу и факт заполнения страницы.
+    #     final_total = local_total + sap_total if sap_total > 0 else local_total
+    #     # has_next = true только если страница заполнена целиком
+    #     has_next = len(result_items) == page_size
+
+    # === Определяем total и has_next ===
+    # SAP API возвращает некорректный total (размер всей своей таблицы,
+    # без учёта наших фильтров), поэтому его нельзя складывать с local_total.
+    #
+    # Логика:
+    # - Если есть локальные записи (local_total > 0) — пагинация идёт
+    #   по локальным, SAP лишь добивает текущую страницу. total = local_total.
+    # - Если локальных нет — работаем только с SAP, используем его total
+    #   и определяем has_next по факту заполнения страницы.
+    if local_total > 0:
         final_total = local_total
         has_next = (skip + len(result_items)) < local_total
     else:
-        # SAP вызывался. Его total врёт (не учитывает фильтры).
-        # Используем local_total как нижнюю границу и факт заполнения страницы.
-        final_total = local_total + sap_total if sap_total > 0 else local_total
-        # has_next = true только если страница заполнена целиком
+        final_total = sap_total or 0
         has_next = len(result_items) == page_size
 
     # Защита от «фантомных» страниц

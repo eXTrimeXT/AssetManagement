@@ -134,23 +134,24 @@ async def get_assets_list_with_sap(
             result_items.extend(sap_items[:remaining_slots])  # Обрезаем до нужного размера
             sap_total = fetched_sap_total
     else:
-        # Локальные активы закончились. Запрашиваем только SAP со смещением
-        sap_offset = skip - local_total
-        sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-            db=db,
-            limit=page_size,
-            offset=sap_offset,
-            material_id=material_id,
-            name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            employee_id=employee_id,
-            search_mode=search_mode,
-            exclude_inventory_ids=[],
-            asset_type_id=asset_type_id
-        )
-        result_items.extend(sap_items)
-        sap_total = fetched_sap_total
+        if asset_type_id == 10 or asset_type_id is None:
+            # Локальные активы закончились. Запрашиваем только SAP со смещением
+            sap_offset = skip - local_total
+            sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
+                db=db,
+                limit=page_size,
+                offset=sap_offset,
+                material_id=material_id,
+                name=name,
+                inventory_id=inventory_id,
+                serial_number=serial_number,
+                employee_id=employee_id,
+                search_mode=search_mode,
+                exclude_inventory_ids=[],
+                asset_type_id=asset_type_id
+            )
+            result_items.extend(sap_items)
+            sap_total = fetched_sap_total
 
     # Итоговый total - это сумма (приблизительная, но достаточная для пагинации)
     final_total = local_total + sap_total

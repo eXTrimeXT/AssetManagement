@@ -177,8 +177,17 @@ async def _get_local_assets_count(
         query = query.where(Asset.asset_id == asset_id)
     if material_id:
         query = query.where(Asset.material_id == material_id)
+    # if name:
+    #     query = query.where(Asset.name.ilike(f"%{name}%"))
     if name:
-        query = query.where(Asset.name.ilike(f"%{name}%"))
+        search_term = f"%{name}%"
+        query = query.where(
+            or_(
+                Asset.name.ilike(search_term),
+                Asset.inventory_id.ilike(search_term),
+                Asset.serial_number.ilike(search_term)
+            )
+        )
     if inventory_id:
         query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
     if serial_number:
@@ -248,8 +257,17 @@ async def _get_local_assets_slice(
         query = query.where(Asset.asset_id == asset_id)
     if material_id:
         query = query.where(Asset.material_id == material_id)
+    # if name:
+    #     query = query.where(Asset.name.ilike(f"%{name}%"))
     if name:
-        query = query.where(Asset.name.ilike(f"%{name}%"))
+        search_term = f"%{name}%"
+        query = query.where(
+            or_(
+                Asset.name.ilike(search_term),
+                Asset.inventory_id.ilike(search_term),
+                Asset.serial_number.ilike(search_term)
+            )
+        )
     if inventory_id:
         query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
     if serial_number:

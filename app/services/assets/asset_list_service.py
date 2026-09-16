@@ -44,7 +44,7 @@ async def get_assets_list_with_sap(
     # === ОПТИМИЗАЦИЯ: Прямой поиск по уникальным идентификаторам ===
     # Если запрошен конкретный material_id или asset_id, мы ищем его ТОЛЬКО в локальной БД.
     # Если он там есть, мы сразу возвращаем результат, полностью игнорируя SAP API и пагинацию.
-    if material_id is not None or asset_id is not None or asset_type_id != 10:
+    if material_id is not None or asset_id is not None:
         local_orm_items = await _get_local_assets_slice(
             db=db,
             skip=0, # Игнорируем пагинацию, нам нужен конкретный элемент

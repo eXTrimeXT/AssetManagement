@@ -17,7 +17,6 @@ class AssetBase(BaseModel):
     model_name: Optional[str] = None
     asset_type_id: Optional[int] = None
     parent_id: Optional[int] = None
-    # location_id: Optional[int] = None
 
     # Еженедельная проверка оборудования
     every_week_check: Optional[bool] = False    # true/false
@@ -47,7 +46,7 @@ class AssetBase(BaseModel):
 class AssetCreate(AssetBase):
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
-    responsible_users: Optional[List[AssetUserUpdate]] = None
+    # responsible_users: Optional[List[AssetUserUpdate]] = None
     serving_users: Optional[List[AssetUserUpdate]] = None
     # Локация на карте
     location: Optional[AssetLocationUpdate] = None
@@ -91,7 +90,7 @@ class AssetUpdate(BaseModel):
     current_user: Optional[str] = None
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserUpdate]] = None
-    responsible_users: Optional[List[AssetUserUpdate]] = None
+    # responsible_users: Optional[List[AssetUserUpdate]] = None
     serving_users: Optional[List[AssetUserUpdate]] = None
 
 class AssetResponse(AssetBase):
@@ -104,13 +103,12 @@ class AssetResponse(AssetBase):
     asset_type_name: Optional[str] = None
     asset_status_id: Optional[int] = None
     # model: Optional["AssetModelResponse"] = None
-    # location: Optional[LocationResponse] = None
 
     location: Optional[AssetLocationResponse] = None
 
     # Для синхронизации привязок пользователей
     users: Optional[List[AssetUserFullResponse]] = None
-    responsible_users: Optional[List[AssetUserFullResponse]] = None
+    # responsible_users: Optional[List[AssetUserFullResponse]] = None
     serving_users: Optional[List[AssetUserFullResponse]] = None
 
     current_user: Optional[str] = None

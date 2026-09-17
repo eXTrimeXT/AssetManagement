@@ -26,7 +26,13 @@ from app.models.zup import Employee, ZupDepartment
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
     # ИСКЛЮЧАЕМ чтобы не передать в relationship
-    asset_data = data.model_dump(exclude={"users", "responsible_users", "serving_users", "location", "asset_status"})
+    asset_data = data.model_dump(exclude={
+        "users",
+        # "responsible_users",
+        "serving_users",
+        "location",
+        "asset_status"
+    })
 
     # Создаем актив
     db_obj = Asset(**asset_data, created_by=employee_id, updated_by=employee_id)
@@ -46,12 +52,13 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
     await db.refresh(db_obj)
 
     # Синхронизация привязок пользователей, если они переданы
-    if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
+    # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
+    if data.users is not None or data.serving_users is not None:
         await _sync_asset_users(
             db=db,
             asset_id=db_obj.asset_id,
             users = data.users or [],
-            responsible_users = data.responsible_users or [],
+            # responsible_users = data.responsible_users or [],
             serving_users = data.serving_users or [],
             assigned_by=employee_id
         )
@@ -63,7 +70,6 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
 
     # Возвращаем актив с загруженными связями
     return await get_asset_by_id(db, db_obj.asset_id)
-
 
 async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     result = await db.execute(
@@ -104,7 +110,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
         )
     )
     return result.scalar_one_or_none()
-
 
 def _apply_assets_filters(
         query, name, inventory_id, serial_number, asset_status,
@@ -173,7 +178,6 @@ async def get_assets_count(
     result = await db.execute(query)
     return result.scalar_one()
 
-
 async def get_assets_list(
         db: AsyncSession,
         page: int = 1,
@@ -224,110 +228,6 @@ async def get_assets_list(
 
     return assets, total
 
-
-# async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
-#     obj = await get_asset_by_id(db, asset_id)
-#     if not obj:
-#         return None
-#
-#     # === Получаем старую локацию для истории ===
-#     old_location_data = None
-#     for pos in (obj.asset_positions or []):
-#         if pos.is_active:
-#             old_location_data = {
-#                 "workshop_id": pos.workshop_id,
-#                 "place": pos.place,
-#                 "level": pos.level,
-#                 "x": pos.x,
-#                 "y": pos.y,
-#             }
-#             break
-#
-#     # Сохраняем старые значения для истории
-#     old_data = {
-#         'name': obj.name,
-#         'inventory_id': obj.inventory_id,
-#         'serial_number': obj.serial_number,
-#         'comment': obj.comment,
-#         'date_issue': obj.date_issue,
-#         'date_purchasing': obj.date_purchasing,
-#         'model_id': obj.model_id,
-#         'model_name': obj.model_name,
-#         'asset_type_id': obj.asset_type_id,
-#         'parent_id': obj.parent_id,
-#         'location': str(old_location_data) if old_location_data else None,
-#         'asset_status_id': obj.asset_status_id,
-#         'parent_name': obj.parent_name,
-#         'manufacturer_name': obj.manufacturer_name,
-#         'vendor_name': obj.vendor_name,
-#         'os_name': obj.os_name
-#     }
-#
-#     update_data = data.model_dump(
-#         exclude_unset=True,
-#         exclude={"users", "responsible_users", "serving_users", "location"}
-#     )
-#
-#     # Обновляем ВСЕ поля актива через ЕДИНУЮ общую логику
-#     for key, value in update_data.items():
-#         setattr(obj, key, value)
-#     obj.updated_by = employee_id
-#
-#     # === ОБРАБОТКА ЛОКАЦИИ НА КАРТЕ ===
-#     new_location_data = None
-#     if "location" in data.model_fields_set and data.location is not None:
-#         new_location_data = await _sync_asset_location(db, asset_id, data.location, employee_id)
-#
-#     # === СОХРАНЕНИЕ ИСТОРИИ ИЗМЕНЕНИЙ ===
-#     new_data = {
-#         'name': obj.name,
-#         'inventory_id': obj.inventory_id,
-#         'serial_number': obj.serial_number,
-#         'comment': obj.comment,
-#         'date_issue': obj.date_issue,
-#         'date_purchasing': obj.date_purchasing,
-#         'model_id': obj.model_id,
-#         'model_name': obj.model_name,
-#         'asset_type_id': obj.asset_type_id,
-#         'parent_id': obj.parent_id,
-#         'location': str(new_location_data) if new_location_data else (
-#             str(old_location_data) if old_location_data else None
-#         ),
-#         'asset_status_id': obj.asset_status_id,
-#         'parent_name': obj.parent_name,
-#         'manufacturer_name': obj.manufacturer_name,
-#         'vendor_name': obj.vendor_name,
-#         'os_name': obj.os_name
-#     }
-#
-#     await compare_and_save_changes(
-#         db=db,
-#         asset_id=asset_id,
-#         old_data=old_data,
-#         new_data=new_data,
-#         changed_by=employee_id
-#     )
-#
-#     # === ОБРАБОТКА ПЕРВИЧНЫХ ПОЛЬЗОВАТЕЛЕЙ (is_current) ===
-#     # Проверяем, прислал ли фронтенд поле current_user
-#     if "current_user" in data.model_fields_set:
-#         # await _update_primary_assignment(db, asset_id, "user", data.current_user)
-#         await _update_primary_assignment(db, asset_id, data.current_user)
-#
-#     # Синхронизация привязок пользователей
-#     if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
-#         await _sync_asset_users(
-#             db=db,
-#             asset_id=asset_id,
-#             users = data.users or [],
-#             responsible_users = data.responsible_users or [],
-#             serving_users = data.serving_users or [],
-#             assigned_by=employee_id
-#         )
-#
-#     await db.commit()
-#     return await get_asset_by_id(db, asset_id)
-
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     # Пытаемся найти актив в локальной БД
     obj = await get_asset_by_id(db, asset_id)
@@ -340,7 +240,12 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         # Проверяем, есть ли данные для создания
         update_data = data.model_dump(
             exclude_unset=True,
-            exclude={"users", "responsible_users", "serving_users", "location"}
+            exclude={
+                "users",
+                # "responsible_users",
+                "serving_users",
+                "location"
+            }
         )
 
         if not update_data:
@@ -365,12 +270,13 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             await _sync_asset_location(db, obj.asset_id, data.location, employee_id)
 
         # Обработка пользователей
-        if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
+        # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
+        if data.users is not None or data.serving_users is not None:
             await _sync_asset_users(
                 db=db,
                 asset_id=obj.asset_id,
                 users=data.users or [],
-                responsible_users=data.responsible_users or [],
+                # responsible_users=data.responsible_users or [],
                 serving_users=data.serving_users or [],
                 assigned_by=employee_id
             )
@@ -380,7 +286,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     # === СЦЕНАРИЙ 2: Актив найден в БД ===
     # Проверяем, есть ли реальные изменения
-
     # Получаем текущие значения для сравнения
     old_location_data = None
     for pos in (obj.asset_positions or []):
@@ -416,7 +321,12 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
     # Применяем изменения из запроса
     update_data = data.model_dump(
         exclude_unset=True,
-        exclude={"users", "responsible_users", "serving_users", "location"}
+        exclude={
+            "users",
+            # "responsible_users",
+            "serving_users",
+            "location"
+        }
     )
 
     has_changes = False
@@ -436,7 +346,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     # Проверяем изменения пользователей
     users_changed = False
-    if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
+    # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
+    if data.users is not None or data.serving_users is not None:
         # Проверяем, есть ли изменения в пользователях
         # (упрощенная проверка - всегда считаем что есть изменения если переданы)
         users_changed = True
@@ -489,7 +400,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             db=db,
             asset_id=asset_id,
             users=data.users or [],
-            responsible_users=data.responsible_users or [],
+            # responsible_users=data.responsible_users or [],
             serving_users=data.serving_users or [],
             assigned_by=employee_id
         )
@@ -534,36 +445,37 @@ async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
     Оптимизированное обогащение с кэшированием.
     Решает проблему N+1, вызывая тяжелые функции только для УНИКАЛЬНЫХ guid.
     """
-    # 1. Собираем уникальные GUID'ы со всех пользователей всех активов
+    # Собираем уникальные GUID'ы со всех пользователей всех активов
     unique_dept_guids = set()
     unique_pos_guids = set()
 
     for asset in assets:
-        for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
+        # for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
+        for user in (asset.users or []) + (asset.serving_users or []):
             user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
             if user_dict.get("department_guid"):
                 unique_dept_guids.add(user_dict["department_guid"])
             if user_dict.get("position_guid"):
                 unique_pos_guids.add(user_dict["position_guid"])
 
-    # 2. Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
+    # Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
     dept_hierarchy_cache = {}
     for guid in unique_dept_guids:
         hierarchy = await get_hierarchy_departments(db, guid)
         dept_hierarchy_cache[guid] = hierarchy
 
-    # 3. Кэшируем должности
+    # Кэшируем должности
     pos_cache = {}
     for guid in unique_pos_guids:
         position = await get_position_by_guid(db, guid)
         pos_cache[guid] = position
 
-    # 4. Обогащаем данные в памяти, используя готовые кэши
+    # Обогащаем данные в памяти, используя готовые кэши
     for asset in assets:
         if asset.users:
             asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
-        if asset.responsible_users:
-            asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
+        # if asset.responsible_users:
+        #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
         if asset.serving_users:
             asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
 
@@ -571,7 +483,7 @@ async def _sync_asset_users(
         db: AsyncSession,
         asset_id: int,
         users: list,
-        responsible_users: list,
+        # responsible_users: list,
         serving_users: list,
         assigned_by: str,
 ) -> None:
@@ -584,7 +496,7 @@ async def _sync_asset_users(
     - Отвязанные пользователи (есть в БД, но нет в запросе) → уведомление об отвязке
     """
     requested_user_ids = {user.employee_id for user in (users or [])}
-    requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
+    # requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
     requested_serving_ids = {user.employee_id for user in (serving_users or [])}
 
     # Получаем все активные привязки
@@ -601,10 +513,10 @@ async def _sync_asset_users(
         a.employee_id for a in active_assignments
         if a.assignment_type == AssignmentTypeEnum.USER
     }
-    active_responsible_ids = {
-        a.employee_id for a in active_assignments
-        if a.assignment_type == AssignmentTypeEnum.RESPONSIBLE
-    }
+    # active_responsible_ids = {
+    #     a.employee_id for a in active_assignments
+    #     if a.assignment_type == AssignmentTypeEnum.RESPONSIBLE
+    # }
     active_serving_ids = {
         a.employee_id for a in active_assignments
         if a.assignment_type == AssignmentTypeEnum.SERVING
@@ -635,28 +547,28 @@ async def _sync_asset_users(
         )
 
     # === НОВЫЕ ответственные пользователи (привязка + уведомление) ===
-    for employee_id in requested_responsible_ids:
-        if employee_id in active_responsible_ids:
-            # Уже привязан — пропускаем без уведомления
-            continue
-
-        new_assignment = AssetAssignment(
-            asset_id=asset_id,
-            employee_id=employee_id,
-            assignment_type=AssignmentTypeEnum.RESPONSIBLE,
-            start_date=date.today(),
-            end_date=None,
-            assigned_by=assigned_by
-        )
-        db.add(new_assignment)
-
-        # Уведомление только для НОВОГО ответственного
-        await notify_assigned_responsible(
-            db=db,
-            employee_id=employee_id,
-            asset_id=asset_id,
-            initiator_id=assigned_by,
-        )
+    # for employee_id in requested_responsible_ids:
+    #     if employee_id in active_responsible_ids:
+    #         # Уже привязан — пропускаем без уведомления
+    #         continue
+    #
+    #     new_assignment = AssetAssignment(
+    #         asset_id=asset_id,
+    #         employee_id=employee_id,
+    #         assignment_type=AssignmentTypeEnum.RESPONSIBLE,
+    #         start_date=date.today(),
+    #         end_date=None,
+    #         assigned_by=assigned_by
+    #     )
+    #     db.add(new_assignment)
+    #
+    #     # Уведомление только для НОВОГО ответственного
+    #     await notify_assigned_responsible(
+    #         db=db,
+    #         employee_id=employee_id,
+    #         asset_id=asset_id,
+    #         initiator_id=assigned_by,
+    #     )
 
     # === НОВЫЕ обслуживающие пользователи (привязка + уведомление) ===
     for employee_id in requested_serving_ids:
@@ -688,8 +600,8 @@ async def _sync_asset_users(
 
         if assignment.assignment_type == AssignmentTypeEnum.USER:
             should_unassign = assignment.employee_id not in requested_user_ids
-        elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
-            should_unassign = assignment.employee_id not in requested_responsible_ids
+        # elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
+        #     should_unassign = assignment.employee_id not in requested_responsible_ids
         elif assignment.assignment_type == AssignmentTypeEnum.SERVING:
             should_unassign = assignment.employee_id not in requested_serving_ids
 
@@ -704,13 +616,13 @@ async def _sync_asset_users(
                     asset_id=asset_id,
                     initiator_id=assigned_by,
                 )
-            elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
-                await notify_unassigned_responsible(
-                    db=db,
-                    employee_id=assignment.employee_id,
-                    asset_id=asset_id,
-                    initiator_id=assigned_by,
-                )
+            # elif assignment.assignment_type == AssignmentTypeEnum.RESPONSIBLE:
+            #     await notify_unassigned_responsible(
+            #         db=db,
+            #         employee_id=assignment.employee_id,
+            #         asset_id=asset_id,
+            #         initiator_id=assigned_by,
+            #     )
             elif assignment.assignment_type == AssignmentTypeEnum.SERVING:
                 await notify_unassigned_serving(
                     db=db,

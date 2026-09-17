@@ -53,12 +53,13 @@ async def get_assets_list_with_sap(
         if local_orm_items:
             local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
-        return _build_paginated_response([], total=0, page=1, page_size=1)
+        # return _build_paginated_response([], total=0, page=1, page_size=1)
 
     # === ОПТИМИЗАЦИЯ 2: Если запрошен asset_type_id != 10, SAP не запрашиваем ===
     # Все виртуальные активы из SAP имеют asset_type_id = 10.
     # Если фильтр требует другой тип, ни один виртуальный актив не пройдет фильтрацию.
-    skip_sap_fetch = (asset_type_id is not None and asset_type_id != 10) or asset_type_id is None
+    skip_sap_fetch = (asset_type_id is not None and asset_type_id != 10)
+    logger.debug(f"skip_sap_fetch = {skip_sap_fetch}")
 
     # === Получаем локальные данные ===
     local_total = await _get_local_assets_count(

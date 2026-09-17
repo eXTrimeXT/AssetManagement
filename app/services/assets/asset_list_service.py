@@ -439,15 +439,15 @@ def _build_virtual_asset(
         current_user_full_name = " ".join(parts) if parts else None
 
     raw_material_id = sap_item.get("material_id")
-    if raw_material_id is not None:
-        try:
-            asset_id_val = int(raw_material_id)
-        except (ValueError, OverflowError):
-            asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
-    else:
-        inv = str(sap_item.get("inventory_number", ""))
-        serial = str(sap_item.get("serial_number", ""))
-        asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
+    # if raw_material_id is not None:
+    #     try:
+    #         asset_id_val = int(raw_material_id)
+    #     except (ValueError, OverflowError):
+    #         asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
+    # else:
+    #     inv = str(sap_item.get("inventory_number", ""))
+    #     serial = str(sap_item.get("serial_number", ""))
+    #     asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
 
     return {
         "asset_id": None,
@@ -479,6 +479,7 @@ def _build_virtual_asset(
         "location": None,
         "users": users,
         # "responsible_users": [],
+        "cost_center_code": sap_item.get("cost_center_code") if sap_item.get("cost_center_code") else None,
         "serving_users": [],
         "current_user": raw_employee_id,
         "current_user_full_name": current_user_full_name,

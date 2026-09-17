@@ -58,7 +58,7 @@ async def get_assets_list_with_sap(
     # === ОПТИМИЗАЦИЯ 2: Если запрошен asset_type_id != 10, SAP не запрашиваем ===
     # Все виртуальные активы из SAP имеют asset_type_id = 10.
     # Если фильтр требует другой тип, ни один виртуальный актив не пройдет фильтрацию.
-    skip_sap_fetch = (asset_type_id is not None and asset_type_id != 10)
+    skip_sap_fetch = (asset_type_id is not None and asset_type_id != 10) or asset_type_id is None
 
     # === Получаем локальные данные ===
     local_total = await _get_local_assets_count(
@@ -479,6 +479,7 @@ def _build_virtual_asset(
         "location": None,
         "users": users,
         # "responsible_users": [],
+        "cost_center_code_from": sap_item.get("cost_center_code_from") if sap_item.get("cost_center_code_from") else None,
         "cost_center_code": sap_item.get("cost_center_code") if sap_item.get("cost_center_code") else None,
         "serving_users": [],
         "current_user": raw_employee_id,

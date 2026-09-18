@@ -11,18 +11,20 @@ async def get_department_by_guid(db: AsyncSession, guid: str) -> Optional[ZupDep
 async def get_department_by_more_params(
         db: AsyncSession,
         guid: Optional[str] = None,
-        name: Optional[str] = None
+        name: Optional[str] = None,
+        name_en: Optional[str] = None,
+        short_name: Optional[str] = None,
 ) -> Optional[ZupDepartment]:
     conditions = []
 
     if guid:
         conditions.append(ZupDepartment.guid == guid)
     if name:
-        conditions.extend([
-            ZupDepartment.name.ilike(f"%{name}%"),
-            ZupDepartment.name_en.ilike(f"%{name}%"),
-            ZupDepartment.short_name.ilike(f"%{name}%"),
-            ])
+        conditions.append(ZupDepartment.name.ilike(f"%{name}%"))
+    if name_en:
+        conditions.append(ZupDepartment.name_en.ilike(f"%{name_en}%"))
+    if short_name:
+        conditions.append(ZupDepartment.short_name == short_name)
 
     if not conditions:
         return None
@@ -114,6 +116,8 @@ async def get_hierarchy_departments(
         db: AsyncSession,
         guid: Optional[str] = None,
         name: Optional[str] = None,
+        name_en: Optional[str] = None,
+        short_name: Optional[str] = None,
 ) -> Optional[DepartmentDivisionGroupResponse]:
     """
     Получить плоскую иерархию подразделений от группы до общества.
@@ -124,7 +128,7 @@ async def get_hierarchy_departments(
         return None
 
     # Ищем стартовый департамент
-    start_dept = await get_department_by_more_params(db, guid=guid, name=name)
+    start_dept = await get_department_by_more_params(db, guid=guid, name=name, name_en=name_en, short_name=short_name)
     if not start_dept:
         return None
 

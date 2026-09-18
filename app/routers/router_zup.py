@@ -213,7 +213,9 @@ async def get_departments(
 )
 async def get_hierarchy_departments_endpoint(
         guid: Optional[str] = Query(None, description="GUID подразделения (группы)"),
-        name: Optional[str] = Query(None, description="Поиск по name, name_en, short_name"),
+        name: Optional[str] = Query(None, description="Поиск по name (ilike)"),
+        name_en: Optional[str] = Query(None, description="Поиск по name_en (ilike)"),
+        short_name: Optional[str] = Query(None, description="Поиск строго по short_name"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -226,7 +228,7 @@ async def get_hierarchy_departments_endpoint(
     - department: департамент (parent от отдела)
     - society: общество (parent от департамента, у него parent_guid == 00000000-...)
     """
-    result = await get_hierarchy_departments(db, guid, name)
+    result = await get_hierarchy_departments(db, guid, name, name_en, short_name)
     if result is None:
         raise HTTPException(status_code=404, detail="Подразделение не найдено")
     return result

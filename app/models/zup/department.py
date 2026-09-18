@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Date, DateTime, func
 from sqlalchemy.orm import relationship
-from datetime import datetime
+
 from app.models.Base import Base
 
 class ZupDepartment(Base):

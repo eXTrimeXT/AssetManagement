@@ -25,9 +25,10 @@ def init_scheduler():
         replace_existing=True,
     )
 
+    # 1С - синхронизация на 6:00
     scheduler.add_job(
         func=sync_zup_data_job,
-        trigger=CronTrigger(hour=2),
+        trigger=CronTrigger(hour=6),
         # trigger=IntervalTrigger(minutes=1),
         id="sync_all_data",
         replace_existing=True,

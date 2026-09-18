@@ -110,7 +110,12 @@ class AssetResponse(AssetBase):
     users: Optional[List[AssetUserFullResponse]] = None
     # responsible_users: Optional[List[AssetUserFullResponse]] = None
     cost_center_code_from: Optional[str] = None
+    cost_center_code_from_name: Optional[str] = None
+    cost_center_code_from_short_name: Optional[str] = None
+
     cost_center_code: Optional[str] = None
+    cost_center_code_name: Optional[str] = None
+    cost_center_code_short_name: Optional[str] = None
     serving_users: Optional[List[AssetUserFullResponse]] = None
 
     current_user: Optional[str] = None

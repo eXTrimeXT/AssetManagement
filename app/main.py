@@ -68,6 +68,7 @@ from app.services.zup.zup_integration import close_http_client
 
 # Импорт роутера для импорта из SAP
 from app.routers.router_from_sap import router_from_sap
+from app.routers.assets.router_asset_transfer import router_asset_transfer
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,7 @@ app.include_router(router_asset_types, prefix="/api")       # Asset Types
 app.include_router(router_asset_models, prefix="/api")      # Asset Models
 app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
 app.include_router(router_assets, prefix="/api")            # Assets
+app.include_router(router_asset_transfer, prefix="/api")    # Роутер передачи актива
 app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
 app.include_router(router_asset_history, prefix="/api")     # История активов
 app.include_router(router_asset_write_off, prefix="/api")   # Списание активов

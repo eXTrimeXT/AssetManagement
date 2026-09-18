@@ -34,6 +34,11 @@ class NotificationEventType:
     INVENTORY_DISCREPANCY = "inventory_discrepancy"
     INVENTORY_COMPLETED = "inventory_completed"
 
+    # События по передаче актива
+    TRANSFER_ASSET_INIT = "transfer_asset_init"
+    TRANSFER_ASSET_DECLINED = "transfer_asset_declined"
+    TRANSFER_ASSET_ACCEPTED = "transfer_asset_accepted"
+
     RU_LABELS = {
         # Сервисные события
         SERVICE_DUE: "Требуется обслуживание",
@@ -61,6 +66,11 @@ class NotificationEventType:
         INVENTORY_STARTED: "Сессия инвентаризации запущена",
         INVENTORY_DISCREPANCY: "Обнаружено расхождение по активу",
         INVENTORY_COMPLETED: "Сессия инвентаризации завершена",
+
+        # События по передаче актива
+        TRANSFER_ASSET_INIT: "Вам предложено принять актив",
+        TRANSFER_ASSET_DECLINED: "Получатель отклонил передачу актива",
+        TRANSFER_ASSET_ACCEPTED: "Получатель принял передачу актива",
     }
 
     @classmethod
@@ -72,12 +82,10 @@ class NotificationStatus:
     """Статусы уведомлений"""
     UNREAD = "unread"
     READ = "read"
-    # DECLINED = "declined"
 
     RU_LABELS = {
         UNREAD: "Не прочитано",
         READ: "Прочитано",
-        # DECLINED: "Отклонено",
     }
 
     @classmethod
@@ -104,6 +112,9 @@ class Notification(Base):
     employee_deleted = Column(Boolean, default=False, nullable=False)   # Скрыто для получателя
     initiator_deleted = Column(Boolean, default=False, nullable=False)  # Скрыто для инициатора
     # ========================================
+
+    # === НОВОЕ ПОЛЕ ДЛЯ СОХРАНЕНИЯ ТИПА ПРИВЯЗКИ ===
+    assignment_type = Column(String(20), nullable=True)  # "user" или "responsible"
 
     # Relationships
     asset = relationship("Asset", foreign_keys=[asset_id], lazy="selectin")

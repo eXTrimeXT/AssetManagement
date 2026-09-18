@@ -57,6 +57,7 @@ class NotificationResponse(BaseModel):
 
         # Единый словарь сообщений: (текст_для_инициатора (исходящее), текст_для_получателя (входящее))
         messages = {
+            # Системные события
             NotificationEventType.SERVICE_DUE: ("Требуется обслуживание актива", "Требуется обслуживание актива"),
             NotificationEventType.ASSET_STATUS_CHANGED: ("Изменение статуса актива", "Изменение статуса актива"),
 
@@ -67,16 +68,24 @@ class NotificationResponse(BaseModel):
             NotificationEventType.RESPONSIBLE_DECLINED: ("Сотрудник отклонил ваше назначение ответственным", "Вы отклонили назначение ответственным"),
             NotificationEventType.USER_DECLINED: ("Сотрудник отклонил ваше назначение пользователем", "Вы отклонили назначение пользователем"),
 
+            # События обслуживающим
             NotificationEventType.ASSIGNED_SERVING: ("Вы назначали сотрудника обслуживать актив", "Вас назначили обслуживать актив "),
             NotificationEventType.UNASSIGNED_SERVING: ("Вы открепили сотрудника обслуживающего актив", "Вас открепили обслуживать актив "),
 
+            # Списание актива
             NotificationEventType.WRITE_OFF_REQUESTED: ("Вы создали заявку на списание", "Создана заявка на списание актива"),
             NotificationEventType.WRITE_OFF_APPROVED: ("Вы утвердили заявку на списание", "Ваша заявка на списание утверждена"),
             NotificationEventType.WRITE_OFF_REJECTED: ("Вы отклонили заявку на списание", "Ваша заявка на списание отклонена"),
 
+            # Инвентаризация
             NotificationEventType.INVENTORY_STARTED: ("Вы запустили новую сессию инвентаризации", "Началась инвентаризация закрепленных за вами активов"),
             NotificationEventType.INVENTORY_DISCREPANCY: ("Вы зафиксировали расхождение при инвентаризации", "Обнаружено расхождение по закрепленному за вами активу при инвентаризации"),
             NotificationEventType.INVENTORY_COMPLETED: ("Вы завершили сессию инвентаризации", "Сессия инвентаризации, затрагивающая ваши активы, завершена"),
+
+            # Передача актива
+            NotificationEventType.TRANSFER_ASSET_INIT: ("Вы инициировали передачу актива", "Вам предложено принять актив"),
+            NotificationEventType.TRANSFER_ASSET_DECLINED: ("Получатель отклонил передачу актива", "Вы отклонили передачу актива"),
+            NotificationEventType.TRANSFER_ASSET_ACCEPTED: ("Получатель принял передачу актива", "Вы приняли передачу актива"),
         }
 
         type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))

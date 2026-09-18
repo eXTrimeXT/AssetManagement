@@ -481,7 +481,13 @@ def _build_virtual_asset(
         "users": users,
         # "responsible_users": [],
         "cost_center_code_from": sap_item.get("cost_center_code_from") if sap_item.get("cost_center_code_from") else None,
+        "cost_center_code_from_name": sap_item.get("cost_center_code_from") if sap_item.get("cost_center_code_from_name") else None,
+        "cost_center_code_from_short_name": sap_item.get("cost_center_code_from") if sap_item.get("cost_center_code_from_short_name") else None,
+
         "cost_center_code": sap_item.get("cost_center_code") if sap_item.get("cost_center_code") else None,
+        "cost_center_code_name": sap_item.get("cost_center_code") if sap_item.get("cost_center_code_name") else None,
+        "cost_center_code_short_name": sap_item.get("cost_center_code") if sap_item.get("cost_center_code_short_name") else None,
+
         "serving_users": [],
         "current_user": raw_employee_id,
         "current_user_full_name": current_user_full_name,

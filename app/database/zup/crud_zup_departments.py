@@ -1,5 +1,5 @@
 from typing import Optional, Sequence, List
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.zup.department import ZupDepartment
 from app.schemas.zup.DepartmentSchemas import DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
@@ -8,29 +8,26 @@ async def get_department_by_guid(db: AsyncSession, guid: str) -> Optional[ZupDep
     result = await db.execute(select(ZupDepartment).where(ZupDepartment.guid == guid))
     return result.scalar_one_or_none()
 
+from sqlalchemy import select, and_, func
+
 async def get_department_by_more_params(
         db: AsyncSession,
         guid: Optional[str] = None,
-        name: Optional[str] = None,
-        name_en: Optional[str] = None,
         short_name: Optional[str] = None,
 ) -> Optional[ZupDepartment]:
     conditions = []
 
     if guid:
         conditions.append(ZupDepartment.guid == guid)
-    if name:
-        conditions.append(ZupDepartment.name.ilike(f"%{name}%"))
-    if name_en:
-        conditions.append(ZupDepartment.name_en.ilike(f"%{name_en}%"))
+
     if short_name:
-        conditions.append(ZupDepartment.short_name == short_name)
+        conditions.append(func.lower(ZupDepartment.short_name) == short_name.lower())
 
     if not conditions:
         return None
 
     result = await db.execute(
-        select(ZupDepartment).where(or_(*conditions))
+        select(ZupDepartment).where(and_(*conditions))
     )
     return result.scalars().first()
 
@@ -59,64 +56,9 @@ async def get_departments_list(db: AsyncSession, skip: int = 0, limit: int = 50)
     result = await db.execute(query)
     return result.scalars().all()
 
-# async def get_hierarchy_departments(
-#         db: AsyncSession,
-#         guid: Optional[str] = None,
-#         name: Optional[str] = None,
-# ) -> Optional[DepartmentDivisionGroupResponse]:
-#     """
-#     Получить плоскую иерархию подразделений от группы до общества.
-#
-#     Логика:
-#     - guid — это группа (самый нижний уровень, chain[0])
-#     - Идём вверх по parent_guid, собирая цепочку
-#     - Общество определяется по признаку parent_guid == NULL_GUID
-#     - Остальные уровни раскладываются по позиции:
-#         chain[0] = group
-#         chain[1] = division (отдел)
-#         chain[2] = department (департамент)
-#     """
-#
-#     # Константа — "пустой" GUID, обозначающий корень иерархии (общество)
-#     NULL_GUID = "00000000-0000-0000-0000-000000000000"
-#
-#     if not guid:
-#         return None
-#
-#     # Собираем цепочку от группы вверх
-#     chain: List[ZupDepartment] = []
-#     current_guid = guid
-#     visited = set()  # Защита от циклов
-#
-#     while current_guid and current_guid != NULL_GUID and current_guid not in visited:
-#         visited.add(current_guid)
-#         # dept = await get_department_by_guid(db, current_guid)
-#         dept = await get_department_by_more_params(db, guid=current_guid, name=name)
-#         if not dept:
-#             break
-#         chain.append(dept)
-#         current_guid = dept.parent_guid
-#
-#     if not chain:
-#         return None
-#
-#     def to_workplace(department: Optional[ZupDepartment]) -> Optional[WorkplaceResponse]:
-#         if not department:
-#             return None
-#         return WorkplaceResponse.model_validate(department)
-#
-#     return DepartmentDivisionGroupResponse(
-#         society=to_workplace(chain[-1]) if len(chain) >= 1 else None,
-#         department=to_workplace(chain[-2]) if len(chain) >= 2 else None,
-#         division=to_workplace(chain[-3]) if len(chain) >= 3 else None,
-#         group=to_workplace(chain[-4]) if len(chain) >= 4 else None,
-#     )
-
 async def get_hierarchy_departments(
         db: AsyncSession,
         guid: Optional[str] = None,
-        name: Optional[str] = None,
-        name_en: Optional[str] = None,
         short_name: Optional[str] = None,
 ) -> Optional[DepartmentDivisionGroupResponse]:
     """
@@ -124,11 +66,8 @@ async def get_hierarchy_departments(
     """
     NULL_GUID = "00000000-0000-0000-0000-000000000000"
 
-    if not guid and not name:
-        return None
-
     # Ищем стартовый департамент
-    start_dept = await get_department_by_more_params(db, guid=guid, name=name, name_en=name_en, short_name=short_name)
+    start_dept = await get_department_by_more_params(db, guid=guid, short_name=short_name)
     if not start_dept:
         return None
 

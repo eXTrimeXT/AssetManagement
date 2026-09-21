@@ -91,7 +91,8 @@ class NotificationResponse(BaseModel):
         type_messages = messages.get(self.event_type, ("Уведомление", "Уведомление"))
 
         # Если зритель является инициатором (и не является получателем одновременно)
-        if is_initiator and not is_recipient:
+        # if is_initiator and not is_recipient:
+        if is_initiator:
             return type_messages[0]
 
         # Во всех остальных случаях (зритель - получатель, или системное уведомление без инициатора)

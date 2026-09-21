@@ -6,7 +6,7 @@ from app.schemas.assets.AssetTransferSchemas import AssetTransferRequest, Transf
 from app.database.assets.crud_asset_transfer import request_asset_transfer, respond_to_asset_transfer
 from app.services.auth.auth_service import require_authorized_user
 
-router_asset_transfer = APIRouter(prefix="/api/assets/transfers", tags=["Asset Transfers"])
+router_asset_transfer = APIRouter(prefix="/assets/transfers", tags=["Asset Transfers"])
 
 @router_asset_transfer.post(
     "/request",
@@ -18,9 +18,6 @@ async def create_transfer_request(
         current_user = Depends(require_authorized_user)
 ):
     try:
-        # Примечание: убедитесь, что current_user содержит поле employee_id
-        # initiator_id = getattr(current_user, 'employee_id', current_user.login)
-
         notification = await request_asset_transfer(
             db=db,
             request=request,
@@ -43,7 +40,6 @@ async def respond_transfer_request(
         current_user = Depends(require_authorized_user)
 ):
     try:
-        # responder_id = getattr(current_user, 'employee_id', current_user.login)
         result = await respond_to_asset_transfer(
             db=db,
             notification_id=notification_id,

@@ -68,9 +68,9 @@ class NotificationEventType:
         INVENTORY_COMPLETED: "Сессия инвентаризации завершена",
 
         # События по передаче актива
-        TRANSFER_ASSET_INIT: "Вам предложено принять актив",
-        TRANSFER_ASSET_DECLINED: "Получатель отклонил передачу актива",
-        TRANSFER_ASSET_ACCEPTED: "Получатель принял передачу актива",
+        TRANSFER_ASSET_INIT: "Инициация передачи актива",
+        TRANSFER_ASSET_DECLINED: "Передача актива отклонена",
+        TRANSFER_ASSET_ACCEPTED: "Передача актива выполнена",
     }
 
     @classmethod

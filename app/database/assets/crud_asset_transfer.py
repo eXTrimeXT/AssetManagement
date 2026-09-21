@@ -32,15 +32,13 @@ async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional
 async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) -> Dict[str, Any]:
     """
     Получает данные ОДНОГО актива из SAP API по material_id.
-    Использует существующую функцию _fetch_sap_materials без пагинации.
     """
     try:
-        # Запрашиваем ровно 1 элемент по material_id
         sap_response = await fetch_sap_materials(
             page=1,
             page_size=1,
             material_id=material_id,
-            search_mode="ALL", # Или "NOT_NULLS", в зависимости от вашей бизнес-логики
+            search_mode="ALL",
         )
 
         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
@@ -56,8 +54,6 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
         raw_emp_id = sap_item.get("employee_id")
         sap_employee_id = str(raw_emp_id).zfill(8) if raw_emp_id else None
 
-        # Маппинг полей из ответа SAP в формат, ожидаемый моделью Asset при создании.
-        # КРИТИЧЕСКИ ВАЖНО: Явное приведение типов предотвращает ошибку SQLAlchemy "Not a boolean value"
         return {
             "material_id": sap_item.get("material_id", material_id),
             "inventory_id": sap_item.get("inventory_number", material_id),
@@ -74,14 +70,13 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
         }
 
     except Exception as exc:
-        # Ловим все ошибки (включая httpx.RequestError, если он пробрасывается из _fetch_sap_materials)
         logger.error(f"Ошибка при получении данных SAP для transfer (material_id={material_id}): {exc}")
         raise ValueError(f"Не удалось получить данные актива из SAP: {exc}")
 
 
 async def create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
     """
-    Создает локальную запись актива на основе данных, полученных из SAP.
+    Создает локальную запись актива на основе данных из SAP и сразу создает привязку пользователя, если она есть в SAP.
     """
     sap_data = await fetch_sap_asset_data_for_transfer(db, material_id)
 
@@ -100,6 +95,33 @@ async def create_asset_from_sap_material(db: AsyncSession, material_id: str, cre
     )
 
     db.add(new_asset)
+
+    # ВАЖНО: Делаем flush, чтобы база данных сгенерировала new_asset.asset_id до коммита
+    await db.flush()
+
+    # Если в SAP указан сотрудник, создаем для него начальную привязку
+    if sap_data.get("sap_employee_id"):
+        # Парсим дату начала привязки из SAP (формат YYYYMMDD)
+        start_date = date.today()
+        changed_date_str = sap_data.get("changed_date")
+        if changed_date_str and len(str(changed_date_str)) == 8:
+            try:
+                start_date = datetime.strptime(str(changed_date_str), "%Y%m%d").date()
+            except ValueError:
+                pass  # Если дата некорректна, используем сегодняшнюю
+
+        new_assignment = AssetAssignment(
+            asset_id=new_asset.asset_id,
+            employee_id=sap_data["sap_employee_id"],
+            assignment_type="user",  # По умолчанию назначаем как пользователя
+            start_date=start_date,
+            end_date=None,
+            assigned_by=created_by,
+            comment="Автоматическая привязка при импорте из SAP"
+        )
+        db.add(new_assignment)
+
+    # Финальный коммит для актива и привязки
     await db.commit()
     await db.refresh(new_asset)
     return new_asset
@@ -216,6 +238,7 @@ async def respond_to_asset_transfer(
         response_notification = decline_notification
 
     elif action == "accept":
+        # Отвязываем текущий актив (это закроет и ту привязку, которую мы только что создали из SAP, если она была)
         active_assignment_result = await db.execute(
             select(AssetAssignment).where(
                 AssetAssignment.asset_id == asset_id,

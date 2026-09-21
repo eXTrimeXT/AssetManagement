@@ -108,7 +108,7 @@ class NotificationResponse(BaseModel):
             NotificationEventType.INVENTORY_STARTED: ("Вы запустили новую сессию инвентаризации", "Началась инвентаризация закрепленных за вами активов"),
             NotificationEventType.INVENTORY_DISCREPANCY: ("Вы зафиксировали расхождение при инвентаризации", "Обнаружено расхождение по закрепленному за вами активу при инвентаризации"),
             NotificationEventType.INVENTORY_COMPLETED: ("Вы завершили сессию инвентаризации", "Сессия инвентаризации, затрагивающая ваши активы, завершена"),
-            NotificationEventType.TRANSFER_ASSET_INIT: ("Вы инициировали передачу актива", "Вам предложено принять актив"),
+            NotificationEventType.TRANSFER_ASSET_INIT: ("Вы инициировали передачу актива", "Вам принять актив"),
             NotificationEventType.TRANSFER_ASSET_DECLINED: ("Получатель отклонил передачу актива", "Вы отклонили передачу актива"),
             NotificationEventType.TRANSFER_ASSET_ACCEPTED: ("Получатель принял передачу актива", "Вы приняли передачу актива"),
         }

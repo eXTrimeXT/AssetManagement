@@ -190,8 +190,8 @@ class NotificationResponse(BaseModel):
             NotificationEventType.INVENTORY_DISCREPANCY: ("Вы зафиксировали расхождение при инвентаризации", "Обнаружено расхождение по закрепленному за вами активу при инвентаризации"),
             NotificationEventType.INVENTORY_COMPLETED: ("Вы завершили сессию инвентаризации", "Сессия инвентаризации, затрагивающая ваши активы, завершена"),
             NotificationEventType.TRANSFER_ASSET_INIT: ("Вы инициировали передачу актива", "Вам предложено принять актив"),
-            NotificationEventType.TRANSFER_ASSET_DECLINED: ("Получатель отклонил передачу актива", "Вы отклонили передачу актива"),
-            NotificationEventType.TRANSFER_ASSET_ACCEPTED: ("Получатель принял передачу актива", "Вы приняли передачу актива"),
+            NotificationEventType.TRANSFER_ASSET_DECLINED: ("Вы отклонили передачу актива", "Получатель отклонил передачу актива"),
+            NotificationEventType.TRANSFER_ASSET_ACCEPTED: ("Вы приняли передачу актива", "Получатель принял передачу актива"),
         }
 
         pair = messages.get(self.event_type, ("Уведомление", "Уведомление"))

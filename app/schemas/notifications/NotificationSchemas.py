@@ -1,7 +1,7 @@
 import logging
 from pydantic import BaseModel, ConfigDict, computed_field, Field, model_validator, ValidationInfo
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Optional, List
 
 from app.models.notifications.Notification import NotificationEventType
 
@@ -71,7 +71,7 @@ class NotificationResponse(BaseModel):
 
     @computed_field
     @property
-    def event_type_ru(self) -> tuple[str, str] | Any:
+    def event_type_ru(self) -> str:
         """Единая логика формирования текста строго по роли зрителя"""
         # 100% надежное сравнение: приводим к строке и убираем пробелы
         viewer = str(self.viewer_id).strip() if self.viewer_id else ""
@@ -119,7 +119,8 @@ class NotificationResponse(BaseModel):
         #     return type_messages[0]
         #
         # return type_messages[1]
-        type_messages = ('Уведомление', 'Уведомление')
+        # type_messages = ('Уведомление', 'Уведомление')
+        type_messages = "Уведомление"
         if is_initiator:
             type_messages = messages.get(self.event_type[0], ('Уведомление', 'Уведомление'))
         if is_recipient:

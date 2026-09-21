@@ -281,7 +281,7 @@
 #         previous_assignment_closed=previous_assignment_closed
 #     )
 
-
+import logging
 from datetime import date, datetime
 from typing import Optional, Dict, Any
 from sqlalchemy import select
@@ -300,6 +300,9 @@ from app.schemas.assets.AssetTransferSchemas import (
     EmployeeInfoResponse,
     NotificationInfoResponse
 )
+from app.services.assets.asset_list_service import fetch_sap_materials
+
+logger = logging.getLogger(__name__)
 
 async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional[str]:
     result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
@@ -309,48 +312,77 @@ async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional
     parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
     return " ".join(parts) if parts else None
 
-async def fetch_sap_asset_data(material_id: str) -> Dict[str, Any]:
+async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) -> Dict[str, Any]:
     """
-    ЗАГЛУШКА: Получение данных об активе из SAP по material_id.
-    TODO: Замените этот код на реальный асинхронный запрос к вашему SAP API через httpx.
+    Получает данные ОДНОГО актива из SAP API по material_id.
+    Использует существующую функцию _fetch_sap_materials без пагинации.
     """
-    # Пример реального запроса:
-    # async with httpx.AsyncClient() as client:
-    #     response = await client.get(f"http://10.168.143.7:8123/sap/materials/{material_id}")
-    #     return response.json()
+    try:
+        # Запрашиваем ровно 1 элемент по material_id
+        sap_response = await fetch_sap_materials(
+            page=1,
+            page_size=1,
+            material_id=material_id,
+            search_mode="ALL", # Или "NOT_NULLS", в зависимости от вашей бизнес-логики
+        )
 
-    # Возвращаем моковые данные, которые гарантированно содержат все нужные поля
-    return {
-        "inventory_id": material_id,
-        "name": f"Актив SAP (Material: {material_id})",
-        "asset_type_id": 10,  # Замените на реальную логику маппинга типов из SAP
-        "asset_status_id": 9, # "На складе"
-        "quantity": 1,
-        "every_week_check": False, # ВАЖНО: Явное указание boolean предотвращает ошибку SQLAlchemy!
-        "model_id": None,
-        "serial_number": None
-    }
+        if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
+            raise ValueError(f"Актив с material_id '{material_id}' не найден в SAP API")
+
+        sap_data_list = sap_response["response"]["data"]
+        if not sap_data_list:
+            raise ValueError(f"Актив с material_id '{material_id}' не найден в SAP API (пустой список)")
+
+        sap_item = sap_data_list[0]
+
+        # Маппинг полей из ответа SAP в формат, ожидаемый моделью Asset при создании.
+        # КРИТИЧЕСКИ ВАЖНО: Явное приведение типов предотвращает ошибку SQLAlchemy "Not a boolean value"
+        return {
+            "material_id": sap_item.get("material_id", material_id),
+            "inventory_id": sap_item.get("inventory_number", material_id),
+            "name": sap_item.get("base_material_name", f"Актив SAP {material_id}"),
+            "serial_number": sap_item.get("serial_number"),
+            "quantity": int(sap_item.get("quantity", 1)) if sap_item.get("quantity") is not None else 1,
+
+            # Явные примитивные типы Python (bool, int) вместо объектов SQLAlchemy
+            "every_week_check": False,
+            "asset_type_id": 10,  # ID типа "Виртуальный актив из SAP" (проверьте, что в вашей БД это 10)
+            "asset_status_id": 9, # ID статуса "На складе" (проверьте, что в вашей БД это 9)
+            "model_id": None,
+        }
+
+    except Exception as exc:
+        # Ловим все ошибки (включая httpx.RequestError, если он пробрасывается из _fetch_sap_materials)
+        logger.error(f"Ошибка при получении данных SAP для transfer (material_id={material_id}): {exc}")
+        raise ValueError(f"Не удалось получить данные актива из SAP: {exc}")
+
 
 async def create_asset_from_sap_material(db: AsyncSession, sap_material_id: str, created_by: str) -> Asset:
-    sap_data = await fetch_sap_asset_data(sap_material_id)
+    """
+    Создает локальную запись актива на основе данных, полученных из SAP.
+    """
+    sap_data = await fetch_sap_asset_data_for_transfer(db, sap_material_id)
 
     new_asset = Asset(
-        material_id=sap_material_id,          # Сохраняем исходный ID материала
-        inventory_id=sap_data.get("inventory_id", sap_material_id),
+        material_id=sap_data["material_id"],
+        inventory_id=sap_data["inventory_id"],
         name=sap_data["name"],
         serial_number=sap_data.get("serial_number"),
         asset_type_id=sap_data["asset_type_id"],
         model_id=sap_data.get("model_id"),
         asset_status_id=sap_data["asset_status_id"],
-        quantity=sap_data.get("quantity", 1),
-        every_week_check=sap_data.get("every_week_check", False), # Явно задаем boolean!
+        quantity=sap_data["quantity"],
+        every_week_check=sap_data["every_week_check"], # <-- Это поле исправляет вашу ошибку SQLAlchemy!
         created_by=created_by,
         updated_by=created_by
     )
+
     db.add(new_asset)
     await db.commit()
     await db.refresh(new_asset)
     return new_asset
+
+# ... (далее идут ваши функции request_asset_transfer и respond_to_asset_transfer без изменений) ...
 
 async def request_asset_transfer(
         db: AsyncSession,
@@ -360,14 +392,14 @@ async def request_asset_transfer(
     asset_id = request.asset_id
     asset_source = "local"
 
-    if request.sap_material_id:
+    if request.material_id:
         try:
-            new_asset = await create_asset_from_sap_material(db, request.sap_material_id, initiator_id)
+            new_asset = await create_asset_from_sap_material(db, request.material_id, initiator_id)
             asset_id = new_asset.asset_id
             asset_source = "sap"
         except IntegrityError:
             await db.rollback()
-            raise ValueError(f"Актив с material_id/inventory_id {request.sap_material_id} уже существует локально")
+            raise ValueError(f"Актив с material_id/inventory_id {request.material_id} уже существует локально")
 
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
     asset = result.scalar_one()

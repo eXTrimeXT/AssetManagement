@@ -253,7 +253,7 @@ async def _fetch_and_merge_sap_assets(
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Запрос к SAP и слияние с исключением дубликатов."""
     try:
-        sap_response = await _fetch_sap_materials(
+        sap_response = await fetch_sap_materials(
             page=1,
             page_size=limit,
             material_id=material_id,
@@ -313,7 +313,7 @@ async def _fetch_and_merge_sap_assets(
         return [], 0
 
 
-async def _fetch_sap_materials(
+async def fetch_sap_materials(
         page: int,
         page_size: int,
         material_id: Optional[str],

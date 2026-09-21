@@ -50,9 +50,9 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
 
         sap_item = sap_data_list[0]
 
-        # Извлекаем и форматируем employee_id из SAP (приводим к строке и дополняем нулями до 8 символов, если нужно)
+        # Извлекаем и форматируем employee_id из SAP (приводим к строке и дополняем нулями до 10 символов, если нужно)
         raw_emp_id = sap_item.get("employee_id")
-        sap_employee_id = str(raw_emp_id).zfill(8) if raw_emp_id else None
+        sap_employee_id = str(raw_emp_id).zfill(10) if raw_emp_id else None
 
         return {
             "material_id": sap_item.get("material_id", material_id),

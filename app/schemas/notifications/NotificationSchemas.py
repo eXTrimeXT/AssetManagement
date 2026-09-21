@@ -120,7 +120,6 @@ class NotificationResponse(BaseModel):
         #
         # return type_messages[1]
         # type_messages = ('Уведомление', 'Уведомление')
-        type_messages = "Уведомление"
         if is_initiator:
             type_messages = messages.get(self.event_type[0], ('Уведомление', 'Уведомление'))
         if is_recipient:

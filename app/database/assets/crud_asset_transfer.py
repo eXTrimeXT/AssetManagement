@@ -357,11 +357,11 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
         raise ValueError(f"Не удалось получить данные актива из SAP: {exc}")
 
 
-async def create_asset_from_sap_material(db: AsyncSession, sap_material_id: str, created_by: str) -> Asset:
+async def create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
     """
     Создает локальную запись актива на основе данных, полученных из SAP.
     """
-    sap_data = await fetch_sap_asset_data_for_transfer(db, sap_material_id)
+    sap_data = await fetch_sap_asset_data_for_transfer(db, material_id)
 
     new_asset = Asset(
         material_id=sap_data["material_id"],

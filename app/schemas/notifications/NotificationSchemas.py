@@ -120,11 +120,13 @@ class NotificationResponse(BaseModel):
         #
         # return type_messages[1]
         # type_messages = ('Уведомление', 'Уведомление')
-        if is_initiator:
+        type_messages = "EMPTY"
+        if initiator == viewer:
             type_messages = messages.get(self.event_type[0], ('Уведомление', 'Уведомление'))
-        if is_recipient:
+            return type_messages
+        if recipient == viewer:
             type_messages = messages.get(self.event_type[1], ('Уведомление', 'Уведомление'))
-
+            return type_messages
         return type_messages
 
     @computed_field

@@ -41,12 +41,27 @@ class NotificationResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    # @model_validator(mode='after')
-    # def inject_viewer_id_from_context(self, info: ValidationInfo):
-    #     """Забирает viewer_id из контекста валидации, если он был передан"""
-    #     if info.context and "viewer_id" in info.context:
-    #         self.viewer_id = info.context["viewer_id"]
-    #     return self
+    @model_validator(mode='after')
+    def inject_viewer_id_from_context(self, info: ValidationInfo):
+        """Забирает viewer_id из контекста валидации, если он был передан"""
+        if info.context and "viewer_id" in info.context:
+            self.viewer_id = info.context["viewer_id"]
+        return self
+
+    @model_validator(mode='after')
+    def inject_direction_from_context(self, info: ValidationInfo):
+        is_initiator = (self.initiator_id == self.viewer_id)
+        is_recipient = (self.employee_id == self.viewer_id)
+
+        if info.context and "direction" in info.context:
+            self.direction = info.context["direction"]
+            if is_initiator and not is_recipient:
+                self.direction = "outgoing"
+                self.direction_ru = "Исходящее"
+            else:
+                self.direction = "incoming"
+                self.direction_ru = "Входящее"
+        return self
 
     @computed_field
     @property
@@ -102,27 +117,6 @@ class NotificationResponse(BaseModel):
     def status_ru(self) -> str:
         statuses = {"unread": "Не прочитано", "read": "Прочитано"}
         return statuses.get(self.status, self.status)
-
-
-    @model_validator(mode='after')
-    def inject_direction_from_context(self, info: ValidationInfo):
-        is_initiator = (self.initiator_id == self.viewer_id)
-        is_recipient = (self.employee_id == self.viewer_id)
-
-        """Забирает viewer_id из контекста валидации, если он был передан"""
-        if info.context and "viewer_id" in info.context:
-            self.viewer_id = info.context["viewer_id"]
-
-        if info.context and "direction" in info.context:
-            self.direction = info.context["direction"]
-            if is_initiator and not is_recipient:
-                self.direction = "outgoing"
-                self.direction_ru = "Исходящее"
-            else:
-                self.direction = "incoming"
-                self.direction_ru = "Входящее"
-        return self
-
 
 class PaginatedNotificationResponse(BaseModel):
     items: List[NotificationResponse]

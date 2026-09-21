@@ -31,19 +31,76 @@ logger = logging.getLogger(__name__)
 router_notifications = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
-@router_notifications.get("/my", response_model=PaginatedNotificationResponse)
+# @router_notifications.get("/my", response_model=PaginatedNotificationResponse)
+# async def get_my_notifications(
+#         page: int = Query(1, ge=1),
+#         page_size: int = Query(200, ge=1, le=200),
+#         only_unread: bool = Query(False, description="Показывать только прочитанные ?"),
+#         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+#         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
+#         direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming (входящие), outgoing (исходящие) или all (все)"),
+#         notification_type: Literal["all", "asset", "session"] = Query("all", description="Тип уведомления: all, asset или session"),
+#         db: AsyncSession = Depends(get_db),
+#         current_user=Depends(require_authorized_user),
+# ):
+#     """Получение всех видом уведомлений с параметрами"""
+#     employee_id = current_user.employee_id
+#
+#     notifications, total = await get_notifications_by_employee(
+#         db=db,
+#         employee_id=employee_id,
+#         page=page,
+#         page_size=page_size,
+#         only_unread=only_unread,
+#         asset_id=asset_id,
+#         session_id=session_id,
+#         direction=direction,
+#         notification_type=notification_type
+#     )
+#
+#     counts = await get_notification_counts(db, employee_id)
+#     total_pages = math.ceil(total / page_size) if total > 0 else 0
+#
+#     serialized_items = [
+#         NotificationResponse.model_validate(n, context={"viewer_id": employee_id, "direction": direction}).model_dump(mode='json')
+#         for n in notifications
+#     ]
+#
+#     return PaginatedNotificationResponse(
+#         items=serialized_items,
+#         total=total,
+#         page=page,
+#         page_size=page_size,
+#         total_pages=total_pages,
+#         has_next=page < total_pages,
+#         has_previous=page > 1,
+#         unchecked_count=counts["unchecked_count"],
+#         checked_count=counts["checked_count"]
+#     )
+
+@router_notifications.get("/my")
 async def get_my_notifications(
         page: int = Query(1, ge=1),
         page_size: int = Query(200, ge=1, le=200),
-        only_unread: bool = Query(False, description="Показывать только прочитанные ?"),
+        only_unread: bool = Query(False, description="Показывать только непрочитанные"),
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
-        direction: Literal["incoming", "outgoing", "all"] = Query("all", description="incoming (входящие), outgoing (исходящие) или all (все)"),
-        notification_type: Literal["all", "asset", "session"] = Query("all", description="Тип уведомления: all, asset или session"),
+        direction: Literal["incoming", "outgoing", "all"] = Query(
+            "all", description="incoming (входящие), outgoing (исходящие) или all (все)"
+        ),
+        notification_type: Literal["all", "asset", "session"] = Query(
+            "all", description="Тип уведомления: all, asset или session"
+        ),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
-    """Получение всех видом уведомлений с параметрами"""
+    """Получение всех видов уведомлений с параметрами.
+
+    ВАЖНО: декоратор НЕ использует response_model, потому что FastAPI при
+    повторной валидации создаёт NotificationResponse без context={"viewer_id": ...},
+    из-за чего computed-поля (event_type_ru, direction_ru и т.д.) теряют
+    информацию о роли зрителя. Поэтому сериализуем вручную и возвращаем dict.
+    """
     employee_id = current_user.employee_id
 
     notifications, total = await get_notifications_by_employee(
@@ -55,19 +112,26 @@ async def get_my_notifications(
         asset_id=asset_id,
         session_id=session_id,
         direction=direction,
-        notification_type=notification_type
+        notification_type=notification_type,
     )
 
     counts = await get_notification_counts(db, employee_id)
     total_pages = math.ceil(total / page_size) if total > 0 else 0
 
-    serialized_items = [
-        NotificationResponse.model_validate(n, context={"viewer_id": employee_id, "direction": direction}).model_dump(mode='json')
+    # Один проход валидации с context — здесь вычисляются event_type_ru,
+    # direction_ru, status_ru строго по роли текущего пользователя.
+    items = [
+        NotificationResponse.model_validate(
+            n,
+            context={"viewer_id": employee_id, "direction": direction},
+        )
         for n in notifications
     ]
 
+    # Сериализуем один раз вручную, чтобы FastAPI не запускал повторную
+    # валидацию через response_model (без context).
     return PaginatedNotificationResponse(
-        items=serialized_items,
+        items=items,
         total=total,
         page=page,
         page_size=page_size,
@@ -75,8 +139,8 @@ async def get_my_notifications(
         has_next=page < total_pages,
         has_previous=page > 1,
         unchecked_count=counts["unchecked_count"],
-        checked_count=counts["checked_count"]
-    )
+        checked_count=counts["checked_count"],
+    ).model_dump(mode="json")
 
 @router_notifications.get("/stream")
 async def stream_notifications(

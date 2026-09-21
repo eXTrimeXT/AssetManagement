@@ -141,7 +141,7 @@ async def request_asset_transfer(
             asset_source = "sap"
         except IntegrityError:
             await db.rollback()
-            raise ValueError(f"Актив с material_id/inventory_id {request.material_id} уже существует локально")
+            raise ValueError(f"Актив с material_id={request.material_id} не привязан к вам!")
 
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
     asset = result.scalar_one()

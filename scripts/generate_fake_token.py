@@ -11,7 +11,7 @@ now = int(time.time())
 payload = {
     "iat": now,
     "exp": now + 365 * 24 * 60 * 60,  # 365 дней
-    "login": "gw07015370",
+    "login": "gw07010680",
     "last_ip": "10.168.154.42",
     "last_time": "12:47:52 21.07.2026",
     "department": None,
@@ -30,8 +30,8 @@ payload = {
     ],
     "assets_admin": True,
     "user_data": {
-        "email": "Timur.Malyshev@hmmr.ru",
-        "fullname": "Timur Malyshev",
+        "email": "Andrey@hmmr.ru",
+        "fullname": "Andrey Malykh",
         "department": "SDG",
         "distinguishedName": "CN=Timur Malyshev,OU=SOFTWARE DEVELOPMENT GROUP (SDG),OU=INFORMATION SYSTEMS SUPPORT SECTION (ISSS),OU=Russian Digital Center (RDC),OU=Users,OU=HMMR,DC=local,DC=hmmr,DC=ru",
         "groups": []

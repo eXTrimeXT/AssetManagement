@@ -16,7 +16,7 @@ router_asset_transfer = APIRouter(prefix="/assets/transfers", tags=["Asset Trans
 @router_asset_transfer.post(
     "/request",
     response_model=AssetTransferResponse,
-    summary="Запросить передачу актива другому пользователю"
+    summary="Передать актив другому пользователю"
 )
 async def create_transfer_request(
         request: AssetTransferRequest,

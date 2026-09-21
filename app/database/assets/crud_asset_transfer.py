@@ -52,6 +52,10 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
 
         sap_item = sap_data_list[0]
 
+        # Извлекаем и форматируем employee_id из SAP (приводим к строке и дополняем нулями до 8 символов, если нужно)
+        raw_emp_id = sap_item.get("employee_id")
+        sap_employee_id = str(raw_emp_id).zfill(8) if raw_emp_id else None
+
         # Маппинг полей из ответа SAP в формат, ожидаемый моделью Asset при создании.
         # КРИТИЧЕСКИ ВАЖНО: Явное приведение типов предотвращает ошибку SQLAlchemy "Not a boolean value"
         return {
@@ -60,12 +64,13 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
             "name": sap_item.get("base_material_name", f"Актив SAP {material_id}"),
             "serial_number": sap_item.get("serial_number"),
             "quantity": int(sap_item.get("quantity", 1)) if sap_item.get("quantity") is not None else 1,
-
-            # Явные примитивные типы Python (bool, int) вместо объектов SQLAlchemy
             "every_week_check": False,
-            "asset_type_id": 10,  # ID типа "Виртуальный актив из SAP" (проверьте, что в вашей БД это 10)
-            "asset_status_id": 9, # ID статуса "На складе" (проверьте, что в вашей БД это 9)
+            "asset_type_id": 10,
+            "asset_status_id": 9,
             "model_id": None,
+            # Добавляем данные для привязки пользователя
+            "sap_employee_id": sap_employee_id,
+            "changed_date": sap_item.get("changed_date")
         }
 
     except Exception as exc:

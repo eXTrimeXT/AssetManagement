@@ -307,52 +307,103 @@ async def generate_qr_code(request: QRCodeRequest):
 
     # Ваш SVG-шаблон с заменой динамических значений.
     # Фигурные скобки в CSS экранированы двойными скобками {{ }}, чтобы str.format() их игнорировал.
-    svg_template = """<svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <style>
-      .border {{ fill: none; stroke: black; stroke-width: 2; }}
-      .text-label {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; }}
-      .text-value {{ font-family: Arial, sans-serif; font-size: 16px; fill: black; }}
-      .text-header {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }}
-    </style>
-  </defs>
+#     svg_template = """<svg width="800" height="170" viewBox="0 0 800 170" xmlns="http://www.w3.org/2000/svg">
+#   <defs>
+#     <style>
+#       .border {{ fill: none; stroke: black; stroke-width: 2; }}
+#       .text-label {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; }}
+#       .text-value {{ font-family: Arial, sans-serif; font-size: 16px; fill: black; }}
+#       .text-header {{ font-family: Arial, sans-serif; font-size: 14px; fill: black; font-weight: normal; }}
+#     </style>
+#   </defs>
+#
+#   <!-- Основной контейнер -->
+#   <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+#
+#   <!-- Левая колонка (QR-код) -->
+#   <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
+#
+#   <!-- Сгенерированный QR-код -->
+#   <g transform="translate(15, 15)">
+#     {qr_code_path}
+#   </g>
+#
+#   <!-- Правая часть: Таблица -->
+#
+#   <!-- Горизонтальные разделители -->
+#   <!-- Строка 1 -->
+#   <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
+#   <!-- Строка 2 -->
+#   <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+#
+#   <!-- Вертикальный разделитель между названиями и значениями -->
+#   <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+#
+#   <!-- Текст: Строка 1 (Наименование) -->
+#   <text x="165" y="30" class="text-label">Наименование ОС</text>
+#   <text x="165" y="48" class="text-label">Fixed asset name</text>
+#   <text x="370" y="40" class="text-value">{name}</text>
+#
+#   <!-- Текст: Строка 2 (Инвентарный номер) -->
+#   <text x="165" y="80" class="text-label">Инвентарный номер</text>
+#   <text x="165" y="98" class="text-label">Inventory number</text>
+#   <text x="370" y="90" class="text-value">{inventory_id}</text>
+#
+#   <!-- Текст: Строка 3 (Серийный номер) -->
+#   <text x="165" y="130" class="text-label">Серийный номер</text>
+#   <text x="165" y="148" class="text-label">Serial number</text>
+#   <text x="370" y="140" class="text-value">{serial_number}</text>
+# </svg>"""
 
-  <!-- Основной контейнер -->
-  <rect x="5" y="5" width="790" height="160" fill="white" stroke="black" stroke-width="2"/>
+    svg_template = """<svg width="800" height="250" viewBox="0 0 800 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- Фон -->
+    <rect width="100%" height="100%" fill="white" />
 
-  <!-- Левая колонка (QR-код) -->
-  <rect x="5" y="5" width="150" height="160" fill="white" stroke="black" stroke-width="2"/>
-  
-  <!-- Сгенерированный QR-код -->
-  <g transform="translate(15, 15)">
-    {qr_code_path}
-  </g>
+    <!-- Внешняя рамка -->
+    <rect x="10" y="10" width="780" height="230" fill="none" stroke="black" stroke-width="2" />
 
-  <!-- Правая часть: Таблица -->
-  
-  <!-- Горизонтальные разделители -->
-  <!-- Строка 1 -->
-  <line x1="155" y1="58" x2="795" y2="58" stroke="black" stroke-width="2"/>
-  <!-- Строка 2 -->
-  <line x1="155" y1="108" x2="795" y2="108" stroke="black" stroke-width="2"/>
+    <!-- Вертикальные линии -->
+    <!-- Линия после левой колонки -->
+    <line x1="200" y1="10" x2="200" y2="240" stroke="black" stroke-width="2" />
+    <!-- Линия перед QR-кодом -->
+    <line x1="630" y1="10" x2="630" y2="240" stroke="black" stroke-width="2" />
 
-  <!-- Вертикальный разделитель между названиями и значениями -->
-  <line x1="360" y1="5" x2="360" y2="165" stroke="black" stroke-width="2"/>
+    <!-- Горизонтальные линии -->
+    <!-- Линия между "Наименование" и "Инвентарный номер" -->
+    <line x1="10" y1="110" x2="630" y2="110" stroke="black" stroke-width="2" />
+    <!-- Линия между "Инвентарный номер" и "Серийный номер" -->
+    <line x1="10" y1="170" x2="630" y2="170" stroke="black" stroke-width="2" />
 
-  <!-- Текст: Строка 1 (Наименование) -->
-  <text x="165" y="30" class="text-label">Наименование ОС</text>
-  <text x="165" y="48" class="text-label">Fixed asset name</text>
-  <text x="370" y="40" class="text-value">{name}</text>
+    <!-- Текст: Левая колонка -->
+    <g font-family="Arial, sans-serif" font-size="14" fill="black">
+        <!-- Наименование OC -->
+        <text x="25" y="55">Наименование ОС</text>
+        <text x="25" y="80">Fixed asset name</text>
 
-  <!-- Текст: Строка 2 (Инвентарный номер) -->
-  <text x="165" y="80" class="text-label">Инвентарный номер</text>
-  <text x="165" y="98" class="text-label">Inventory number</text>
-  <text x="370" y="90" class="text-value">{inventory_id}</text>
+        <!-- Инвентарный номер -->
+        <text x="25" y="140">Инвентарный номер</text>
+        <text x="25" y="165">Inventory number</text>
 
-  <!-- Текст: Строка 3 (Серийный номер) -->
-  <text x="165" y="130" class="text-label">Серийный номер</text>
-  <text x="165" y="148" class="text-label">Serial number</text>
-  <text x="370" y="140" class="text-value">{serial_number}</text>
+        <!-- Серийный номер -->
+        <text x="25" y="205">Серийный номер</text>
+        <text x="25" y="230">Serial number</text>
+    </g>
+
+    <!-- Текст: Средняя колонка (заполнители) -->
+    <g font-family="Arial, sans-serif" font-size="14" fill="black">
+        <!-- Наименование OC значение -->
+        <text x="215" y="55">{name}</text>
+
+        <!-- Инвентарный номер значение -->
+        <text x="215" y="140">{inventory_id}</text>
+
+        <!-- Серийный номер значение -->
+        <text x="215" y="205">{serial_number}</text>
+    </g>
+    
+    <g transform="translate(660, 70)">
+        {qr_code_path}
+    </g>
 </svg>"""
 
     final_svg = svg_template.format(

@@ -388,18 +388,18 @@ async def _fetch_and_merge_sap_assets(
             inv_num = item.get("inventory_number")
             mat_id = item.get("material_id")
 
-            # 1. Исключаем, если уже есть на текущей странице локальных результатов (старая логика)
+            # Исключаем, если уже есть на текущей странице локальных результатов (старая логика)
             if inv_num in exclude_inventory_ids:
                 continue
 
-            # 2. НОВАЯ ЛОГИКА: Исключаем, если этот актив УЖЕ существует в локальной БД в принципе.
+            # НОВАЯ ЛОГИКА: Исключаем, если этот актив УЖЕ существует в локальной БД в принципе.
             # Это предотвращает появление "призрачного" SAP-актива, если локальный актив был передан другому лицу.
             if inv_num in local_inv_ids_to_exclude or (mat_id and mat_id in local_mat_ids_to_exclude):
                 continue
 
-            # 3. Проверка only_my (исправлена опечатка .zfill10() -> .zfill(10))
+            # Проверка only_my
             if only_my and employee_id:
-                sap_emp_id = str(item.get("employee_id", "")).zfill(10)
+                sap_emp_id = "00" + str(item.get("employee_id", ""))
                 # Сравниваем нормализованный ID из SAP с ID текущего пользователя
                 if sap_emp_id != employee_id:
                     continue

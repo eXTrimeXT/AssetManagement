@@ -367,13 +367,13 @@ async def _fetch_and_merge_sap_assets(
                 continue
 
             # Если only_my == True, дополнительно проверяем, что этот актив действительно числится за employee_id в SAP
-            if only_my and employee_id:
+            # if only_my and employee_id:
                 # sap_emp_id = str(item.get("employee_id", "")).zfill10() # Приводим к формату как в БД (00...)
                 # Примечание: убедитесь, что формат employee_id из SAP совпадает с тем, что приходит в employee_id аргумента
                 # Если в SAP employee_id хранится без нулей, а в аргументе с нулями, раскомментируйте строку ниже:
-                if str(item.get("employee_id")).zfill(10) != employee_id: continue
-                if str(item.get("employee_id")) != employee_id.lstrip('0'): # Упрощенная проверка на совпадение
-                    continue
+                # if str(item.get("employee_id")).zfill(10) != employee_id: continue
+                # if str(item.get("employee_id")) != employee_id.lstrip('0'): # Упрощенная проверка на совпадение
+                #     continue
 
             filtered_sap_items.append(item)
 

@@ -15,7 +15,6 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
-from app.services.auth.auth_service import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +158,7 @@ async def _get_local_assets_count(
     if employee_id:
         emp_asset_subq = (
             select(AssetAssignment.asset_id)
-            .where(AssetAssignment.employee_id == employee_id)
+            .where(AssetAssignment.employee_id == employee_id, AssetAssignment.end_date is None)
             .scalar_subquery()
         )
         query = query.where(Asset.asset_id.in_(emp_asset_subq))

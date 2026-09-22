@@ -111,6 +111,7 @@ async def get_assets(
         parent_id=parent_id,
         search_mode=search_mode,
         employee_id=employee_id,
+        only_my=only_my
     )
 
     return PaginatedResponse(**result)

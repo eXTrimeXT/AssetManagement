@@ -35,6 +35,7 @@ async def get_assets_list_with_sap(
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         employee_id: Optional[str] = None,
+        only_my: Optional[bool] = False,
         search_mode: str = "not_nulls",
 ) -> Dict[str, Any]:
     """
@@ -48,7 +49,7 @@ async def get_assets_list_with_sap(
             asset_id=asset_id, material_id=material_id,
             name=name, inventory_id=inventory_id, serial_number=serial_number,
             asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id
+            parent_id=parent_id, employee_id=employee_id, only_my=only_my
         )
 
         if local_orm_items:
@@ -67,7 +68,7 @@ async def get_assets_list_with_sap(
         db=db, asset_id=asset_id, material_id=material_id,
         name=name, inventory_id=inventory_id, serial_number=serial_number,
         asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-        parent_id=parent_id, employee_id=employee_id
+        parent_id=parent_id, employee_id=employee_id, only_my=only_my
     )
 
     skip = (page - 1) * page_size
@@ -81,7 +82,7 @@ async def get_assets_list_with_sap(
             asset_id=asset_id, material_id=material_id,
             name=name, inventory_id=inventory_id, serial_number=serial_number,
             asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id
+            parent_id=parent_id, employee_id=employee_id, only_my=only_my
         )
 
         local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
@@ -96,7 +97,7 @@ async def get_assets_list_with_sap(
                 material_id=material_id, name=name,
                 inventory_id=inventory_id, serial_number=serial_number,
                 employee_id=employee_id, search_mode=search_mode,
-                exclude_inventory_ids=exclude_inv_ids, asset_type_id=asset_type_id
+                exclude_inventory_ids=exclude_inv_ids, asset_type_id=asset_type_id, only_my=only_my
             )
             result_items.extend(sap_items[:remaining_slots])
             sap_total = fetched_sap_total
@@ -109,7 +110,7 @@ async def get_assets_list_with_sap(
                 material_id=material_id, name=name,
                 inventory_id=inventory_id, serial_number=serial_number,
                 employee_id=employee_id, search_mode=search_mode,
-                exclude_inventory_ids=[], asset_type_id=asset_type_id
+                exclude_inventory_ids=[], asset_type_id=asset_type_id, only_my=only_my
             )
             result_items.extend(sap_items)
             sap_total = fetched_sap_total
@@ -132,6 +133,7 @@ async def _get_local_assets_count(
         asset_type_id: Optional[int],
         parent_id: Optional[int],
         employee_id: Optional[str],
+        only_my: Optional[bool] = False
 ) -> int:
     """Подсчет количества локальных активов по всем фильтрам."""
     query = select(func.count(Asset.asset_id))
@@ -158,9 +160,13 @@ async def _get_local_assets_count(
     if employee_id:
         emp_asset_subq = (
             select(AssetAssignment.asset_id)
-            .where(AssetAssignment.employee_id == employee_id, AssetAssignment.end_date.is_(None))
+            .where(AssetAssignment.employee_id == employee_id)
             .scalar_subquery()
         )
+        if only_my:
+            # Ключевое условие: исключаем архивные привязки
+            emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
+
         query = query.where(Asset.asset_id.in_(emp_asset_subq))
 
     result = await db.execute(query)
@@ -181,6 +187,7 @@ async def _get_local_assets_slice(
         asset_type_id: Optional[int],
         parent_id: Optional[int],
         employee_id: Optional[str],
+        only_my: Optional[bool] = False
 ) -> Sequence[Asset]:
     """Получение среза локальных активов с полной загрузкой связей."""
     query = select(Asset).options(
@@ -232,7 +239,10 @@ async def _get_local_assets_slice(
             .where(AssetAssignment.employee_id == employee_id)
             .scalar_subquery()
         )
-        query = query.where(Asset.asset_id.in_(emp_asset_subq))
+        if only_my:
+            emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
+
+        query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
 
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -250,7 +260,8 @@ async def _fetch_and_merge_sap_assets(
         employee_id: Optional[str],
         search_mode: str,
         exclude_inventory_ids: List[str],
-        asset_type_id: Optional[int]
+        asset_type_id: Optional[int],
+        only_my: Optional[bool] = False
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Запрос к SAP и слияние с исключением дубликатов."""
     try:
@@ -289,7 +300,7 @@ async def _fetch_and_merge_sap_assets(
 
         # Массовая загрузка сотрудников и департаментов
         employees_map = {}
-        if employee_ids:
+        if only_my and employee_ids:
             employees = await _get_employees_by_ids(db, list(employee_ids))
             employees_map = {emp.employee_id: emp for emp in employees}
 

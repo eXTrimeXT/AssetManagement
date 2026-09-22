@@ -80,9 +80,10 @@
         <!-- Текст: Средняя колонка (заполнители) -->
         <g font-family="Arial, sans-serif" font-size="26" fill="black">
             <!-- Наименование OC значение (динамический перенос) -->
-            <text font-weight="bold" x="270" y="35">Ноутбук Lenovo</text>
-            <text font-weight="bold" x="270" y="65">ThinkBook 16 G7 ARP 3</text>
-            <text font-weight="bold" x="270" y="95">ThinkBook 16 G7 ARP 3</text>
+            <!-- default font-size="26" -->
+            <text font-size="30" font-weight="bold" x="270" y="35">Ноутбук Lenovo</text>
+            <text font-size="30" font-weight="bold" x="270" y="65">ThinkBook 16 G7 ARP 3</text>
+            <text font-size="30" font-weight="bold" x="270" y="95">ThinkBook 16 G7 ARP 3</text>
             <!-- Инвентарный номер значение -->
             <text font-size="38" font-weight="bold" x="270" y="150">100000006527</text>
             <!-- Серийный номер значение -->

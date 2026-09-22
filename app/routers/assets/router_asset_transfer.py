@@ -60,8 +60,8 @@ async def check_transfer_exists(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    return await check_pending_transfer_exists(db, asset_id)
-
+    response = await check_pending_transfer_exists(db, asset_id)
+    return response
 
 
 @router_asset_transfer.post(

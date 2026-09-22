@@ -7,7 +7,7 @@ from app.schemas.assets.AssetTransferSchemas import (
     TransferActionRequest,
     AssetTransferResponse,
     AssetTransferRespondResponse,
-    AssetTransferCancelResponse
+    AssetTransferCancelResponse, AssetTransferExistsResponse
 )
 from app.database.assets.crud_asset_transfer import (
     request_asset_transfer,
@@ -52,7 +52,7 @@ async def create_transfer_request(
 
 @router_asset_transfer.post(
     "/check-request",
-    # response_model=AssetTransferRespondResponse,
+    response_model=AssetTransferExistsResponse,
     summary="Проверяем есть ли у нас запрос на передачу актива"
 )
 async def check_transfer_exists(
@@ -60,8 +60,8 @@ async def check_transfer_exists(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    result = await check_pending_transfer_exists(db, asset_id)
-    return {f"is_exists: {result}"}
+    return await check_pending_transfer_exists(db, asset_id)
+
 
 
 @router_asset_transfer.post(

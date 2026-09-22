@@ -76,3 +76,6 @@ class AssetTransferCancelResponse(BaseModel):
     transfer_id: int
     status: str
     cancelled_at: datetime
+
+class AssetTransferExistsResponse(BaseModel):
+    is_exists: bool = False

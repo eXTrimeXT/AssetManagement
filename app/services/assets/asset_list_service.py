@@ -249,6 +249,81 @@ async def _get_local_assets_slice(
     return result.scalars().all()
 
 
+# async def _fetch_and_merge_sap_assets(
+#         db: AsyncSession,
+#         limit: int,
+#         offset: int,
+#         material_id: Optional[str],
+#         name: Optional[str],
+#         inventory_id: Optional[str],
+#         serial_number: Optional[str],
+#         employee_id: Optional[str],
+#         search_mode: str,
+#         exclude_inventory_ids: List[str],
+#         asset_type_id: Optional[int],
+#         only_my: Optional[bool] = False
+# ) -> Tuple[List[Dict[str, Any]], int]:
+#     """Запрос к SAP и слияние с исключением дубликатов."""
+#     try:
+#         sap_response = await fetch_sap_materials(
+#             page=1,
+#             page_size=limit,
+#             material_id=material_id,
+#             search_mode=search_mode,
+#             base_material_name_like=name,
+#             inventory_number=inventory_id,
+#             serial_number=serial_number,
+#             employee_id=employee_id,
+#         )
+#
+#         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
+#             return [], 0
+#
+#         sap_data = sap_response["response"]
+#         sap_items_raw = sap_data.get("data", [])
+#         sap_total = sap_data.get("total", 0)
+#
+#         # Фильтрация дубликатов
+#         filtered_sap_items = []
+#         employee_ids = set()
+#         department_codes = set()
+#
+#         for item in sap_items_raw:
+#             if item.get("inventory_number") in exclude_inventory_ids:
+#                 continue
+#             filtered_sap_items.append(item)
+#
+#             if item.get("employee_id"):
+#                 employee_ids.add("00" + item["employee_id"])
+#             if item.get("department_code"):
+#                 department_codes.add(item["department_code"])
+#
+#         # Массовая загрузка сотрудников и департаментов
+#         employees_map = {}
+#         if only_my and employee_ids:
+#             employees = await _get_employees_by_ids(db, list(employee_ids))
+#             employees_map = {emp.employee_id: emp for emp in employees}
+#
+#         departments_map = {}
+#         if department_codes:
+#             departments = await _get_departments_by_codes(db, list(department_codes))
+#             departments_map = {dept.short_name: dept for dept in departments}
+#
+#         # Сборка виртуальных активов
+#         virtual_assets = []
+#         for sap_item in filtered_sap_items:
+#             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
+#             # Все виртуальные активы имеют asset_type_id = 10
+#             # Если запрошен другой тип, они не пройдут фильтрацию
+#             if asset_type_id is None or asset_type_id == 10:
+#                 virtual_assets.append(virtual_asset)
+#
+#         return virtual_assets, sap_total
+#
+#     except Exception as e:
+#         logger.error(f"[SAP FALLBACK] Ошибка при запросе к SAP API: {e}", exc_info=True)
+#         return [], 0
+
 async def _fetch_and_merge_sap_assets(
         db: AsyncSession,
         limit: int,
@@ -261,7 +336,7 @@ async def _fetch_and_merge_sap_assets(
         search_mode: str,
         exclude_inventory_ids: List[str],
         asset_type_id: Optional[int],
-        only_my: Optional[bool] = False
+        only_my: bool = False,  # <--- НОВЫЙ ПАРАМЕТР
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Запрос к SAP и слияние с исключением дубликатов."""
     try:
@@ -273,7 +348,7 @@ async def _fetch_and_merge_sap_assets(
             base_material_name_like=name,
             inventory_number=inventory_id,
             serial_number=serial_number,
-            employee_id=employee_id,
+            employee_id=employee_id, # SAP API сам отфильтрует по employee_id
         )
 
         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
@@ -283,7 +358,6 @@ async def _fetch_and_merge_sap_assets(
         sap_items_raw = sap_data.get("data", [])
         sap_total = sap_data.get("total", 0)
 
-        # Фильтрация дубликатов
         filtered_sap_items = []
         employee_ids = set()
         department_codes = set()
@@ -291,16 +365,26 @@ async def _fetch_and_merge_sap_assets(
         for item in sap_items_raw:
             if item.get("inventory_number") in exclude_inventory_ids:
                 continue
+
+            # Если only_my == True, дополнительно проверяем, что этот актив действительно числится за employee_id в SAP
+            if only_my and employee_id:
+                # sap_emp_id = str(item.get("employee_id", "")).zfill10() # Приводим к формату как в БД (00...)
+                # Примечание: убедитесь, что формат employee_id из SAP совпадает с тем, что приходит в employee_id аргумента
+                # Если в SAP employee_id хранится без нулей, а в аргументе с нулями, раскомментируйте строку ниже:
+                if str(item.get("employee_id")).zfill(10) != employee_id: continue
+                if str(item.get("employee_id")) != employee_id.lstrip('0'): # Упрощенная проверка на совпадение
+                    continue
+
             filtered_sap_items.append(item)
 
             if item.get("employee_id"):
-                employee_ids.add("00" + item["employee_id"])
+                employee_ids.add("00" + str(item["employee_id"]))
             if item.get("department_code"):
                 department_codes.add(item["department_code"])
 
         # Массовая загрузка сотрудников и департаментов
         employees_map = {}
-        if only_my and employee_ids:
+        if employee_ids:
             employees = await _get_employees_by_ids(db, list(employee_ids))
             employees_map = {emp.employee_id: emp for emp in employees}
 
@@ -313,8 +397,6 @@ async def _fetch_and_merge_sap_assets(
         virtual_assets = []
         for sap_item in filtered_sap_items:
             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
-            # Все виртуальные активы имеют asset_type_id = 10
-            # Если запрошен другой тип, они не пройдут фильтрацию
             if asset_type_id is None or asset_type_id == 10:
                 virtual_assets.append(virtual_asset)
 
@@ -323,7 +405,6 @@ async def _fetch_and_merge_sap_assets(
     except Exception as e:
         logger.error(f"[SAP FALLBACK] Ошибка при запросе к SAP API: {e}", exc_info=True)
         return [], 0
-
 
 async def fetch_sap_materials(
         page: int,

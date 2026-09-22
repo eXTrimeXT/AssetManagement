@@ -94,6 +94,7 @@ async def get_assets(
 ):
     if only_my:
         employee_id = current_user.employee_id
+        print(f"employee_id = {employee_id}")
 
     result = await get_assets_list_with_sap(
         db=db,

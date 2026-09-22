@@ -44,7 +44,7 @@ async def get_assets_list_with_sap(
     Список дополняется данными из SAP API, если локальных записей недостаточно.
     """
     if only_my:
-        employee_id = await get_current_user_id()
+        employee_id = get_current_user_id()
 
     # === ОПТИМИЗАЦИЯ 1: Прямой поиск по уникальным идентификаторам ===
     if material_id is not None or asset_id is not None:

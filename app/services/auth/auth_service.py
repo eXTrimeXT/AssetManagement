@@ -195,7 +195,7 @@ async def require_authorized_user(
         logger.warning(f"Недопустимый токен: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Недопустимый токен: {str(e)}")
 
-async def get_current_user_id(
+def get_current_user_id(
         current_user: Employee = Depends(require_authorized_user)
 ) -> str:
     """

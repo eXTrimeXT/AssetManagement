@@ -158,7 +158,7 @@ async def _get_local_assets_count(
     if employee_id:
         emp_asset_subq = (
             select(AssetAssignment.asset_id)
-            .where(AssetAssignment.employee_id == employee_id, AssetAssignment.end_date is None)
+            .where(AssetAssignment.employee_id == employee_id, AssetAssignment.end_date is not None)
             .scalar_subquery()
         )
         query = query.where(Asset.asset_id.in_(emp_asset_subq))

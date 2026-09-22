@@ -324,6 +324,117 @@ async def _get_local_assets_slice(
 #         logger.error(f"[SAP FALLBACK] Ошибка при запросе к SAP API: {e}", exc_info=True)
 #         return [], 0
 
+# async def _fetch_and_merge_sap_assets(
+#         db: AsyncSession,
+#         limit: int,
+#         offset: int,
+#         material_id: Optional[str],
+#         name: Optional[str],
+#         inventory_id: Optional[str],
+#         serial_number: Optional[str],
+#         employee_id: Optional[str],
+#         search_mode: str,
+#         exclude_inventory_ids: List[str],
+#         asset_type_id: Optional[int],
+#         only_my: Optional[bool] = False,
+# ) -> Tuple[List[Dict[str, Any]], int]:
+#     """Запрос к SAP и слияние с исключением дубликатов и 'призрачных' SAP активов."""
+#     try:
+#         sap_response = await fetch_sap_materials(
+#             page=1,
+#             page_size=limit,
+#             material_id=material_id,
+#             search_mode=search_mode,
+#             base_material_name_like=name,
+#             inventory_number=inventory_id,
+#             serial_number=serial_number,
+#             employee_id=employee_id,
+#         )
+#
+#         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
+#             return [], 0
+#
+#         sap_data = sap_response["response"]
+#         sap_items_raw = sap_data.get("data", [])
+#         sap_total = sap_data.get("total", 0)
+#
+#         # === НОВОЕ: Получаем все inventory_id и material_id, которые УЖЕ есть в локальной БД среди текущих SAP-кандидатов ===
+#         sap_inventory_ids = [item.get("inventory_number") for item in sap_items_raw if item.get("inventory_number")]
+#         sap_material_ids = [item.get("material_id") for item in sap_items_raw if item.get("material_id")]
+#
+#         local_inv_ids_to_exclude = set()
+#         local_mat_ids_to_exclude = set()
+#
+#         if sap_inventory_ids or sap_material_ids:
+#             conditions = []
+#             if sap_inventory_ids:
+#                 conditions.append(Asset.inventory_id.in_(sap_inventory_ids))
+#             if sap_material_ids:
+#                 conditions.append(Asset.material_id.in_(sap_material_ids))
+#
+#             # Ищем любые локальные активы с такими идентификаторами
+#             existing_query = select(Asset.inventory_id, Asset.material_id).where(or_(*conditions))
+#             existing_result = await db.execute(existing_query)
+#             existing_records = existing_result.all()
+#
+#             local_inv_ids_to_exclude = {rec.inventory_id for rec in existing_records if rec.inventory_id}
+#             local_mat_ids_to_exclude = {rec.material_id for rec in existing_records if rec.material_id}
+#
+#         filtered_sap_items = []
+#         employee_ids = set()
+#         department_codes = set()
+#
+#         for item in sap_items_raw:
+#             inv_num = item.get("inventory_number")
+#             mat_id = item.get("material_id")
+#
+#             # Исключаем, если уже есть на текущей странице локальных результатов (старая логика)
+#             if inv_num in exclude_inventory_ids:
+#                 continue
+#
+#             # НОВАЯ ЛОГИКА: Исключаем, если этот актив УЖЕ существует в локальной БД в принципе.
+#             # Это предотвращает появление "призрачного" SAP-актива, если локальный актив был передан другому лицу.
+#             if inv_num in local_inv_ids_to_exclude or (mat_id and mat_id in local_mat_ids_to_exclude):
+#                 continue
+#
+#             # Проверка only_my
+#             if only_my and employee_id:
+#                 sap_emp_id = "00" + str(item.get("employee_id", ""))
+#                 # Сравниваем нормализованный ID из SAP с ID текущего пользователя
+#                 if sap_emp_id != employee_id:
+#                     continue
+#
+#             filtered_sap_items.append(item)
+#
+#             if item.get("employee_id"):
+#                 employee_ids.add("00" + str(item["employee_id"]))
+#             if item.get("department_code"):
+#                 department_codes.add(item["department_code"])
+#
+#         # Массовая загрузка сотрудников и департаментов
+#         employees_map = {}
+#         if employee_ids:
+#             employees = await _get_employees_by_ids(db, list(employee_ids))
+#             employees_map = {emp.employee_id: emp for emp in employees}
+#
+#         departments_map = {}
+#         if department_codes:
+#             departments = await _get_departments_by_codes(db, list(department_codes))
+#             departments_map = {dept.short_name: dept for dept in departments}
+#
+#         # Сборка виртуальных активов
+#         virtual_assets = []
+#         for sap_item in filtered_sap_items:
+#             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
+#             if asset_type_id is None or asset_type_id == 10:
+#                 virtual_assets.append(virtual_asset)
+#
+#         return virtual_assets, sap_total
+#
+#     except Exception as e:
+#         logger.error(f"[SAP FALLBACK] Ошибка при запросе к SAP API: {e}", exc_info=True)
+#         return [], 0
+
 async def _fetch_and_merge_sap_assets(
         db: AsyncSession,
         limit: int,
@@ -358,7 +469,7 @@ async def _fetch_and_merge_sap_assets(
         sap_items_raw = sap_data.get("data", [])
         sap_total = sap_data.get("total", 0)
 
-        # === НОВОЕ: Получаем все inventory_id и material_id, которые УЖЕ есть в локальной БД среди текущих SAP-кандидатов ===
+        # === Получаем все inventory_id и material_id, которые УЖЕ есть в локальной БД ===
         sap_inventory_ids = [item.get("inventory_number") for item in sap_items_raw if item.get("inventory_number")]
         sap_material_ids = [item.get("material_id") for item in sap_items_raw if item.get("material_id")]
 
@@ -372,7 +483,6 @@ async def _fetch_and_merge_sap_assets(
             if sap_material_ids:
                 conditions.append(Asset.material_id.in_(sap_material_ids))
 
-            # Ищем любые локальные активы с такими идентификаторами
             existing_query = select(Asset.inventory_id, Asset.material_id).where(or_(*conditions))
             existing_result = await db.execute(existing_query)
             existing_records = existing_result.all()
@@ -384,25 +494,32 @@ async def _fetch_and_merge_sap_assets(
         employee_ids = set()
         department_codes = set()
 
+        # === НОВОЕ: Счетчик исключенных элементов для коррекции total ===
+        excluded_count = 0
+
         for item in sap_items_raw:
             inv_num = item.get("inventory_number")
             mat_id = item.get("material_id")
 
-            # Исключаем, если уже есть на текущей странице локальных результатов (старая логика)
+            is_excluded = False
+
+            # 1. Исключаем, если уже есть на текущей странице локальных результатов
             if inv_num in exclude_inventory_ids:
-                continue
+                is_excluded = True
 
-            # НОВАЯ ЛОГИКА: Исключаем, если этот актив УЖЕ существует в локальной БД в принципе.
-            # Это предотвращает появление "призрачного" SAP-актива, если локальный актив был передан другому лицу.
-            if inv_num in local_inv_ids_to_exclude or (mat_id and mat_id in local_mat_ids_to_exclude):
-                continue
+            # 2. Исключаем, если этот актив УЖЕ существует в локальной БД в принципе
+            elif inv_num in local_inv_ids_to_exclude or (mat_id and mat_id in local_mat_ids_to_exclude):
+                is_excluded = True
 
-            # Проверка only_my
-            if only_my and employee_id:
+            # 3. Проверка only_my
+            elif only_my and employee_id:
                 sap_emp_id = "00" + str(item.get("employee_id", ""))
-                # Сравниваем нормализованный ID из SAP с ID текущего пользователя
                 if sap_emp_id != employee_id:
-                    continue
+                    is_excluded = True
+
+            if is_excluded:
+                excluded_count += 1
+                continue
 
             filtered_sap_items.append(item)
 
@@ -429,7 +546,10 @@ async def _fetch_and_merge_sap_assets(
             if asset_type_id is None or asset_type_id == 10:
                 virtual_assets.append(virtual_asset)
 
-        return virtual_assets, sap_total
+        # === НОВОЕ: Корректируем общее количество SAP-активов, вычитая исключенные ===
+        adjusted_sap_total = max(0, sap_total - excluded_count)
+
+        return virtual_assets, adjusted_sap_total
 
     except Exception as e:
         logger.error(f"[SAP FALLBACK] Ошибка при запросе к SAP API: {e}", exc_info=True)

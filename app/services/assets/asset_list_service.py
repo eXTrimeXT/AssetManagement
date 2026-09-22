@@ -36,16 +36,12 @@ async def get_assets_list_with_sap(
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         employee_id: Optional[str] = None,
-        only_my: Optional[bool] = False,
         search_mode: str = "not_nulls",
 ) -> Dict[str, Any]:
     """
     Получение списка активов: Локальные данные имеют абсолютный приоритет.
     Список дополняется данными из SAP API, если локальных записей недостаточно.
     """
-    if only_my:
-        employee_id = get_current_user_id()
-
     # === ОПТИМИЗАЦИЯ 1: Прямой поиск по уникальным идентификаторам ===
     if material_id is not None or asset_id is not None:
         local_orm_items = await _get_local_assets_slice(

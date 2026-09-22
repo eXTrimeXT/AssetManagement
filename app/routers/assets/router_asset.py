@@ -92,6 +92,9 @@ async def get_assets(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
+    if only_my:
+        employee_id = current_user.employee_id
+
     result = await get_assets_list_with_sap(
         db=db,
         page=page,
@@ -107,7 +110,6 @@ async def get_assets(
         parent_id=parent_id,
         search_mode=search_mode,
         employee_id=employee_id,
-        only_my=only_my
     )
 
     return PaginatedResponse(**result)

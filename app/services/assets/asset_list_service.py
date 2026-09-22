@@ -336,9 +336,9 @@ async def _fetch_and_merge_sap_assets(
         search_mode: str,
         exclude_inventory_ids: List[str],
         asset_type_id: Optional[int],
-        only_my: bool = False,  # <--- НОВЫЙ ПАРАМЕТР
+        only_my: bool = False,
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Запрос к SAP и слияние с исключением дубликатов."""
+    """Запрос к SAP и слияние с исключением дубликатов и 'призрачных' SAP активов."""
     try:
         sap_response = await fetch_sap_materials(
             page=1,
@@ -348,7 +348,7 @@ async def _fetch_and_merge_sap_assets(
             base_material_name_like=name,
             inventory_number=inventory_id,
             serial_number=serial_number,
-            employee_id=employee_id, # SAP API сам отфильтрует по employee_id
+            employee_id=employee_id,
         )
 
         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
@@ -358,21 +358,50 @@ async def _fetch_and_merge_sap_assets(
         sap_items_raw = sap_data.get("data", [])
         sap_total = sap_data.get("total", 0)
 
+        # === НОВОЕ: Получаем все inventory_id и material_id, которые УЖЕ есть в локальной БД среди текущих SAP-кандидатов ===
+        sap_inventory_ids = [item.get("inventory_number") for item in sap_items_raw if item.get("inventory_number")]
+        sap_material_ids = [item.get("material_id") for item in sap_items_raw if item.get("material_id")]
+
+        local_inv_ids_to_exclude = set()
+        local_mat_ids_to_exclude = set()
+
+        if sap_inventory_ids or sap_material_ids:
+            conditions = []
+            if sap_inventory_ids:
+                conditions.append(Asset.inventory_id.in_(sap_inventory_ids))
+            if sap_material_ids:
+                conditions.append(Asset.material_id.in_(sap_material_ids))
+
+            # Ищем любые локальные активы с такими идентификаторами
+            existing_query = select(Asset.inventory_id, Asset.material_id).where(or_(*conditions))
+            existing_result = await db.execute(existing_query)
+            existing_records = existing_result.all()
+
+            local_inv_ids_to_exclude = {rec.inventory_id for rec in existing_records if rec.inventory_id}
+            local_mat_ids_to_exclude = {rec.material_id for rec in existing_records if rec.material_id}
+
         filtered_sap_items = []
         employee_ids = set()
         department_codes = set()
 
         for item in sap_items_raw:
-            if item.get("inventory_number") in exclude_inventory_ids:
+            inv_num = item.get("inventory_number")
+            mat_id = item.get("material_id")
+
+            # 1. Исключаем, если уже есть на текущей странице локальных результатов (старая логика)
+            if inv_num in exclude_inventory_ids:
                 continue
 
-            # Если only_my == True, дополнительно проверяем, что этот актив действительно числится за employee_id в SAP
+            # 2. НОВАЯ ЛОГИКА: Исключаем, если этот актив УЖЕ существует в локальной БД в принципе.
+            # Это предотвращает появление "призрачного" SAP-актива, если локальный актив был передан другому лицу.
+            if inv_num in local_inv_ids_to_exclude or (mat_id and mat_id in local_mat_ids_to_exclude):
+                continue
+
+            # 3. Проверка only_my (исправлена опечатка .zfill10() -> .zfill(10))
             if only_my and employee_id:
-                sap_emp_id = str(item.get("employee_id", "")).zfill10() # Приводим к формату как в БД (00...)
-                # Примечание: убедитесь, что формат employee_id из SAP совпадает с тем, что приходит в employee_id аргумента
-                # Если в SAP employee_id хранится без нулей, а в аргументе с нулями, раскомментируйте строку ниже:
-                if str(item.get("employee_id")).zfill(10) != employee_id: continue
-                if str(item.get("employee_id")) != employee_id.lstrip('0'): # Упрощенная проверка на совпадение
+                sap_emp_id = str(item.get("employee_id", "")).zfill(10)
+                # Сравниваем нормализованный ID из SAP с ID текущего пользователя
+                if sap_emp_id != employee_id:
                     continue
 
             filtered_sap_items.append(item)

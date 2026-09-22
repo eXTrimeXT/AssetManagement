@@ -52,7 +52,7 @@ async def create_transfer_request(
 
 @router_asset_transfer.post(
     "/check-request",
-    response_model=AssetTransferExistsResponse,
+    # response_model=AssetTransferExistsResponse,
     summary="Проверяем есть ли у нас запрос на передачу актива"
 )
 async def check_transfer_exists(

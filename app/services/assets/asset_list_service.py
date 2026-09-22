@@ -1,6 +1,8 @@
 import logging
 import zlib
 from typing import List, Dict, Optional, Any, Sequence, Tuple
+
+from fastapi.params import Depends
 from sqlalchemy import select, func, inspect, Integer, or_, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,6 +15,7 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
+from app.services.auth.auth_service import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +36,15 @@ async def get_assets_list_with_sap(
         asset_type_id: Optional[int] = None,
         parent_id: Optional[int] = None,
         employee_id: Optional[str] = None,
+        only_my: Optional[bool] = False,
         search_mode: str = "not_nulls",
 ) -> Dict[str, Any]:
     """
     Получение списка активов: Локальные данные имеют абсолютный приоритет.
     Список дополняется данными из SAP API, если локальных записей недостаточно.
     """
+    if only_my:
+        employee_id = await get_current_user_id()
 
     # === ОПТИМИЗАЦИЯ 1: Прямой поиск по уникальным идентификаторам ===
     if material_id is not None or asset_id is not None:

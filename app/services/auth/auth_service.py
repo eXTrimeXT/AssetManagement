@@ -203,15 +203,6 @@ async def get_current_user_id(
     """
     return current_user.employee_id
 
-
-async def get_current_user_id(
-        current_user: Employee = Depends(require_authorized_user)
-) -> str:
-    """
-    Зависимость для получения employee_id текущего авторизованного сотрудника.
-    """
-    return current_user.employee_id
-
 async def extract_login_from_request(request: Request) -> dict:
     """
     Извлекает login из токена.

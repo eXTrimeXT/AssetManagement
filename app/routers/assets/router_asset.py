@@ -87,6 +87,7 @@ async def get_assets(
         asset_type_id: Optional[int] = Query(None, description="ID типа актива"),
         parent_id: Optional[int] = Query(None, description="ID родительского актива"),
         employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),
+        only_my: Optional[bool] = Query(False, description="Показать только мои активы? (employee_id игнорируется)"),
         search_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL", description="Режим поиска SAP: all, not_nulls, nulls"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -106,6 +107,7 @@ async def get_assets(
         parent_id=parent_id,
         search_mode=search_mode,
         employee_id=employee_id,
+        only_my=only_my
     )
 
     return PaginatedResponse(**result)

@@ -844,6 +844,7 @@ def _build_virtual_asset(
         "every_week_check": False,
         "next_service": None,
         "service_period": 0,
+        "check_period": 0,
         "parent_name": None,
         "manufacturer_name": None,
         "vendor_name": None,

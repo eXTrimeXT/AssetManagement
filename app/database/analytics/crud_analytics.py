@@ -138,18 +138,27 @@ async def get_service_analytics(db: AsyncSession) -> dict:
     upcoming_30_count = upcoming_30_result.scalar()
 
     # Средний период обслуживания
-    avg_period_query = (
+    avg_service_period_query = (
         select(func.avg(Asset.service_period))
         .where(Asset.service_period.isnot(None))
     )
-    avg_period_result = await db.execute(avg_period_query)
-    avg_period = avg_period_result.scalar_one()
+    avg_service_period_result = await db.execute(avg_service_period_query)
+    avg_service_period = avg_service_period_result.scalar_one()
+
+    # Средний период проверки
+    avg_check_period_query = (
+        select(func.avg(Asset.check_period))
+        .where(Asset.check_period.isnot(None))
+    )
+    avg_check_period_result = await db.execute(avg_check_period_query)
+    avg_check_period = avg_check_period_result.scalar_one()
 
     return {
         "overdue_count": overdue_count,
         "upcoming_7_days": upcoming_7_count,
         "upcoming_30_days": upcoming_30_count,
-        "avg_service_period": round(avg_period, 2) if avg_period else 0
+        "avg_service_period": round(avg_service_period, 2) if avg_service_period else 0,
+        "avg_check_period": round(avg_check_period, 2) if avg_check_period else 0
     }
 
 async def get_write_off_analytics(db: AsyncSession) -> dict:

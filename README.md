@@ -212,32 +212,33 @@ docker compose up -d
 <summary>Таблица assets</summary>
 
 ### Таблица: `assets`
-| Колонка               | Тип данных  | Описание                                                      |
-|:----------------------|:------------|:--------------------------------------------------------------|
-| asset_id              | Integer     | Первичный ключ, автоинкремент                                 |
-| name                  | String(150) | Имя актива (не nullable, индекс)                              |
-| inventory_id          | String(100) | Инвентарный номер (уникальный, индекс, не nullable)           |
-| serial_number         | String(100) | Серийный номер (уникальный, индекс, nullable)                 |
-| asset_status_id       | Integer     | Внешний ключ на `asset_status.id`                             |
-| quantity              | Integer     | Количество (по умолчанию 1)                                   |
-| comment               | Text        | Комментарий                                                   |
-| date_issue            | Date        | Дата выдачи                                                   |
-| date_purchasing       | Date        | Дата покупки                                                  |
-| model_id              | Integer     | Внешний ключ на `asset_models.model_id`                       |
-| model_name            | String(300) | Название модели (денормализованное)                           |
-| parent_name           | String(100) | Название родителя (денормализованное)                         |
-| manufacturer_name     | String(100) | Название производителя (денормализованное)                    |
-| vendor_name           | String(100) | Название поставщика (денормализованное)                       |
-| os_name               | String(100) | Название ОС (денормализованное)                               |
-| asset_type_id         | Integer     | Внешний ключ на `asset_types.asset_type_id`                   |
-| parent_id             | Integer     | Внешний ключ на `assets.asset_id` (для иерархии комплектации) |
-| every_week_check      | Boolean     | Флаг еженедельной проверки                                    |
-| next_service          | Date        | Дата следующего обслуживания                                  |
-| service_period        | Integer     | Период обслуживания в днях                                    |
-| created_by            | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
-| updated_by            | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
-| created_at            | DateTime    | Дата создания                                                 |
-| updated_at            | DateTime    | Дата обновления                                               |
+| Колонка           | Тип данных  | Описание                                                      |
+|:------------------|:------------|:--------------------------------------------------------------|
+| asset_id          | Integer     | Первичный ключ, автоинкремент                                 |
+| name              | String(150) | Имя актива (не nullable, индекс)                              |
+| inventory_id      | String(100) | Инвентарный номер (уникальный, индекс, не nullable)           |
+| serial_number     | String(100) | Серийный номер (уникальный, индекс, nullable)                 |
+| asset_status_id   | Integer     | Внешний ключ на `asset_status.id`                             |
+| quantity          | Integer     | Количество (по умолчанию 1)                                   |
+| comment           | Text        | Комментарий                                                   |
+| date_issue        | Date        | Дата выдачи                                                   |
+| date_purchasing   | Date        | Дата покупки                                                  |
+| model_id          | Integer     | Внешний ключ на `asset_models.model_id`                       |
+| model_name        | String(300) | Название модели (денормализованное)                           |
+| parent_name       | String(100) | Название родителя (денормализованное)                         |
+| manufacturer_name | String(100) | Название производителя (денормализованное)                    |
+| vendor_name       | String(100) | Название поставщика (денормализованное)                       |
+| os_name           | String(100) | Название ОС (денормализованное)                               |
+| asset_type_id     | Integer     | Внешний ключ на `asset_types.asset_type_id`                   |
+| parent_id         | Integer     | Внешний ключ на `assets.asset_id` (для иерархии комплектации) |
+| every_week_check  | Boolean     | Флаг еженедельной проверки                                    |
+| next_service      | Date        | Дата следующего обслуживания                                  |
+| service_period    | Integer     | Период обслуживания в днях                                    |
+| check_period      | Integer     | Период проверки в днях                                        |
+| created_by        | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
+| updated_by        | String(20)  | Внешний ключ на `zup_employees.employee_id`                   |
+| created_at        | DateTime    | Дата создания                                                 |
+| updated_at        | DateTime    | Дата обновления                                               |
 </details>
 
 <details>

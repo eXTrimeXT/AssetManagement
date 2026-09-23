@@ -47,6 +47,7 @@ class Asset(Base):
     every_week_check = Column(Boolean, default=false)
     next_service = Column(Date)  # date
     service_period = Column(Integer, default=0) # Int (count days)
+    check_period = Column(Integer, default=0) # Int (count days)
 
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))

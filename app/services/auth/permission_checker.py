@@ -58,10 +58,6 @@ async def check_permission(
         if is_assets_admin:
             return True
 
-        # Если это актив без типа, то даем права
-        if resource == "Without a type":
-            return True
-
         # Получаем права из токена
         permissions = get_user_permissions_from_token(token)
         if not permissions:

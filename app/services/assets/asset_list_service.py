@@ -817,15 +817,6 @@ def _build_virtual_asset(
         current_user_full_name = " ".join(parts) if parts else None
 
     raw_material_id = sap_item.get("material_id")
-    # if raw_material_id is not None:
-    #     try:
-    #         asset_id_val = int(raw_material_id)
-    #     except (ValueError, OverflowError):
-    #         asset_id_val = zlib.crc32(str(raw_material_id).encode()) & 0x7FFFFFFF
-    # else:
-    #     inv = str(sap_item.get("inventory_number", ""))
-    #     serial = str(sap_item.get("serial_number", ""))
-    #     asset_id_val = zlib.crc32(f"{inv}_{serial}".encode()) & 0x7FFFFFFF
 
     return {
         "asset_id": None,
@@ -854,7 +845,7 @@ def _build_virtual_asset(
         "created_at": None,
         "updated_at": None,
         "asset_type_name": "Без типа",
-        "asset_type_id": 11,
+        "asset_type_id": 0,
         "location": None,
         "users": users,
 

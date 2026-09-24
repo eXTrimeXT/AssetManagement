@@ -38,7 +38,7 @@ async def get_asset_types_list(
     if en_name:
         query = query.where(AssetType.en_name.ilike(f"%{en_name}%"))
 
-    query = query.offset(skip).limit(limit).order_by(AssetType.asset_type_id.desc())
+    query = query.offset(skip).limit(limit).order_by(AssetType.asset_type_id.asc())
     result = await db.execute(query)
     return result.scalars().all()
 

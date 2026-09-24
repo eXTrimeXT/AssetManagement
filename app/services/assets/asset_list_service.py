@@ -999,8 +999,10 @@ async def get_assets_list_with_sap(
         # === NEW: фильтры по cost_center ===
         cost_center_shortname_from: Optional[str] = None,
         cost_center_shortname_from_mode: SearchMode = "ALL",
+        cost_center_code_from: Optional[str] = None,
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_mode: SearchMode = "ALL",
+        cost_center_code: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Получение списка активов: Локальные данные имеют абсолютный приоритет.
@@ -1087,8 +1089,10 @@ async def get_assets_list_with_sap(
                 asset_type_id=asset_type_id, only_my=bool(only_my),
                 cost_center_shortname_from=cost_center_shortname_from,
                 cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+                cost_center_code_from=cost_center_code_from,
                 cost_center_shortname=cost_center_shortname,
                 cost_center_shortname_mode=cost_center_shortname_mode,
+                cost_center_code=cost_center_code
             )
             result_items.extend(sap_items[:remaining_slots])
             sap_total = fetched_sap_total
@@ -1297,8 +1301,10 @@ async def _fetch_and_merge_sap_assets(
         only_my: bool = False,
         cost_center_shortname_from: Optional[str] = None,
         cost_center_shortname_from_mode: SearchMode = "ALL",
+        cost_center_code_from: Optional[str] = None,
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_mode: SearchMode = "ALL",
+        cost_center_code: Optional[str] = None,
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Запрос к SAP и слияние с исключением дубликатов и 'призрачных' SAP активов."""
     try:
@@ -1311,6 +1317,8 @@ async def _fetch_and_merge_sap_assets(
             inventory_number=inventory_id,
             serial_number=serial_number,
             employee_id=employee_id,
+            cost_center_code_from=cost_center_code_from,
+            cost_center_code=cost_center_code
         )
 
         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
@@ -1483,6 +1491,8 @@ async def fetch_sap_materials(
         inventory_number: Optional[str] = None,
         serial_number: Optional[str] = None,
         employee_id: Optional[str] = None,
+        cost_center_code_from: Optional[str] = None,
+        cost_center_code: Optional[str] = None
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
     offset = (page - 1) * page_size
@@ -1502,6 +1512,10 @@ async def fetch_sap_materials(
         params["serial_number"] = serial_number
     if employee_id:
         params["employee_id"] = employee_id
+    if cost_center_code_from:
+        params["cost_center_code_from"] = cost_center_code_from
+    if cost_center_code:
+        params["cost_center_code"] = cost_center_code
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(SAP_API_URL, params=params)

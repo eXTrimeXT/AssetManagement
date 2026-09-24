@@ -68,7 +68,7 @@ async def check_permission(
         resource_perms = permissions.get(resource, {})
         has_permission = resource_perms.get(action, False)
 
-        if not has_permission and resource != "Without a type":
+        if not has_permission:
             user_data = get_user_from_token(token)
             logger.debug(f"Пользователь {user_data.login} не имеет права {action} на {resource}")
 

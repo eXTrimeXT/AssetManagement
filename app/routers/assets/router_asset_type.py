@@ -65,7 +65,7 @@ async def get_asset_types(
     for asset_type in all_types:
         # Проверяем право read на конкретный тип (en_name = ключ в permissions)
         has_perm = await check_permission(request, asset_type.en_name, "read")
-        if has_perm or asset_type.en_name == "Without a type":
+        if has_perm:
             accessible_types.append(asset_type)
             logger.debug(f"Есть право read на {asset_type.en_name}")
     return accessible_types

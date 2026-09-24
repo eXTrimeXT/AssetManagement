@@ -1041,7 +1041,7 @@ async def get_assets_list_with_sap(
     # ни один виртуальный актив не пройдёт фильтрацию → SAP не дёргаем.
     skip_sap_fetch = (
             asset_type_id is not None
-            and asset_type_id not in WITHOUT_TYPE_ASSET_ID
+            and asset_type_id != WITHOUT_TYPE_ASSET_ID
     )
     logger.debug(f"skip_sap_fetch = {skip_sap_fetch}, has_cost_center_filter = {has_cost_center_filter}")
 
@@ -1443,7 +1443,7 @@ async def _fetch_and_merge_sap_assets(
             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
             # Виртуальные активы имеют asset_type_id =0
             # Пропускаем их, если запрошен конкретный другой тип.
-            if asset_type_id is None or asset_type_id in WITHOUT_TYPE_ASSET_ID:
+            if asset_type_id is None or asset_type_id == WITHOUT_TYPE_ASSET_ID:
                 virtual_assets.append(virtual_asset)
 
         # === Корректировка total ===

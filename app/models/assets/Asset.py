@@ -25,6 +25,10 @@ class Asset(Base):
     quantity = Column(Integer, default=1, nullable=True)
     comment = Column(Text)
 
+    # Коды департаментов
+    cost_center_code_from = Column(String(20), nullable=True)   # Код ответственного департамента
+    cost_center_code = Column(String(20), nullable=True)        # Код департамента владельца
+
     # Даты
     date_issue = Column(Date)
     date_purchasing = Column(Date)

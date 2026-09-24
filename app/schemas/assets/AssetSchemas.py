@@ -75,6 +75,9 @@ class AssetUpdate(BaseModel):
     # location_id: Optional[int] = None
     location: Optional[AssetLocationUpdate] = None
 
+    cost_center_code_from: Optional[str] = None
+    cost_center_code: Optional[str] = None
+
     material_id: Optional[str] = None
 
     # Периоды обслуживания и проверки оборудования

@@ -6,7 +6,6 @@ from sqlalchemy.orm import relationship, backref, Mapped
 from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.schemas.assets.AssetSchemas import AssetLocationResponse
-from app.models.assets.AssetAssignment import AssignmentTypeEnum
 
 
 class Asset(Base):

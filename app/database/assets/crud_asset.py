@@ -315,7 +315,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
-        'os_name': obj.os_name
+        'os_name': obj.os_name,
     }
 
     # Применяем изменения из запроса

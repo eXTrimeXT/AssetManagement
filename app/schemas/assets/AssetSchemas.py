@@ -75,8 +75,16 @@ class AssetUpdate(BaseModel):
     # location_id: Optional[int] = None
     location: Optional[AssetLocationUpdate] = None
 
+    # Ответственный департамент
     cost_center_code_from: Optional[str] = None
+    cost_center_name_from: Optional[str] = None
+    cost_center_shortname_from: Optional[str] = None
+
+    # Департамент владельца
     cost_center_code: Optional[str] = None
+    cost_center_name: Optional[str] = None
+    cost_center_shortname: Optional[str] = None
+
 
     material_id: Optional[str] = None
 
@@ -115,10 +123,12 @@ class AssetResponse(AssetBase):
     users: Optional[List[AssetUserFullResponse]] = None
     # responsible_users: Optional[List[AssetUserFullResponse]] = None
 
+    # Ответственный департамент
     cost_center_code_from: Optional[str] = None
     cost_center_name_from: Optional[str] = None
     cost_center_shortname_from: Optional[str] = None
 
+    # Департамент владельца
     cost_center_code: Optional[str] = None
     cost_center_name: Optional[str] = None
     cost_center_shortname: Optional[str] = None

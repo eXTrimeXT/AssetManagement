@@ -25,8 +25,13 @@ class Asset(Base):
     comment = Column(Text)
 
     # Коды департаментов
-    cost_center_code_from = Column(String(20), nullable=True)   # Код ответственного департамента
+    cost_center_code_from = Column(String(20), nullable=True)       # Код ответственного департамента
+    cost_center_name_from = Column(String(20), nullable=True)       # Название ответственного департамента
+    cost_center_shortname_from = Column(String(20), nullable=True)  # Аббревиатура ответственного департамента
+
     cost_center_code = Column(String(20), nullable=True)        # Код департамента владельца
+    cost_center_name = Column(String(20), nullable=True)        # Название департамента владельца
+    cost_center_shortname = Column(String(20), nullable=True)   # Аббревиатура департамента владельца
 
     # Даты
     date_issue = Column(Date)

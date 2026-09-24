@@ -970,9 +970,6 @@ logger = logging.getLogger(__name__)
 SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
 # ID виртуального типа SAP-активов.
-# ВАЖНО: должен совпадать с "asset_type_id" в _build_virtual_asset.
-VIRTUAL_SAP_ASSET_TYPE_ID = 10
-
 # ID типа "Без типа" (публичный, права на него не выдаются).
 WITHOUT_TYPE_ASSET_ID = 0
 
@@ -1036,7 +1033,7 @@ async def get_assets_list_with_sap(
             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
 
     # === ОПТИМИЗАЦИЯ 2: Определяем, нужен ли SAP ===
-    # Виртуальные активы SAP "живут" под VIRTUAL_SAP_ASSET_TYPE_ID (10).
+    # Виртуальные активы SAP "живут" под WITHOUT_TYPE_ASSET_ID.
     # "Без типа" (0) — публичный локальный тип, тоже может показываться без SAP,
     # но виртуалки под него не подпадают (см. _build_virtual_asset).
     #
@@ -1044,7 +1041,7 @@ async def get_assets_list_with_sap(
     # ни один виртуальный актив не пройдёт фильтрацию → SAP не дёргаем.
     skip_sap_fetch = (
             asset_type_id is not None
-            and asset_type_id not in (VIRTUAL_SAP_ASSET_TYPE_ID, WITHOUT_TYPE_ASSET_ID)
+            and asset_type_id not in WITHOUT_TYPE_ASSET_ID
     )
     logger.debug(f"skip_sap_fetch = {skip_sap_fetch}, has_cost_center_filter = {has_cost_center_filter}")
 
@@ -1444,9 +1441,9 @@ async def _fetch_and_merge_sap_assets(
         virtual_assets = []
         for sap_item in filtered_sap_items:
             virtual_asset = _build_virtual_asset(sap_item, employees_map, departments_map)
-            # Виртуальные активы имеют тип VIRTUAL_SAP_ASSET_TYPE_ID (10).
+            # Виртуальные активы имеют asset_type_id =0
             # Пропускаем их, если запрошен конкретный другой тип.
-            if asset_type_id is None or asset_type_id in (VIRTUAL_SAP_ASSET_TYPE_ID, WITHOUT_TYPE_ASSET_ID):
+            if asset_type_id is None or asset_type_id in WITHOUT_TYPE_ASSET_ID:
                 virtual_assets.append(virtual_asset)
 
         # === Корректировка total ===
@@ -1639,9 +1636,9 @@ def _build_virtual_asset(
         "updated_by": None,
         "created_at": None,
         "updated_at": None,
-        # ВАЖНО: виртуальный тип SAP. Должен совпадать с VIRTUAL_SAP_ASSET_TYPE_ID.
-        "asset_type_name": "Виртуальный (SAP)",
-        "asset_type_id": VIRTUAL_SAP_ASSET_TYPE_ID,
+        # ВАЖНО: виртуальный тип SAP. Должен совпадать с .
+        "asset_type_name": "Без типа",
+        "asset_type_id": WITHOUT_TYPE_ASSET_ID,
         "location": None,
         "users": users,
 

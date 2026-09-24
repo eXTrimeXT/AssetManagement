@@ -853,15 +853,17 @@ def _build_virtual_asset(
         "updated_by": None,
         "created_at": None,
         "updated_at": None,
-        "asset_type_name": "Оборудование M&U",
-        "asset_type_id": 10,
+        "asset_type_name": "Без типа",
+        "asset_type_id": 11,
         "location": None,
         "users": users,
-        # "responsible_users": [],
+
+        # ответственный департамент
         "cost_center_code_from": sap_item.get("cost_center_code_from") if sap_item.get("cost_center_code_from") else None,
         "cost_center_name_from": sap_item.get("cost_center_name_from") if sap_item.get("cost_center_name_from") else None,
         "cost_center_shortname_from": sap_item.get("cost_center_shortname_from") if sap_item.get("cost_center_shortname_from") else None,
 
+        # департамент владельца
         "cost_center_code": sap_item.get("cost_center_code") if sap_item.get("cost_center_code") else None,
         "cost_center_name": sap_item.get("cost_center_name") if sap_item.get("cost_center_name") else None,
         "cost_center_shortname": sap_item.get("cost_center_shortname") if sap_item.get("cost_center_shortname") else None,

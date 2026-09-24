@@ -89,6 +89,13 @@ async def get_assets(
         employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),
         only_my: Optional[bool] = Query(False, description="Показать только мои активы? (employee_id игнорируется)"),
         search_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL", description="Режим поиска SAP: all, not_nulls, nulls"),
+
+        # Фильтры по MVZ:
+        cost_center_shortname_from: Optional[str] = Query(None, description="Ответственный департамент (short_name)"),
+        cost_center_shortname_from_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL"),
+        cost_center_shortname: Optional[str] = Query(None, description="Департамент владельца (short_name)"),
+        cost_center_shortname_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL"),
+
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
@@ -111,7 +118,13 @@ async def get_assets(
         parent_id=parent_id,
         search_mode=search_mode,
         employee_id=employee_id,
-        only_my=only_my
+        only_my=only_my,
+
+        # Фильтры по MVZ
+        cost_center_shortname_from=cost_center_shortname_from,
+        cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+        cost_center_shortname=cost_center_shortname,
+        cost_center_shortname_mode=cost_center_shortname_mode
     )
 
     return PaginatedResponse(**result)

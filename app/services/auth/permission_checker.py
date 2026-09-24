@@ -14,6 +14,10 @@ from app.database.assets import get_asset_type_by_id
 
 logger = logging.getLogger(__name__)
 
+# Тип актива "Без типа" — виртуальный, права на него не выдаются.
+# Все авторизованные пользователи видят такие активы без проверки прав.
+WITHOUT_TYPE_EN_NAME = "Without a type"
+
 # Вспомогательная функция — проверка прав по asset_type_id напрямую
 async def check_asset_permission(
         db: AsyncSession,
@@ -22,7 +26,7 @@ async def check_asset_permission(
         action: str
 ) -> None:
     """Проверка права на тип актива напрямую через asset_type_id."""
-    if asset_type_id is None:
+    if asset_type_id is None or asset_type_id == 0:
         return
     asset_type = await get_asset_type_by_id(db, asset_type_id)
     if not asset_type:
@@ -33,6 +37,13 @@ async def check_asset_permission(
             status_code=403,
             detail=f"Нет права '{action}' на тип актива '{asset_type.en_name}'"
         )
+
+def _is_public_resource(resource: str | None) -> bool:
+    """Ресурсы, доступные всем авторизованным пользователям без проверки прав."""
+    if not resource:
+        return False
+    return resource.strip().lower() == WITHOUT_TYPE_EN_NAME.lower()
+
 
 async def check_permission(
         request: Request,
@@ -56,6 +67,10 @@ async def check_permission(
         # Проверяем права админа
         is_assets_admin = check_assets_is_admin(token)
         if is_assets_admin:
+            return True
+
+        # 2. "Без типа" — публичный ресурс, права не требуются
+        if _is_public_resource(resource):
             return True
 
         # Получаем права из токена
@@ -103,6 +118,8 @@ async def check_any_permission(
         for resource, perms in permissions.items():
             if resource == "users":
                 continue
+            if _is_public_resource(resource):
+                continue  # "Без типа" не даёт права
             if perms.get(action, False):
                 return True
 
@@ -198,4 +215,6 @@ async def get_accessible_asset_types(request: Request) -> List[str]:
         if perms.get("read", False):
             accessible_types.append(resource)
 
+    # "Без типа" доступен всем авторизованным
+    accessible_types.append(WITHOUT_TYPE_EN_NAME)
     return accessible_types

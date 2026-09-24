@@ -1318,7 +1318,9 @@ async def _fetch_and_merge_sap_assets(
             serial_number=serial_number,
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
-            cost_center_code=cost_center_code
+            cost_center_shortname_from=cost_center_shortname_from,
+            cost_center_code=cost_center_code,
+            cost_center_shortname=cost_center_shortname
         )
 
         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
@@ -1492,7 +1494,9 @@ async def fetch_sap_materials(
         serial_number: Optional[str] = None,
         employee_id: Optional[str] = None,
         cost_center_code_from: Optional[str] = None,
-        cost_center_code: Optional[str] = None
+        cost_center_shortname_from: Optional[str] = None,
+        cost_center_code: Optional[str] = None,
+        cost_center_shortname: Optional[str] = None
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
     offset = (page - 1) * page_size
@@ -1514,8 +1518,12 @@ async def fetch_sap_materials(
         params["employee_id"] = employee_id
     if cost_center_code_from:
         params["cost_center_code_from"] = cost_center_code_from
+    if cost_center_shortname_from:
+        params["cost_center_shortname_from"] = cost_center_shortname_from
     if cost_center_code:
         params["cost_center_code"] = cost_center_code
+    if cost_center_shortname:
+        params["cost_center_shortname"] = cost_center_shortname
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(SAP_API_URL, params=params)

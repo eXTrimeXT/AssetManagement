@@ -47,10 +47,7 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
                 token,
                 key=key,
                 algorithms=["HS256"],
-                options={
-                    "verify_signature": True,
-                    "verify_exp": False
-                }
+                options={"verify_exp": True}
             )
         else:
             logger.warning(
@@ -59,24 +56,11 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
             )
             payload = jwt.decode(
                 token,
-                options={
-                    "verify_signature": True,
-                    "verify_exp": False
-                }
+                options={"verify_signature": False, "verify_exp": True}
             )
         return payload
     except jwt.ExpiredSignatureError:
         logger.warning("Срок действия токена истек")
-        payload = jwt.decode(
-            token,
-            key=key,
-            algorithms=["HS256"],
-            options={
-                "verify_signature": True,
-                "verify_exp": False
-            }
-        )
-        logger.warning(f"payload = {payload}")
         raise TokenValidationError("Срок действия токена истек")
     except jwt.InvalidTokenError as e:
         logger.warning(f"Недопустимый токен: {str(e)}")
@@ -85,7 +69,6 @@ def decode_token(token: str, secret_key: Optional[str] = None) -> Dict[str, Any]
 def get_user_from_token(token: str, secret_key: Optional[str] = None) -> UserJWTData:
     key = secret_key or JWT_SECRET_KEY
     payload = decode_token(token, key)
-    logger.warning(f"payload = {payload}")
     return UserJWTData(payload)
 
 def is_token_valid(token: str, secret_key: Optional[str] = None) -> bool:

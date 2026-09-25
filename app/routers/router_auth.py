@@ -76,15 +76,10 @@ async def auth_token(
             request.token,
             key=JWT_SECRET_KEY if JWT_SECRET_KEY else None,
             algorithms=["HS256"],
-            options={
-                # "verify_signature": bool(JWT_SECRET_KEY),
-                "verify_signature": True,
-                "verify_exp": False
-            }
+            options={"verify_signature": bool(JWT_SECRET_KEY), "verify_exp": False}
         )
 
         exp = payload.get("exp")
-        logger.warning(f"exp = {exp}")
         ttl = int(exp - datetime.now().timestamp()) if exp else 3600
         ttl = max(ttl, 60)
 

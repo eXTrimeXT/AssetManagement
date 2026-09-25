@@ -89,3 +89,16 @@ class AssetTransferExistsResponse(BaseModel):
     initiator_comment: Optional[str] = None
     created_at: Optional[datetime] = None
     direction: Optional[str] = None
+
+class AssetTransferListItem(BaseModel):
+    transfer_id: int
+    asset_id: int
+    initiator: EmployeeInfoResponse
+    target_employee: EmployeeInfoResponse
+    assignment_type: str
+    assignment_type_ru: str
+    status: str
+    initiator_comment: Optional[str] = None
+    responder_comment: Optional[str] = None
+    created_at: datetime
+    responded_at: Optional[datetime] = None

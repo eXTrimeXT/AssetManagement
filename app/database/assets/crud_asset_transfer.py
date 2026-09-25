@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql.functions import current_user
+from sqlalchemy.sql.functions import current_user, func
 
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
@@ -446,3 +446,79 @@ async def cancel_asset_transfer(
         status=transfer.status,
         cancelled_at=transfer.responded_at
     )
+
+async def get_transfers_list(
+        db: AsyncSession,
+        page: int = 1,
+        page_size: int = 50,
+        asset_id: Optional[int] = None,
+        initiator_id: Optional[str] = None,
+        target_employee_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    query = select(AssetTransfer)
+
+    if asset_id is not None:
+        query = query.where(AssetTransfer.asset_id == asset_id)
+    if initiator_id is not None:
+        query = query.where(AssetTransfer.initiator_id == initiator_id)
+    if target_employee_id is not None:
+        query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+
+    # Total
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one() or 0
+
+    # Slice
+    skip = (page - 1) * page_size
+    query = query.order_by(AssetTransfer.created_at.desc()).offset(skip).limit(page_size)
+    result = await db.execute(query)
+    transfers = result.scalars().all()
+
+    # Собираем все employee_id для массовой загрузки
+    employee_ids = set()
+    for t in transfers:
+        employee_ids.add(t.initiator_id)
+        employee_ids.add(t.target_employee_id)
+
+    employees_map = {}
+    if employee_ids:
+        emp_result = await db.execute(
+            select(Employee).where(Employee.employee_id.in_(employee_ids))
+        )
+        for emp in emp_result.scalars().all():
+            parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+            employees_map[emp.employee_id] = " ".join(parts) if parts else None
+
+    items = []
+    for t in transfers:
+        items.append({
+            "transfer_id": t.id,
+            "asset_id": t.asset_id,
+            "initiator": {
+                "employee_id": t.initiator_id,
+                "full_name": employees_map.get(t.initiator_id),
+            },
+            "target_employee": {
+                "employee_id": t.target_employee_id,
+                "full_name": employees_map.get(t.target_employee_id),
+            },
+            "assignment_type": t.assignment_type,
+            "assignment_type_ru": "Пользователь" if t.assignment_type == "user" else "Ответственный",
+            "status": t.status,
+            "initiator_comment": t.initiator_comment,
+            "responder_comment": t.responder_comment,
+            "created_at": t.created_at,
+            "responded_at": t.responded_at,
+        })
+
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1,
+    }

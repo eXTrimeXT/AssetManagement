@@ -1,5 +1,7 @@
+from typing import Optional
+
 from anyio import current_effective_deadline
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
@@ -13,11 +15,37 @@ from app.schemas.assets.AssetTransferSchemas import (
 from app.database.assets.crud_asset_transfer import (
     request_asset_transfer,
     respond_to_asset_transfer,
-    cancel_asset_transfer, check_pending_transfer_exists
+    cancel_asset_transfer, check_pending_transfer_exists, get_transfers_list
 )
 from app.services.auth.auth_service import require_authorized_user
+from app.schemas.PaginationResponse import PaginatedResponse
 
 router_asset_transfer = APIRouter(prefix="/assets/transfers", tags=["Asset Transfers"])
+
+
+@router_asset_transfer.get(
+    "/",
+    response_model=PaginatedResponse,
+    summary="Получить список передач активов"
+)
+async def get_transfers(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(50, ge=1, le=100),
+        asset_id: Optional[int] = Query(None),
+        initiator_id: Optional[str] = Query(None),
+        target_employee_id: Optional[str] = Query(None),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user),
+):
+    result = await get_transfers_list(
+        db=db,
+        page=page,
+        page_size=page_size,
+        asset_id=asset_id,
+        initiator_id=initiator_id,
+        target_employee_id=target_employee_id,
+    )
+    return PaginatedResponse(**result)
 
 @router_asset_transfer.post(
     "/request",

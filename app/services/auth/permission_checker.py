@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Тип актива "Без типа" — виртуальный, права на него не выдаются.
 # Все авторизованные пользователи видят такие активы без проверки прав.
-WITHOUT_TYPE_EN_NAME = "Without a type"
+WITHOUT_TYPE_EN_NAME = "without_type"
 
 # Вспомогательная функция — проверка прав по asset_type_id напрямую
 async def check_asset_permission(

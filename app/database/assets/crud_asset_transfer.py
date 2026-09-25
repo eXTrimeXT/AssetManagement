@@ -191,7 +191,7 @@ async def check_pending_transfer_exists(
 async def request_asset_transfer(
         db: AsyncSession,
         request: AssetTransferRequest,
-        initiator_id: str
+        initiator_id: str,
 ) -> AssetTransferResponse:
     asset_id = request.asset_id
     asset_source = "local"
@@ -206,7 +206,7 @@ async def request_asset_transfer(
             raise ValueError(f"Актив с material_id={request.material_id} не привязан к вам!")
 
     # Проверяем, нет ли уже активной заявки на этот актив
-    if await check_pending_transfer_exists(db, asset_id):
+    if await check_pending_transfer_exists(db, asset_id, initiator_id):
         raise ValueError("На этот актив уже есть активная заявка на передачу")
 
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))

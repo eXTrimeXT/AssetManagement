@@ -132,13 +132,12 @@ async def check_pending_transfer_exists(
     Возвращает полную информацию о запросе, если он существует.
     """
 
-
     # Ищем активную передачу для этого актива
     query = (
         select(AssetTransfer)
         .where(
             AssetTransfer.asset_id == asset_id,
-            AssetTransfer.status == "pending"  # Только активные запросы
+            AssetTransfer.status == "PENDING"  # <-- ИСПРАВЛЕНО: в модели статус "PENDING" (верхний регистр)
         )
         .order_by(AssetTransfer.created_at.desc())
         .limit(1)
@@ -166,14 +165,14 @@ async def check_pending_transfer_exists(
         initiator=EmployeeInfoResponse(
             employee_id=transfer.initiator_id,
             full_name=f"{initiator.last_name} {initiator.first_name}" if initiator else None
-        ),
+        ) if initiator else None,  # <-- ДОБАВЛЕНО: защита от None, если сотрудник удален из БД
         target_employee=EmployeeInfoResponse(
             employee_id=transfer.target_employee_id,
             full_name=f"{target.last_name} {target.first_name}" if target else None
-        ),
+        ) if target else None,     # <-- ДОБАВЛЕНО: защита от None, если сотрудник удален из БД
         assignment_type=transfer.assignment_type,
         assignment_type_ru="Пользователь" if transfer.assignment_type == "user" else "Ответственный",
-        comment=transfer.comment,
+        comment=transfer.initiator_comment,  # <-- ИСПРАВЛЕНО: в модели поле называется initiator_comment
         created_at=transfer.created_at
     )
 

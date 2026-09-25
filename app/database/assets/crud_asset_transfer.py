@@ -17,7 +17,7 @@ from app.schemas.assets.AssetTransferSchemas import (
     AssetTransferCancelResponse,
     AssetInfoResponse,
     EmployeeInfoResponse,
-    NotificationInfoResponse
+    NotificationInfoResponse, AssetTransferExistsResponse
 )
 from app.services.assets.asset_list_service import fetch_sap_materials
 
@@ -113,15 +113,69 @@ async def create_asset_from_sap_material(db: AsyncSession, material_id: str, cre
     await db.refresh(new_asset)
     return new_asset
 
-async def check_pending_transfer_exists(db: AsyncSession, asset_id: int) -> bool:
-    """Проверяет, есть ли уже активная PENDING-заявка на этот актив"""
-    result = await db.execute(
-        select(AssetTransfer).where(
+# async def check_pending_transfer_exists(db: AsyncSession, asset_id: int) -> bool:
+#     """Проверяет, есть ли уже активная PENDING-заявка на этот актив"""
+#     result = await db.execute(
+#         select(AssetTransfer).where(
+#             AssetTransfer.asset_id == asset_id,
+#             AssetTransfer.status == "PENDING"
+#         )
+#     )
+#     return result.scalar_one_or_none() is not None
+
+async def check_pending_transfer_exists(
+        db: AsyncSession,
+        asset_id: int
+) -> AssetTransferExistsResponse:
+    """
+    Проверяет наличие активного запроса на передачу актива.
+    Возвращает полную информацию о запросе, если он существует.
+    """
+
+
+    # Ищем активную передачу для этого актива
+    query = (
+        select(AssetTransfer)
+        .where(
             AssetTransfer.asset_id == asset_id,
-            AssetTransfer.status == "PENDING"
+            AssetTransfer.status == "pending"  # Только активные запросы
         )
+        .order_by(AssetTransfer.created_at.desc())
+        .limit(1)
     )
-    return result.scalar_one_or_none() is not None
+
+    result = await db.execute(query)
+    transfer = result.scalar_one_or_none()
+
+    if not transfer:
+        return AssetTransferExistsResponse(is_exists=False)
+
+    # Получаем информацию об инициаторе
+    initiator_query = select(Employee).where(Employee.employee_id == transfer.initiator_id)
+    initiator_result = await db.execute(initiator_query)
+    initiator = initiator_result.scalar_one_or_none()
+
+    # Получаем информацию о получателе
+    target_query = select(Employee).where(Employee.employee_id == transfer.target_employee_id)
+    target_result = await db.execute(target_query)
+    target = target_result.scalar_one_or_none()
+
+    return AssetTransferExistsResponse(
+        is_exists=True,
+        transfer_id=transfer.id,
+        initiator=EmployeeInfoResponse(
+            employee_id=transfer.initiator_id,
+            full_name=f"{initiator.last_name} {initiator.first_name}" if initiator else None
+        ),
+        target_employee=EmployeeInfoResponse(
+            employee_id=transfer.target_employee_id,
+            full_name=f"{target.last_name} {target.first_name}" if target else None
+        ),
+        assignment_type=transfer.assignment_type,
+        assignment_type_ru="Пользователь" if transfer.assignment_type == "user" else "Ответственный",
+        comment=transfer.comment,
+        created_at=transfer.created_at
+    )
 
 async def request_asset_transfer(
         db: AsyncSession,

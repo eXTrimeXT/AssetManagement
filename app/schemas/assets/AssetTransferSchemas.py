@@ -36,6 +36,8 @@ class EmployeeInfoResponse(BaseModel):
     employee_id: str
     full_name: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 class NotificationInfoResponse(BaseModel):
     notification_id: int
     event_type: str
@@ -79,3 +81,10 @@ class AssetTransferCancelResponse(BaseModel):
 
 class AssetTransferExistsResponse(BaseModel):
     is_exists: bool = False
+    transfer_id: Optional[int] = None
+    initiator: Optional[EmployeeInfoResponse] = None
+    target_employee: Optional[EmployeeInfoResponse] = None
+    assignment_type: Optional[str] = None
+    assignment_type_ru: Optional[str] = None
+    comment: Optional[str] = None
+    created_at: Optional[datetime] = None

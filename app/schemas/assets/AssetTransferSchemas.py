@@ -88,3 +88,4 @@ class AssetTransferExistsResponse(BaseModel):
     assignment_type_ru: Optional[str] = None
     initiator_comment: Optional[str] = None
     created_at: Optional[datetime] = None
+    direction: Optional[str] = None

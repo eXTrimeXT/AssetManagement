@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.functions import current_user
 
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
@@ -125,7 +126,8 @@ async def create_asset_from_sap_material(db: AsyncSession, material_id: str, cre
 
 async def check_pending_transfer_exists(
         db: AsyncSession,
-        asset_id: int
+        asset_id: int,
+        employee_id: str
 ) -> AssetTransferExistsResponse:
     """
     Проверяет наличие активного запроса на передачу актива.
@@ -159,6 +161,15 @@ async def check_pending_transfer_exists(
     target_result = await db.execute(target_query)
     target = target_result.scalar_one_or_none()
 
+    direction = None
+    if transfer.initiator_id == employee_id:
+        direction = "outgoing"
+    elif transfer.target_employee_id == employee_id:
+        direction = "incoming"
+    else:
+        # иначе возвращаем пустую
+        return AssetTransferExistsResponse()
+
     return AssetTransferExistsResponse(
         is_exists=True,
         transfer_id=transfer.id,
@@ -173,7 +184,8 @@ async def check_pending_transfer_exists(
         assignment_type=transfer.assignment_type,
         assignment_type_ru="Пользователь" if transfer.assignment_type == "user" else "Ответственный",
         initiator_comment=transfer.initiator_comment,
-        created_at=transfer.created_at
+        created_at=transfer.created_at,
+        direction=direction
     )
 
 async def request_asset_transfer(

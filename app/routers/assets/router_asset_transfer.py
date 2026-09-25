@@ -1,3 +1,4 @@
+from anyio import current_effective_deadline
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,7 +53,7 @@ async def create_transfer_request(
 
 @router_asset_transfer.post(
     "/check-request",
-    # response_model=AssetTransferExistsResponse,
+    response_model=AssetTransferExistsResponse,
     summary="Проверяем есть ли у нас запрос на передачу актива"
 )
 async def check_transfer_exists(
@@ -60,7 +61,12 @@ async def check_transfer_exists(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    response = await check_pending_transfer_exists(db, asset_id)
+    response = await check_pending_transfer_exists(db, asset_id, current_user.employee_id)
+    if response.direction is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Доступ не разрешен"
+        )
     return response
 
 

@@ -10,9 +10,9 @@ print(f"{SECRET=}")
 now = int(time.time())
 payload = {
     "iat": now,
-    # "exp": now + 365 * 24 * 60 * 60,  # 365 дней
-    "exp": now + 2 * 60,  # 365 дней
-    "login": "gw07015370",
+    "exp": now + 365 * 24 * 60 * 60,  # 365 дней
+    # "exp": now + 2 * 60,  # 365 дней
+    "login": "gw07014942",
     "last_ip": "10.168.154.42",
     "last_time": "12:47:52 21.07.2026",
     "department": "RDC",

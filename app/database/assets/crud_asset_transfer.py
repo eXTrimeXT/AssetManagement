@@ -164,15 +164,15 @@ async def check_pending_transfer_exists(
         transfer_id=transfer.id,
         initiator=EmployeeInfoResponse(
             employee_id=transfer.initiator_id,
-            full_name=f"{initiator.last_name} {initiator.first_name}" if initiator else None
-        ) if initiator else None,  # <-- ДОБАВЛЕНО: защита от None, если сотрудник удален из БД
+            full_name=f"{initiator.last_name} {initiator.first_name} {initiator.middle_name}" if initiator else None
+        ) if initiator else None,  # защита от None, если сотрудник удален из БД
         target_employee=EmployeeInfoResponse(
             employee_id=transfer.target_employee_id,
-            full_name=f"{target.last_name} {target.first_name}" if target else None
-        ) if target else None,     # <-- ДОБАВЛЕНО: защита от None, если сотрудник удален из БД
+            full_name=f"{target.last_name} {target.first_name} {target.middle_name}" if target else None
+        ) if target else None,     # защита от None, если сотрудник удален из БД
         assignment_type=transfer.assignment_type,
         assignment_type_ru="Пользователь" if transfer.assignment_type == "user" else "Ответственный",
-        comment=transfer.initiator_comment,  # <-- ИСПРАВЛЕНО: в модели поле называется initiator_comment
+        initiator_comment=transfer.initiator_comment,
         created_at=transfer.created_at
     )
 

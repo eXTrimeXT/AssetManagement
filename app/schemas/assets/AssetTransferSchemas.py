@@ -86,5 +86,5 @@ class AssetTransferExistsResponse(BaseModel):
     target_employee: Optional[EmployeeInfoResponse] = None
     assignment_type: Optional[str] = None
     assignment_type_ru: Optional[str] = None
-    comment: Optional[str] = None
+    initiator_comment: Optional[str] = None
     created_at: Optional[datetime] = None

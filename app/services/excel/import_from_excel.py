@@ -1,7 +1,7 @@
 import io
 import logging
 from typing import Optional, Dict, Any, List
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 import pandas as pd
@@ -12,19 +12,28 @@ from app.models.assets.Asset import Asset
 
 logger = logging.getLogger(__name__)
 
-router_excel_import = APIRouter(prefix="/assets", tags=["Assets"])
+router_excel_import = APIRouter(prefix="/excel/assets", tags=["Assets"])
 
 SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
 # ==============================================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ==============================================================================
-
 def normalize(value: Any) -> Optional[str]:
-    """Нормализация: убирает пробелы, приводит к верхнему регистру, пустоту превращает в None"""
-    if value is None or str(value).strip() == "":
+    """
+    Нормализация: убирает пробелы, приводит к верхнему регистру,
+    пустоту и pandas 'nan' превращает в None.
+    """
+    if value is None:
         return None
-    return str(value).strip().upper()
+
+    val_str = str(value).strip()
+
+    # Защита от того, что pandas при dtype=str превращает пустые ячейки в строку "nan"
+    if val_str == "" or val_str.lower() == "nan":
+        return None
+
+    return val_str.upper()
 
 
 def parse_cost_centers(code_str: Optional[str]) -> List[str]:
@@ -41,27 +50,11 @@ async def get_user_cost_center_code(token: str) -> Optional[str]:
     """
     url = "http://gps-test.hmmr.ru/api/getinfouser"
 
-    headers = {
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Connection": "keep-alive",
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Cookie": f"PHPSESSID=8s9909705lor036d1bppe54o85; lang=ru; token={token}",
-        "DNT": "1",
-        "Origin": "http://gps-test.hmmr.ru",
-        "Referer": "http://gps-test.hmmr.ru/itassets/Store/10",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
-        "X-KL-kes-Ajax-Request": "Ajax_Request",
-        "X-Requested-With": "XMLHttpRequest"
-    }
-
-    payload = {"token": token}
-
     async with httpx.AsyncClient(verify=False) as client:
-        response = await client.post(url, headers=headers, data=payload)
+        response = await client.post(url, json={"token": token})
         response.raise_for_status()
         data = response.json()
-
+        logger.error(f"getinfouser: {data=}")
     for perm in data.get("permission_departments", []):
         if perm.get("read") is True and perm.get("write") is True:
             return perm.get("department_code")
@@ -100,6 +93,8 @@ async def fetch_sap_asset_for_import(
             response.raise_for_status()
             data = response.json()
 
+            logger.error(f"SAP: {data=}")
+
             if data.get("success") and "data" in data.get("response", {}):
                 sap_items = data["response"]["data"]
 
@@ -107,6 +102,7 @@ async def fetch_sap_asset_for_import(
                 for item in sap_items:
                     item_cc = item.get("cost_center_code_from")
                     if not cost_center_codes_from or (item_cc and any(cc in item_cc for cc in cost_center_codes_from)):
+                        logger.error(f"{item=}")
                         return item
 
             return None
@@ -118,13 +114,12 @@ async def fetch_sap_asset_for_import(
 # ==============================================================================
 # ОСНОВНАЯ ЛОГИКА ОБРАБОТКИ СТРОКИ
 # ==============================================================================
-
 async def process_excel_row(
         excel_row: Dict[str, Any],
         db: AsyncSession,
         cost_center_codes_from: List[str]
 ):
-    # 1. Извлечение и нормализация полей из Excel
+    # Извлечение и нормализация полей из Excel
     inv_id = normalize(excel_row.get("inventory_id"))
     sn = normalize(excel_row.get("serial_number"))
     name = normalize(excel_row.get("name"))
@@ -134,7 +129,7 @@ async def process_excel_row(
     if not inv_id and not sn:
         return {"status": "skipped", "reason": "Нет inventory_id и serial_number"}
 
-    # 2. Поиск в локальной БД по серийному ИЛИ инвентарному номеру
+    # Поиск в локальной БД по серийному ИЛИ инвентарному номеру
     # Примечание: фильтры cost_center относятся ТОЛЬКО к SAP (согласно комментарию в get_assets_list_with_sap)
     stmt = select(Asset).where(
         or_(
@@ -145,13 +140,13 @@ async def process_excel_row(
     result = await db.execute(stmt)
     local_asset = result.scalar_one_or_none()
 
-    # 3. Поиск в SAP (только если не нашли в локальной БД, чтобы сэкономить запросы,
+    # Поиск в SAP (только если не нашли в локальной БД, чтобы сэкономить запросы,
     # или если нужно сверить данные. По ТЗ: "сравнивать... с локальной БД и SAP")
     sap_asset = None
     if not local_asset:
         sap_asset = await fetch_sap_asset_for_import(inv_id, sn, cost_center_codes_from)
 
-    # 4. Матрица решений
+    # Матрица решений
     if local_asset:
         # Сценарии A и B: Запись есть в локальной БД.
         # Обновляем значения строго из Excel, если они переданы.
@@ -178,7 +173,8 @@ async def process_excel_row(
             serial_number=sn or base_data.get("serial_number"),
             name=name or base_data.get("base_material_name") or "Без имени",
             quantity=int(quantity) if quantity is not None else (int(base_data.get("quantity", 1)) if base_data.get("quantity") else 1),
-            # material_id=base_data.get("material_id"), # Раскомментируйте, если есть в модели
+            material_id=base_data.get("material_id"), # Раскомментируйте, если есть в модели
+            every_week_check=False
         )
 
         db.add(new_asset)
@@ -187,9 +183,7 @@ async def process_excel_row(
         return {"status": "created", "asset_id": new_asset.asset_id}
 
 
-# ==============================================================================
-# FASTAPI ENDPOINT
-# ==============================================================================
+# ENDPOINT импорта Excel
 @router_excel_import.post("/import-from-excel")
 async def import_from_excel(
         file: UploadFile = File(..., description="Excel файл для импорта"),
@@ -212,7 +206,14 @@ async def import_from_excel(
     # 2. Читаем файл
     contents = await file.read()
     try:
-        df = pd.read_excel(io.BytesIO(contents))
+        df = pd.read_excel(
+            io.BytesIO(contents),
+            dtype={
+                "inventory_id": str,
+                "serial_number": str,
+                "name": str
+            }
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка чтения Excel файла: {str(e)}")
 
@@ -246,3 +247,42 @@ async def import_from_excel(
         "total_rows": len(df),
         "results": results
     }
+
+# ГЕНЕРАЦИЯ ШАБЛОНА EXCEL
+@router_excel_import.get("/import-template")
+async def get_import_template():
+    """
+    Генерирует и отдает пустой Excel-шаблон с примером заполнения
+    для последующего импорта активов.
+    """
+    # Определяем строго требуемые колонки
+    columns = ["name", "inventory_id", "serial_number", "quantity"]
+
+    # Создаем пример данных для наглядности формата (1 строка)
+    example_data = [
+        {
+            "name": "Ноутбук Dell Latitude 5520",
+            "inventory_id": "INV-0000123",
+            "serial_number": "SN987654321",
+            "quantity": 1
+        }
+    ]
+
+    # Формируем DataFrame
+    df = pd.DataFrame(example_data, columns=columns)
+
+    # Записываем в буфер памяти в формате .xlsx
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Шаблон импорта")
+
+    excel_bytes = output.getvalue()
+
+    # Возвращаем файл с правильными заголовками для скачивания
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=asset_import_template.xlsx"
+        }
+    )

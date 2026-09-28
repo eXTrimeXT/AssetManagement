@@ -83,6 +83,7 @@ async def get_assets_list_with_sap(
             asset_type_id=asset_type_id,
             parent_id=parent_id,
             employee_id=employee_id,
+            cost_center_code_from=cost_center_code_from,
             only_my=only_my
         )
 
@@ -120,6 +121,7 @@ async def get_assets_list_with_sap(
             asset_type_id=asset_type_id,
             parent_id=parent_id,
             employee_id=employee_id,
+            cost_center_code_from=cost_center_code_from,
             only_my=only_my
         )
 
@@ -143,6 +145,7 @@ async def get_assets_list_with_sap(
             asset_type_id=asset_type_id,
             parent_id=parent_id,
             employee_id=employee_id,
+            cost_center_code_from=cost_center_code_from,
             only_my=only_my
         )
 
@@ -227,6 +230,7 @@ async def _get_local_assets_count(
         asset_type_id: Optional[int],
         parent_id: Optional[int],
         employee_id: Optional[str],
+        cost_center_code_from: Optional[str],
         only_my: Optional[bool] = False
 ) -> int:
     """Подсчет количества локальных активов по всем фильтрам."""
@@ -262,6 +266,9 @@ async def _get_local_assets_count(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq))
 
+    if cost_center_code_from:
+        query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+
     result = await db.execute(query)
     return result.scalar_one() or 0
 
@@ -280,7 +287,8 @@ async def _get_local_assets_slice(
         asset_type_id: Optional[int],
         parent_id: Optional[int],
         employee_id: Optional[str],
-        only_my: Optional[bool] = False
+        cost_center_code_from: Optional[str],
+        only_my: Optional[bool] = False,
 ) -> Sequence[Asset]:
     """Получение среза локальных активов с полной загрузкой связей."""
     query = select(Asset).options(
@@ -336,6 +344,9 @@ async def _get_local_assets_slice(
             emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
+
+    if cost_center_code_from:
+        query = query.where(Asset.cost_center_code_from == cost_center_code_from)
 
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)

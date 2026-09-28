@@ -1,5 +1,4 @@
 import httpx
-from sqlalchemy import or_
 
 async def get_user_cost_center_code(token: str) -> str | None:
     url = "http://gps-test.hmmr.ru/api/getinfouser"
@@ -25,6 +24,7 @@ async def get_user_cost_center_code(token: str) -> str | None:
         response = await client.post(url, headers=headers, data=payload)
         response.raise_for_status()
         data = response.json()
+        print(f"{data=}")
 
     # Ищем department_code, где read и write == true
     for perm in data.get("permission_departments", []):

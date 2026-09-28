@@ -295,16 +295,16 @@ async def generate_qr_code(request: QRCodeRequest):
         <line x1="10" y1="170" x2="630" y2="170" stroke="black" stroke-width="2" />
         
         <!-- Текст: Левая колонка -->
-        <g font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="black">
+        <g font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="black">
             <!-- Наименование OC -->
-            <text x="15" y="55">Наименование ОС</text>
-            <text x="15" y="80">Fixed asset name</text>
+<!--            <text x="15" y="55">Наименование ОС</text>-->
+            <text x="15" y="75">Fixed asset name</text>
             <!-- Инвентарный номер -->
-            <text x="15" y="140">Инвентарный номер</text>
-            <text x="15" y="165">Inventory number</text>
+<!--            <text x="15" y="140">Инвентарный номер</text>-->
+            <text x="15" y="145">Inventory number</text>
             <!-- Серийный номер -->
-            <text x="15" y="205">Серийный номер</text>
-            <text x="15" y="230">Serial number</text>
+<!--            <text x="15" y="205">Серийный номер</text>-->
+            <text x="15" y="215">Serial number</text>
         </g>
         
         <!-- Текст: Средняя колонка (заполнители) -->

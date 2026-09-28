@@ -35,7 +35,7 @@ async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional
 async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) -> Dict[str, Any]:
     try:
         sap_response = await fetch_sap_materials(
-            page=1,
+            offset=0,
             page_size=1,
             material_id=material_id,
             search_mode="ALL",

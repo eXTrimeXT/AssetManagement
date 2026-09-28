@@ -360,7 +360,7 @@ async def _fetch_and_merge_sap_assets(
     """Запрос к SAP и слияние с исключением дубликатов и 'призрачных' SAP активов."""
     try:
         sap_response = await fetch_sap_materials(
-            page=1,
+            offset=offset,
             page_size=limit,
             material_id=material_id,
             search_mode=search_mode,
@@ -536,7 +536,7 @@ async def _fetch_and_merge_sap_assets(
 
 
 async def fetch_sap_materials(
-        page: int,
+        offset: int,
         page_size: int,
         material_id: Optional[str],
         search_mode: str = "ALL",
@@ -550,7 +550,7 @@ async def fetch_sap_materials(
         cost_center_shortname: Optional[str] = None
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
-    offset = (page - 1) * page_size
+    # offset = (page - 1) * page_size
     params = {
         "limit": page_size,
         "offset": offset,

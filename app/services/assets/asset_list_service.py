@@ -109,10 +109,18 @@ async def get_assets_list_with_sap(
         local_total = 0
     else:
         local_total = await _get_local_assets_count(
-            db=db, asset_id=asset_id, material_id=material_id,
-            name=name, inventory_id=inventory_id, serial_number=serial_number,
-            asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id, only_my=only_my
+            db=db,
+            asset_id=asset_id,
+            material_id=material_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+            only_my=only_my
         )
 
     skip = (page - 1) * page_size
@@ -187,8 +195,10 @@ async def get_assets_list_with_sap(
                 only_my=bool(only_my),
                 cost_center_shortname_from=cost_center_shortname_from,
                 cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+                cost_center_code_from=cost_center_code_from,
                 cost_center_shortname=cost_center_shortname,
                 cost_center_shortname_mode=cost_center_shortname_mode,
+                cost_center_code=cost_center_code
             )
             result_items.extend(sap_items)
             sap_total = fetched_sap_total

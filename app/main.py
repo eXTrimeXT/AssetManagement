@@ -70,6 +70,9 @@ from app.services.zup.zup_integration import close_http_client
 from app.routers.router_from_sap import router_from_sap
 from app.routers.assets.router_asset_transfer import router_asset_transfer
 
+# Роутер для excel импорта
+from app.services.excel.import_from_excel import router_excel_import
+
 logger = logging.getLogger(__name__)
 
 # --- Управление жизненным циклом (Lifespan) ---
@@ -186,7 +189,9 @@ app.include_router(router_asset_transfer, prefix="/api")    # Роутер пе�
 app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
 app.include_router(router_asset_history, prefix="/api")     # История активов
 app.include_router(router_asset_write_off, prefix="/api")   # Списание активов
+
 app.include_router(router_from_sap, prefix="/api")          # Импорт активов из SAP
+app.include_router(router_excel_import, prefix="/api")      # Импорт активов из Excel
 
 app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
 

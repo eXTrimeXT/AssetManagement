@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 import pandas as pd
 
-from database.connection import get_db
-from models.assets import Asset
+from app.database.connection import get_db
+from app.models.assets import Asset
 
 router_excel_import = APIRouter(prefix="/assets", tags=["Assets"])
 

@@ -149,7 +149,6 @@ async def get_assets_list_with_sap(
         # Либо локальные закончились, либо есть cost_center-фильтр — идём в SAP
         if not skip_sap_fetch:
             # Если cost_center-фильтр задан — локальных нет, offset считается от 0
-            logger.info(f"{skip_sap_fetch=} {skip=} {local_total=}")
             sap_offset = 0 if has_cost_center_filter else max(0, skip - local_total)
             sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
                 db=db, limit=page_size, offset=sap_offset,
@@ -165,6 +164,8 @@ async def get_assets_list_with_sap(
             )
             result_items.extend(sap_items)
             sap_total = fetched_sap_total
+
+            logger.info(f"{skip_sap_fetch=} {skip=} {local_total=} {sap_offset=} {fetched_sap_total=} {sap_total=}")
 
     # Итоговый total
     final_total = local_total + sap_total

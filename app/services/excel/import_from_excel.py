@@ -58,7 +58,6 @@ def parse_int(value: Any) -> Optional[int]:
     except (ValueError, TypeError):
         return None
 
-
 def parse_text(value: Any) -> Optional[str]:
     """Безопасный парсинг обычного текста (без upper(), но с защитой от NaN)."""
     if pd.isna(value) or value is None:
@@ -143,16 +142,16 @@ async def process_excel_row(
         employee_id: str
 ):
     # Извлечение и нормализация полей из Excel
-    name = normalize(excel_row.get("name"))
-    inv_id = normalize(excel_row.get("inventory_id"))
-    sn = normalize(excel_row.get("serial_number"))
-    quantity = parse_int(excel_row.get("quantity"))
-    comment = parse_text(excel_row.get("comment"))
-    date_issue = parse_date(excel_row.get("date_issue"))
-    date_purchasing = parse_date(excel_row.get("date_purchasing"))
-    next_service = parse_date(excel_row.get("next_service"))
-    service_period = parse_int(excel_row.get("service_period"))
-    check_period = parse_int(excel_row.get("check_period"))
+    name            = normalize(excel_row.get("Название"))
+    inv_id          = normalize(excel_row.get("Инвентарный номер"))
+    sn              = normalize(excel_row.get("Серийный номер"))
+    quantity        = parse_int(excel_row.get("Количество"))
+    comment         = parse_text(excel_row.get("Комментарий"))
+    date_issue      = parse_date(excel_row.get("Дата выпуска"))
+    date_purchasing = parse_date(excel_row.get("Дата покупки"))
+    next_service    = parse_date(excel_row.get("Дата обслуживания"))
+    service_period  = parse_int(excel_row.get("Период обслуживания"))
+    check_period    = parse_int(excel_row.get("Период проверки"))
     # cost_center_code_from = excel_row.get("cost_center_code_from")
     # cost_center_name_from = excel_row.get("cost_center_name_from")
     # cost_center_shortname_from = excel_row.get("cost_center_shortname_from")
@@ -163,7 +162,7 @@ async def process_excel_row(
     if not inv_id and not sn:
         return {"status": "skipped", "reason": "Нет inventory_id и serial_number"}
 
-    # 1. Поиск в локальной БД
+    # Поиск в локальной БД
     stmt = select(Asset).where(
         or_(
             Asset.inventory_id == inv_id,
@@ -194,22 +193,22 @@ async def process_excel_row(
 
     # Матрица решений
     if local_asset:
-        # Обновляем значения строго из Excel
-        if name:
-            local_asset.name = name
-        if inv_id:
-            local_asset.inventory_id = inv_id
-        if sn:
-            local_asset.serial_number = sn
-        if quantity is not None:
-            local_asset.quantity = int(quantity)
-
-        # Кто обновил актив
-        local_asset.updated_by = employee_id
+        local_asset.name             = name            if name            else local_asset.name
+        local_asset.inventory_id     = inv_id          if inv_id          else local_asset.inventory_id
+        local_asset.serial_number    = sn              if sn              else local_asset.serial_number
+        local_asset.quantity         = quantity        if quantity        else local_asset.quantity
+        local_asset.comment          = comment         if comment         else local_asset.comment
+        local_asset.every_week_check = False
+        local_asset.date_issue       = date_issue      if date_issue      else local_asset.data_issue
+        local_asset.date_purchasing  = date_purchasing if date_purchasing else local_asset.date_purchasing
+        local_asset.next_service     = next_service    if next_service    else local_asset.next_service
+        local_asset.service_period   = service_period  if service_period  else local_asset.service_period
+        local_asset.check_period     = check_period    if check_period    else local_asset.check_period
+        local_asset.updated_by       = employee_id     if employee_id     else local_asset.updated_by
 
         await db.commit()
         await db.refresh(local_asset)
-        return {"status": "updated", "asset_id": local_asset.asset_id}
+        return {"status": "updated", "asset_id": local_asset.asset_id, "from_sap": False}
 
     else:
         # Создаем новую запись
@@ -221,8 +220,8 @@ async def process_excel_row(
             serial_number=sn or base_data.get("serial_number"),
             quantity=int(quantity) if quantity is not None else (int(base_data.get("quantity", 1)) if base_data.get("quantity") else 1),
             material_id=base_data.get("material_id"),
+            every_week_check=False,
             comment=comment,                    # Данные брать только из Excel
-            every_week_check=False,             # Данные брать только из Excel
             date_issue=date_issue,              # Данные брать только из Excel
             date_purchasing=date_purchasing,    # Данные брать только из Excel
             next_service=next_service,          # Данные брать только из Excel
@@ -235,12 +234,16 @@ async def process_excel_row(
             cost_center_code=base_data.get("cost_center_code"),
             cost_center_name=base_data.get("cost_center_name"),
             cost_center_shortname=base_data.get("cost_center_shortname"),
+
+            # Тип и статус по умолчанию
+            asset_type_id=0,
+            asset_status_id=9,
         )
 
         db.add(new_asset)
         await db.commit()
         await db.refresh(new_asset)
-        return {"status": "created", "asset_id": new_asset.asset_id}
+        return {"status": "created", "asset_id": new_asset.asset_id, "from_sap": True}
 
 @router_excel_import.post("/import-from-excel")
 async def import_from_excel(
@@ -254,43 +257,44 @@ async def import_from_excel(
     if not file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx или .xls")
 
-    # 1. Получаем список разрешенных cost_center_code
+    # Получаем список разрешенных cost_center_code
     allowed_cost_centers = await get_user_allowed_cost_centers(token)
     if not allowed_cost_centers:
         raise HTTPException(status_code=403, detail="У пользователя нет прав (read/write) ни для одного department_code")
 
-    # 2. Читаем файл
+    # Читаем файл
     contents = await file.read()
     try:
         df = pd.read_excel(
             io.BytesIO(contents),
             dtype={
-                "inventory_id": str,
-                "serial_number": str,
-                "name": str
+                "Название": str,
+                "Инвентарный номер": str,
+                "Серийный номер": str,
             }
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка чтения Excel файла: {str(e)}")
 
-    # 3. Проверяем наличие обязательных колонок
-    required_columns = {"name", "inventory_id", "serial_number", "quantity"}
+    # Проверяем наличие обязательных колонок
+    required_columns = {"Название", "Инвентарный номер", "Серийный номер", "Количество"}
     missing_columns = required_columns - set(df.columns)
+
     if missing_columns:
         raise HTTPException(
             status_code=400,
             detail=f"В файле отсутствуют обязательные колонки: {missing_columns}"
         )
 
-    # 4. Обрабатываем каждую строку
+    # Обрабатываем каждую строку
     results = []
     for index, row in df.iterrows():
         excel_row = row.to_dict()
 
         # Извлекаем основные поля для включения в ответ (для наглядности и отладки)
-        inv_id = normalize(excel_row.get("inventory_id"))
-        sn = normalize(excel_row.get("serial_number"))
-        name = normalize(excel_row.get("name"))
+        name = normalize(excel_row.get("Название"))
+        inv_id = normalize(excel_row.get("Инвентарный номер"))
+        sn = normalize(excel_row.get("Серийный номер"))
 
         try:
             result = await process_excel_row(

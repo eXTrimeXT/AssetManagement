@@ -17,12 +17,16 @@ async def create_asset_type(db: AsyncSession, data: AssetTypeCreate, employee_id
 
 
 async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> Optional[AssetType]:
-    result = await db.execute(
+    res = await db.execute(
         select(AssetType)
         .options(selectinload(AssetType.creator))
         .where(AssetType.asset_type_id == asset_type_id)
     )
-    return result.scalar_one_or_none()
+    return res.scalar_one_or_none()
+
+# async def get_asset_type_by_name(db: AsyncSession, name: str) -> Optional[AssetType]:
+#     res = await db.execute(select(AssetType).where(AssetType.name == name))
+#     return res.scalar_one_or_none()
 
 async def get_asset_types_list(
         db: AsyncSession,
@@ -39,8 +43,9 @@ async def get_asset_types_list(
         query = query.where(AssetType.en_name.ilike(f"%{en_name}%"))
 
     query = query.offset(skip).limit(limit).order_by(AssetType.asset_type_id.asc())
-    result = await db.execute(query)
-    return result.scalars().all()
+    res = await db.execute(query)
+    return res.scalars().all()
+
 
 
 async def update_asset_type(db: AsyncSession, asset_type_id: int, data: AssetTypeUpdate) -> Optional[AssetType]:

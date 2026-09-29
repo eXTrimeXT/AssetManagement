@@ -122,6 +122,7 @@ async def preview_excel_row(
 
     if local_asset:
         # Слияние: Локальная БД + перезапись полями из Excel, если они есть
+        # (Пользователи при обновлении из Excel обычно не меняются, оставляем как есть в БД)
         return {
             "excel_row_index": row_index,
             "status": "update",
@@ -158,6 +159,18 @@ async def preview_excel_row(
                     "name": name, "inventory_id": inv_id, "serial_number": sn
                 }
 
+        # === ПОДТЯГИВАНИЕ ПОЛЬЗОВАТЕЛЕЙ ИЗ SAP ===
+        sap_employee_id = sap_asset.get("employee_id")
+        formatted_emp_id = None
+        if sap_employee_id and sap_employee_id != "00000000":
+            # Форматируем табельный номер так же, как в get_assets_list_with_sap (добавление "00")
+            formatted_emp_id = "00" + str(sap_employee_id).strip()
+
+        sap_users = []
+        if formatted_emp_id:
+            sap_users.append({"employee_id": formatted_emp_id})
+        # ==========================================
+
         # Слияние: SAP + перезапись полями из Excel
         return {
             "excel_row_index": row_index,
@@ -182,6 +195,9 @@ async def preview_excel_row(
             "cost_center_shortname": sap_asset.get("cost_center_shortname"),
             "asset_type_id": 0,
             "asset_status_id": 9,
+            # === ДОБАВЛЕНО: Передаем пользователей в формат, ожидаемый AssetCreate ===
+            "users": sap_users,
+            "current_user": formatted_emp_id, # Опционально: для удобства отображения на фронте
         }
 
     # Не найдено нигде

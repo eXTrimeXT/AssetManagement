@@ -766,7 +766,6 @@ def _build_virtual_asset(
         "updated_by": None,
         "created_at": None,
         "updated_at": None,
-        # ВАЖНО: виртуальный тип SAP. Должен совпадать с .
         "asset_type_name": "Без типа",
         "asset_type_id": WITHOUT_TYPE_ASSET_ID,
         "location": None,

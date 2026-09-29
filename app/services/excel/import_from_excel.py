@@ -385,6 +385,55 @@ async def preview_import(
     }
 
 
+# @router_excel_import.post("/bulk-save")
+# async def bulk_save_assets(
+#         items: List[Dict[str, Any]],
+#         db: AsyncSession = Depends(get_db),
+#         current_user = Depends(require_authorized_user)
+# ):
+#     """Массовое создание или обновление активов на основе данных, отредактированных на фронтенде."""
+#     results = []
+#
+#     for item_data in items:
+#         asset_id = item_data.get("asset_id")
+#
+#         try:
+#             clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason"]}
+#
+#             if asset_id:
+#                 update_schema = AssetUpdate(**clean_data)
+#                 updated_asset = await update_asset(db, asset_id, update_schema, current_user.employee_id)
+#                 results.append({
+#                     "asset_id": asset_id,
+#                     "status": "updated",
+#                     "success": True
+#                 })
+#             else:
+#                 create_schema = AssetCreate(**clean_data)
+#                 created_asset = await create_asset(db, create_schema, current_user.employee_id)
+#                 results.append({
+#                     "asset_id": created_asset.asset_id if created_asset else None,
+#                     "status": "created",
+#                     "success": True
+#                 })
+#         except Exception as e:
+#             await db.rollback()
+#             logger.error(f"Ошибка при сохранении актива {item_data.get('inventory_id')}: {e}", exc_info=True)
+#             results.append({
+#                 "asset_id": asset_id,
+#                 "status": "error",
+#                 "success": False,
+#                 "reason": str(e)
+#             })
+#
+#     success_count = sum(1 for r in results if r["success"])
+#     return {
+#         "total_processed": len(items),
+#         "success_count": success_count,
+#         "error_count": len(items) - success_count,
+#         "details": results
+#     }
+
 @router_excel_import.post("/bulk-save")
 async def bulk_save_assets(
         items: List[Dict[str, Any]],
@@ -396,11 +445,36 @@ async def bulk_save_assets(
 
     for item_data in items:
         asset_id = item_data.get("asset_id")
+        inv_id = item_data.get("inventory_id")
+        sn = item_data.get("serial_number")
+        material_id = item_data.get("material_id")
 
         try:
+            # Исключаем служебные поля предпросмотра
             clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason"]}
 
+            # === ЗАЩИТА ОТ UNIQUE VIOLATION ===
+            # Если фронтенд говорит "создать" (asset_id == null), но мы находим актив в БД
+            # по инвентарному, серийному или material_id, мы принудительно переключаемся на UPDATE.
+            if not asset_id:
+                conditions = []
+                if inv_id:
+                    conditions.append(Asset.inventory_id == inv_id)
+                if sn:
+                    conditions.append(Asset.serial_number == sn)
+                if material_id:
+                    conditions.append(Asset.material_id == material_id)
+
+                if conditions:
+                    stmt = select(Asset.asset_id).where(or_(*conditions))
+                    result = await db.execute(stmt2)
+                    existing_asset_id = result.scalar_one_or_none()
+
+                    if existing_asset_id:
+                        asset_id = existing_asset_id  # Переключаем режим на обновление!
+
             if asset_id:
+                # === ОБНОВЛЕНИЕ СУЩЕСТВУЮЩЕГО ===
                 update_schema = AssetUpdate(**clean_data)
                 updated_asset = await update_asset(db, asset_id, update_schema, current_user.employee_id)
                 results.append({
@@ -409,6 +483,7 @@ async def bulk_save_assets(
                     "success": True
                 })
             else:
+                # === СОЗДАНИЕ НОВОГО ===
                 create_schema = AssetCreate(**clean_data)
                 created_asset = await create_asset(db, create_schema, current_user.employee_id)
                 results.append({
@@ -433,7 +508,6 @@ async def bulk_save_assets(
         "error_count": len(items) - success_count,
         "details": results
     }
-
 
 @router_excel_import.get("/import-template")
 async def get_import_template():

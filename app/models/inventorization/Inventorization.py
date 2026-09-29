@@ -35,6 +35,6 @@ class InventorizationItem(Base):
     quantity = Column(Integer, nullable=True)                       # Количество из актива (копируется при создании сессии)
     quantity_fact = Column(Integer, nullable=True, default=None)    # Фактическое количество (указывается при проверке)
 
-    checked_by = Column(String(20), ForeignKey("zup_employees.employee_id", nullable=True)) # Кто сверил
+    checked_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто сверил
 
     session = relationship("InventorizationSession", back_populates="items")

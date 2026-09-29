@@ -467,7 +467,7 @@ async def bulk_save_assets(
 
                 if conditions:
                     stmt = select(Asset.asset_id).where(or_(*conditions))
-                    result = await db.execute(stmt2)
+                    result = await db.execute(stmt)
                     existing_asset_id = result.scalar_one_or_none()
 
                     if existing_asset_id:

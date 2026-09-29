@@ -38,18 +38,22 @@ async def get_inventory_items_by_session_id(
 ) -> Tuple[Sequence[InventorizationItem], int]:
     """Получить элементы сессии инвентаризации с пагинацией. Возвращает (items, total_count)"""
 
-    # 1. Получаем общее количество записей для этой сессии
+    # Получаем общее количество записей для этой сессии
     count_query = select(func.count(InventorizationItem.inventorization_id)).where(
         InventorizationItem.session_id == session_id
     )
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
 
-    # 2. Получаем пагинированный список элементов
+    # Получаем пагинированный список элементов
     offset = (page - 1) * page_size
     items_query = (
         select(InventorizationItem)
         .where(InventorizationItem.session_id == session_id)
+        .options(
+            # === ДОБАВЛЕНО: Явная загрузка данных сотрудника ===
+            selectinload(InventorizationItem.checked_employee)
+        )
         .order_by(InventorizationItem.inventorization_id) # Добавляем порядок для стабильной пагинации
         .offset(offset)
         .limit(page_size)

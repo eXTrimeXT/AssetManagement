@@ -1,3 +1,6 @@
+from typing import Optional
+
+from pydantic import computed_field
 from sqlalchemy import Column, Integer, Boolean, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -16,7 +19,6 @@ class InventorizationSession(Base):
     end_date = Column(DateTime(timezone=True), nullable=True)   # Дата и время завершения инвентаризации
 
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто создал
-
 
     items = relationship("InventorizationItem", back_populates="session", cascade="all, delete-orphan")
     asset_type = relationship("AssetType", foreign_keys=[asset_type_id])
@@ -38,3 +40,26 @@ class InventorizationItem(Base):
     checked_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто сверил
 
     session = relationship("InventorizationSession", back_populates="items")
+
+    # === ДОБАВЛЯЕМ СВЯЗЬ С СОТРУДНИКОМ ===
+    checked_employee = relationship(
+        "Employee",
+        primaryjoin="InventorizationItem.checked_by == Employee.employee_id",
+        foreign_keys=[checked_by],
+        lazy="selectin" # Гарантирует загрузку без N+1 запросов
+    )
+
+    # === ДОБАВЛЯЕМ ВЫЧИСЛЯЕМОЕ ПОЛЕ ДЛЯ ФИО ===
+    @computed_field
+    @property
+    def checked_by_full_name(self) -> Optional[str]:
+        if self.checked_employee:
+            parts = [
+                self.checked_employee.last_name,
+                self.checked_employee.first_name,
+                self.checked_employee.middle_name
+            ]
+            # Фильтруем None и пустые строки, затем объединяем через пробел
+            clean_parts = [p for p in parts if p]
+            return " ".join(clean_parts) if clean_parts else None
+        return None

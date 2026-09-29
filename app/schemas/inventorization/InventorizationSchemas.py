@@ -21,6 +21,7 @@ class InventorizationItemResponse(BaseModel):
     quantity_fact: Optional[int] = None
 
     checked_by: Optional[str] = None
+    checked_by_full_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

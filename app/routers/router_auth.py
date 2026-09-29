@@ -97,6 +97,7 @@ async def auth_token(
         result = user_data.to_dict()
         result["token"] = request.token
         result["employee_id"] = employee.employee_id
+        result["permission_departments"] = payload.get("permission_departments")
 
         return result
 

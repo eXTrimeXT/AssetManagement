@@ -74,6 +74,7 @@ async def sync_employee_data(db: AsyncSession) -> Dict[str, int]:
 
     logger.info("Синхронизация сотрудников...")
     employees_data = await fetch_from_zup("employees")
+
     for emp in employees_data:
         await upsert_employee(db, {
             "guid": emp["GUID"],
@@ -94,6 +95,9 @@ async def sync_employee_data(db: AsyncSession) -> Dict[str, int]:
             "department_guid": emp.get("department")
         })
         stats["employees"] += 1
+    # ВАЖНО: Делаем commit ОДИН РАЗ после обработки всех сотрудников
+    await db.commit()
+    logger.info(f"Синхронизация сотрудников завершена. Обработано: {stats['employees']}")
     return stats
 
 async def sync_all_data(db: AsyncSession) -> Dict[str, int]:

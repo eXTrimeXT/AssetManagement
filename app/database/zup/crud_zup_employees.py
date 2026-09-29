@@ -325,18 +325,59 @@ async def get_employees_list(
 
     return employees, total
 
+# async def upsert_employee(db: AsyncSession, employee_data: dict) -> Employee:
+#     employee = await get_employee_by_guid(db, employee_data["guid"])
+#     if employee:
+#         for key, value in employee_data.items():
+#             if hasattr(employee, key):
+#                 setattr(employee, key, value)
+#     else:
+#         employee = Employee(**employee_data)
+#         db.add(employee)
+#     await db.commit()
+#     await db.refresh(employee)
+#     return employee
+
 async def upsert_employee(db: AsyncSession, employee_data: dict) -> Employee:
-    employee = await get_employee_by_guid(db, employee_data["guid"])
-    if employee:
-        for key, value in employee_data.items():
-            if hasattr(employee, key):
-                setattr(employee, key, value)
-    else:
-        employee = Employee(**employee_data)
-        db.add(employee)
-    await db.commit()
-    await db.refresh(employee)
-    return employee
+    """
+    Создает нового сотрудника или обновляет существующего по уникальному employee_id.
+    Использует нативный PostgreSQL ON CONFLICT DO UPDATE.
+    """
+    # Создаем оператор INSERT
+    stmt = insert(Employee).values(**employee_data)
+
+    # Указываем, какие поля обновлять, если employee_id уже существует
+    # stmt.excluded ссылается на значения, которые мы пытались вставить
+    update_dict = {
+        "guid": stmt.excluded.guid,
+        "guid_person": stmt.excluded.guid_person,
+        "active_directory_login": stmt.excluded.active_directory_login,
+        "comment": stmt.excluded.comment,
+        "last_name": stmt.excluded.last_name,
+        "first_name": stmt.excluded.first_name,
+        "middle_name": stmt.excluded.middle_name,
+        "last_name_en": stmt.excluded.last_name_en,
+        "first_name_en": stmt.excluded.first_name_en,
+        "middle_name_en": stmt.excluded.middle_name_en,
+        "birth_date": stmt.excluded.birth_date,
+        "employment_date": stmt.excluded.employment_date,
+        "dismissal_date": stmt.excluded.dismissal_date,
+        "phone": stmt.excluded.phone,
+        "email": stmt.excluded.email,
+        "position_guid": stmt.excluded.position_guid,
+        "department_guid": stmt.excluded.department_guid,
+        "updated_at": func.now(),  # Обновляем время изменения
+    }
+
+    # при конфликте по employee_id -> обновить поля из update_dict
+    stmt = stmt.on_conflict_do_update(
+        index_elements=['employee_id'],
+        set_=update_dict
+    )
+
+    await db.execute(stmt)
+    result = await db.execute(select(Employee).where(Employee.employee_id == employee_data["employee_id"]))
+    return result.scalar_one()
 
 async def bulk_upsert_employees(db: AsyncSession, employees: List[Dict[str, Any]]) -> int:
     """

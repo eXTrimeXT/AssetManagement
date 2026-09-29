@@ -17,12 +17,12 @@ class Asset(Base):
     material_id = Column(String(50), unique=True, index=True, nullable=True)
 
     # Основные поля
-    name = Column(String(150), nullable=False, index=True)
-    inventory_id = Column(String(100), unique=True, index=True, nullable=True)
-    serial_number = Column(String(100), unique=True, index=True, nullable=True)
-    asset_status_id = Column(Integer, ForeignKey("asset_status.id"), nullable=True)
-    quantity = Column(Integer, default=1, nullable=True)
-    comment = Column(Text)
+    name = Column(String(150), nullable=False, index=True)                          # Название актива
+    inventory_id = Column(String(100), unique=True, index=True, nullable=True)      # Инвентарный номер
+    serial_number = Column(String(100), unique=True, index=True, nullable=True)     # Серийный номер
+    asset_status_id = Column(Integer, ForeignKey("asset_status.id"), nullable=True) # id статуса актива
+    quantity = Column(Integer, default=1, nullable=True) # Количество
+    comment = Column(Text)  # Комментарий
 
     # Коды департаментов
     cost_center_code_from = Column(String(10), nullable=True)       # Код ответственного департамента
@@ -34,8 +34,8 @@ class Asset(Base):
     cost_center_shortname = Column(String(12), nullable=True)   # Аббревиатура департамента владельца
 
     # Даты
-    date_issue = Column(Date)
-    date_purchasing = Column(Date)
+    date_issue = Column(Date)           # Дата выпуска
+    date_purchasing = Column(Date)      # Дата покупки
 
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
@@ -47,21 +47,21 @@ class Asset(Base):
     vendor_name = Column(String(100), nullable=True)
     os_name = Column(String(100), nullable=True)
 
-    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True)
+    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), index=True) # id типа актива
     parent_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), index=True)
     # location_id = Column(Integer, ForeignKey("locations.location_id"), index=True)
 
     # Еженедельная проверка оборудования
-    every_week_check = Column(Boolean, default=false)
-    next_service = Column(Date)  # date
-    service_period = Column(Integer, default=0) # Int (count days)
-    check_period = Column(Integer, default=0) # Int (count days)
+    every_week_check = Column(Boolean, default=false) # TODO: удалить
+    next_service = Column(Date)                     # Следующее обслуживание
+    service_period = Column(Integer, default=0)     # Период обслуживания
+    check_period = Column(Integer, default=0)       # Период проверки
 
     # Аудит
-    created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-    updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))    # Создан кем
+    updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))    # Изменён кем
+    created_at = Column(DateTime, default=func.now(), nullable=False)           # Создан когда
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())      # Изменён когда
 
     # Relationships
     model = relationship("AssetModel", back_populates="assets")
@@ -152,153 +152,6 @@ class Asset(Base):
                 parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
                 full_name_ru=" ".join(parts_ru) if parts_ru else None
         return full_name_ru
-
-    # @computed_field
-    # @property
-    # def users(self) -> List[AssetUserFullResponse]:
-    #     """Список обычных пользователей с полной информацией"""
-    #     result = []
-    #     for a in self.assignments:
-    #         if a.end_date is not None:
-    #             continue
-    #         if a.assignment_type != "user":
-    #             continue
-    #         emp = a.employee
-    #         if not emp:
-    #             continue
-    #
-    #         parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
-    #         parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
-    #
-    #         result.append(AssetUserFullResponse(
-    #             # Базовые поля
-    #             guid=emp.guid,
-    #             employee_id=emp.employee_id,
-    #             # last_name=emp.last_name,
-    #             # first_name=emp.first_name,
-    #             # middle_name=emp.middle_name,
-    #             # last_name_en=emp.last_name_en,
-    #             # first_name_en=emp.first_name_en,
-    #             # middle_name_en=emp.middle_name_en,
-    #             birth_date=emp.birth_date,
-    #             employment_date=emp.employment_date,
-    #             dismissal_date=emp.dismissal_date,
-    #             phone=emp.phone,
-    #             email=emp.email,
-    #             comment=emp.comment,
-    #             position_guid=emp.position_guid,
-    #             department_guid=emp.department_guid,
-    #             created_at=emp.created_at,
-    #             updated_at=emp.updated_at,
-    #
-    #             # Вычисляемые поля
-    #             full_name_ru=" ".join(parts_ru) if parts_ru else None,
-    #             full_name_en=" ".join(parts_en) if parts_en else None,
-    #
-    #             # Поля из AssetAssignment
-    #             start_date=a.start_date,
-    #             end_date=a.end_date,
-    #             assignment_type=a.assignment_type,
-    #         ))
-    #     return result
-    #
-    # @computed_field
-    # @property
-    # def responsible_users(self) -> List[AssetUserFullResponse]:
-    #     """Список ответственных пользователей с полной информацией"""
-    #     result = []
-    #     for a in self.assignments:
-    #         if a.end_date is not None:
-    #             continue
-    #         if a.assignment_type != "responsible":
-    #             continue
-    #         emp = a.employee
-    #         if not emp:
-    #             continue
-    #
-    #         parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
-    #         parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
-    #
-    #         result.append(AssetUserFullResponse(
-    #             # Базовые поля
-    #             guid=emp.guid,
-    #             employee_id=emp.employee_id,
-    #             # last_name=emp.last_name,
-    #             # first_name=emp.first_name,
-    #             # middle_name=emp.middle_name,
-    #             # last_name_en=emp.last_name_en,
-    #             # first_name_en=emp.first_name_en,
-    #             # middle_name_en=emp.middle_name_en,
-    #             birth_date=emp.birth_date,
-    #             employment_date=emp.employment_date,
-    #             dismissal_date=emp.dismissal_date,
-    #             phone=emp.phone,
-    #             email=emp.email,
-    #             comment=emp.comment,
-    #             position_guid=emp.position_guid,
-    #             department_guid=emp.department_guid,
-    #             created_at=emp.created_at,
-    #             updated_at=emp.updated_at,
-    #
-    #             # Вычисляемые поля
-    #             full_name_ru=" ".join(parts_ru) if parts_ru else None,
-    #             full_name_en=" ".join(parts_en) if parts_en else None,
-    #
-    #             # Поля из AssetAssignment
-    #             start_date=a.start_date,
-    #             end_date=a.end_date,
-    #             assignment_type=a.assignment_type,
-    #         ))
-    #     return result
-    #
-    # @computed_field
-    # @property
-    # def serving_users(self) -> List[AssetUserFullResponse]:
-    #     """Список обслуживающих пользователей с полной информацией"""
-    #     result = []
-    #     for a in self.assignments:
-    #         if a.end_date is not None:
-    #             continue
-    #         if a.assignment_type != AssignmentTypeEnum.SERVING:
-    #             continue
-    #         emp = a.employee
-    #         if not emp:
-    #             continue
-    #
-    #         parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
-    #         parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
-    #
-    #         result.append(AssetUserFullResponse(
-    #             # Базовые поля
-    #             guid=emp.guid,
-    #             employee_id=emp.employee_id,
-    #             # last_name=emp.last_name,
-    #             # first_name=emp.first_name,
-    #             # middle_name=emp.middle_name,
-    #             # last_name_en=emp.last_name_en,
-    #             # first_name_en=emp.first_name_en,
-    #             # middle_name_en=emp.middle_name_en,
-    #             birth_date=emp.birth_date,
-    #             employment_date=emp.employment_date,
-    #             dismissal_date=emp.dismissal_date,
-    #             phone=emp.phone,
-    #             email=emp.email,
-    #             comment=emp.comment,
-    #             position_guid=emp.position_guid,
-    #             department_guid=emp.department_guid,
-    #             created_at=emp.created_at,
-    #             updated_at=emp.updated_at,
-    #
-    #             # Вычисляемые поля
-    #             full_name_ru=" ".join(parts_ru) if parts_ru else None,
-    #             full_name_en=" ".join(parts_en) if parts_en else None,
-    #
-    #             # Поля из AssetAssignment
-    #             start_date=a.start_date,
-    #             end_date=a.end_date,
-    #             assignment_type=a.assignment_type,
-    #         ))
-    #     return result
 
     @computed_field
     @property

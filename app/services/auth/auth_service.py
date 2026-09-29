@@ -13,6 +13,7 @@ from app.database.zup.crud_zup_employees import get_employee_by_login_or_email, 
 from app.database.zup.crud_zup_employees import get_employee_by_active_directory_login
 from app.services.zup.zup_integration import sync_all_data, sync_employee_data
 from app.services.auth.system_users import MockSystemEmployee, SYSTEM_USERS
+from app.schemas.auth.AuthSchemas import PermissionDepartments
 
 logger = logging.getLogger(__name__)
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
@@ -124,6 +125,14 @@ def get_user_permissions_from_token(token: str) -> Optional[Dict[str, Dict[str, 
         logger.error(f"Ошибка получения permissions из токена: {e}")
         return None
 
+def get_departments_permission_from_token(token: str) -> Optional[PermissionDepartments]:
+    try:
+        payload = decode_token(token)
+        permissions_raw = payload.get("permission_departments", [])
+        return permissions_raw
+    except Exception as e:
+        logger.error(f"Ошибка получения permissions из токена: {e}")
+        return None
 
 async def require_authorized_user(
         request: Request,

@@ -299,7 +299,7 @@ async def preview_excel_row(
             "cost_center_shortname": sap_asset.get("cost_center_shortname"),
             "asset_type_id": 0,
             "asset_status_id": 9,
-            "users": users,
+            "users": users
             # "current_user": formatted_emp_id,
         }
 
@@ -319,7 +319,7 @@ async def preview_excel_row(
         "service_period": service_period,
         "check_period": check_period,
         "asset_type_id": 0,
-        "asset_status_id": 9,
+        "asset_status_id": 9
     }
 
 # ==============================================================================

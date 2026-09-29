@@ -52,6 +52,13 @@ class AssetCreate(AssetBase):
     # Локация на карте
     location: Optional[AssetLocationUpdate] = None
 
+    cost_center_code_from: Optional[str] = None
+    cost_center_name_from: Optional[str] = None
+    cost_center_shortname_from: Optional[str] = None
+    cost_center_code: Optional[str] = None
+    cost_center_name: Optional[str] = None
+    cost_center_shortname: Optional[str] = None
+
     material_id: Optional[str] = None
 
 # Схема для обновления привязок пользователей
@@ -84,7 +91,6 @@ class AssetUpdate(BaseModel):
     cost_center_code: Optional[str] = None
     cost_center_name: Optional[str] = None
     cost_center_shortname: Optional[str] = None
-
 
     material_id: Optional[str] = None
 

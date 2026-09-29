@@ -14,7 +14,7 @@ from app.database.connection import get_db
 from app.models.assets.Asset import Asset
 from app.models.zup import Employee, ZupDepartment
 from app.services.auth.auth_service import get_token_from_request, require_authorized_user
-from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
+from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest
 from app.database.assets.crud_asset import update_asset, create_asset
 from app.services.gps_rs.getinfouser import get_user_allowed_cost_centers
 
@@ -436,12 +436,13 @@ async def preview_import(
 
 @router_excel_import.post("/bulk-save")
 async def bulk_save_assets(
-        items: List[Dict[str, Any]],
+        request_data: BulkSaveRequest,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
     """Массовое создание или обновление активов на основе данных, отредактированных на фронтенде."""
     results = []
+    items = request_data.items # <-- Извлекаем список из объекта
 
     for item_data in items:
         asset_id = item_data.get("asset_id")
@@ -450,12 +451,10 @@ async def bulk_save_assets(
         material_id = item_data.get("material_id")
 
         try:
-            # Исключаем служебные поля предпросмотра
+            # Исключаем служебные поля предпросмотра перед валидацией схемами
             clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason"]}
 
             # === ЗАЩИТА ОТ UNIQUE VIOLATION ===
-            # Если фронтенд говорит "создать" (asset_id == null), но мы находим актив в БД
-            # по инвентарному, серийному или material_id, мы принудительно переключаемся на UPDATE.
             if not asset_id:
                 conditions = []
                 if inv_id:

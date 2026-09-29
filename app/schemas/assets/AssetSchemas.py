@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from datetime import datetime, date
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 
 class AssetBase(BaseModel):
@@ -184,6 +184,8 @@ class AssetLocationResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class BulkSaveRequest(BaseModel):
+    items: List[Dict[str, Any]]
 
 class QRCodeRequest(BaseModel):
     name: Optional[str] = None

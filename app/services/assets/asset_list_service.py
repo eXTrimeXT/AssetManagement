@@ -217,7 +217,6 @@ async def get_assets_list_with_sap(
 # ============================================================
 # Локальная часть
 # ============================================================
-
 async def _get_local_assets_count(
         db: AsyncSession,
         asset_id: Optional[int],
@@ -266,8 +265,13 @@ async def _get_local_assets_count(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq))
 
+    # if cost_center_code_from:
+    #     query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+
     if cost_center_code_from:
-        query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()]
+        if ccc_list:
+            query = query.where(Asset.cost_center_code_from.in_(ccc_list))
 
     result = await db.execute(query)
     return result.scalar_one() or 0
@@ -345,8 +349,13 @@ async def _get_local_assets_slice(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
 
+    # if cost_center_code_from:
+    #     query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+
     if cost_center_code_from:
-        query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()]
+        if ccc_list:
+            query = query.where(Asset.cost_center_code_from.in_(ccc_list))
 
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -356,7 +365,6 @@ async def _get_local_assets_slice(
 # ============================================================
 # SAP-часть
 # ============================================================
-
 def _matches_cost_center(
         value: Optional[str],
         pattern: Optional[str],

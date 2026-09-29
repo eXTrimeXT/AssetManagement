@@ -140,7 +140,8 @@ async def check_inventory_item(
         db: AsyncSession,
         session_id: int,
         asset_id: int,
-        quantity_fact: Optional[int] = None
+        checked_by: str,
+        quantity_fact: Optional[int] = None,
 ) -> bool:
     # === ПРОВЕРКА: quantity_fact не может быть меньше 0 ===
     if quantity_fact is not None and quantity_fact < 0:
@@ -165,6 +166,7 @@ async def check_inventory_item(
     if item:
         item.is_checked = True
         item.quantity_fact = quantity_fact
+        item.checked_by = checked_by
         await db.commit()
         return True
     return False

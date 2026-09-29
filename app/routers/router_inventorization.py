@@ -102,7 +102,13 @@ async def check_item(
             status_code=400,
             detail="Количество не может быть меньше 0"
         )
-    success = await check_inventory_item(db, session_id, data.asset_id, data.quantity_fact)
+    success = await check_inventory_item(
+        db=db,
+        session_id=session_id,
+        asset_id=data.asset_id,
+        checked_by=current_user.employee_id,
+        quantity_fact=data.quantity_fact
+    )
     if not success:
         raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
     return {"message": "success"}

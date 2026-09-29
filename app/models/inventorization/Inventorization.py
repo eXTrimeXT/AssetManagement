@@ -17,6 +17,7 @@ class InventorizationSession(Base):
 
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто создал
 
+
     items = relationship("InventorizationItem", back_populates="session", cascade="all, delete-orphan")
     asset_type = relationship("AssetType", foreign_keys=[asset_type_id])
 
@@ -33,5 +34,7 @@ class InventorizationItem(Base):
 
     quantity = Column(Integer, nullable=True)                       # Количество из актива (копируется при создании сессии)
     quantity_fact = Column(Integer, nullable=True, default=None)    # Фактическое количество (указывается при проверке)
+
+    checked_by = Column(String(20), ForeignKey("zup_employees.employee_id", nullable=True)) # Кто сверил
 
     session = relationship("InventorizationSession", back_populates="items")

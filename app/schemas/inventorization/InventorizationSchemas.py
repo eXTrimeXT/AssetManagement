@@ -20,6 +20,8 @@ class InventorizationItemResponse(BaseModel):
     quantity: Optional[int] = None
     quantity_fact: Optional[int] = None
 
+    checked_by: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 class InventorizationSessionResponse(BaseModel):

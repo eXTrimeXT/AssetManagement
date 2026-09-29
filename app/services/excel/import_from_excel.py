@@ -245,7 +245,7 @@ async def process_excel_row(
         await db.refresh(new_asset)
         return {"status": "created", "asset_id": new_asset.asset_id, "from_sap": True}
 
-@router_excel_import.post("/import-from-excel")
+@router_excel_import.post("/import")
 async def import_from_excel(
         request: Request,
         file: UploadFile = File(..., description="Excel файл для импорта"),

@@ -67,7 +67,7 @@ async def get_asset_types(
         has_perm = await check_permission(request, asset_type.en_name, "read")
         if has_perm:
             accessible_types.append(asset_type)
-            logger.debug(f"Есть право read на {asset_type.en_name}")
+            # logger.debug(f"Есть право read на {asset_type.en_name}")
     return accessible_types
 
 

@@ -249,7 +249,7 @@ async def preview_excel_row(
                 users.append(enriched_user)
 
         # Если есть привязка и нет данных из Excel, то передаем пользователей
-        elif assignments and not employee_id:
+        elif assignments:
             for assignment in assignments:
                 enriched_user = await _get_enriched_user(db, assignment.employee_id)
                 if enriched_user:

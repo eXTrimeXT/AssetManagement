@@ -96,6 +96,11 @@ async def _get_enriched_user(db: AsyncSession, employee_id: str, start_date: Opt
     if not employee_id:
         return None
 
+    # 1068
+    if len(employee_id) < 10:
+        len_emp_id = len(employee_id) # 4
+        employee_id = ("0" * (10-len_emp_id)) + employee_id
+
     stmt = select(Employee).options(
         selectinload(Employee.position),
         selectinload(Employee.group).options(
@@ -228,11 +233,13 @@ async def preview_excel_row(
     local_asset = result.scalars().first()
 
     if local_asset:
-        # users = []
-        # if employee_id:
-        #     enriched_user = await _get_enriched_user(db, employee_id, local_asset.get("changed_date"))
-        #     if enriched_user:
-        #         users.append(enriched_user)
+        users = []
+        if employee_id:
+            logger.error(f"LOCAL 1: {employee_id=}")
+            enriched_user = await _get_enriched_user(db, employee_id)
+            if enriched_user:
+                logger.error(f"LOCAL 2: {employee_id=}")
+                users.append(enriched_user)
 
         return {
             "excel_row_index": row_index,
@@ -251,7 +258,7 @@ async def preview_excel_row(
             "asset_type_id": local_asset.asset_type_id,
             "asset_status_id": local_asset.asset_status_id,
             "material_id": local_asset.material_id,
-            # "users": users
+            "users": users
         }
 
     # Поиск в SAP
@@ -312,8 +319,10 @@ async def preview_excel_row(
     # Не найдено нигде
     users = []
     if employee_id:
-        enriched_user = await _get_enriched_user(db, employee_id, local_asset.get("changed_date"))
+        logger.error(f"RETURN 1: {employee_id=}")
+        enriched_user = await _get_enriched_user(db, employee_id)
         if enriched_user:
+            logger.error(f"RETURN 2: {employee_id=}")
             users.append(enriched_user)
 
     return {

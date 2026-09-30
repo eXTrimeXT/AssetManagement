@@ -329,12 +329,9 @@ async def generate_qr_code(request: QRCodeRequest):
         serial_number=serial_display
     )
 
-    # Кодирование в Base64
+    # 7. Кодирование в Base64 для формата data URI
     svg_bytes = final_svg.encode('utf-8')
     base64_encoded = base64.b64encode(svg_bytes).decode('utf-8')
     data_uri = f"data:image/svg+xml;base64,{base64_encoded}"
 
-    return {
-        "success": True,
-        "data_uri": data_uri
-    }
+    return Response(content=data_uri, media_type="image/svg+xml")

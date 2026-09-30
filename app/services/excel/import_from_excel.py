@@ -205,6 +205,9 @@ async def preview_excel_row(
     service_period = parse_int(excel_row.get("Период обслуживания"))
     check_period = parse_int(excel_row.get("Период проверки"))
 
+    employee_id = parse_text(excel_row.get("Табельный номер"))
+    employee_full_name = parse_int(excel_row.get("ФИО"))
+
     if not inv_id and not sn:
         return {
             "excel_row_index": row_index,
@@ -212,11 +215,6 @@ async def preview_excel_row(
             "reason": "Нет inventory_id и serial_number",
             "name": name, "inventory_id": inv_id, "serial_number": sn
         }
-
-    # Поиск в локальной БД
-    # stmt = select(Asset).where(or_(Asset.inventory_id == inv_id, Asset.serial_number == sn))
-    # result = await db.execute(stmt)
-    # local_asset = result.scalar_one_or_none()
 
     # Поиск в локальной БД (используем .first(), чтобы избежать ошибки при дубликатах)
     stmt = select(Asset).where(
@@ -229,6 +227,12 @@ async def preview_excel_row(
     local_asset = result.scalars().first()
 
     if local_asset:
+        users = []
+        if employee_id:
+            enriched_user = await _get_enriched_user(db, employee_id, local_asset.get("changed_date"))
+            if enriched_user:
+                users.append(enriched_user)
+
         return {
             "excel_row_index": row_index,
             "status": "update",
@@ -246,6 +250,7 @@ async def preview_excel_row(
             "asset_type_id": local_asset.asset_type_id,
             "asset_status_id": local_asset.asset_status_id,
             "material_id": local_asset.material_id,
+            "users": users
         }
 
     # Поиск в SAP
@@ -383,56 +388,6 @@ async def preview_import(
         "total_rows": len(df),
         "items": results
     }
-
-
-# @router_excel_import.post("/bulk-save")
-# async def bulk_save_assets(
-#         items: List[Dict[str, Any]],
-#         db: AsyncSession = Depends(get_db),
-#         current_user = Depends(require_authorized_user)
-# ):
-#     """Массовое создание или обновление активов на основе данных, отредактированных на фронтенде."""
-#     results = []
-#
-#     for item_data in items:
-#         asset_id = item_data.get("asset_id")
-#
-#         try:
-#             clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason"]}
-#
-#             if asset_id:
-#                 update_schema = AssetUpdate(**clean_data)
-#                 updated_asset = await update_asset(db, asset_id, update_schema, current_user.employee_id)
-#                 results.append({
-#                     "asset_id": asset_id,
-#                     "status": "updated",
-#                     "success": True
-#                 })
-#             else:
-#                 create_schema = AssetCreate(**clean_data)
-#                 created_asset = await create_asset(db, create_schema, current_user.employee_id)
-#                 results.append({
-#                     "asset_id": created_asset.asset_id if created_asset else None,
-#                     "status": "created",
-#                     "success": True
-#                 })
-#         except Exception as e:
-#             await db.rollback()
-#             logger.error(f"Ошибка при сохранении актива {item_data.get('inventory_id')}: {e}", exc_info=True)
-#             results.append({
-#                 "asset_id": asset_id,
-#                 "status": "error",
-#                 "success": False,
-#                 "reason": str(e)
-#             })
-#
-#     success_count = sum(1 for r in results if r["success"])
-#     return {
-#         "total_processed": len(items),
-#         "success_count": success_count,
-#         "error_count": len(items) - success_count,
-#         "details": results
-#     }
 
 @router_excel_import.post("/bulk-save")
 async def bulk_save_assets(

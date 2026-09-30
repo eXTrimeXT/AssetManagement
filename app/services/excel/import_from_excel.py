@@ -18,6 +18,7 @@ from app.services.auth.auth_service import get_token_from_request, require_autho
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest
 from app.database.assets.crud_asset import update_asset, create_asset
 from app.services.gps_rs.getinfouser import get_user_allowed_cost_centers
+from app.database.assets.crud_asset_assignment import get_assignments_by_asset
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +213,7 @@ async def preview_excel_row(
     check_period = parse_int(excel_row.get("Период проверки"))
 
     employee_id = parse_text(excel_row.get("Табельный номер"))
-    employee_full_name = parse_int(excel_row.get("ФИО"))
+    users = []
 
     if not inv_id and not sn:
         return {
@@ -233,13 +234,23 @@ async def preview_excel_row(
     local_asset = result.scalars().first()
 
     if local_asset:
-        users = []
-        if employee_id:
+        # Получаем привязку актива и всех пользователей
+        assignments = await get_assignments_by_asset(db, asset_id=local_asset.asset_id, active_only=True)
+
+        # Если нет привязок, то создаем её из Excel
+        if not assignments and employee_id:
             logger.error(f"LOCAL 1: {employee_id=}")
             enriched_user = await _get_enriched_user(db, employee_id)
             if enriched_user:
                 logger.error(f"LOCAL 2: {employee_id=}")
                 users.append(enriched_user)
+        # Если есть привязка и нет данных из Excel, то передаем пользователей
+        elif assignments and not employee_id:
+            for assignment in assignments:
+                enriched_user = await _get_enriched_user(db, assignment.employee_id)
+                if enriched_user:
+                    users.append(enriched_user)
+
 
         return {
             "excel_row_index": row_index,
@@ -282,7 +293,6 @@ async def preview_excel_row(
         sap_employee_id = sap_asset.get("employee_id")
         formatted_emp_id = "00" + str(sap_employee_id).strip() if sap_employee_id else None
 
-        users = []
         if formatted_emp_id:
             enriched_user = await _get_enriched_user(db, formatted_emp_id, sap_asset.get("changed_date"))
             if enriched_user:
@@ -317,7 +327,6 @@ async def preview_excel_row(
         }
 
     # Не найдено нигде
-    users = []
     if employee_id:
         logger.error(f"RETURN 1: {employee_id=}")
         enriched_user = await _get_enriched_user(db, employee_id)

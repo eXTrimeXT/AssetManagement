@@ -9,6 +9,7 @@ from sqlalchemy import select, or_, inspect
 from sqlalchemy.orm import selectinload
 import pandas as pd
 import httpx
+from sqlalchemy.testing.suite.test_reflection import users
 
 from app.database.connection import get_db
 from app.models.assets.Asset import Asset
@@ -227,11 +228,11 @@ async def preview_excel_row(
     local_asset = result.scalars().first()
 
     if local_asset:
-        users = []
-        if employee_id:
-            enriched_user = await _get_enriched_user(db, employee_id, local_asset.get("changed_date"))
-            if enriched_user:
-                users.append(enriched_user)
+        # users = []
+        # if employee_id:
+        #     enriched_user = await _get_enriched_user(db, employee_id, local_asset.get("changed_date"))
+        #     if enriched_user:
+        #         users.append(enriched_user)
 
         return {
             "excel_row_index": row_index,
@@ -250,7 +251,7 @@ async def preview_excel_row(
             "asset_type_id": local_asset.asset_type_id,
             "asset_status_id": local_asset.asset_status_id,
             "material_id": local_asset.material_id,
-            "users": users
+            # "users": users
         }
 
     # Поиск в SAP
@@ -309,6 +310,12 @@ async def preview_excel_row(
         }
 
     # Не найдено нигде
+    users = []
+    if employee_id:
+        enriched_user = await _get_enriched_user(db, employee_id, local_asset.get("changed_date"))
+        if enriched_user:
+            users.append(enriched_user)
+
     return {
         "excel_row_index": row_index,
         "status": "create_new",
@@ -324,7 +331,8 @@ async def preview_excel_row(
         "service_period": service_period,
         "check_period": check_period,
         "asset_type_id": 0,
-        "asset_status_id": 9
+        "asset_status_id": 9,
+        "users": users
     }
 
 # ==============================================================================

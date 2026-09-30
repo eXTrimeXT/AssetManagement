@@ -327,7 +327,7 @@ async def generate_qr_code(request: QRCodeRequest):
     # Сборка финального SVG
     final_svg = svg_template.format(
         qr_code_path=qr_path_svg,
-        name_lines=name_lines_svg,
+        name_lines=name_lines_svg.replace('&', '&amp;'),
         inventory_id=request.inventory_id,
         serial_number=serial_display
     )

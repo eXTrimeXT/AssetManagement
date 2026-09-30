@@ -510,7 +510,8 @@
 
 import io
 import logging
-from datetime import date
+import re
+from datetime import date, datetime
 from typing import Optional, Dict, Any, List
 
 import pandas as pd
@@ -537,32 +538,24 @@ SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 # ==============================================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ==============================================================================
-
 def clean_inventory_id(value: Any) -> Optional[str]:
-    """
-    Специальная очистка инвентарного номера.
-    Убирает научную нотацию (9.7E+11), лишние .0, игнорирует мусор (?, 'не на балансе' и т.д.)
-    """
+    """Специальная очистка инвентарного номера."""
     if pd.isna(value) or value is None:
         return None
     val = str(value).strip()
 
-    # Игнорируем служебные пометки из Excel
     if val.lower() in ('nan', 'na', 'n/a', '?', 'не на балансе_ит', 'поставить на учет', 'new_поставить на учет'):
         return None
 
-    # Убираем .0 на конце, если pandas превратил число в float-строку
     if val.endswith('.0'):
         val = val[:-2]
 
-    # Пытаемся преобразовать научную нотацию в обычное число, если она просочилась
     try:
         val = str(int(float(val)))
     except ValueError:
         pass
 
     return val.upper() if val else None
-
 
 def normalize(value: Any) -> Optional[str]:
     if value is None:
@@ -572,15 +565,49 @@ def normalize(value: Any) -> Optional[str]:
         return None
     return val_str.upper()
 
-
 def parse_date(value: Any) -> Optional[date]:
+    """
+    Умный парсинг даты из Excel.
+    - Извлекает самую раннюю дату из текста (например, "Акт 28.11.2025... Акт 22.08.2026")
+    - Обрабатывает форматы DD.MM.YYYY и DD-MM-YYYY
+    - Если найден только год (YYYY), преобразует его в YYYY-01-01
+    """
     if pd.isna(value) or value is None or str(value).strip() == "":
         return None
-    try:
-        return pd.to_datetime(value).date()
-    except Exception:
-        return None
 
+    text = str(value).strip()
+
+    # Паттерн для поиска полных дат: DD.MM.YYYY или DD-MM-YYYY
+    pattern_full = r'\b(\d{2})[.\-](\d{2})[.\-](\d{4})\b'
+    # Паттерн для поиска только года: YYYY (в диапазоне 1900-2099)
+    pattern_year = r'\b(19\d{2}|20\d{2})\b'
+
+    found_dates = []
+
+    # Ищем полные даты
+    for match in re.finditer(pattern_full, text):
+        day, month, year = match.groups()
+        try:
+            dt = datetime.strptime(f"{day}.{month}.{year}", "%d.%m.%Y")
+            found_dates.append(dt.date())
+        except ValueError:
+            pass
+
+    # Если полных дат не найдено, ищем только год
+    if not found_dates:
+        for match in re.finditer(pattern_year, text):
+            year = match.group(1)
+            try:
+                dt = datetime.strptime(year, "%Y")
+                found_dates.append(dt.date())
+            except ValueError:
+                pass
+
+    # Возвращаем самую раннюю найденную дату
+    if found_dates:
+        return min(found_dates)
+
+    return None
 
 def parse_int(value: Any) -> Optional[int]:
     if pd.isna(value) or value is None or str(value).strip() == "":
@@ -589,7 +616,6 @@ def parse_int(value: Any) -> Optional[int]:
         return int(float(value))
     except (ValueError, TypeError):
         return None
-
 
 def parse_text(value: Any) -> Optional[str]:
     if pd.isna(value) or value is None:
@@ -731,7 +757,6 @@ async def _get_enriched_user(db: AsyncSession, employee_id: str, start_date: Opt
 # ==============================================================================
 # ЛОГИКА ПРЕДВАРИТЕЛЬНОГО ПРОСМОТРА
 # ==============================================================================
-
 async def preview_excel_row(
         excel_row: Dict[str, Any],
         db: AsyncSession,
@@ -781,16 +806,16 @@ async def preview_excel_row(
             "excel_row_index": row_index,
             "status": "update",
             "asset_id": local_asset.asset_id,
-            "name": name or local_asset.name,
-            "inventory_id": inv_id or local_asset.inventory_id,
-            "serial_number": sn or local_asset.serial_number,
+            "name": local_asset.name or name,
+            "inventory_id": local_asset.inventory_id or inv_id,
+            "serial_number": local_asset.serial_number or sn,
             "quantity": 1,
-            "comment": comment if comment else local_asset.comment,
-            "date_issue": date_issue or local_asset.date_issue,
-            "date_purchasing": date_purchasing or local_asset.date_purchasing,
-            "next_service": next_service or local_asset.next_service,
-            "service_period": service_period if service_period is not None else local_asset.service_period,
-            "check_period": check_period if check_period is not None else local_asset.check_period,
+            "comment": local_asset.comment or comment,
+            "date_issue": local_asset.date_issue or date_issue,
+            "date_purchasing": local_asset.date_purchasing or date_purchasing,
+            "next_service": local_asset.next_service or next_service,
+            "service_period": local_asset.service_period or service_period,
+            "check_period": local_asset.check_period or check_period,
             "asset_type_id": local_asset.asset_type_id,
             "asset_status_id": local_asset.asset_status_id,
             "material_id": local_asset.material_id,

@@ -185,6 +185,7 @@ class AssetLocationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class BulkSaveRequest(BaseModel):
+    asset_type_id: Optional[int] = 0
     items: List[Dict[str, Any]]
 
 class QRCodeRequest(BaseModel):

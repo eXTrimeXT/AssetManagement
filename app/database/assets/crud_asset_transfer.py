@@ -114,16 +114,6 @@ async def create_asset_from_sap_material(db: AsyncSession, material_id: str, cre
     await db.refresh(new_asset)
     return new_asset
 
-# async def check_pending_transfer_exists(db: AsyncSession, asset_id: int) -> bool:
-#     """Проверяет, есть ли уже активная PENDING-заявка на этот актив"""
-#     result = await db.execute(
-#         select(AssetTransfer).where(
-#             AssetTransfer.asset_id == asset_id,
-#             AssetTransfer.status == "PENDING"
-#         )
-#     )
-#     return result.scalar_one_or_none() is not None
-
 async def check_pending_transfer_exists(
         db: AsyncSession,
         asset_id: int,

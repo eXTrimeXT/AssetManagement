@@ -13,8 +13,8 @@ class AssetTransferRequest(BaseModel):
     def check_asset_source(self):
         if not self.asset_id and not self.material_id:
             raise ValueError("Необходимо указать либо asset_id, либо material_id")
-        if self.asset_id and self.asset_id != 0 and self.material_id and self.material_id != "":
-            raise ValueError("Можно указать только один источник актива: asset_id или material_id")
+        # if self.asset_id and self.asset_id != 0 and self.material_id and self.material_id != "":
+        #     raise ValueError("Можно указать только один источник актива: asset_id или material_id")
         return self
 
 class TransferActionRequest(BaseModel):

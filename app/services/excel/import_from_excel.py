@@ -204,16 +204,12 @@ async def preview_excel_row(
     inv_id = normalize(excel_row.get("Инвентарный номер"))
     sn = normalize(excel_row.get("Серийный номер"))
 
-    quantity = parse_int(excel_row.get("Количество"))
     comment = parse_text(excel_row.get("Комментарий"))
     date_issue = parse_date(excel_row.get("Дата выпуска"))
     date_purchasing = parse_date(excel_row.get("Дата покупки"))
     next_service = parse_date(excel_row.get("Дата обслуживания"))
     service_period = parse_int(excel_row.get("Период обслуживания"))
     check_period = parse_int(excel_row.get("Период проверки"))
-
-    employee_id = parse_text(excel_row.get("Табельный номер"))
-    users = []
 
     if not inv_id and not sn:
         return {
@@ -236,14 +232,14 @@ async def preview_excel_row(
     if local_asset:
         # Получаем привязки всех пользователей с активом
         assignments = await get_assignments_by_asset(db=db, asset_id=local_asset.asset_id, active_only=True)
-
+        employees = []
         # Если есть привязка, то передаем список пользователей
         if assignments:
             for assignment in assignments:
                 logger.error(f"{assignment.id=} {assignment.asset_id=} {assignment.employee_id=}")
                 enriched_user = await _get_enriched_user(db, assignment.employee_id)
                 if enriched_user:
-                    users.append(enriched_user)
+                    employees.append(enriched_user)
 
         return {
             "excel_row_index": row_index,
@@ -262,7 +258,7 @@ async def preview_excel_row(
             "asset_type_id": local_asset.asset_type_id,
             "asset_status_id": local_asset.asset_status_id,
             "material_id": local_asset.material_id,
-            "users": users
+            "users": employees
         }
 
     # Поиск в SAP
@@ -286,10 +282,11 @@ async def preview_excel_row(
         sap_employee_id = sap_asset.get("employee_id")
         formatted_emp_id = "00" + str(sap_employee_id).strip() if sap_employee_id else None
 
+        employees = []
         if formatted_emp_id:
             enriched_user = await _get_enriched_user(db, formatted_emp_id, sap_asset.get("changed_date"))
             if enriched_user:
-                users.append(enriched_user)
+                employees.append(enriched_user)
         # =====================================================
 
         return {
@@ -315,7 +312,7 @@ async def preview_excel_row(
             "cost_center_shortname": sap_asset.get("cost_center_shortname"),
             "asset_type_id": 0,
             "asset_status_id": 9,
-            "users": users
+            "users": employees
         }
 
     # Не найдено нигде
@@ -367,7 +364,7 @@ async def preview_import(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка чтения Excel файла: {str(e)}")
 
-    required_columns = {"Название", "Инвентарный номер", "Серийный номер", "Количество"}
+    required_columns = {"Название", "Инвентарный номер", "Серийный номер"}
     missing_columns = required_columns - set(df.columns)
     if missing_columns:
         raise HTTPException(status_code=400, detail=f"В файле отсутствуют обязательные колонки: {missing_columns}")

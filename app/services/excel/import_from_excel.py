@@ -234,27 +234,16 @@ async def preview_excel_row(
     local_asset = result.scalars().first()
 
     if local_asset:
-        # Получаем привязку актива и всех пользователей
+        # Получаем привязки всех пользователей с активом
         assignments = await get_assignments_by_asset(db=db, asset_id=local_asset.asset_id, active_only=True)
 
-        for a in assignments:
-            logger.error(f"{a.id=} {a.asset_id=} {a.employee_id=}")
-
-        # Если нет привязок, то создаем её из Excel
-        if not assignments and employee_id:
-            logger.error(f"LOCAL 1: {employee_id=}")
-            enriched_user = await _get_enriched_user(db, employee_id)
-            if enriched_user:
-                logger.error(f"LOCAL 2: {employee_id=}")
-                users.append(enriched_user)
-
-        # Если есть привязка и нет данных из Excel, то передаем пользователей
-        elif assignments:
+        # Если есть привязка, то передаем список пользователей
+        if assignments:
             for assignment in assignments:
+                logger.error(f"{assignment.id=} {assignment.asset_id=} {assignment.employee_id=}")
                 enriched_user = await _get_enriched_user(db, assignment.employee_id)
                 if enriched_user:
                     users.append(enriched_user)
-
 
         return {
             "excel_row_index": row_index,
@@ -327,17 +316,9 @@ async def preview_excel_row(
             "asset_type_id": 0,
             "asset_status_id": 9,
             "users": users
-            # "current_user": formatted_emp_id,
         }
 
     # Не найдено нигде
-    if employee_id:
-        logger.error(f"RETURN 1: {employee_id=}")
-        enriched_user = await _get_enriched_user(db, employee_id)
-        if enriched_user:
-            logger.error(f"RETURN 2: {employee_id=}")
-            users.append(enriched_user)
-
     return {
         "excel_row_index": row_index,
         "status": "create_new",
@@ -354,7 +335,7 @@ async def preview_excel_row(
         "check_period": check_period,
         "asset_type_id": 0,
         "asset_status_id": 9,
-        "users": users
+        "users": None
     }
 
 # ==============================================================================

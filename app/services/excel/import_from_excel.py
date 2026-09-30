@@ -235,7 +235,10 @@ async def preview_excel_row(
 
     if local_asset:
         # Получаем привязку актива и всех пользователей
-        assignments = await get_assignments_by_asset(db, asset_id=local_asset.asset_id, active_only=True)
+        assignments = await get_assignments_by_asset(db=db, asset_id=local_asset.asset_id, active_only=True)
+
+        for a in assignments:
+            logger.error(f"{a.id=} {a.asset_id=} {a.employee_id=}")
 
         # Если нет привязок, то создаем её из Excel
         if not assignments and employee_id:
@@ -244,6 +247,7 @@ async def preview_excel_row(
             if enriched_user:
                 logger.error(f"LOCAL 2: {employee_id=}")
                 users.append(enriched_user)
+
         # Если есть привязка и нет данных из Excel, то передаем пользователей
         elif assignments and not employee_id:
             for assignment in assignments:

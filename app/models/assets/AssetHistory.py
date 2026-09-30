@@ -10,7 +10,7 @@ class AssetHistory(Base):
     __tablename__ = "asset_history"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    asset_id = Column(Integer, ForeignKey("assets.asset_id"), nullable=False, index=True)
+    asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Тип действия
     action_type = Column(

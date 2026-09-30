@@ -1,3 +1,4 @@
+import base64
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
@@ -246,7 +247,7 @@ async def generate_qr_code(request: QRCodeRequest):
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=5,
+        box_size=6,
         border=0,
     )
     qr.add_data(qr_data)
@@ -278,7 +279,6 @@ async def generate_qr_code(request: QRCodeRequest):
     svg_template = """<svg xmlns="http://www.w3.org/2000/svg" width="70mm" height="25mm" viewBox="0 0 827 295">
     <title>Этикетка 70×25</title>
     <g transform="scale(1.03375000 1.18000000)">
-
         <!-- Фон -->
         <rect width="100%" height="100%" fill="white" />
         <!-- Внешняя рамка -->
@@ -297,13 +297,10 @@ async def generate_qr_code(request: QRCodeRequest):
         <!-- Текст: Левая колонка -->
         <g font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="black">
             <!-- Наименование OC -->
-<!--            <text x="15" y="55">Наименование ОС</text>-->
             <text x="15" y="75">Fixed asset name</text>
             <!-- Инвентарный номер -->
-<!--            <text x="15" y="140">Инвентарный номер</text>-->
             <text x="15" y="145">Inventory number</text>
             <!-- Серийный номер -->
-<!--            <text x="15" y="205">Серийный номер</text>-->
             <text x="15" y="215">Serial number</text>
         </g>
         
@@ -332,4 +329,12 @@ async def generate_qr_code(request: QRCodeRequest):
         serial_number=serial_display
     )
 
-    return Response(content=final_svg, media_type="image/svg+xml")
+    # Кодирование в Base64
+    svg_bytes = final_svg.encode('utf-8')
+    base64_encoded = base64.b64encode(svg_bytes).decode('utf-8')
+    data_uri = f"data:image/svg+xml;base64,{base64_encoded}"
+
+    return {
+        "success": True,
+        "data_uri": data_uri
+    }

@@ -53,5 +53,5 @@ services:
       - ./logs:/logs
 #      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
-volumes:
-  pgdata:
+#volumes:
+#  pgdata:

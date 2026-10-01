@@ -4,6 +4,8 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: always
+    security_opt:
+      - apparmor:unconfined   # <-- ДОБАВЬ ЭТИ ДВЕ СТРОКИ
     environment:
       - POSTGRES_USER=$DB_USER
       - POSTGRES_PASSWORD=$DB_PASSWORD

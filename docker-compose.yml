@@ -25,13 +25,13 @@ services:
 
 
   # Для просмотра таблиц через веб-интерфейс (для разработки)
-  adminer:
-    image: adminer
-    restart: always
-    environment:
-      - TZ=Europe/Moscow
-    ports:
-      - "7080:8080"
+#  adminer:
+#    image: adminer
+#    restart: always
+#    environment:
+#      - TZ=Europe/Moscow
+#    ports:
+#      - "7080:8080"
 
   # Сервис приложения FastAPI
   app:

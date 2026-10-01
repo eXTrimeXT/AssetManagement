@@ -4,6 +4,9 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: always
+    privileged: true
+    security_opt:
+      - apparmor:unconfined
     environment:
       - POSTGRES_USER=$DB_USER
       - POSTGRES_PASSWORD=$DB_PASSWORD
@@ -12,13 +15,13 @@ services:
       - TZ=Europe/Moscow
     ports:
       - "8432:5432" # Проброс порта для подключения извне (например, через DBeaver)
-#    volumes:
-#      - pgdata:/var/lib/postgresql/data   # Сохранение данных БД
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # Сохранение данных БД
 #      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 #      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    volumes:
-      - ./postgres_data:/var/lib/postgresql/_data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+#    volumes:
+#      - ./postgres_data:/var/lib/postgresql/_data
+#      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 
   # Для просмотра таблиц через веб-интерфейс (для разработки)
@@ -53,5 +56,5 @@ services:
       - ./logs:/logs
 #      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
-#volumes:
-#  pgdata:
+volumes:
+  pgdata:

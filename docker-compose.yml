@@ -48,7 +48,7 @@ services:
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs
-      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
 volumes:
   pgdata:

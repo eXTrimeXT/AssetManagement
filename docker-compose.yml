@@ -4,6 +4,7 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: always
+    privileged: true
     security_opt:
       - apparmor:unconfined   # <-- ДОБАВЬ ЭТИ ДВЕ СТРОКИ
     environment:
@@ -19,7 +20,7 @@ services:
 #      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 #      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/_data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 

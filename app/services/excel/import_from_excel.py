@@ -500,6 +500,7 @@ async def bulk_save_assets(
         sn = item_data.get("serial_number")
         material_id = item_data.get("material_id")
         item_asset_type_id = request_data.asset_type_id if request_data.asset_type_id else item_data.get("asset_type_id")
+        logger.debug(f"{request_data.asset_type_id=} {item_data.get('asset_type_id')=} {item_asset_type_id=}")
 
         try:
             clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason", "asset_type_id"]}

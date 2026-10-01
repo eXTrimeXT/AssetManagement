@@ -453,8 +453,8 @@ async def respond_to_asset_transfer(
             Notification.employee_id == responder_id,
             Notification.asset_id == asset_id,
             Notification.event_type == NotificationEventType.TRANSFER_ASSET_INIT,
-            Notification.status == NotificationStatus.UNREAD
-        ).order_by(Notification.created_at.desc()).limit(1)
+            Notification.responded_at.is_(None)
+    ).order_by(Notification.created_at.desc()).limit(1)
     )
     init_notification = init_notification_result.scalar_one_or_none()
     if init_notification:

@@ -1,10 +1,15 @@
+import io
 from datetime import datetime
 from typing import Optional, Sequence, Tuple
 
 import logging
+
+from openpyxl import Workbook
 from sqlalchemy import select, update, distinct, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from fastapi.responses import StreamingResponse
+
 from app.models.inventorization.Inventorization import InventorizationSession, InventorizationItem
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetType import AssetType
@@ -386,3 +391,117 @@ async def delete_inventorization_session(db: AsyncSession, session_id: int) -> O
     await db.delete(obj)
     await db.commit()
     return obj
+
+
+async def export_inventory_session_to_excel(
+        db: AsyncSession,
+        session_id: int
+) -> StreamingResponse:
+    """Экспортировать сессию инвентаризации в Excel файл."""
+    session = await get_inventory_session_by_id(db, session_id)
+    if not session:
+        raise ValueError("Сессия не найдена")
+
+    # Получаем все элементы сессии
+    result = await db.execute(
+        select(InventorizationItem)
+        .where(InventorizationItem.session_id == session_id)
+        .options(selectinload(InventorizationItem.checked_employee))
+        .order_by(InventorizationItem.inventorization_id)
+    )
+    items = result.scalars().all()
+
+    # Создаем Excel файл
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Инвентаризация"
+
+    # Заголовок с информацией о сессии
+    ws['A1'] = "Сессия инвентаризации"
+    ws['A1'].font = ws['A1'].font.copy(bold=True, size=14)
+
+    ws['A3'] = "ID сессии:"
+    ws['B3'] = session.session_id
+    ws['A4'] = "Тип актива:"
+    ws['B4'] = session.asset_type_name
+    ws['A5'] = "Статус:"
+    ws['B5'] = session.status
+    ws['A6'] = "Дата создания:"
+    ws['B6'] = session.created_at.strftime("%Y-%m-%d %H:%M:%S") if session.created_at else ""
+    ws['A7'] = "Дата начала:"
+    ws['B7'] = session.start_date.strftime("%Y-%m-%d %H:%M:%S") if session.start_date else ""
+    ws['A8'] = "Дата окончания:"
+    ws['B8'] = session.end_date.strftime("%Y-%m-%d %H:%M:%S") if session.end_date else ""
+
+    # Заголовки таблицы
+    headers = [
+        "ID",
+        "ID актива",
+        "Название актива",
+        "Серийный номер",
+        "Инвентарный номер",
+        "Учетное кол-во",
+        "Фактическое кол-во",
+        "Проверено",
+        "Проверил",
+        "Разница"
+    ]
+
+    start_row = 10
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=start_row, column=col, value=header)
+        cell.font = cell.font.copy(bold=True)
+        cell.fill = cell.fill.copy(fgColor="D3D3D3")
+
+    # Данные элементов
+    for idx, item in enumerate(items, start=start_row + 1):
+        ws.cell(row=idx, column=1, value=item.inventorization_id)
+        ws.cell(row=idx, column=2, value=item.asset_id)
+        ws.cell(row=idx, column=3, value=item.asset_name)
+        ws.cell(row=idx, column=4, value=item.serial_number or "")
+        ws.cell(row=idx, column=5, value=item.inventory_id or "")
+        ws.cell(row=idx, column=6, value=item.quantity)
+        ws.cell(row=idx, column=7, value=item.quantity_fact if item.quantity_fact is not None else "")
+        ws.cell(row=idx, column=8, value="Да" if item.is_checked else "Нет")
+
+        # Проверяющий сотрудник
+        checked_by_name = ""
+        if item.checked_employee:
+            checked_by_name = f"{item.checked_employee.last_name} {item.checked_employee.first_name} {item.checked_employee.middle_name or ''}".strip()
+        elif item.checked_by:
+            checked_by_name = item.checked_by
+        ws.cell(row=idx, column=9, value=checked_by_name)
+
+        # Разница
+        if item.quantity_fact is not None and item.quantity is not None:
+            difference = item.quantity_fact - item.quantity
+            ws.cell(row=idx, column=10, value=difference)
+        else:
+            ws.cell(row=idx, column=10, value="")
+
+    # Автоматическая ширина колонок
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Сохраняем в буфер
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Формируем имя файла
+    filename = f"inventory_session_{session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

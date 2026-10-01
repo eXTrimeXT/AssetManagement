@@ -22,7 +22,8 @@ from app.database.inventorization.crud_inventorization import (
     get_inventory_session_by_id,
     get_inventorization_report,
     get_inventorization_discrepancies,
-    delete_inventorization_session
+    delete_inventorization_session,
+    export_inventory_session_to_excel
 )
 from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
@@ -176,3 +177,18 @@ async def delete_status(
     if not db_status:
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return {"message": "success"}
+
+@router_inventorization.get(
+    "/sessions/{session_id}/export/excel",
+    summary="Экспорт сессии инвентаризации в Excel"
+)
+async def export_session_to_excel(
+        session_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """Скачать сессию инвентаризации в формате Excel."""
+    try:
+        return await export_inventory_session_to_excel(db, session_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

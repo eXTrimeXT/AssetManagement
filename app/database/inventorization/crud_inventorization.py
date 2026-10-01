@@ -411,6 +411,9 @@ async def export_inventory_session_to_excel(
     )
     items = result.scalars().all()
 
+    # Ru label for status
+    ru_status = "В работе" if session.status == "in_progress" else "Завершено"
+
     # Создаем Excel файл
     wb = Workbook()
     ws = wb.active
@@ -425,7 +428,7 @@ async def export_inventory_session_to_excel(
     ws['A4'] = "Тип актива:"
     ws['B4'] = session.asset_type_name
     ws['A5'] = "Статус:"
-    ws['B5'] = session.status
+    ws['B5'] = ru_status
     ws['A6'] = "Дата создания:"
     ws['B6'] = session.created_at.strftime("%Y-%m-%d %H:%M:%S") if session.created_at else ""
     ws['A7'] = "Дата начала:"

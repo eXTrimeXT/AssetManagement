@@ -1,13 +1,14 @@
 import logging
 from fastapi import HTTPException, Request
-from typing import List
+from typing import List, Optional, Literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.auth.auth_service import (
     get_user_permissions_from_token,
     get_token_from_request,
     get_user_from_token,
-    check_assets_is_admin
+    check_assets_is_admin,
+    get_departments_permission_from_token
 )
 
 from app.database.assets import get_asset_type_by_id
@@ -38,12 +39,58 @@ async def check_asset_permission(
             detail=f"Нет права '{action}' на тип актива '{asset_type.en_name}'"
         )
 
+async def check_cost_center_permission(
+        request: Request,
+        cost_center_code: Optional[str],
+        action: Literal["read", "write"]
+) -> None:
+    """
+    Проверяет право на конкретный cost_center_code (department_code) из токена.
+    Поддерживает множественные значения, разделенные точкой с запятой (напр. "RU1; RU2").
+    Доступ разрешается, если у пользователя есть право хотя бы на один из указанных кодов.
+    """
+    if not cost_center_code or not str(cost_center_code).strip():
+        return  # Если код не указан, пропускаем проверку (или можно raise HTTPException, если это обязательно)
+
+    token = await get_token_from_request(request)
+
+    # Админы имеют полный доступ
+    if check_assets_is_admin(token):
+        return
+
+    permissions = get_departments_permission_from_token(token)
+    if not permissions:
+        raise HTTPException(status_code=403, detail="Права департаментов не найдены в токене")
+
+    # Парсим входящий cost_center_code: разбиваем по ';' и чистим от пробелов
+    # Пример: "RU1; RU2" -> ["RU1", "RU2"]
+    target_codes = [code.strip().upper() for code in str(cost_center_code).split(';') if code.strip()]
+
+    if not target_codes:
+        return
+
+    # Собираем множество (set) всех кодов департаментов, на которые у пользователя есть нужное право
+    user_permitted_codes = set()
+    for perm in permissions:
+        perm_code = str(perm.get("department_code", "")).strip().upper()
+        if perm.get(action, False) and perm_code:
+            user_permitted_codes.add(perm_code)
+
+    # Проверяем пересечение множеств: есть ли хотя бы один код из target_codes в user_permitted_codes
+    has_access = bool(set(target_codes) & user_permitted_codes)
+
+    if not has_access:
+        action_ru = "чтение" if action == "read" else "изменение/создание"
+        raise HTTPException(
+            status_code=403,
+            detail=f"Нет права на {action_ru} активов для департаментов: '{cost_center_code}'"
+        )
+
 def _is_public_resource(resource: str | None) -> bool:
     """Ресурсы, доступные всем авторизованным пользователям без проверки прав."""
     if not resource:
         return False
     return resource.strip().lower() == WITHOUT_TYPE_EN_NAME.lower()
-
 
 async def check_permission(
         request: Request,

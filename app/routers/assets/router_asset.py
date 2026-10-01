@@ -39,32 +39,6 @@ async def create_asset_endpoint(
     return await create_asset(db, data, current_user.employee_id)
 
 
-async def enrich_users_data(db: AsyncSession, users_data: list) -> list:
-    """Дополняет данные о пользователях иерархией и должностью"""
-    enriched = []
-    for user in users_data:
-        user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
-
-        # Получаем иерархию подразделений
-        if user_dict.get("department_guid"):
-            hierarchy = await get_hierarchy_departments(db, user_dict["department_guid"])
-            if hierarchy:
-                user_dict["society"] = hierarchy.society
-                user_dict["department"] = hierarchy.department
-                user_dict["division"] = hierarchy.division
-                user_dict["group"] = hierarchy.group
-
-        # Получаем должность
-        if user_dict.get("position_guid"):
-            position = await get_position_by_guid(db, user_dict["position_guid"])
-            if position:
-                from app.schemas.zup.PositionSchemas import PositionResponse
-                user_dict["position"] = PositionResponse.model_validate(position)
-
-        enriched.append(AssetUserFullResponse(**user_dict))
-
-    return enriched
-
 @router_assets.get(
     "/",
     response_model=PaginatedResponse[AssetResponse],
@@ -74,11 +48,9 @@ async def get_assets(
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
         page_size: int = Query(50, ge=1, le=100, description="Размер страницы"),
         name: Optional[str] = Query(None, description="Поиск по названию актива"),
-        # name: Optional[str] = Query("ноутбук", description="Поиск по названию актива"),
         asset_id: Optional[int] = Query(None, description="Поиск по asset_id (one Local DB)"),
         material_id: Optional[str] = Query(None, description="Поиск по material_id (one SAP)"),
         inventory_id: Optional[str] = Query(None, description="Инвентарный номер"),
-        # inventory_id: Optional[str] = Query("110000050000", description="Инвентарный номер"),
         serial_number: Optional[str] = Query(None, description="Серийный номер"),
         asset_status: Optional[str] = Query(None, description="Статус актива"),
         model_id: Optional[int] = Query(None, description="ID модели"),
@@ -102,7 +74,6 @@ async def get_assets(
 ):
     if only_my:
         employee_id = current_user.employee_id
-        # print(f"employee_id = {employee_id}")
 
     result = await get_assets_list_with_sap(
         db=db,

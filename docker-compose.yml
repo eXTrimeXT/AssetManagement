@@ -17,7 +17,7 @@ services:
 #      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 #      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 

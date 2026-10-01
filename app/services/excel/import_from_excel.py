@@ -493,16 +493,16 @@ async def bulk_save_assets(
     """Массовое создание или обновление активов на основе данных, отредактированных на фронтенде."""
     results = []
     items = request_data.items
-    asset_type_id = request_data.asset_type_id if request_data.asset_type_id else 0
 
     for item_data in items:
         asset_id = item_data.get("asset_id")
         inv_id = item_data.get("inventory_id")
         sn = item_data.get("serial_number")
         material_id = item_data.get("material_id")
+        item_asset_type_id = request_data.asset_type_id if request_data.asset_type_id else item_data.get("asset_type_id")
 
         try:
-            clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason"]}
+            clean_data = {k: v for k, v in item_data.items() if k not in ["excel_row_index", "status", "reason", "asset_type_id"]}
 
             # Защита от UNIQUE VIOLATION
             if not asset_id:
@@ -523,11 +523,11 @@ async def bulk_save_assets(
                         asset_id = existing_asset_id
 
             if asset_id:
-                update_schema = AssetUpdate(**clean_data)
+                update_schema = AssetUpdate(asset_type_id=item_asset_type_id, **clean_data)
                 await update_asset(db, asset_id, update_schema, current_user.employee_id)
                 results.append({"asset_id": asset_id, "status": "updated", "success": True})
             else:
-                create_schema = AssetCreate(**clean_data)
+                create_schema = AssetCreate(asset_type_id=item_asset_type_id ,**clean_data)
                 created_asset = await create_asset(db, create_schema, current_user.employee_id)
                 results.append({
                     "asset_id": created_asset.asset_id if created_asset else None,

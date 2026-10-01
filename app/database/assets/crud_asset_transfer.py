@@ -262,6 +262,153 @@ async def request_asset_transfer(
         created_at=transfer.created_at
     )
 
+# async def respond_to_asset_transfer(
+#         db: AsyncSession,
+#         transfer_id: int,
+#         action: str,
+#         responder_id: str,
+#         comment: Optional[str] = None
+# ) -> AssetTransferRespondResponse:
+#     # Получаем заявку на передачу
+#     result = await db.execute(select(AssetTransfer).where(AssetTransfer.id == transfer_id))
+#     transfer = result.scalar_one_or_none()
+#
+#     if not transfer:
+#         raise ValueError("Заявка на передачу не найдена")
+#     if transfer.target_employee_id != responder_id:
+#         raise ValueError("Вы не являетесь получателем этой заявки")
+#     if transfer.status != "PENDING":
+#         raise ValueError("Заявка уже обработана")
+#
+#     asset_id = transfer.asset_id
+#     initiator_id = transfer.initiator_id
+#     assignment_type = transfer.assignment_type
+#
+#     asset_result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
+#     asset = asset_result.scalar_one()
+#
+#     initiator_name = await get_employee_full_name(db, initiator_id)
+#     responder_name = await get_employee_full_name(db, responder_id)
+#
+#     transfer.responded_at = datetime.utcnow()
+#     transfer.responder_comment = comment
+#
+#     assignment_type_ru = "Пользователь" if assignment_type == "user" else "Ответственный"
+#     new_assignment_id = None
+#     previous_assignment_closed = False
+#
+#     if action == "decline":
+#         transfer.status = "DECLINED"
+#
+#         # Создаем уведомление для инициатора об отклонении
+#         decline_notification = Notification(
+#             employee_id=initiator_id,
+#             asset_id=asset_id,
+#             event_type=NotificationEventType.TRANSFER_ASSET_DECLINED,
+#             initiator_id=responder_id,
+#             status=NotificationStatus.UNREAD,
+#             assignment_type=assignment_type
+#         )
+#         db.add(decline_notification)
+#         response_msg = "Передача актива отклонена"
+#         response_notification = decline_notification
+#
+#     elif action == "accept":
+#         transfer.status = "ACCEPTED"
+#
+#         # Закрываем текущую привязку
+#         active_assignment_result = await db.execute(
+#             select(AssetAssignment).where(
+#                 AssetAssignment.asset_id == asset_id,
+#                 AssetAssignment.assignment_type == assignment_type,
+#                 AssetAssignment.end_date.is_(None)
+#             )
+#         )
+#         active_assignment = active_assignment_result.scalar_one_or_none()
+#
+#         if active_assignment:
+#             active_assignment.end_date = date.today()
+#             previous_assignment_closed = True
+#
+#         # Создаем новую привязку для получателя
+#         new_assignment = AssetAssignment(
+#             asset_id=asset_id,
+#             employee_id=responder_id,
+#             assignment_type=assignment_type,
+#             start_date=date.today(),
+#             end_date=None,
+#             assigned_by=initiator_id,
+#             comment=comment
+#         )
+#         db.add(new_assignment)
+#
+#         # Создаем уведомление для инициатора о принятии
+#         accept_notification = Notification(
+#             employee_id=initiator_id,
+#             asset_id=asset_id,
+#             event_type=NotificationEventType.TRANSFER_ASSET_ACCEPTED,
+#             initiator_id=responder_id,
+#             status=NotificationStatus.UNREAD,
+#             assignment_type=assignment_type
+#         )
+#         db.add(accept_notification)
+#         response_msg = "Передача актива успешно завершена"
+#         response_notification = accept_notification
+#     else:
+#         raise ValueError("Недопустимое действие")
+#
+#     await db.commit()
+#     await db.refresh(transfer)
+#     await db.refresh(response_notification)
+#
+#     if action == "accept":
+#         new_assignment_result = await db.execute(
+#             select(AssetAssignment).where(
+#                 AssetAssignment.asset_id == asset_id,
+#                 AssetAssignment.employee_id == responder_id,
+#                 AssetAssignment.assignment_type == assignment_type,
+#                 AssetAssignment.end_date.is_(None)
+#             ).order_by(AssetAssignment.id.desc())
+#         )
+#         new_assignment_obj = new_assignment_result.scalars().first()
+#         if new_assignment_obj:
+#             new_assignment_id = new_assignment_obj.id
+#
+#     event_type_ru_map = {
+#         NotificationEventType.TRANSFER_ASSET_DECLINED: "Передача актива отклонена",
+#         NotificationEventType.TRANSFER_ASSET_ACCEPTED: "Передача актива принята"
+#     }
+#
+#     return AssetTransferRespondResponse(
+#         message=response_msg,
+#         action=action,
+#         transfer_id=transfer.id,
+#         notification=NotificationInfoResponse(
+#             notification_id=response_notification.notification_id,
+#             event_type=response_notification.event_type,
+#             event_type_ru=event_type_ru_map.get(response_notification.event_type, "Ответ на передачу"),
+#             status=response_notification.status,
+#             created_at=response_notification.created_at
+#         ),
+#         asset=AssetInfoResponse(
+#             asset_id=asset.asset_id,
+#             inventory_id=asset.inventory_id,
+#             name=asset.name,
+#             serial_number=asset.serial_number,
+#             asset_type_id=asset.asset_type_id,
+#             model_id=asset.model_id,
+#             source="local"
+#         ),
+#         initiator=EmployeeInfoResponse(employee_id=initiator_id, full_name=initiator_name),
+#         responder=EmployeeInfoResponse(employee_id=responder_id, full_name=responder_name),
+#         assignment_type=assignment_type,
+#         assignment_type_ru=assignment_type_ru,
+#         comment=comment,
+#         responded_at=transfer.responded_at,
+#         new_assignment_id=new_assignment_id,
+#         previous_assignment_closed=previous_assignment_closed
+#     )
+
 async def respond_to_asset_transfer(
         db: AsyncSession,
         transfer_id: int,
@@ -296,6 +443,24 @@ async def respond_to_asset_transfer(
     assignment_type_ru = "Пользователь" if assignment_type == "user" else "Ответственный"
     new_assignment_id = None
     previous_assignment_closed = False
+
+    # ==============================================================================
+    # НОВОЕ: Помечаем исходное уведомление о запросе как прочитанное,
+    # так как пользователь совершил действие (принял или отклонил)
+    # ==============================================================================
+    init_notification_result = await db.execute(
+        select(Notification).where(
+            Notification.employee_id == responder_id,
+            Notification.asset_id == asset_id,
+            Notification.event_type == NotificationEventType.TRANSFER_ASSET_INIT,
+            Notification.status == NotificationStatus.UNREAD
+        ).order_by(Notification.created_at.desc()).limit(1)
+    )
+    init_notification = init_notification_result.scalar_one_or_none()
+    if init_notification:
+        init_notification.status = NotificationStatus.READ
+        # Если вы добавили поле responded_at в модель Notification, раскомментируйте строку ниже:
+        init_notification.responded_at = datetime.utcnow()
 
     if action == "decline":
         transfer.status = "DECLINED"
@@ -360,6 +525,8 @@ async def respond_to_asset_transfer(
     await db.commit()
     await db.refresh(transfer)
     await db.refresh(response_notification)
+    if init_notification:
+        await db.refresh(init_notification)
 
     if action == "accept":
         new_assignment_result = await db.execute(

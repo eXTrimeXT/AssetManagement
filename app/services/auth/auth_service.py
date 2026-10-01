@@ -131,7 +131,7 @@ def get_departments_permission_from_token(token: str) -> Optional[PermissionDepa
         permissions_raw = payload.get("permission_departments", [])
         return permissions_raw
     except Exception as e:
-        logger.error(f"Ошибка получения permissions из токена: {e}")
+        logger.error(f"Ошибка получения permission_departments из токена: {e}")
         return None
 
 async def require_authorized_user(

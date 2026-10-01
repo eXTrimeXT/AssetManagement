@@ -6,7 +6,7 @@ services:
     restart: always
     privileged: true
     security_opt:
-      - apparmor:unconfined   # <-- ДОБАВЬ ЭТИ ДВЕ СТРОКИ
+      - apparmor:unconfined
     environment:
       - POSTGRES_USER=$DB_USER
       - POSTGRES_PASSWORD=$DB_PASSWORD

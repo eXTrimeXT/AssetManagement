@@ -636,8 +636,6 @@
 #         headers={"Content-Disposition": "attachment; filename=asset_import_template_new.xlsx"}
 #     )
 
-
-
 import io
 import logging
 import re
@@ -658,7 +656,7 @@ from app.services.auth.auth_service import get_token_from_request, require_autho
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest, AssetResponse
 from app.database.assets.crud_asset import update_asset, create_asset
 from app.database.assets.crud_asset_assignment import get_assignments_by_asset
-from app.database.assets.crud_asset_type import get_asset_types_list  # <-- ДОБАВЛЕНО
+from app.database.assets.crud_asset_type import get_asset_types_list  # <-- Убедись, что этот импорт есть
 from app.services.gps_rs.getinfouser import get_user_allowed_cost_centers
 from app.services.ai.addon_asset_by_ai import addon_asset_by_agent
 
@@ -671,7 +669,6 @@ SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ==============================================================================
 def clean_inventory_id(value: Any) -> Optional[str]:
-    """Специальная очистка инвентарного номера."""
     if pd.isna(value) or value is None:
         return None
     val = str(value).strip()
@@ -877,7 +874,8 @@ async def preview_excel_row(
         db: AsyncSession,
         allowed_cost_centers: List[str],
         row_index: int,
-        asset_types_names: List[str]  # <-- ДОБАВЛЕНО
+        asset_types_map: Dict[str, int],      # <-- ДОБАВЛЕНО: словарь имя -> ID
+        asset_types_names: List[str]
 ) -> Dict[str, Any]:
     name = normalize(excel_row.get("name"))
     inv_id = clean_inventory_id(excel_row.get("inventory_id"))
@@ -982,6 +980,9 @@ async def preview_excel_row(
         except Exception as e:
             logger.error(f"Ошибка AI агента при обогащении актива из SAP (строка {row_index}): {e}")
 
+        # <-- ИСПРАВЛЕНИЕ: Получаем реальный ID по имени, если не нашли - 0
+        resolved_asset_type_id_sap = asset_types_map.get(asset_type_name_sap, 0)
+
         return {
             "excel_row_index": row_index,
             "status": "create_from_sap",
@@ -1003,7 +1004,7 @@ async def preview_excel_row(
             "cost_center_code": sap_asset.get("cost_center_code"),
             "cost_center_name": sap_asset.get("cost_center_name"),
             "cost_center_shortname": sap_asset.get("cost_center_shortname"),
-            "asset_type_id": 0,
+            "asset_type_id": resolved_asset_type_id_sap,  # <-- ИСПОЛЬЗУЕМ РАЗРЕШЕННЫЙ ID
             "asset_status_id": 9,
             "model_name": model_name_sap,
             "manufacturer_name": manufacturer_name_sap,
@@ -1033,6 +1034,9 @@ async def preview_excel_row(
     except Exception as e:
         logger.error(f"Ошибка AI агента при обогащении актива (строка {row_index}): {e}")
 
+    # <-- ИСПРАВЛЕНИЕ: Получаем реальный ID по имени, если не нашли - 0
+    resolved_asset_type_id = asset_types_map.get(asset_type_name, 0)
+
     return {
         "excel_row_index": row_index,
         "status": "create_new",
@@ -1047,7 +1051,7 @@ async def preview_excel_row(
         "next_service": next_service,
         "service_period": service_period,
         "check_period": check_period,
-        "asset_type_id": 0,
+        "asset_type_id": resolved_asset_type_id,  # <-- ИСПОЛЬЗУЕМ РАЗРЕШЕННЫЙ ID
         "asset_status_id": 9,
         "model_name": model_name,
         "manufacturer_name": manufacturer_name,
@@ -1127,7 +1131,10 @@ async def preview_import(
 
     # Получаем список типов активов один раз для всех строк (оптимизация)
     asset_types = await get_asset_types_list(db, limit=200)
-    asset_types_names = [at.name for at in asset_types]
+
+    # <-- ИСПРАВЛЕНИЕ: Создаем словарь для мгновенного поиска ID по имени
+    asset_types_map = {at.name: at.asset_type_id for at in asset_types}
+    asset_types_names = list(asset_types_map.keys())
 
     results = []
     for index, row in df.iterrows():
@@ -1138,7 +1145,8 @@ async def preview_import(
                 db=db,
                 allowed_cost_centers=allowed_cost_centers,
                 row_index=index + 2,
-                asset_types_names=asset_types_names  # <-- ПЕРЕДАЕМ СПИСОК
+                asset_types_map=asset_types_map,      # <-- ПЕРЕДАЕМ СЛОВАРЬ
+                asset_types_names=asset_types_names
             )
             results.append(preview_data)
         except Exception as e:

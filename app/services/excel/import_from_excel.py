@@ -940,17 +940,18 @@ async def preview_excel_row(
     sap_asset = await find_asset_in_sap(inv_id, sn)
 
     if sap_asset:
-        sap_cc = sap_asset.get("cost_center_code_from")
-        if sap_cc:
-            sap_cc_list = [c.strip().upper() for c in str(sap_cc).split(';') if c.strip()]
-            has_permission = any(cc in allowed_cost_centers for cc in sap_cc_list)
-            if not has_permission:
-                return {
-                    "excel_row_index": row_index,
-                    "status": "no_permission",
-                    "reason": f"Нет прав на импорт. cost_center_code_from в SAP: {sap_cc}",
-                    "name": name, "inventory_id": inv_id, "serial_number": sn
-                }
+        # Временно отключаем проверку на права доступа по MVZ
+        # sap_cc = sap_asset.get("cost_center_code_from")
+        # if sap_cc:
+        #     sap_cc_list = [c.strip().upper() for c in str(sap_cc).split(';') if c.strip()]
+        #     has_permission = any(cc in allowed_cost_centers for cc in sap_cc_list)
+        #     if not has_permission:
+        #         return {
+        #             "excel_row_index": row_index,
+        #             "status": "no_permission",
+        #             "reason": f"Нет прав на импорт. cost_center_code_from в SAP: {sap_cc}",
+        #             "name": name, "inventory_id": inv_id, "serial_number": sn
+        #         }
 
         sap_employee_id = sap_asset.get("employee_id")
         formatted_emp_id = str(sap_employee_id).strip().zfill(10) if sap_employee_id else None

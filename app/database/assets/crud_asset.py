@@ -19,6 +19,7 @@ from app.database.crud_notifications import notify_assigned_user, notify_unassig
 # Импорты для оптимизации запроса связки актива и пользователя
 from app.schemas.zup import PositionResponse
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
+from app.schemas.assets.AssetSchemas import AssetLocationUpdate
 from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.database.crud_notifications import notify_unassigned_serving
@@ -695,7 +696,7 @@ async def _update_primary_assignment(
 async def _sync_asset_location(
         db: AsyncSession,
         asset_id: int,
-        location_data,  # AssetLocationUpdate
+        location_data: AssetLocationUpdate,
         assigned_by: str
 ) -> dict:
     """
@@ -717,13 +718,13 @@ async def _sync_asset_location(
     # Создаём новую активную позицию
     new_position = AssetPosition(
         asset_id=asset_id,
-        workshop_id=location_data.workshop_id,
-        place=location_data.place,
-        level=location_data.level,
-        x=location_data.x,
-        y=location_data.y,
-        rotation=location_data.rotation if hasattr(location_data, 'rotation') else 0,
-        scale=location_data.scale if hasattr(location_data, 'scale') else 100,
+        workshop_id=getattr(location_data, 'workshop_id', None),
+        place=getattr(location_data, 'place', None),
+        level=getattr(location_data, 'level', None),
+        x=getattr(location_data, 'x', None),
+        y=getattr(location_data, 'y', None),
+        rotation=getattr(location_data, 'rotation', None),
+        scale=getattr(location_data, 'scale', None),
         is_active=True,
     )
     db.add(new_position)

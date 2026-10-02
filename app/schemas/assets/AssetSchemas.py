@@ -170,8 +170,8 @@ class AssetLocationUpdate(BaseModel):
     level: Optional[int] = None
     x: Optional[int] = None
     y: Optional[int] = None
-    rotation: Optional[int] = 0
-    scale: Optional[int] = 100
+    rotation: Optional[int] = None
+    scale: Optional[int] = None
 
 class AssetLocationResponse(BaseModel):
     """Локация актива на основе Workshop и AssetPosition"""

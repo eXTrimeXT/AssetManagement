@@ -15,10 +15,11 @@ from app.database.connection import get_db
 from app.models.assets.Asset import Asset
 from app.models.zup import Employee, ZupDepartment
 from app.services.auth.auth_service import get_token_from_request, require_authorized_user
-from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest
+from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest, AssetResponse
 from app.database.assets.crud_asset import update_asset, create_asset
 from app.database.assets.crud_asset_assignment import get_assignments_by_asset
 from app.services.gps_rs.getinfouser import get_user_allowed_cost_centers
+from app.services.ai.addon_asset_by_ai import addon_asset_by_agent
 
 logger = logging.getLogger(__name__)
 
@@ -360,6 +361,26 @@ async def preview_excel_row(
             "asset_status_id": 9,
             "users": employees
         }
+        # Формируем временный объект AssetResponse для отправки в AI
+    temp_asset = AssetResponse(
+        name=name or "Без имени",
+        inventory_id=inv_id or "UNKNOWN",
+        serial_number=sn or "UNKNOWN",
+        asset_type_id=0,
+        asset_status_id=9,
+        quantity=1
+    )
+
+    # Попытка обогатить данные через AI-агента
+    model_name = manufacturer_name = asset_type_name = os_name = None
+    try:
+        enriched_data = await addon_asset_by_agent(temp_asset)
+        model_name = enriched_data.get("model_name")
+        manufacturer_name = enriched_data.get("manufacturer_name")
+        asset_type_name = enriched_data.get("asset_type_name")
+        os_name = enriched_data.get("os_name")
+    except Exception as e:
+        logger.error(f"Ошибка AI агента при обогащении актива (строка {row_index}): {e}")
 
     return {
         "excel_row_index": row_index,
@@ -377,14 +398,35 @@ async def preview_excel_row(
         "check_period": check_period,
         "asset_type_id": 0,
         "asset_status_id": 9,
+        "model_name": model_name,
+        "manufacturer_name": manufacturer_name,
+        "asset_type_name": asset_type_name,
+        "os_name": os_name,
         "users": None
     }
+    # return {
+    #     "excel_row_index": row_index,
+    #     "status": "create_new",
+    #     "asset_id": None,
+    #     "name": name or "Без имени",
+    #     "inventory_id": inv_id,
+    #     "serial_number": sn,
+    #     "quantity": 1,
+    #     "comment": comment,
+    #     "date_issue": date_issue,
+    #     "date_purchasing": date_purchasing,
+    #     "next_service": next_service,
+    #     "service_period": service_period,
+    #     "check_period": check_period,
+    #     "asset_type_id": 0,
+    #     "asset_status_id": 9,
+    #     "users": None
+    # }
 
 
 # ==============================================================================
 # ENDPOINTS
 # ==============================================================================
-
 @router_excel_import.post("/preview")
 async def preview_import(
         request: Request,

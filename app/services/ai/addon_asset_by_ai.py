@@ -1,22 +1,23 @@
 import asyncio
 import os
+import json
 import httpx
 from dotenv import load_dotenv
+from typing import Optional, Dict, Any
 
-from app.schemas.assets import AssetResponse
+from app.schemas.assets.AssetSchemas import AssetResponse
 
 load_dotenv()
 AI_AGENT_TOKEN = os.getenv("AI_AGENT_TOKEN")
 
-# Функция любого запроса для ИИ
-async def send_agent_request(content: str) -> str | None:
+async def send_agent_request(content: str) -> Optional[str]:
     url = "https://hiagent.gwm.cn/api/aigw/v1/chat/completions"
 
     headers = {
         "Authorization": f"Bearer {AI_AGENT_TOKEN}"
     }
 
-    json = {
+    payload = {
         "model": "d7uk27hun0790uk9jrvg",
         "messages": [
             {
@@ -30,78 +31,49 @@ async def send_agent_request(content: str) -> str | None:
     }
 
     async with httpx.AsyncClient(verify=False) as client:
-        response = await client.post(url, headers=headers, json=json)
+        response = await client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
 
         answer: str = data.get("choices")[0].get("message").get("content")
-        answer = answer.replace('**', '').replace('«', '').replace('»', '')
+        answer = answer.replace('**', '').replace('«', '').replace('»', '').strip()
+
+        # Гарантированная очистка от markdown-оберток ```json ... ```
+        if answer.startswith("```json"):
+            answer = answer[7:]
+        if answer.startswith("```"):
+            answer = answer[3:]
+        if answer.endswith("```"):
+            answer = answer[:-3]
+
+        answer = answer.strip()
         print(answer)
         return answer or None
 
-# TEST
-query = """
-Есть список:
-  {
-  "items": [
-    {
-      "name": "Ноутбук 15.6\" MSI Modern 15 F13MG",
-      "inventory_id": "100000004480",
-      "serial_number": null,
-      "asset_status": "На складе",
-      "asset_status_id": 9,
-      "quantity": 1,
-      "comment": null,
-      "date_issue": null,
-      "date_purchasing": null,
-      "model_id": null,
-      "model_name": null,
-      "asset_type_id": 0,
-      "parent_id": null,
-      "every_week_check": false,
-      "next_service": null,
-      "service_period": 0,
-      "check_period": 0,
-      "parent_name": null,
-      "manufacturer_name": null,
-      "vendor_name": null,
-      "os_name": null,
-      "asset_id": null,
-      "material_id": "1000000044800000",
-      "created_by": null,
-      "updated_by": null,
-      "created_at": null,
-      "updated_at": null,
-      "asset_type_name": "Без типа",
-      "location": null,
-      "users": [],
-      "cost_center_code_from": "RU01050011",
-      "cost_center_name_from": "#Отдел сопровождения базовых сервисо",
-      "cost_center_shortname_from": null,
-      "cost_center_code": "RU01050011",
-      "cost_center_name": "#Отдел сопровождения базовых сервисо",
-      "cost_center_shortname": null,
-      "serving_users": [],
-      "current_user": null,
-      "current_user_full_name": null,
-      "parent": null
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "page_size": 50,
-  "total_pages": 1,
-  "has_next": false,
-  "has_previous": false
-}
+async def addon_asset_by_agent(asset: AssetResponse) -> Dict[str, Any]:
+    asset_dict = asset.model_dump() if hasattr(asset, 'model_dump') else asset.dict()
 
-Определи и заполни поля, которые содержаться там model_name - это модель, manufacturer_name - производитель. И верни этот массив
+    prompt = f"""
+Есть данные актива:
+{json.dumps(asset_dict, ensure_ascii=False, indent=2)}
 
-Ответь строго в формате json без доп символов (```json )
-Хорошо подумай перед ответом
+Определи и заполни поля, которые можно извлечь из названия (name) или других доступных данных:
+- model_name (модель)
+- manufacturer_name (производитель)
+- asset_type_name (тип актива, например: Ноутбук, Монитор, Принтер, Сетевое оборудование и т.д.)
+- os_name (операционная система, если применимо)
+
+Ответь строго в формате json без доп символов (```json ).
+Хорошо подумай перед ответом. Если поле не удается определить, оставь его null.
 """
 
-asyncio.run(send_agent_request(query))
+    response_text = await send_agent_request(prompt)
+    if not response_text:
+        return asset_dict
 
-async def addon_asset_by_agent(asset: AssetResponse):
-    prompt = ""
+    try:
+        updated_asset = json.loads(response_text)
+        return updated_asset
+    except json.JSONDecodeError as e:
+        print(f"Ошибка парсинга JSON от AI агента: {e}")
+        return asset_dict

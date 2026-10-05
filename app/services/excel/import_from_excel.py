@@ -951,6 +951,16 @@ def parse_text(value: Any) -> Optional[str]:
     val_str = str(value).strip()
     return val_str if val_str.lower() != "nan" else None
 
+def serialize_for_json(obj: Any) -> Any:
+    """Рекурсивно преобразует объекты date/datetime в строки для JSON-сериализации."""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_for_json(v) for v in obj]
+    return obj
+
 async def find_asset_in_sap(inventory_id: Optional[str], serial_number: Optional[str]) -> Optional[Dict[str, Any]]:
     search_combinations = []
     if inventory_id and serial_number:
@@ -1280,7 +1290,8 @@ async def process_excel_import_job(
                 # Сохраняем прогресс и результаты каждые 10 строк или в конце
                 if index % 10 == 0 or index == total_rows - 1:
                     task.processed_rows = index + 1
-                    task.items_data = items_results
+                    # ИСПРАВЛЕНИЕ: Сериализуем данные перед сохранением в JSON
+                    task.items_data = [serialize_for_json(item) for item in items_results]
                     await db.commit()
 
             task.status = "completed"

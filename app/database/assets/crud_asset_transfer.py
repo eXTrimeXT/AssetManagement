@@ -60,7 +60,7 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
             "quantity": int(sap_item.get("quantity", 1)) if sap_item.get("quantity") is not None else 1,
             "every_week_check": False,
             "asset_type_id": 10,
-            "asset_status_id": 9,
+            "asset_status_id": 10,
             "model_id": None,
             "sap_employee_id": sap_employee_id,
             "changed_date": sap_item.get("changed_date")

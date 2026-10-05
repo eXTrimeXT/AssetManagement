@@ -885,7 +885,7 @@ def _build_virtual_asset(
         "inventory_id": sap_item.get("inventory_number"),
         "serial_number": sap_item.get("serial_number"),
         "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
-        "asset_status": "На складе",
+        "asset_status": "В работе",
         "asset_status_id": 10,
         "comment": None,
         "date_issue": None,

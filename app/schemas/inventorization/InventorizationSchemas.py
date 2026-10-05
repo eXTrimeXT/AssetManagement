@@ -3,7 +3,8 @@ from datetime import datetime
 from typing import Optional, List
 
 class InventorizationSessionCreate(BaseModel):
-    asset_type_id: int
+    asset_type_id: Optional[int] = None
+    department_codes: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
@@ -26,11 +27,12 @@ class InventorizationItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class InventorizationSessionResponse(BaseModel):
-    session_id: int
-    asset_type_id: int
-    asset_type_name: str
-    asset_type_en_name: str
-    status: str
+    session_id: Optional[int] = None
+    asset_type_id: Optional[int] = None
+    department_codes: Optional[str] = None
+    asset_type_name: Optional[str] = None
+    asset_type_en_name: Optional[str] = None
+    status: Optional[str] = None
     created_at: datetime
     # items: List[InventorizationItemResponse] = []
     start_date: Optional[datetime] = None
@@ -59,9 +61,10 @@ class InventorizationItemDiscrepancy(BaseModel):
 class InventorizationReportResponse(BaseModel):
     """Отчёт по сессии инвентаризации"""
     session_id: int
-    asset_type_id: int
-    asset_type_name: str
-    status: str
+    asset_type_id: Optional[int] = None
+    asset_type_name: Optional[str] = None
+    department_codes: Optional[str] = None
+    status: Optional[str] = None
     created_at: datetime
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

@@ -75,11 +75,12 @@ async def start_session(
         current_user=Depends(require_authorized_user)
 ):
     return await create_inventory_session(
-        db,
-        data.asset_type_id,
-        current_user.employee_id,
-        data.start_date,
-        data.end_date
+        db=db,
+        asset_type_id=data.asset_type_id,
+        department_codes=data.department_codes,
+        creator_employee_id=current_user.employee_id,
+        start_date=data.start_date,
+        end_date=data.end_date
     )
 
 @router_inventorization.post("/sessions/{session_id}/check")

@@ -69,25 +69,115 @@ async def get_inventory_items_by_session_id(
     return items, total
 
 
+# async def create_inventory_session(
+#         db: AsyncSession,
+#         asset_type_id: Optional[int] = None,
+#         department_codes: Optional[str] = None,
+#         creator_employee_id: Optional[str] = None,
+#         start_date: Optional[datetime] = None,
+#         end_date: Optional[datetime] = None
+# ) -> InventorizationSession:
+#     asset_type_result = await db.execute(
+#         select(AssetType).where(AssetType.asset_type_id == asset_type_id)
+#     )
+#     asset_type = asset_type_result.scalar_one_or_none()
+#
+#     if not asset_type:
+#         raise ValueError(f"Asset type with id {asset_type_id} not found")
+#
+#     session = InventorizationSession(
+#         asset_type_id=asset_type_id,
+#         asset_type_name=asset_type.name,
+#         asset_type_en_name=asset_type.en_name,
+#         status="in_progress",
+#         created_by=creator_employee_id,
+#         start_date=start_date,
+#         end_date=end_date
+#     )
+#     db.add(session)
+#     await db.flush()
+#
+#     result = await db.execute(
+#         select(Asset).where(Asset.asset_type_id == asset_type_id)
+#     )
+#     assets = result.scalars().all()
+#
+#     items = [
+#         InventorizationItem(
+#             session_id=session.session_id,
+#             asset_id=asset.asset_id,
+#             asset_name=asset.name,
+#             is_checked=False,
+#             serial_number=asset.serial_number,
+#             inventory_id=asset.inventory_id,
+#             quantity=asset.quantity,
+#             quantity_fact=None,
+#         )
+#         for asset in assets
+#     ]
+#     db.add_all(items)
+#     await db.flush()  # Важно сделать flush, чтобы получить session_id и asset_ids
+#
+#     # === НОВАЯ ЛОГИКА УВЕДОМЛЕНИЙ ===
+#     # Находим всех уникальных сотрудников, которые имеют активы из этой сессии
+#     asset_ids = [item.asset_id for item in items]
+#
+#     if asset_ids:
+#         # Ищем активных ответственных или пользователей этих активов
+#         employees_result = await db.execute(
+#             select(distinct(AssetAssignment.employee_id)).where(
+#                 AssetAssignment.asset_id.in_(asset_ids),
+#                 AssetAssignment.end_date.is_(None)  # Только активные назначения
+#             )
+#         )
+#     responsible_employees = [row[0] for row in employees_result.all()]
+#
+#     # Отправляем ОДНО уведомление каждому уникальному сотруднику
+#     for emp_id in responsible_employees:
+#         await notify_inventory_started(
+#             db=db,
+#             employee_id=emp_id,
+#             session_id=session.session_id,
+#             initiator_id=creator_employee_id,
+#         )
+#
+#     await db.commit()
+#     await db.refresh(session)
+#     return session
+
 async def create_inventory_session(
         db: AsyncSession,
         asset_type_id: Optional[int] = None,
+        department_codes: Optional[str] = None,
         creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
-    asset_type_result = await db.execute(
-        select(AssetType).where(AssetType.asset_type_id == asset_type_id)
-    )
-    asset_type = asset_type_result.scalar_one_or_none()
 
-    if not asset_type:
-        raise ValueError(f"Asset type with id {asset_type_id} not found")
+    # 1. ВАЛИДАЦИЯ: Должен быть указан хотя бы один критерий
+    if not asset_type_id and not department_codes:
+        raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
 
+    # 2. Определяем названия типа актива (если он указан)
+    asset_type_name = "Смешанный тип (по департаментам)"
+    asset_type_en_name = "mixed_by_departments"
+
+    if asset_type_id is not None:
+        asset_type_result = await db.execute(
+            select(AssetType).where(AssetType.asset_type_id == asset_type_id)
+        )
+        asset_type = asset_type_result.scalar_one_or_none()
+        if not asset_type:
+            raise ValueError(f"Тип актива с id {asset_type_id} не найден")
+        asset_type_name = asset_type.name
+        asset_type_en_name = asset_type.en_name
+
+    # 3. Создаем сессию
     session = InventorizationSession(
         asset_type_id=asset_type_id,
-        asset_type_name=asset_type.name,
-        asset_type_en_name=asset_type.en_name,
+        department_codes=department_codes,  # Сохраняем строку кодов в БД
+        asset_type_name=asset_type_name,
+        asset_type_en_name=asset_type_en_name,
         status="in_progress",
         created_by=creator_employee_id,
         start_date=start_date,
@@ -96,11 +186,34 @@ async def create_inventory_session(
     db.add(session)
     await db.flush()
 
-    result = await db.execute(
-        select(Asset).where(Asset.asset_type_id == asset_type_id)
-    )
+    # 4. Динамически формируем запрос для поиска активов
+    query = select(Asset)
+    conditions = []
+
+    if asset_type_id is not None:
+        conditions.append(Asset.asset_type_id == asset_type_id)
+
+    if department_codes:
+        # Разбиваем строку по запятой, убираем пробелы и приводим к верхнему регистру
+        codes_list = [code.strip().upper() for code in department_codes.split(',') if code.strip()]
+        if codes_list:
+            # Фильтруем по текущему ответственному MVZ актива (cost_center_code_from)
+            conditions.append(Asset.cost_center_code_from.in_(codes_list))
+
+    # Применяем все условия через AND
+    if conditions:
+        query = query.where(*conditions)
+    else:
+        # На случай, если оба параметра somehow оказались пустыми (защита)
+        query = query.where(False)
+
+    result = await db.execute(query)
     assets = result.scalars().all()
 
+    if not assets:
+        logger.warning(f"Не найдено активов для сессии с параметрами: asset_type_id={asset_type_id}, department_codes={department_codes}")
+
+    # 5. Создаем элементы инвентаризации
     items = [
         InventorizationItem(
             session_id=session.session_id,
@@ -114,36 +227,34 @@ async def create_inventory_session(
         )
         for asset in assets
     ]
-    db.add_all(items)
-    await db.flush()  # Важно сделать flush, чтобы получить session_id и asset_ids
 
-    # === НОВАЯ ЛОГИКА УВЕДОМЛЕНИЙ ===
-    # Находим всех уникальных сотрудников, которые имеют активы из этой сессии
+    if items:
+        db.add_all(items)
+        await db.flush()
+
+    # 6. ЛОГИКА УВЕДОМЛЕНИЙ
     asset_ids = [item.asset_id for item in items]
 
     if asset_ids:
-        # Ищем активных ответственных или пользователей этих активов
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
                 AssetAssignment.end_date.is_(None)  # Только активные назначения
             )
         )
-    responsible_employees = [row[0] for row in employees_result.all()]
+        responsible_employees = [row[0] for row in employees_result.all()]
 
-    # Отправляем ОДНО уведомление каждому уникальному сотруднику
-    for emp_id in responsible_employees:
-        await notify_inventory_started(
-            db=db,
-            employee_id=emp_id,
-            session_id=session.session_id,
-            initiator_id=creator_employee_id,
-        )
+        for emp_id in responsible_employees:
+            await notify_inventory_started(
+                db=db,
+                employee_id=emp_id,
+                session_id=session.session_id,
+                initiator_id=creator_employee_id,
+            )
 
     await db.commit()
     await db.refresh(session)
     return session
-
 
 async def check_inventory_item(
         db: AsyncSession,

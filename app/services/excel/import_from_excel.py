@@ -892,17 +892,23 @@ async def preview_excel_row(
         return {
             "excel_row_index": row_index,
             "status": "skipped",
-            "reason": "Нет корректного inventory_id или serial_number",
+            "reason": "Нет корректного inventory_id и serial_number",
             "name": name, "inventory_id": inv_id, "serial_number": sn
         }
 
     # Поиск в локальной БД
-    stmt = select(Asset).where(
-        or_(
-            Asset.inventory_id == inv_id,
-            Asset.serial_number == sn
-        )
-    )
+    conditions = []
+    if inv_id is not None:
+        conditions.append(Asset.inventory_id == inv_id)
+    if sn is not None:
+        conditions.append(Asset.serial_number == sn)
+
+    # Если оба значения None, запрос не выполнится (хотя выше уже есть защита от этого)
+    if conditions:
+        stmt = select(Asset).where(or_(*conditions))
+    else:
+        stmt = select(Asset).where(False)
+
     result = await db.execute(stmt)
     local_asset = result.scalars().first()
 
@@ -1078,8 +1084,8 @@ async def preview_import(
         raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx или .xls")
 
     allowed_cost_centers = await get_user_allowed_cost_centers(token)
-    if not allowed_cost_centers:
-        raise HTTPException(status_code=403, detail="У пользователя нет прав (read/write) ни для одного department_code")
+    # if not allowed_cost_centers:
+    #     raise HTTPException(status_code=403, detail="У пользователя нет прав (read/write) ни для одного department_code")
 
     contents = await file.read()
 

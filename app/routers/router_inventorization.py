@@ -185,7 +185,7 @@ async def delete_status(
 async def export_session_to_excel(
         session_id: int,
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """Скачать сессию инвентаризации в формате Excel."""
     try:

@@ -1296,7 +1296,8 @@ async def process_excel_import_job(
 
             task.status = "completed"
             task.processed_rows = total_rows
-            task.items_data = items_results
+            # ИСПРАВЛЕНИЕ: Сериализуем данные перед сохранением в JSON
+            task.items_data = [serialize_for_json(item) for item in items_results]
             await db.commit()
             logger.info(f"[IMPORT JOB] Задача {task_id} завершена успешно.")
 

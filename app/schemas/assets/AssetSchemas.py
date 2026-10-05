@@ -5,7 +5,7 @@ from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 
 class AssetBase(BaseModel):
     name: str
-    inventory_id: str
+    inventory_id: Optional[str] = None
     serial_number: Optional[str] = None
     asset_status: Optional[str] = None
     asset_status_id: Optional[int] = None

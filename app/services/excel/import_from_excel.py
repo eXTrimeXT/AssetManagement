@@ -874,7 +874,7 @@ async def preview_excel_row(
         db: AsyncSession,
         allowed_cost_centers: List[str],
         row_index: int,
-        asset_types_map: Dict[str, int],      # <-- ДОБАВЛЕНО: словарь имя -> ID
+        asset_types_map: Dict[str, int],      # <-- словарь имя -> ID
         asset_types_names: List[str]
 ) -> Dict[str, Any]:
     name = normalize(excel_row.get("name"))

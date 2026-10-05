@@ -303,7 +303,7 @@ async def preview_excel_row(
             "cost_center_name_from": sap_asset.get("cost_center_name_from"), "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
             "cost_center_code": sap_asset.get("cost_center_code"), "cost_center_name": sap_asset.get("cost_center_name"),
             "cost_center_shortname": sap_asset.get("cost_center_shortname"), "asset_type_id": resolved_asset_type_id_sap,
-            "asset_status_id": 9, "model_name": model_name_sap, "manufacturer_name": manufacturer_name_sap,
+            "asset_status_id": 10, "model_name": model_name_sap, "manufacturer_name": manufacturer_name_sap,
             "asset_type_name": asset_type_name_sap, "os_name": os_name_sap, "users": employees
         }
 
@@ -327,7 +327,7 @@ async def preview_excel_row(
         "name": name or "Без имени", "inventory_id": inv_id, "serial_number": sn, "quantity": 1,
         "comment": comment, "date_issue": date_issue, "date_purchasing": date_purchasing,
         "next_service": next_service, "service_period": service_period, "check_period": check_period,
-        "asset_type_id": resolved_asset_type_id, "asset_status_id": 9,
+        "asset_type_id": resolved_asset_type_id, "asset_status_id": 10,
         "model_name": model_name, "manufacturer_name": manufacturer_name,
         "asset_type_name": asset_type_name, "os_name": os_name, "users": None
     }

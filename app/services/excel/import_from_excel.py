@@ -2059,7 +2059,7 @@ async def start_excel_import(
     allowed_cost_centers = await get_user_allowed_cost_centers(token)
 
     task_id = str(uuid.uuid4())
-    new_task = ImportTask(task_id=task_id, status="pending")
+    new_task = ImportTask(task_id=task_id, status="pending", employee_id=current_user.employee_id)
     db.add(new_task)
     await db.commit()
 
@@ -2088,7 +2088,7 @@ async def get_import_status(
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    stmt = select(ImportTask).where(ImportTask.task_id == task_id)
+    stmt = select(ImportTask).where(ImportTask.task_id == task_id, ImportTask.employee_id == current_user.employee_id)
     result = await db.execute(stmt)
     task = result.scalar_one_or_none()
 
@@ -2101,6 +2101,7 @@ async def get_import_status(
 
     return {
         "task_id": task.task_id,
+        "employee_id": task.employee_id,
         "status": task.status,
         "total_rows": task.total_rows,
         "processed_rows": task.processed_rows,
@@ -2109,6 +2110,24 @@ async def get_import_status(
         "allowed_cost_centers_used": task.allowed_cost_centers or [],
         "items": task.items_data or []
     }
+
+@router_excel_import.get("/import/check-last-import/")
+async def check_last_import(
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    """Выдаем последний task_id со статусом `pending` или `processing` для текущего пользователя"""
+    stmt = (select(ImportTask).where(
+        or_(
+            ImportTask.status == "pending",
+            ImportTask.status == "processing"
+        ),
+        ImportTask.employee_id == current_user.employee_id)
+        .order_by(ImportTask.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    task = result.scalars().first()
+    return { "task_id": task.task_id if task else None }
 
 @router_excel_import.post("/bulk-save")
 async def bulk_save_assets(

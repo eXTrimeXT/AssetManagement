@@ -12,5 +12,6 @@ class ImportTask(Base):
     error_message = Column(Text, nullable=True)
     allowed_cost_centers = Column(JSON, nullable=True)
     items_data = Column(JSON, nullable=True)  # Храним результаты обработки строк
+    employee_id = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

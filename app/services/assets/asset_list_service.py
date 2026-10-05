@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
 from sqlalchemy import select, func, inspect, Integer, or_, cast, null
@@ -13,10 +14,14 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
+# PROD OR TEST SAP_API_URL
+# SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
+SAP_API_URL = "http://10.168.130.86:8123/sap/base_materials"
+X_API_TOKEN = os.getenv("X_API_TOKEN")
 
 # ID виртуального типа SAP-активов.
 # ID типа "Без типа" (публичный, права на него не выдаются).
@@ -745,6 +750,11 @@ async def fetch_sap_materials(
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
     # offset = (page - 1) * page_size
+    headers = {
+        "X-API-Token": X_API_TOKEN,
+        "Accept": "application/json"
+    }
+
     params = {
         "limit": page_size,
         "offset": offset,
@@ -772,7 +782,7 @@ async def fetch_sap_materials(
     if cost_center_shortname:
         params["cost_center_shortname"] = cost_center_shortname
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
         response = await client.get(SAP_API_URL, params=params)
         response.raise_for_status()
         return response.json()
@@ -781,7 +791,6 @@ async def fetch_sap_materials(
 # ============================================================
 # Загрузка сотрудников и департаментов
 # ============================================================
-
 async def _get_employees_by_ids(
         db: AsyncSession,
         employee_ids: List[str],

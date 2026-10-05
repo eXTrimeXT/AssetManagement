@@ -195,7 +195,7 @@ async def create_inventory_session(
 
     if department_codes:
         # Разбиваем строку по запятой, убираем пробелы и приводим к верхнему регистру
-        codes_list = [code.strip().upper() for code in department_codes.split(',') if code.strip()]
+        codes_list = [code.strip().upper() for code in department_codes.split(';') if code.strip()]
         if codes_list:
             # Фильтруем по текущему ответственному MVZ актива (cost_center_code_from)
             conditions.append(Asset.cost_center_code_from.in_(codes_list))

@@ -580,16 +580,19 @@ async def check_last_import(
 ):
     """Выдаем последний task_id со статусом `pending` или `processing` для текущего пользователя"""
     stmt = (select(ImportTask).where(
-        or_(
-            ImportTask.status == "pending",
-            ImportTask.status == "processing"
-        ),
+        # or_(
+        #     ImportTask.status == "pending",
+        #     ImportTask.status == "processing"
+        # ),
         ImportTask.employee_id == current_user.employee_id)
         .order_by(ImportTask.created_at.desc())
     )
     result = await db.execute(stmt)
     task = result.scalars().first()
-    return { "task_id": task.task_id if task else None }
+    return {
+        "task_id": task.task_id if task else None,
+        "status": task.status if task else None
+    }
 
 @router_excel_import.post("/bulk-save")
 async def bulk_save_assets(

@@ -191,9 +191,8 @@ app.include_router(router_asset_history, prefix="/api")     # История а�
 app.include_router(router_asset_write_off, prefix="/api")   # Списание активов
 
 app.include_router(router_from_sap, prefix="/api")          # Импорт активов из SAP
-app.include_router(router_excel_import, prefix="/api")      # Импорт активов из Excel
-
 app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
+app.include_router(router_excel_import, prefix="/api")      # Импорт активов из Excel
 
 app.include_router(router_analytics, prefix="/api")         # Аналитика
 

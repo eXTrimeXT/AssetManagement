@@ -578,7 +578,7 @@ async def check_last_import(
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    """Выдаем последний task_id со статусом `pending` или `processing` для текущего пользователя"""
+    """Выдаем последний `task_id` и `status` для текущего пользователя"""
     stmt = (select(ImportTask).where(
         # or_(
         #     ImportTask.status == "pending",

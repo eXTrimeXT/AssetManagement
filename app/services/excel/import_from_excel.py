@@ -383,6 +383,16 @@ async def process_excel_import_job(
             asset_types_names = list(asset_types_map.keys())
 
             for index, row in df.iterrows():
+                # === ПРОВЕРКА НА ОТМЕНУ ЗАДАЧИ (каждые 5 строк) ===
+                if index % 5 == 0:
+                    check_stmt = select(ImportTask.status).where(ImportTask.task_id == task_id)
+                    check_res = await db.execute(check_stmt)
+                    current_status = check_res.scalar_one_or_none()
+                    if current_status == "cancelled":
+                        logger.info(f"[IMPORT JOB] Задача {task_id} была отменена пользователем. Остановка обработки.")
+                        break  # Прерываем цикл, переходим в finally для очистки
+                # =================================================
+
                 excel_row = row.to_dict()
                 row_index = index + 2
 
@@ -410,11 +420,17 @@ async def process_excel_import_job(
                     task.items_data = [serialize_for_json(item) for item in items_results]
                     await db.commit()
 
-            task.status = "completed"
-            task.processed_rows = total_rows
-            task.items_data = [serialize_for_json(item) for item in items_results]
-            await db.commit()
-            logger.info(f"[IMPORT JOB] Задача {task_id} завершена успешно (превью сформировано).")
+            # Если цикл завершился нормально (не через break), помечаем как completed
+            # Но сначала проверим, не был ли он отменен
+            check_stmt = select(ImportTask.status).where(ImportTask.task_id == task_id)
+            check_res = await db.execute(check_stmt)
+            if check_res.scalar_one_or_none() != "cancelled":
+                task.status = "completed"
+                task.processed_rows = total_rows
+                task.items_data = [serialize_for_json(item) for item in items_results]
+                await db.commit()
+                logger.info(f"[IMPORT JOB] Задача {task_id} завершена успешно (превью сформировано).")
+
 
     except Exception as e:
         logger.error(f"[IMPORT JOB] Критическая ошибка задачи {task_id}: {e}", exc_info=True)
@@ -429,6 +445,7 @@ async def process_excel_import_job(
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
+            logger.info(f"[IMPORT JOB] Временный файл {file_path} удален.")
 
 # ==============================================================================
 # ENDPOINTS
@@ -542,6 +559,44 @@ async def start_excel_import(
     return {
         "task_id": task_id,
         "message": "Формирование превью запущено в фоновом режиме. Используйте task_id для проверки статуса и получения данных для bulk-save."
+    }
+
+@router_excel_import.delete("/import/{task_id}", status_code=200)
+async def cancel_excel_import(
+        task_id: str,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    """Отменяет выполняющуюся или ожидающую задачу импорта."""
+    # Находим задачу и проверяем, что она принадлежит текущему пользователю и еще не завершена
+    stmt = select(ImportTask).where(
+        ImportTask.task_id == task_id,
+        ImportTask.employee_id == current_user.employee_id,
+        ImportTask.status.in_(["pending", "processing"]) # Можно отменить только активные задачи
+    )
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(
+            status_code=404,
+            detail="Задача не найдена, уже завершена, отменена, либо у вас нет прав на её отмену"
+        )
+
+    # Меняем статус на cancelled (это сигнал для фоновой задачи остановиться)
+    task.status = "cancelled"
+    task.error_message = "Отменено пользователем"
+    await db.commit()
+
+    # Удаляем задачу из планировщика APScheduler, если она там еще есть
+    job_id = f"import_{task_id}"
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+        logger.info(f"[IMPORT JOB] Задача {task_id} принудительно удалена из планировщика")
+
+    return {
+        "message": "Задача импорта успешно отменена",
+        "task_id": task_id
     }
 
 @router_excel_import.get("/import/status/{task_id}")

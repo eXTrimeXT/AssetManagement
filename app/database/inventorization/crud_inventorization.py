@@ -15,6 +15,7 @@ from app.models.assets.Asset import Asset
 from app.models.assets.AssetType import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.database.crud_notifications import notify_inventory_started, notify_inventory_completed
+from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_TYPE_ASSET_ID
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,117 @@ async def get_inventory_items_by_session_id(
 #     await db.refresh(session)
 #     return session
 
+# async def create_inventory_session(
+#         db: AsyncSession,
+#         asset_type_id: Optional[int] = None,
+#         department_codes: Optional[str] = None,
+#         creator_employee_id: Optional[str] = None,
+#         start_date: Optional[datetime] = None,
+#         end_date: Optional[datetime] = None
+# ) -> InventorizationSession:
+#
+#     # ВАЛИДАЦИЯ: Должен быть указан хотя бы один критерий
+#     if not asset_type_id and not department_codes:
+#         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
+#
+#     # Определяем названия типа актива (если он указан)
+#     asset_type_name = "Смешанный тип (по департаментам)"
+#     asset_type_en_name = "mixed_by_departments"
+#
+#     if asset_type_id is not None:
+#         asset_type_result = await db.execute(
+#             select(AssetType).where(AssetType.asset_type_id == asset_type_id)
+#         )
+#         asset_type = asset_type_result.scalar_one_or_none()
+#         if not asset_type:
+#             raise ValueError(f"Тип актива с id {asset_type_id} не найден")
+#         asset_type_name = asset_type.name
+#         asset_type_en_name = asset_type.en_name
+#
+#     # Создаем сессию
+#     session = InventorizationSession(
+#         asset_type_id=asset_type_id,
+#         department_codes=department_codes,  # Сохраняем строку кодов в БД
+#         asset_type_name=asset_type_name,
+#         asset_type_en_name=asset_type_en_name,
+#         status="in_progress",
+#         created_by=creator_employee_id,
+#         start_date=start_date,
+#         end_date=end_date
+#     )
+#     db.add(session)
+#     await db.flush()
+#
+#     # Динамически формируем запрос для поиска активов
+#     query = select(Asset)
+#     conditions = []
+#
+#     if asset_type_id is not None:
+#         conditions.append(Asset.asset_type_id == asset_type_id)
+#
+#     if department_codes:
+#         # Разбиваем строку по запятой, убираем пробелы и приводим к верхнему регистру
+#         codes_list = [code.strip().upper() for code in department_codes.split(';') if code.strip()]
+#         if codes_list:
+#             # Фильтруем по текущему ответственному MVZ актива (cost_center_code_from)
+#             conditions.append(Asset.cost_center_code_from.in_(codes_list))
+#
+#     # Применяем все условия через AND
+#     if conditions:
+#         query = query.where(*conditions)
+#     else:
+#         # На случай, если оба параметра somehow оказались пустыми (защита)
+#         query = query.where(False)
+#
+#     result = await db.execute(query)
+#     assets = result.scalars().all()
+#
+#     if not assets:
+#         logger.warning(f"Не найдено активов для сессии с параметрами: asset_type_id={asset_type_id}, department_codes={department_codes}")
+#
+#     # Создаем элементы инвентаризации
+#     items = [
+#         InventorizationItem(
+#             session_id=session.session_id,
+#             asset_id=asset.asset_id,
+#             asset_name=asset.name,
+#             is_checked=False,
+#             serial_number=asset.serial_number,
+#             inventory_id=asset.inventory_id,
+#             quantity=asset.quantity,
+#             quantity_fact=None,
+#         )
+#         for asset in assets
+#     ]
+#
+#     if items:
+#         db.add_all(items)
+#         await db.flush()
+#
+#     # ЛОГИКА УВЕДОМЛЕНИЙ
+#     asset_ids = [item.asset_id for item in items]
+#
+#     if asset_ids:
+#         employees_result = await db.execute(
+#             select(distinct(AssetAssignment.employee_id)).where(
+#                 AssetAssignment.asset_id.in_(asset_ids),
+#                 AssetAssignment.end_date.is_(None)  # Только активные назначения
+#             )
+#         )
+#         responsible_employees = [row[0] for row in employees_result.all()]
+#
+#         for emp_id in responsible_employees:
+#             await notify_inventory_started(
+#                 db=db,
+#                 employee_id=emp_id,
+#                 session_id=session.session_id,
+#                 initiator_id=creator_employee_id,
+#             )
+#
+#     await db.commit()
+#     await db.refresh(session)
+#     return session
+
 async def create_inventory_session(
         db: AsyncSession,
         asset_type_id: Optional[int] = None,
@@ -154,11 +266,9 @@ async def create_inventory_session(
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
 
-    # 1. ВАЛИДАЦИЯ: Должен быть указан хотя бы один критерий
     if not asset_type_id and not department_codes:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
 
-    # 2. Определяем названия типа актива (если он указан)
     asset_type_name = "Смешанный тип (по департаментам)"
     asset_type_en_name = "mixed_by_departments"
 
@@ -172,10 +282,9 @@ async def create_inventory_session(
         asset_type_name = asset_type.name
         asset_type_en_name = asset_type.en_name
 
-    # 3. Создаем сессию
     session = InventorizationSession(
         asset_type_id=asset_type_id,
-        department_codes=department_codes,  # Сохраняем строку кодов в БД
+        department_codes=department_codes,
         asset_type_name=asset_type_name,
         asset_type_en_name=asset_type_en_name,
         status="in_progress",
@@ -186,7 +295,7 @@ async def create_inventory_session(
     db.add(session)
     await db.flush()
 
-    # 4. Динамически формируем запрос для поиска активов
+    # 1. Локальные активы
     query = select(Asset)
     conditions = []
 
@@ -194,30 +303,23 @@ async def create_inventory_session(
         conditions.append(Asset.asset_type_id == asset_type_id)
 
     if department_codes:
-        # Разбиваем строку по запятой, убираем пробелы и приводим к верхнему регистру
-        codes_list = [code.strip().upper() for code in department_codes.split(';') if code.strip()]
+        codes_list = [code.strip().upper() for code in department_codes.split(',') if code.strip()]
         if codes_list:
-            # Фильтруем по текущему ответственному MVZ актива (cost_center_code_from)
             conditions.append(Asset.cost_center_code_from.in_(codes_list))
 
-    # Применяем все условия через AND
     if conditions:
         query = query.where(*conditions)
     else:
-        # На случай, если оба параметра somehow оказались пустыми (защита)
         query = query.where(False)
 
     result = await db.execute(query)
     assets = result.scalars().all()
 
-    if not assets:
-        logger.warning(f"Не найдено активов для сессии с параметрами: asset_type_id={asset_type_id}, department_codes={department_codes}")
-
-    # 5. Создаем элементы инвентаризации
     items = [
         InventorizationItem(
             session_id=session.session_id,
             asset_id=asset.asset_id,
+            material_id=asset.material_id, # Сохраняем material_id и для локальных
             asset_name=asset.name,
             is_checked=False,
             serial_number=asset.serial_number,
@@ -232,14 +334,88 @@ async def create_inventory_session(
         db.add_all(items)
         await db.flush()
 
-    # 6. ЛОГИКА УВЕДОМЛЕНИЙ
-    asset_ids = [item.asset_id for item in items]
+    # 2. ЗАПРОС SAP-АКТИВОВ
+    # Идем в SAP, если:
+    # - Указан department_codes (фильтруем SAP по этим кодам)
+    # - Указан asset_type_id == 0 (Без типа), так как SAP-активы виртуально имеют тип 0
+    should_fetch_sap = False
+    sap_cost_center_code_from = None
+
+    if department_codes:
+        should_fetch_sap = True
+        # SAP API ожидает коды через точку с запятой
+        sap_cost_center_code_from = department_codes.replace(',', ';')
+
+    if asset_type_id == WITHOUT_TYPE_ASSET_ID:
+        should_fetch_sap = True
+
+    if should_fetch_sap:
+        try:
+            sap_response = await fetch_sap_materials(
+                offset=0,
+                page_size=1000, # Запрашиваем большой лимит для инвентаризации
+                material_id=None,
+                search_mode="ALL",
+                base_material_name_like=None,
+                inventory_number=None,
+                serial_number=None,
+                employee_id=None,
+                cost_center_code_from=sap_cost_center_code_from,
+                cost_center_code_from_search_mode="ALL",
+                cost_center_shortname_from=None,
+                cost_center_code=None,
+                cost_center_shortname=None
+            )
+
+            if sap_response.get("success") and "data" in sap_response.get("response", {}):
+                sap_items_raw = sap_response["response"]["data"]
+
+                # Собираем ID уже добавленных локальных активов для исключения дубликатов
+                local_inv_ids = {asset.inventory_id.strip().lower() for asset in assets if asset.inventory_id}
+                local_mat_ids = {asset.material_id.strip().lower() for asset in assets if asset.material_id}
+
+                sap_items_to_add = []
+                for sap_item in sap_items_raw:
+                    inv_num = str(sap_item.get("inventory_number", "")).strip().lower()
+                    mat_id = str(sap_item.get("material_id", "")).strip().lower()
+
+                    # Пропускаем, если уже есть в локальных
+                    if inv_num and inv_num in local_inv_ids:
+                        continue
+                    if mat_id and mat_id in local_mat_ids:
+                        continue
+
+                    sap_items_to_add.append(
+                        InventorizationItem(
+                            session_id=session.session_id,
+                            asset_id=None, # Виртуальный актив
+                            material_id=sap_item.get("material_id"),
+                            asset_name=sap_item.get("base_material_name"),
+                            is_checked=False,
+                            serial_number=sap_item.get("serial_number"),
+                            inventory_id=sap_item.get("inventory_number"),
+                            quantity=int(sap_item.get("quantity", 1)) if sap_item.get("quantity") else 1,
+                            quantity_fact=None,
+                        )
+                    )
+
+                if sap_items_to_add:
+                    db.add_all(sap_items_to_add)
+                    items.extend(sap_items_to_add) # Добавляем в общий список для уведомлений
+                    await db.flush()
+                    logger.info(f"Добавлено {len(sap_items_to_add)} виртуальных SAP-активов в сессию инвентаризации.")
+
+        except Exception as e:
+            logger.error(f"Ошибка при запросе SAP-активов для инвентаризации: {e}", exc_info=True)
+
+    # 3. ЛОГИКА УВЕДОМЛЕНИЙ
+    asset_ids = [item.asset_id for item in items if item.asset_id is not None] # Только локальные ID
 
     if asset_ids:
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
-                AssetAssignment.end_date.is_(None)  # Только активные назначения
+                AssetAssignment.end_date.is_(None)
             )
         )
         responsible_employees = [row[0] for row in employees_result.all()]
@@ -364,8 +540,6 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
 
 
 """ Списание """
-
-
 async def get_inventorization_report(
         db: AsyncSession,
         session_id: int,
@@ -467,16 +641,16 @@ async def get_inventorization_discrepancies(
             continue
 
         # Получаем serial_number из актива
-        asset_result = await db.execute(
-            select(Asset.serial_number).where(Asset.asset_id == item.asset_id)
-        )
-        serial_number = asset_result.scalar_one_or_none()
+        # asset_result = await db.execute(
+        #     select(Asset.serial_number).where(Asset.asset_id == item.asset_id)
+        # )
+        # serial_number = asset_result.scalar_one_or_none()
 
         discrepancies.append({
             "inventorization_id": item.inventorization_id,
             "asset_id": item.asset_id,
             "asset_name": item.asset_name,
-            "serial_number": serial_number,
+            "serial_number": item.serial_number,
             "quantity": item.quantity,
             "quantity_fact": item.quantity_fact,
             "difference": difference,
@@ -570,7 +744,8 @@ async def export_inventory_session_to_excel(
     # Данные элементов
     for idx, item in enumerate(items, start=start_row + 1):
         ws.cell(row=idx, column=1, value=item.inventorization_id)
-        ws.cell(row=idx, column=2, value=item.asset_id)
+        # ws.cell(row=idx, column=2, value=item.asset_id)
+        ws.cell(row=idx, column=2, value=item.asset_id if item.asset_id else f"SAP ({item.material_id})")
         ws.cell(row=idx, column=3, value=item.asset_name)
         ws.cell(row=idx, column=4, value=item.serial_number or "")
         ws.cell(row=idx, column=5, value=item.inventory_id or "")

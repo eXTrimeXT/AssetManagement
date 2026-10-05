@@ -59,18 +59,19 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
             "serial_number": sap_item.get("serial_number"),
             "quantity": int(sap_item.get("quantity", 1)) if sap_item.get("quantity") is not None else 1,
             "every_week_check": False,
-            "asset_type_id": 10,
+            "asset_type_id": 0,
             "asset_status_id": 10,
             "model_id": None,
             "sap_employee_id": sap_employee_id,
-            "changed_date": sap_item.get("changed_date")
+            "changed_date": sap_item.get("changed_date"),
+            
         }
 
     except Exception as exc:
         logger.error(f"Ошибка при получении данных SAP для transfer (material_id={material_id}): {exc}")
         raise ValueError(f"Не удалось получить данные актива из SAP: {exc}")
 
-async def create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
+async def  create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
     sap_data = await fetch_sap_asset_data_for_transfer(db, material_id)
 
     new_asset = Asset(

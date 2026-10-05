@@ -11,7 +11,8 @@ class InventorizationSessionCreate(BaseModel):
 class InventorizationItemResponse(BaseModel):
     inventorization_id: int
     session_id: int
-    asset_id: int
+    asset_id: Optional[int] = None
+    material_id: Optional[str] = None
     asset_name: str
     is_checked: bool
 

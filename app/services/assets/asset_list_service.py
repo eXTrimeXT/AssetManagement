@@ -21,8 +21,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # PROD OR TEST SAP_API_URL
-SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
-# SAP_API_URL = "http://10.168.130.86:8123/sap/base_materials"
+# SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
+SAP_API_URL = "http://10.168.130.86:8123/sap/base_materials"
 X_API_TOKEN = os.getenv("X_API_TOKEN")
 
 # ID виртуального типа SAP-активов.
@@ -139,90 +139,6 @@ async def get_assets_list_with_sap(
     skip = (page - 1) * page_size
     result_items: List[Any] = []
     sap_total = 0
-
-    # Если на этой странице есть локальные активы, забираем их
-    # if not has_cost_center_filter and skip < local_total:
-    #     local_orm_items = await _get_local_assets_slice(
-    #         db=db,
-    #         skip=skip,
-    #         limit=page_size,
-    #         asset_id=asset_id,
-    #         material_id=material_id,
-    #         name=name,
-    #         inventory_id=inventory_id,
-    #         serial_number=serial_number,
-    #         asset_status=asset_status,
-    #         model_id=model_id,
-    #         asset_type_id=asset_type_id,
-    #         parent_id=parent_id,
-    #         employee_id=employee_id,
-    #         cost_center_code_from=cost_center_code_from,
-    #         cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-    #         only_my=only_my
-    #     )
-    #
-    #     local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
-    #     result_items.extend(local_items)
-    #
-    #     # Дополняем из SAP, только если есть место и SAP не пропускаем
-    #     remaining_slots = page_size - len(result_items)
-    #     if remaining_slots > 0 and not skip_sap_fetch:
-    #         exclude_inv_ids = [item.inventory_id for item in result_items if getattr(item, "inventory_id", None)]
-    #         sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-    #             db=db,
-    #             limit=remaining_slots * 2,
-    #             offset=0,
-    #             material_id=material_id,
-    #             name=name,
-    #             inventory_id=inventory_id,
-    #             serial_number=serial_number,
-    #             employee_id=employee_id,
-    #             search_mode=search_mode,
-    #             exclude_inventory_ids=exclude_inv_ids,
-    #             asset_type_id=asset_type_id,
-    #             only_my=bool(only_my),
-    #             cost_center_shortname_from=cost_center_shortname_from,
-    #             cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-    #             cost_center_code_from=cost_center_code_from,
-    #             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-    #             cost_center_shortname=cost_center_shortname,
-    #             cost_center_shortname_mode=cost_center_shortname_mode,
-    #             cost_center_code=cost_center_code
-    #         )
-    #         result_items.extend(sap_items[:remaining_slots])
-    #         sap_total = fetched_sap_total
-    # else:
-    # # if True:
-    #     # Либо локальные закончились, либо есть cost_center-фильтр — идём в SAP
-    #     # if not skip_sap_fetch:
-    #     if True:
-    #         # Если cost_center-фильтр задан — локальных нет, offset считается от 0
-    #         sap_offset = 0 if has_cost_center_filter else max(0, skip - local_total)
-    #         sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
-    #             db=db,
-    #             limit=page_size,
-    #             offset=sap_offset,
-    #             material_id=material_id,
-    #             name=name,
-    #             inventory_id=inventory_id,
-    #             serial_number=serial_number,
-    #             employee_id=employee_id,
-    #             search_mode=search_mode,
-    #             exclude_inventory_ids=[],
-    #             asset_type_id=asset_type_id,
-    #             only_my=bool(only_my),
-    #             cost_center_shortname_from=cost_center_shortname_from,
-    #             cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-    #             cost_center_code_from=cost_center_code_from,
-    #             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-    #             cost_center_shortname=cost_center_shortname,
-    #             cost_center_shortname_mode=cost_center_shortname_mode,
-    #             cost_center_code=cost_center_code
-    #         )
-    #         result_items.extend(sap_items)
-    #         sap_total = fetched_sap_total
-    #
-    #         logger.info(f"{skip_sap_fetch=} {skip=} {local_total=} {sap_offset=} {fetched_sap_total=} {sap_total=}")
 
     # Если на этой странице есть локальные активы, забираем их
     if not has_cost_center_filter and skip < local_total:

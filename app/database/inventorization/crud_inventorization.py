@@ -71,8 +71,8 @@ async def get_inventory_items_by_session_id(
 
 async def create_inventory_session(
         db: AsyncSession,
-        asset_type_id: int,
-        creator_employee_id: str,
+        asset_type_id: Optional[int] = None,
+        creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:

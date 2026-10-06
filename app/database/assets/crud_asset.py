@@ -1,8 +1,12 @@
 from datetime import date
 from typing import Optional, Sequence, List, Any, Tuple, Dict
+
+from fastapi import HTTPException
 from sqlalchemy import select, func, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette import status
+
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate
 from app.models.assets.Asset import Asset
 from app.models.assets import AssetType
@@ -10,12 +14,12 @@ from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.database.assets.crud_asset_history import compare_and_save_changes
-from app.database.crud_notifications import notify_assigned_user, notify_assigned_responsible, notify_unassigned_user, \
-    notify_unassigned_responsible
+from app.database.crud_notifications import notify_assigned_user, notify_unassigned_user
 
 # Импорты для оптимизации запроса связки актива и пользователя
 from app.schemas.zup import PositionResponse
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
+from app.schemas.assets.AssetSchemas import AssetLocationUpdate
 from app.database.zup import get_position_by_guid
 from app.database.zup.crud_zup_departments import get_hierarchy_departments
 from app.database.crud_notifications import notify_unassigned_serving
@@ -25,10 +29,31 @@ from app.models.zup import Employee, ZupDepartment
 
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
+    # === ПРОВЕРКА: Наличие актива по инвентарному и серийному номеру ===
+    if data.inventory_id:
+        existing_asset_by_inv = await db.execute(
+            select(Asset).where(Asset.inventory_id == data.inventory_id)
+        )
+        if existing_asset_by_inv.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Актив с инвентарным номером '{data.inventory_id}' уже существует."
+            )
+
+    if data.serial_number:
+        existing_asset_by_sn = await db.execute(
+            select(Asset).where(Asset.serial_number == data.serial_number)
+        )
+        if existing_asset_by_sn.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Актив с серийным номером '{data.serial_number}' уже существует."
+            )
+    # ====================================================================
+
     # ИСКЛЮЧАЕМ чтобы не передать в relationship
     asset_data = data.model_dump(exclude={
         "users",
-        # "responsible_users",
         "serving_users",
         "location",
         "asset_status"
@@ -52,14 +77,12 @@ async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) ->
     await db.refresh(db_obj)
 
     # Синхронизация привязок пользователей, если они переданы
-    # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
     if data.users is not None or data.serving_users is not None:
         await _sync_asset_users(
             db=db,
             asset_id=db_obj.asset_id,
-            users = data.users or [],
-            # responsible_users = data.responsible_users or [],
-            serving_users = data.serving_users or [],
+            users=data.users or [],
+            serving_users=data.serving_users or [],
             assigned_by=employee_id
         )
         await db.commit()
@@ -673,7 +696,7 @@ async def _update_primary_assignment(
 async def _sync_asset_location(
         db: AsyncSession,
         asset_id: int,
-        location_data,  # AssetLocationUpdate
+        location_data: AssetLocationUpdate,
         assigned_by: str
 ) -> dict:
     """
@@ -695,13 +718,13 @@ async def _sync_asset_location(
     # Создаём новую активную позицию
     new_position = AssetPosition(
         asset_id=asset_id,
-        workshop_id=location_data.workshop_id,
-        place=location_data.place,
-        level=location_data.level,
-        x=location_data.x,
-        y=location_data.y,
-        rotation=location_data.rotation if hasattr(location_data, 'rotation') else 0,
-        scale=location_data.scale if hasattr(location_data, 'scale') else 100,
+        workshop_id=getattr(location_data, 'workshop_id', None),
+        place=getattr(location_data, 'place', None),
+        level=getattr(location_data, 'level', None),
+        x=getattr(location_data, 'x', None),
+        y=getattr(location_data, 'y', None),
+        rotation=getattr(location_data, 'rotation', None),
+        scale=getattr(location_data, 'scale', None),
         is_active=True,
     )
     db.add(new_position)

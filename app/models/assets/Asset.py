@@ -1,6 +1,5 @@
 from typing import Optional, List
 
-from pydantic import computed_field
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func, inspect
 from sqlalchemy.orm import relationship, backref, Mapped
 from app.models.Base import Base
@@ -99,7 +98,6 @@ class Asset(Base):
         cascade="all, delete-orphan"
     )
 
-    @computed_field
     @property
     def asset_type_name(self) -> Optional[str]:
         if self.asset_type:
@@ -107,7 +105,6 @@ class Asset(Base):
         return None
 
     # === Локация из AssetPosition + Workshop ===
-    @computed_field
     @property
     def location(self) -> Optional[AssetLocationResponse]:
         """Текущая локация актива (активная позиция на карте)"""
@@ -132,7 +129,6 @@ class Asset(Base):
             y=active_position.y,
         )
 
-    @computed_field
     @property
     def current_user(self):
         """Возвращает ОДНУ активную привязку текущего пользователя"""
@@ -141,7 +137,6 @@ class Asset(Base):
                 return assignment.employee_id
         return None
 
-    @computed_field
     @property
     def current_user_full_name(self):
         """Возвращает ФИО текущего пользователя"""
@@ -153,7 +148,6 @@ class Asset(Base):
                 full_name_ru=" ".join(parts_ru) if parts_ru else None
         return full_name_ru
 
-    @computed_field
     @property
     def users(self) -> List[AssetUserFullResponse]:
         result = []
@@ -233,7 +227,6 @@ class Asset(Base):
             ))
         return result
 
-    @computed_field
     @property
     def responsible_users(self) -> List[AssetUserFullResponse]:
         result = []
@@ -307,7 +300,6 @@ class Asset(Base):
             ))
         return result
 
-    @computed_field
     @property
     def serving_users(self) -> List[AssetUserFullResponse]:
         result = []

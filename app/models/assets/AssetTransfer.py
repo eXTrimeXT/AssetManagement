@@ -7,7 +7,7 @@ class AssetTransfer(Base):
     __tablename__ = "asset_transfers"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    asset_id = Column(Integer, ForeignKey("assets.asset_id"), nullable=False)
+    asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"), nullable=False)
     initiator_id = Column(String(10), ForeignKey("zup_employees.employee_id"), nullable=False)
     target_employee_id = Column(String(10), ForeignKey("zup_employees.employee_id"), nullable=False)
     assignment_type = Column(String(20), nullable=False)  # 'user' или 'responsible'

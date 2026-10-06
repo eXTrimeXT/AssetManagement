@@ -64,6 +64,7 @@ async def get_assets(
         cost_center_shortname_from: Optional[str] = Query(None, description="Ответственный департамент (short_name)"),
         cost_center_shortname_from_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL"),
         cost_center_code_from: Optional[str] = Query(None, description="Код ответственного департамента"),
+        cost_center_code_from_search_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL", description="Режим поиска по cost_center_code_from"),
 
         cost_center_shortname: Optional[str] = Query(None, description="Департамент владельца (short_name)"),
         cost_center_shortname_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL"),
@@ -96,6 +97,8 @@ async def get_assets(
         cost_center_shortname_from=cost_center_shortname_from,
         cost_center_shortname_from_mode=cost_center_shortname_from_mode,
         cost_center_code_from=cost_center_code_from,
+        cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+        
         cost_center_shortname=cost_center_shortname,
         cost_center_shortname_mode=cost_center_shortname_mode,
         cost_center_code=cost_center_code

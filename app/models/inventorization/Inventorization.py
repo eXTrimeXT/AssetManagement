@@ -10,6 +10,7 @@ class InventorizationSession(Base):
     __tablename__ = "inventorization_sessions"
     session_id = Column(Integer, primary_key=True, index=True)
     asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), nullable=False)
+    department_codes = Column(String(500), nullable=True)
     asset_type_name = Column(String(100), nullable=False)
     asset_type_en_name = Column(String(100), nullable=False)
     status = Column(String(50), default="in_progress")  # in_progress, completed
@@ -29,6 +30,7 @@ class InventorizationItem(Base):
     inventorization_id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("inventorization_sessions.session_id"), nullable=False)
     asset_id = Column(Integer, nullable=False)  # Без ForeignKey, чтобы удаление из assets не ломало запись здесь
+    material_id = Column(String(100), index=True, nullable=True)
     serial_number = Column(String(100), index=True, nullable=True)
     inventory_id = Column(String(100), index=True, nullable=True)
     asset_name = Column(String(150), nullable=False)

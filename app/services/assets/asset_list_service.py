@@ -1,7 +1,8 @@
 import logging
+import os
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
-from sqlalchemy import select, func, inspect, Integer, or_, cast
+from sqlalchemy import select, func, inspect, Integer, or_, cast, null
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -13,10 +14,16 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.employee import Employee
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
+# PROD OR TEST SAP_API_URL
+# SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
+SAP_API_URL = "http://10.168.130.86:8123/sap/base_materials"
+X_API_TOKEN = os.getenv("X_API_TOKEN")
 
 # ID виртуального типа SAP-активов.
 # ID типа "Без типа" (публичный, права на него не выдаются).
@@ -47,6 +54,8 @@ async def get_assets_list_with_sap(
         cost_center_shortname_from: Optional[str] = None,
         cost_center_shortname_from_mode: SearchMode = "ALL",
         cost_center_code_from: Optional[str] = None,
+        cost_center_code_from_search_mode: SearchMode = "ALL",
+
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_mode: SearchMode = "ALL",
         cost_center_code: Optional[str] = None,
@@ -84,6 +93,7 @@ async def get_assets_list_with_sap(
             parent_id=parent_id,
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             only_my=only_my
         )
 
@@ -94,7 +104,7 @@ async def get_assets_list_with_sap(
     # === ОПТИМИЗАЦИЯ 2: Определяем, нужен ли SAP ===
     # Виртуальные активы SAP "живут" под WITHOUT_TYPE_ASSET_ID.
     # "Без типа" (0) — публичный локальный тип, тоже может показываться без SAP,
-    # но виртуалки под него не подпадают (см. _build_virtual_asset).
+    # но виртуалки под него не попадают (см. _build_virtual_asset).
     #
     # Если пользователь запросил конкретный тип, отличный от виртуального, —
     # ни один виртуальный актив не пройдёт фильтрацию → SAP не дёргаем.
@@ -122,6 +132,7 @@ async def get_assets_list_with_sap(
             parent_id=parent_id,
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             only_my=only_my
         )
 
@@ -146,6 +157,7 @@ async def get_assets_list_with_sap(
             parent_id=parent_id,
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             only_my=only_my
         )
 
@@ -156,9 +168,15 @@ async def get_assets_list_with_sap(
         remaining_slots = page_size - len(result_items)
         if remaining_slots > 0 and not skip_sap_fetch:
             exclude_inv_ids = [item.inventory_id for item in result_items if getattr(item, "inventory_id", None)]
+
+            # ИСПРАВЛЕНИЕ: используем увеличенный лимит для стабильной оценки total.
+            # Это предотвращает скачки total при изменении page_size, гарантируя,
+            # что мы получаем достаточно данных для корректного определения sap_was_exhausted.
+            sap_limit = max(remaining_slots * 2, 100)
+
             sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
                 db=db,
-                limit=remaining_slots * 2,
+                limit=sap_limit,
                 offset=0,
                 material_id=material_id,
                 name=name,
@@ -172,6 +190,7 @@ async def get_assets_list_with_sap(
                 cost_center_shortname_from=cost_center_shortname_from,
                 cost_center_shortname_from_mode=cost_center_shortname_from_mode,
                 cost_center_code_from=cost_center_code_from,
+                cost_center_code_from_search_mode=cost_center_code_from_search_mode,
                 cost_center_shortname=cost_center_shortname,
                 cost_center_shortname_mode=cost_center_shortname_mode,
                 cost_center_code=cost_center_code
@@ -181,11 +200,15 @@ async def get_assets_list_with_sap(
     else:
         # Либо локальные закончились, либо есть cost_center-фильтр — идём в SAP
         if not skip_sap_fetch:
-            # Если cost_center-фильтр задан — локальных нет, offset считается от 0
             sap_offset = 0 if has_cost_center_filter else max(0, skip - local_total)
+
+            # ИСПРАВЛЕНИЕ: для первой страницы SAP используем увеличенный лимит
+            # для стабильной оценки total, независимой от page_size.
+            sap_limit = page_size if sap_offset > 0 else max(page_size, 100)
+
             sap_items, fetched_sap_total = await _fetch_and_merge_sap_assets(
                 db=db,
-                limit=page_size,
+                limit=sap_limit,
                 offset=sap_offset,
                 material_id=material_id,
                 name=name,
@@ -199,6 +222,7 @@ async def get_assets_list_with_sap(
                 cost_center_shortname_from=cost_center_shortname_from,
                 cost_center_shortname_from_mode=cost_center_shortname_from_mode,
                 cost_center_code_from=cost_center_code_from,
+                cost_center_code_from_search_mode=cost_center_code_from_search_mode,
                 cost_center_shortname=cost_center_shortname,
                 cost_center_shortname_mode=cost_center_shortname_mode,
                 cost_center_code=cost_center_code
@@ -230,6 +254,7 @@ async def _get_local_assets_count(
         parent_id: Optional[int],
         employee_id: Optional[str],
         cost_center_code_from: Optional[str],
+        cost_center_code_from_search_mode: SearchMode,
         only_my: Optional[bool] = False
 ) -> int:
     """Подсчет количества локальных активов по всем фильтрам."""
@@ -265,17 +290,23 @@ async def _get_local_assets_count(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq))
 
-    # if cost_center_code_from:
-    #     query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+    # === ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from ===
+    if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
 
-    if cost_center_code_from:
-        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()]
-        if ccc_list:
-            query = query.where(Asset.cost_center_code_from.in_(ccc_list))
+        if cost_center_code_from_search_mode == "NULLS":
+            query = query.where(Asset.cost_center_code_from.is_(None))
+        elif cost_center_code_from_search_mode == "NOT_NULLS":
+            if ccc_list:
+                query = query.where(Asset.cost_center_code_from.in_(ccc_list))
+            else:
+                query = query.where(Asset.cost_center_code_from.isnot(None))
+        else:  # ALL
+            if ccc_list:
+                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
 
     result = await db.execute(query)
     return result.scalar_one() or 0
-
 
 async def _get_local_assets_slice(
         db: AsyncSession,
@@ -292,6 +323,7 @@ async def _get_local_assets_slice(
         parent_id: Optional[int],
         employee_id: Optional[str],
         cost_center_code_from: Optional[str],
+        cost_center_code_from_search_mode: SearchMode = "ALL",
         only_my: Optional[bool] = False,
 ) -> Sequence[Asset]:
     """Получение среза локальных активов с полной загрузкой связей."""
@@ -349,13 +381,20 @@ async def _get_local_assets_slice(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
 
-    # if cost_center_code_from:
-    #     query = query.where(Asset.cost_center_code_from == cost_center_code_from)
+    # === ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from ===
+    if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
 
-    if cost_center_code_from:
-        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()]
-        if ccc_list:
-            query = query.where(Asset.cost_center_code_from.in_(ccc_list))
+        if cost_center_code_from_search_mode == "NULLS":
+            query = query.where(Asset.cost_center_code_from.is_(None))
+        elif cost_center_code_from_search_mode == "NOT_NULLS":
+            if ccc_list:
+                query = query.where(Asset.cost_center_code_from.in_(ccc_list))
+            else:
+                query = query.where(Asset.cost_center_code_from.isnot(None))
+        else:  # ALL
+            if ccc_list:
+                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
 
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -410,6 +449,7 @@ async def _fetch_and_merge_sap_assets(
         cost_center_shortname_from: Optional[str] = None,
         cost_center_shortname_from_mode: SearchMode = "ALL",
         cost_center_code_from: Optional[str] = None,
+        cost_center_code_from_search_mode: SearchMode = "ALL",
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_mode: SearchMode = "ALL",
         cost_center_code: Optional[str] = None,
@@ -426,6 +466,7 @@ async def _fetch_and_merge_sap_assets(
             serial_number=serial_number,
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             cost_center_shortname_from=cost_center_shortname_from,
             cost_center_code=cost_center_code,
             cost_center_shortname=cost_center_shortname
@@ -572,17 +613,35 @@ async def _fetch_and_merge_sap_assets(
         real_sap_items_count = len(filtered_sap_items) + excluded_count
         sap_was_exhausted = len(sap_items_raw) < limit
 
-        if offset == 0 and sap_was_exhausted and real_sap_items_count < sap_total:
+        # if offset == 0 and sap_was_exhausted and real_sap_items_count < sap_total:
+        #     adjusted_sap_total = len(filtered_sap_items)
+        #     logger.debug(
+        #         f"[SAP DEBUG] SAP total ({sap_total}) > real ({real_sap_items_count}), "
+        #         f"offset=0, ответ исчерпан → total={adjusted_sap_total}"
+        #     )
+        # else:
+        #     adjusted_sap_total = max(0, sap_total - excluded_count)
+        #     logger.debug(
+        #         f"[SAP DEBUG] Стандартная корректировка: sap_total={sap_total}, "
+        #         f"исключено={excluded_count}, adjusted={adjusted_sap_total}"
+        #     )
+
+        if offset == 0 and sap_was_exhausted:
+            # Если SAP вернул меньше элементов, чем limit, значит это ВСЕ элементы.
+            # Точное количество доступных элементов равно len(filtered_sap_items).
             adjusted_sap_total = len(filtered_sap_items)
             logger.debug(
-                f"[SAP DEBUG] SAP total ({sap_total}) > real ({real_sap_items_count}), "
-                f"offset=0, ответ исчерпан → total={adjusted_sap_total}"
+                f"[SAP DEBUG] SAP вернул {len(sap_items_raw)} < {limit}, набор исчерпан. "
+                f"adjusted_sap_total = {adjusted_sap_total}"
             )
         else:
+            # Если набор не исчерпан, оцениваем total как sap_total - excluded_count.
+            # Благодаря увеличенному sap_limit на первой странице, эта оценка
+            # становится гораздо стабильнее и не скачет при изменении page_size.
             adjusted_sap_total = max(0, sap_total - excluded_count)
             logger.debug(
-                f"[SAP DEBUG] Стандартная корректировка: sap_total={sap_total}, "
-                f"исключено={excluded_count}, adjusted={adjusted_sap_total}"
+                f"[SAP DEBUG] Набор не исчерпан ({len(sap_items_raw)} >= {limit}). "
+                f"sap_total={sap_total}, excluded={excluded_count}, adjusted={adjusted_sap_total}"
             )
 
         return virtual_assets, adjusted_sap_total
@@ -602,12 +661,17 @@ async def fetch_sap_materials(
         serial_number: Optional[str] = None,
         employee_id: Optional[str] = None,
         cost_center_code_from: Optional[str] = None,
+        cost_center_code_from_search_mode: SearchMode = "ALL",
         cost_center_shortname_from: Optional[str] = None,
         cost_center_code: Optional[str] = None,
         cost_center_shortname: Optional[str] = None
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
     # offset = (page - 1) * page_size
+    headers = {
+        "X-API-Token": X_API_TOKEN
+    }
+
     params = {
         "limit": page_size,
         "offset": offset,
@@ -626,6 +690,8 @@ async def fetch_sap_materials(
         params["employee_id"] = employee_id
     if cost_center_code_from:
         params["cost_center_code_from"] = cost_center_code_from
+    if cost_center_code_from_search_mode:
+        params["cost_center_code_from_search_mode"] = cost_center_code_from_search_mode
     if cost_center_shortname_from:
         params["cost_center_shortname_from"] = cost_center_shortname_from
     if cost_center_code:
@@ -634,7 +700,7 @@ async def fetch_sap_materials(
         params["cost_center_shortname"] = cost_center_shortname
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(SAP_API_URL, params=params)
+        response = await client.get(SAP_API_URL, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
 
@@ -642,7 +708,6 @@ async def fetch_sap_materials(
 # ============================================================
 # Загрузка сотрудников и департаментов
 # ============================================================
-
 async def _get_employees_by_ids(
         db: AsyncSession,
         employee_ids: List[str],
@@ -746,8 +811,8 @@ def _build_virtual_asset(
         "inventory_id": sap_item.get("inventory_number"),
         "serial_number": sap_item.get("serial_number"),
         "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
-        "asset_status": "На складе",
-        "asset_status_id": 9,
+        "asset_status": "В работе",
+        "asset_status_id": 10,
         "comment": None,
         "date_issue": None,
         "date_purchasing": None,

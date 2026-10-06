@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.zup.crud_zup_employees import upsert_employee, bulk_upsert_employees
 from app.database.zup.crud_zup_departments import upsert_department
 from app.database.zup.crud_zup_positions import upsert_position
+from app.database.zup.crud_zup_managers import upsert_manager
 
 logger = logging.getLogger(__name__)
 

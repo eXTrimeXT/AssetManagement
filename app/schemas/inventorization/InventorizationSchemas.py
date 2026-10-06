@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from datetime import datetime
 from typing import Optional, List
 
@@ -42,8 +42,15 @@ class InventorizationSessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class CheckItemRequest(BaseModel):
-    asset_id: int
+    asset_id: Optional[int] = None
+    material_id: Optional[str] = None
     quantity_fact: Optional[int] = None
+
+    @model_validator(mode='after')
+    def check_either_id(self) -> 'CheckItemRequest':
+        if self.asset_id is None and self.material_id is None:
+            raise ValueError("Необходимо указать либо asset_id, либо material_id")
+        return self
 
 
 """ Списание """

@@ -108,11 +108,49 @@ async def check_item(
         db=db,
         session_id=session_id,
         asset_id=data.asset_id,
+        material_id=data.material_id,
         checked_by=current_user.employee_id,
         quantity_fact=data.quantity_fact
     )
     if not success:
         raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
+    return {"message": "success"}
+
+@router_inventorization.post("/sessions/{session_id}/check")
+async def check_item(
+        session_id: int,
+        data: CheckItemRequest,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    # === ПРОВЕРКА: сессия не должна быть completed ===
+    session = await get_inventory_session_by_id(db, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
+    if session.status == "completed":
+        raise HTTPException(
+            status_code=400,
+            detail="Сессия уже завершена. Изменять items нельзя."
+        )
+
+    if data.quantity_fact is not None and data.quantity_fact < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Количество не может быть меньше 0"
+        )
+
+    success = await check_inventory_item(
+        db=db,
+        session_id=session_id,
+        asset_id=data.asset_id,       # <-- ПЕРЕДАЕМ asset_id (может быть None)
+        material_id=data.material_id, # <-- ПЕРЕДАЕМ material_id (может быть None)
+        checked_by=current_user.employee_id,
+        quantity_fact=data.quantity_fact
+    )
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
+
     return {"message": "success"}
 
 @router_inventorization.post("/sessions/{session_id}/complete", response_model=InventorizationSessionResponse)
@@ -174,6 +212,7 @@ async def delete_status(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
+    """Удалить все элементы из сессии и удалить саму сессию инвентаризации"""
     db_status = await delete_inventorization_session(db, session_id)
     if not db_status:
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")

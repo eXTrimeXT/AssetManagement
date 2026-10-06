@@ -188,6 +188,9 @@ class BulkSaveRequest(BaseModel):
     asset_type_id: Optional[int] = None
     items: List[Dict[str, Any]]
 
+class UpdateRequestForImport(BaseModel):
+    items: Optional[List[Dict[str, Any]]] = None
+
 class QRCodeRequest(BaseModel):
     name: Optional[str] = None
     serial_number: Optional[str] = None

@@ -20,7 +20,8 @@ from app.models.assets.Asset import Asset
 from app.models.ImportTask import ImportTask
 from app.models.zup import Employee, ZupDepartment
 from app.services.auth.auth_service import get_token_from_request, require_authorized_user
-from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest, AssetResponse
+from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, BulkSaveRequest, AssetResponse, \
+    UpdateRequestForImport
 from app.database.assets.crud_asset import update_asset, create_asset
 from app.database.assets.crud_asset_assignment import get_assignments_by_asset
 from app.database.assets.crud_asset_type import get_asset_types_list
@@ -494,7 +495,6 @@ async def start_excel_import(
         "items": new_task.items_data or []
     }
 
-
 @router_excel_import.delete("/import/cancel", status_code=200)
 async def cancel_excel_import(
         db: AsyncSession = Depends(get_db),
@@ -558,6 +558,40 @@ async def get_import_status(
         "error_message": task.error_message,
         "allowed_cost_centers_used": task.allowed_cost_centers or [],
         "items": task.items_data or []
+    }
+
+@router_excel_import.post("/import/update")
+async def update_excel_items(
+        request: UpdateRequestForImport,
+        db: AsyncSession = Depends(get_db),
+        current_user = Depends(require_authorized_user)
+):
+    """
+    Обновляет список элементов для последней задачи импорта !
+    """
+    # Находим задачу и проверяем, что она принадлежит текущему пользователю
+    stmt = (select(ImportTask).where(ImportTask.employee_id == current_user.employee_id).order_by(ImportTask.created_at.desc()))
+    result = await db.execute(stmt)
+    task = result.scalars().first()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+
+    # Проверяем, что задача НЕ в статусе failed
+    if task.status == "failed":
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя обновить данные задачи, которая завершилась с ошибкой (failed)"
+        )
+
+    # Обновляем только items_data в таблице import_tasks
+    task.items_data = request.items
+    await db.commit()
+
+    return {
+        "task_id": task.task_id,
+        "message": "items_data успешно обновлены в задаче импорта",
+        "updated_items_count": len(request.items) if request.items else 0
     }
 
 @router_excel_import.post("/bulk-save")

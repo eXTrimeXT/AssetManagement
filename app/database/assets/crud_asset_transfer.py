@@ -64,7 +64,13 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
             "model_id": None,
             "sap_employee_id": sap_employee_id,
             "changed_date": sap_item.get("changed_date"),
-            
+
+
+            # cost_center_code_from
+            # cost_center_code_from_search_mode
+            # cost_center_shortname_from
+            # cost_center_code
+            # cost_center_shortname
         }
 
     except Exception as exc:

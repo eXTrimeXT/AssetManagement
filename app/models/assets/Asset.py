@@ -1,6 +1,5 @@
 from typing import Optional, List
 
-from pydantic import computed_field
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func, inspect
 from sqlalchemy.orm import relationship, backref, Mapped
 from app.models.Base import Base

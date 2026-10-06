@@ -49,6 +49,7 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
             raise ValueError(f"Актив с material_id '{material_id}' не найден в SAP API (пустой список)")
 
         sap_item = sap_data_list[0]
+        logger.warning(f"{sap_item=}")
         raw_emp_id = sap_item.get("employee_id")
         sap_employee_id = str(raw_emp_id).zfill(10) if raw_emp_id else None
 
@@ -65,12 +66,13 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
             "sap_employee_id": sap_employee_id,
             "changed_date": sap_item.get("changed_date"),
 
+            "cost_center_code_from": sap_item.get("cost_center_code_from"),
+            "cost_center_name_from": sap_item.get("cost_center_name_from"),
+            "cost_center_shortname_from": sap_item.get("cost_center_shortname_from"),
 
-            # cost_center_code_from
-            # cost_center_code_from_search_mode
-            # cost_center_shortname_from
-            # cost_center_code
-            # cost_center_shortname
+            "cost_center_code": sap_item.get("cost_center_code"),
+            "cost_center_name": sap_item.get("cost_center_name"),
+            "cost_center_shortname": sap_item.get("cost_center_shortname")
         }
 
     except Exception as exc:
@@ -91,7 +93,13 @@ async def  create_asset_from_sap_material(db: AsyncSession, material_id: str, cr
         quantity=sap_data["quantity"],
         every_week_check=sap_data["every_week_check"],
         created_by=created_by,
-        updated_by=created_by
+        updated_by=created_by,
+        cost_center_code_from=sap_data.get("cost_center_code_from"),
+        cost_center_name_from=sap_data.get("cost_center_name_from"),
+        cost_center_shortname_from=sap_data.get("cost_center_shortname_from"),
+        cost_center_code=sap_data.get("cost_center_code"),
+        cost_center_name=sap_data.get("cost_center_name"),
+        cost_center_shortname=sap_data.get("cost_center_shortname")
     )
 
     db.add(new_asset)

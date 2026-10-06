@@ -450,80 +450,6 @@ async def process_excel_import_job(
 # ==============================================================================
 # ENDPOINTS
 # ==============================================================================
-@router_excel_import.post("/preview")
-async def preview_import(
-        request: Request,
-        file: UploadFile = File(..., description="Excel файл для импорта"),
-        db: AsyncSession = Depends(get_db),
-        current_user = Depends(require_authorized_user)
-):
-    token = await get_token_from_request(request)
-    if not file.filename.endswith((".xlsx", ".xls")):
-        raise HTTPException(status_code=400, detail="Поддерживаются только файлы .xlsx или .xls")
-
-    allowed_cost_centers = await get_user_allowed_cost_centers(token)
-    contents = await file.read()
-
-    try:
-        df_raw = pd.read_excel(io.BytesIO(contents), nrows=1)
-        orig_cols = [str(c).strip() for c in df_raw.columns]
-        dtype_mapping = {}
-        for orig_col in orig_cols:
-            col_lower = orig_col.lower().replace('\n', ' ')
-            if 'инвентарный' in col_lower or 'серийный' in col_lower or 'тип и модель' in col_lower:
-                dtype_mapping[orig_col] = str
-
-        df = pd.read_excel(io.BytesIO(contents), dtype=dtype_mapping)
-        column_mapping_rules = {
-            "инвентарный номер": "inventory_id", "Комментарий": "comment", "Комментарийарий": "comment",
-            "тип и модель пк": "name", "название": "name", "серийный номер": "serial_number",
-            "дата выдачи": "date_issue", "дата покупки": "date_purchasing", "дата обслуживания": "next_service",
-            "период обслуживания": "service_period", "период проверки": "check_period",
-        }
-        new_columns = {}
-        for col in df.columns:
-            col_lower = str(col).strip().lower().replace('\n', ' ')
-            for key, target_name in column_mapping_rules.items():
-                if key in col_lower:
-                    new_columns[col] = target_name
-                    break
-        df = df.rename(columns=new_columns)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Ошибка чтения или парсинга Excel файла: {str(e)}")
-
-    required_columns = {"inventory_id", "serial_number", "name"}
-    missing_columns = required_columns - set(df.columns)
-    if missing_columns:
-        raise HTTPException(status_code=400, detail=f"В файле не найдены обязательные данные. Убедитесь, что есть столбцы: Инвентарный номер, Серийный номер, Тип и модель ПК.")
-
-    asset_types = await get_asset_types_list(db, limit=200)
-    asset_types_map = {at.name: at.asset_type_id for at in asset_types}
-    asset_types_names = list(asset_types_map.keys())
-
-    results = []
-    for index, row in df.iterrows():
-        excel_row = row.to_dict()
-        try:
-            preview_data = await preview_excel_row(
-                excel_row=excel_row, db=db, allowed_cost_centers=allowed_cost_centers,
-                row_index=index + 2, asset_types_map=asset_types_map, asset_types_names=asset_types_names
-            )
-            results.append(preview_data)
-        except Exception as e:
-            logger.error(f"Ошибка при предпросмотре строки {index + 2}: {e}", exc_info=True)
-            results.append({
-                "excel_row_index": index + 2, "status": "error", "reason": str(e),
-                "name": normalize(excel_row.get("name")),
-                "inventory_id": clean_inventory_id(excel_row.get("inventory_id")),
-                "serial_number": normalize(excel_row.get("serial_number"))
-            })
-
-    return {
-        "allowed_cost_centers_used": allowed_cost_centers,
-        "total_rows": len(df),
-        "items": results
-    }
-
 @router_excel_import.post("/import")
 async def start_excel_import(
         request: Request,
@@ -557,23 +483,30 @@ async def start_excel_import(
     )
 
     return {
-        "task_id": task_id,
-        "message": "Формирование превью запущено в фоновом режиме. Используйте task_id для проверки статуса и получения данных для bulk-save."
+        "task_id": new_task.task_id,
+        "employee_id": new_task.employee_id,
+        "status": new_task.status,
+        "total_rows": new_task.total_rows,
+        "processed_rows": new_task.processed_rows,
+        "progress_percent": 0,
+        "error_message": new_task.error_message,
+        "allowed_cost_centers_used": new_task.allowed_cost_centers or [],
+        "items": new_task.items_data or []
     }
 
-@router_excel_import.delete("/import/{task_id}", status_code=200)
+
+@router_excel_import.delete("/import/cancel", status_code=200)
 async def cancel_excel_import(
-        task_id: str,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
     """Отменяет выполняющуюся или ожидающую задачу импорта."""
     # Находим задачу и проверяем, что она принадлежит текущему пользователю и еще не завершена
-    stmt = select(ImportTask).where(
-        ImportTask.task_id == task_id,
+    stmt = (select(ImportTask).where(
         ImportTask.employee_id == current_user.employee_id,
-        ImportTask.status.in_(["pending", "processing"]) # Можно отменить только активные задачи
-    )
+        ImportTask.status.in_(["pending", "processing"])
+    ).order_by(ImportTask.created_at.desc()))
+
     result = await db.execute(stmt)
     task = result.scalar_one_or_none()
 
@@ -589,25 +522,24 @@ async def cancel_excel_import(
     await db.commit()
 
     # Удаляем задачу из планировщика APScheduler, если она там еще есть
-    job_id = f"import_{task_id}"
+    job_id = f"import_{task.task_id}"
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
-        logger.info(f"[IMPORT JOB] Задача {task_id} принудительно удалена из планировщика")
+        logger.info(f"[IMPORT JOB] Задача {task.task_id} принудительно удалена из планировщика")
 
     return {
         "message": "Задача импорта успешно отменена",
-        "task_id": task_id
+        "task_id": task.task_id
     }
 
-@router_excel_import.get("/import/status/{task_id}")
+@router_excel_import.get("/import/status")
 async def get_import_status(
-        task_id: str,
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
-    stmt = select(ImportTask).where(ImportTask.task_id == task_id, ImportTask.employee_id == current_user.employee_id)
+    stmt = (select(ImportTask).where(ImportTask.employee_id == current_user.employee_id).order_by(ImportTask.created_at.desc()))
     result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
+    task = result.scalars().first()
 
     if not task:
         raise HTTPException(status_code=404, detail="Задача не найдена")
@@ -626,27 +558,6 @@ async def get_import_status(
         "error_message": task.error_message,
         "allowed_cost_centers_used": task.allowed_cost_centers or [],
         "items": task.items_data or []
-    }
-
-@router_excel_import.get("/import/check-last-import/")
-async def check_last_import(
-        db: AsyncSession = Depends(get_db),
-        current_user = Depends(require_authorized_user)
-):
-    """Выдаем последний `task_id` и `status` для текущего пользователя"""
-    stmt = (select(ImportTask).where(
-        # or_(
-        #     ImportTask.status == "pending",
-        #     ImportTask.status == "processing"
-        # ),
-        ImportTask.employee_id == current_user.employee_id)
-        .order_by(ImportTask.created_at.desc())
-    )
-    result = await db.execute(stmt)
-    task = result.scalars().first()
-    return {
-        "task_id": task.task_id if task else None,
-        "status": task.status if task else None
     }
 
 @router_excel_import.post("/bulk-save")

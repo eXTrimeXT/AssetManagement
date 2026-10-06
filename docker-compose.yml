@@ -1,6 +1,5 @@
 services:
   # Сервис PostgreSQL
-
   postgres:
     image: postgres:17-alpine
     restart: always
@@ -17,21 +16,17 @@ services:
       - "8432:5432" # Проброс порта для подключения извне (например, через DBeaver)
     volumes:
       - pgdata:/var/lib/postgresql/data   # Сохранение данных БД
-#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
-#      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-#    volumes:
-#      - ./postgres_data:/var/lib/postgresql/_data
-#      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-
+      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   # Для просмотра таблиц через веб-интерфейс (для разработки)
-#  adminer:
-#    image: adminer
-#    restart: always
-#    environment:
-#      - TZ=Europe/Moscow
-#    ports:
-#      - "7080:8080"
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      - TZ=Europe/Moscow
+    ports:
+      - "7080:8080"
 
   # Сервис приложения FastAPI
   app:
@@ -52,9 +47,9 @@ services:
       - ZUP_LOGIN=$ZUP_LOGIN
       - ZUP_PASSWORD=$ZUP_PASSWORD
     volumes:
-#      - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
+      - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs
-#      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
+      - /etc/localtime:/etc/localtime:ro  # Устанавливаем время с хост-машины
 
 volumes:
   pgdata:

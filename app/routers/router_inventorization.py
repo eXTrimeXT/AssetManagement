@@ -78,7 +78,7 @@ async def start_session(
         return await create_inventory_session(
             db=db,
             asset_type_id=data.obj.asset_type_id,
-            department_codes=data.obj.department_codes,
+            department_code=data.obj.department_code,
             creator_employee_id=current_user.employee_id,
             start_date=data.obj.start_date,
             end_date=data.obj.end_date

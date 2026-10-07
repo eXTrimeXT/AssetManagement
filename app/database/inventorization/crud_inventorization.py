@@ -70,14 +70,14 @@ async def get_inventory_items_by_session_id(
 async def create_inventory_session(
         db: AsyncSession,
         asset_type_id: Optional[int] = None,
-        department_codes: Optional[str] = None,
+        department_code: Optional[str] = None,
         creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
 
-    logger.warning(f"{asset_type_id=} {department_codes=}")
-    if asset_type_id is None and department_codes is None:
+    logger.warning(f"{asset_type_id=} {department_code=}")
+    if asset_type_id is None and department_code is None:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
 
     asset_type_name = "Смешанный тип (по департаментам)"
@@ -95,7 +95,7 @@ async def create_inventory_session(
 
     session = InventorizationSession(
         asset_type_id=asset_type_id,
-        department_codes=department_codes,
+        department_codes=department_code,
         asset_type_name=asset_type_name,
         asset_type_en_name=asset_type_en_name,
         status="in_progress",
@@ -115,8 +115,8 @@ async def create_inventory_session(
     if asset_type_id is not None:
         conditions.append(Asset.asset_type_id == asset_type_id)
 
-    if department_codes:
-        codes_list = [code.strip().upper() for code in department_codes.split(',') if code.strip()]
+    if department_code:
+        codes_list = [code.strip().upper() for code in department_code.split(',') if code.strip()]
         if codes_list:
             conditions.append(Asset.cost_center_code_from.in_(codes_list))
 
@@ -153,9 +153,9 @@ async def create_inventory_session(
     should_fetch_sap = False
     sap_cost_center_code_from = None
 
-    if department_codes:
+    if department_code:
         should_fetch_sap = True
-        sap_cost_center_code_from = department_codes.replace(',', ';')
+        sap_cost_center_code_from = department_code.replace(',', ';')
 
     if asset_type_id == WITHOUT_TYPE_ASSET_ID:
         should_fetch_sap = True
@@ -167,7 +167,7 @@ async def create_inventory_session(
             limit = 1000
             total_sap_items = float('inf')  # Инициализируем бесконечностью для входа в цикл
 
-            logger.info(f"[SAP INVENTORY] Начинаем пагинацию запроса SAP активов. department_codes={department_codes}")
+            logger.info(f"[SAP INVENTORY] Начинаем пагинацию запроса SAP активов. department_code={department_code}")
 
             while offset < total_sap_items:
                 sap_response = await fetch_sap_materials(

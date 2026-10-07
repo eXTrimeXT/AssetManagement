@@ -7,7 +7,7 @@ class InventorizationSessionObj(BaseModel):
 
 class InventorizationSessionCreate(BaseModel):
     asset_type_id: Optional[int] = None
-    department_codes: Optional[str] = None
+    department_code: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 

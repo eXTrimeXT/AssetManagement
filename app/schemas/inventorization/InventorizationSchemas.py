@@ -2,9 +2,12 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from datetime import datetime
 from typing import Optional, List
 
+class InventorizationSessionObj(BaseModel):
+    obj: Optional[InventorizationSessionCreate]
+
 class InventorizationSessionCreate(BaseModel):
     asset_type_id: Optional[int] = None
-    department_codes: Optional[str] = None
+    department_code: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 

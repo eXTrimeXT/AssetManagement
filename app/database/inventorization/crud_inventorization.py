@@ -76,6 +76,7 @@ async def create_inventory_session(
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
 
+    logger.warning(f"{asset_type_id=} {department_codes=}")
     if asset_type_id is None and department_codes is None:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
 

@@ -76,7 +76,7 @@ async def create_inventory_session(
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
 
-    if not asset_type_id and not department_codes:
+    if asset_type_id is not None and department_codes is not None:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
 
     asset_type_name = "Смешанный тип (по департаментам)"

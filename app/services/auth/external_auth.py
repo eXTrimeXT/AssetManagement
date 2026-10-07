@@ -1,13 +1,15 @@
 import logging
 import base64
+import os
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
+from dotenv import load_dotenv
 
+load_dotenv()
 logger = logging.getLogger(__name__)
-
-API_BASE_URL = "http://gps-test.hmmr.ru/api"
+API_BASE_URL = os.getenv("API_BASE_URL")
 
 def get_public_key(session: requests.Session) -> dict:
     resp = session.get(f"{API_BASE_URL}/user_key")

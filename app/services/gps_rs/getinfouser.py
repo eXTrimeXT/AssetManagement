@@ -1,9 +1,14 @@
+import os
 from typing import List
-
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL", "http://gps-test.hmmr.ru/api") # default - test
 
 async def get_user_allowed_cost_centers(token: str) -> List[str]:
-    url = "http://gps-test.hmmr.ru/api/getinfouser"
+    url = f"{API_BASE_URL}/getinfouser"
     async with httpx.AsyncClient(verify=False) as client:
         response = await client.post(url, json={"token": token})
         response.raise_for_status()

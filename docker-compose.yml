@@ -40,12 +40,15 @@ services:
       # при локальном запуске используем @localhost (see ./app/database/connection.py)
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}${DB_HOST}:5432/${DB_NAME}
       - TZ=Europe/Moscow
+      - API_BASE_URL=API_BASE_URL
       - JWT_SECRET_KEY=$JWT_SECRET_KEY
-      - SESSION_PREFIX=$SESSION_PREFIX
-      - SESSION_TTL=$SESSION_TTL
       - ZUP_BASE_URL=$ZUP_BASE_URL
       - ZUP_LOGIN=$ZUP_LOGIN
       - ZUP_PASSWORD=$ZUP_PASSWORD
+      - SAP_API_URL=SAP_API_URL
+      - X_API_TOKEN=$X_API_TOKEN
+      - AI_AGENT_TOKEN=$AI_AGENT_TOKEN
+      - AI_AGENT_URL=$AI_AGENT_URL
     volumes:
       - .:/app # Для "горячей перезагрузки" при разработке (чтобы изменения кода применялись сразу)
       - ./logs:/logs

@@ -27,11 +27,14 @@ from app.database.assets.crud_asset_assignment import get_assignments_by_asset
 from app.database.assets.crud_asset_type import get_asset_types_list
 from app.services.gps_rs.getinfouser import get_user_allowed_cost_centers
 from app.services.ai.addon_asset_by_ai import addon_asset_by_agent
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
+SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/base_materials") # default - test
 
 router_excel_import = APIRouter(prefix="/excel/assets", tags=["Assets"])
-SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
 
 # ==============================================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ

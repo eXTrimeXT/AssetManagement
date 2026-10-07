@@ -11,8 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.models.Base import Base
 # ВАЖНО: импортируем все модели, чтобы Alembic их увидел
 
-
-# Загружаем .env (если используешь python-dotenv)
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -23,9 +21,9 @@ except ImportError:
 config = context.config
 
 # Переопределяем URL из переменной окружения
-database_url = os.getenv("DATABASE_URL")
-if database_url:
-    sync_url = database_url.replace("+asyncpg", "+psycopg2")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    sync_url = DATABASE_URL.replace("+asyncpg", "+psycopg2")
     config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging.

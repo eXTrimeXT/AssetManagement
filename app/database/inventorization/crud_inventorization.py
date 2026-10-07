@@ -32,7 +32,7 @@ async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: in
     InventorizationSession]:
     query = select(InventorizationSession).options(
         selectinload(InventorizationSession.items)
-        .selectinload(InventorizationSession.creator)
+        # .selectinload(InventorizationSession.creator)
     ).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()

@@ -16,6 +16,14 @@ async def get_employee_by_guid(db: AsyncSession, guid: str) -> Optional[Employee
     result = await db.execute(select(Employee).where(Employee.guid == guid))
     return result.scalar_one_or_none()
 
+async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional[str]:
+    result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        return None
+    parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
+    return " ".join(parts) if parts else None
+
 async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Employee]:
     result = await db.execute(
         select(Employee)
@@ -325,18 +333,6 @@ async def get_employees_list(
 
     return employees, total
 
-# async def upsert_employee(db: AsyncSession, employee_data: dict) -> Employee:
-#     employee = await get_employee_by_guid(db, employee_data["guid"])
-#     if employee:
-#         for key, value in employee_data.items():
-#             if hasattr(employee, key):
-#                 setattr(employee, key, value)
-#     else:
-#         employee = Employee(**employee_data)
-#         db.add(employee)
-#     await db.commit()
-#     await db.refresh(employee)
-#     return employee
 
 async def upsert_employee(db: AsyncSession, employee_data: dict) -> Employee:
     """

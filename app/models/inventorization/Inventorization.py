@@ -24,6 +24,17 @@ class InventorizationSession(Base):
     items = relationship("InventorizationItem", back_populates="session", cascade="all, delete-orphan")
     asset_type = relationship("AssetType", foreign_keys=[asset_type_id])
 
+    # ДОБАВЛЯЕМ СВЯЗЬ с таблицей сотрудников (lazy="selectin" предотвращает N+1 запросы)
+    creator = relationship("Employee", foreign_keys=[created_by], lazy="selectin")
+
+
+    @property
+    def created_by_full_name(self) -> Optional[str]:
+        if self.creator:
+            parts = [p for p in [self.creator.last_name, self.creator.first_name, self.creator.middle_name] if p]
+            return " ".join(parts) if parts else None
+        return None
+
 class InventorizationItem(Base):
     __tablename__ = "inventorization_items"
 

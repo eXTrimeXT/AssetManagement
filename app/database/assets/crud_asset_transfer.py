@@ -21,16 +21,9 @@ from app.schemas.assets.AssetTransferSchemas import (
     NotificationInfoResponse, AssetTransferExistsResponse
 )
 from app.services.assets.asset_list_service import fetch_sap_materials
+from app.database.zup.crud_zup_employees import get_employee_full_name
 
 logger = logging.getLogger(__name__)
-
-async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional[str]:
-    result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
-    employee = result.scalar_one_or_none()
-    if not employee:
-        return None
-    parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
-    return " ".join(parts) if parts else None
 
 async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) -> Dict[str, Any]:
     try:

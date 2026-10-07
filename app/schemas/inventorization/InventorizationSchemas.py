@@ -41,6 +41,8 @@ class InventorizationSessionResponse(BaseModel):
     # items: List[InventorizationItemResponse] = []
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    created_by: Optional[str] = None
+    created_by_full_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

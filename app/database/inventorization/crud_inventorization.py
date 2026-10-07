@@ -30,7 +30,10 @@ async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Opti
 
 async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[
     InventorizationSession]:
-    query = select(InventorizationSession).options(selectinload(InventorizationSession.items)).offset(skip).limit(limit)
+    query = select(InventorizationSession).options(
+        selectinload(InventorizationSession.items)
+        .selectinload(InventorizationSession.creator)
+    ).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
 

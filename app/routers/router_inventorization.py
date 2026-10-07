@@ -11,7 +11,7 @@ from app.schemas.inventorization.InventorizationSchemas import (
     CheckItemRequest,
     InventorizationItemResponse,
     InventorizationReportResponse,
-    InventorizationDiscrepanciesResponse,
+    InventorizationDiscrepanciesResponse, InventorizationSessionObj,
 )
 from app.database.inventorization.crud_inventorization import (
     create_inventory_session,
@@ -70,18 +70,20 @@ async def get_session_items(
 
 @router_inventorization.post("/sessions/", response_model=InventorizationSessionResponse)
 async def start_session(
-        data: InventorizationSessionCreate,
+        data: InventorizationSessionObj,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    return await create_inventory_session(
-        db=db,
-        asset_type_id=data.asset_type_id,
-        department_codes=data.department_codes,
-        creator_employee_id=current_user.employee_id,
-        start_date=data.start_date,
-        end_date=data.end_date
-    )
+    if data.obj:
+        return await create_inventory_session(
+            db=db,
+            asset_type_id=data.obj.asset_type_id,
+            department_codes=data.obj.department_codes,
+            creator_employee_id=current_user.employee_id,
+            start_date=data.obj.start_date,
+            end_date=data.obj.end_date
+        )
+    return None
 
 @router_inventorization.post("/sessions/{session_id}/check")
 async def check_item(

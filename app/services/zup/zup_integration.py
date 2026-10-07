@@ -14,7 +14,7 @@ from app.database.zup.crud_zup_managers import upsert_manager
 
 logger = logging.getLogger(__name__)
 
-ZUP_BASE_URL = os.getenv("ZUP_BASE_URL", "")
+ZUP_BASE_URL = os.getenv("ZUP_BASE_URL", "https://hrm-data.hmmr.ru/")
 ZUP_AUTH = (os.getenv("ZUP_LOGIN", ""), os.getenv("ZUP_PASSWORD", ""))
 
 # Глобальный клиент с пулом соединений

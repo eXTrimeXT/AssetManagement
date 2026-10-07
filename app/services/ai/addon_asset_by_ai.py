@@ -89,10 +89,9 @@ from app.schemas.assets.AssetSchemas import AssetResponse
 
 load_dotenv()
 AI_AGENT_TOKEN = os.getenv("AI_AGENT_TOKEN")
+AI_AGENT_URL = os.getenv("AI_AGENT_URL", "https://hiagent.gwm.cn/api/aigw/v1/chat/completions")
 
 async def send_agent_request(content: str) -> Optional[str]:
-    url = "https://hiagent.gwm.cn/api/aigw/v1/chat/completions"
-
     headers = {
         "Authorization": f"Bearer {AI_AGENT_TOKEN}"
     }
@@ -111,7 +110,7 @@ async def send_agent_request(content: str) -> Optional[str]:
     }
 
     async with httpx.AsyncClient(verify=False) as client:
-        response = await client.post(url, headers=headers, json=payload)
+        response = await client.post(AI_AGENT_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
 

@@ -1,11 +1,16 @@
 import logging
+import os
+
 from sqlalchemy import select, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 from app.models.assets import Asset
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
-
+SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/base_materials") # default - test
 
 async def sync_sap_assets(db: AsyncSession) -> dict:
     """
@@ -18,7 +23,6 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
     """
     logger.info("[SAP SYNC] Запуск синхронизации активов из SAP...")
 
-    sap_api_url = "http://10.168.143.7:8123/sap/base_materials"
     limit = 1000
     offset = 0
     total_synced = 0
@@ -27,7 +31,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
         async with httpx.AsyncClient() as client:
             while True:
                 response = await client.get(
-                    sap_api_url,
+                    SAP_API_URL,
                     params={"limit": limit, "offset": offset}
                 )
 
@@ -46,7 +50,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                 if not data:
                     break
 
-                # 1. Устраняем дубликаты inventory_id ВНУТРИ текущей порции от SAP
+                # Устраняем дубликаты inventory_id ВНУТРИ текущей порции от SAP
                 records_dict = {}
                 for item in data:
                     inv_id = item.get("inventory_number")
@@ -70,10 +74,10 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     offset += limit
                     continue
 
-                # 2. Собираем все inventory_id из текущей порции для проверки в БД
+                # Собираем все inventory_id из текущей порции для проверки в БД
                 batch_inv_ids = [r["inventory_id"] for r in records]
 
-                # 3. Запрашиваем из БД существующие записи с такими inventory_id
+                # Запрашиваем из БД существующие записи с такими inventory_id
                 existing_query = select(
                     Asset.inventory_id,
                     Asset.name,
@@ -84,13 +88,13 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                 result_db = await db.execute(existing_query)
                 existing_rows = result_db.all()
 
-                # 4. Создаем множество (set) кортежей для мгновенного поиска O(1)
+                # Создаем множество (set) кортежей для мгновенного поиска O(1)
                 existing_set = {
                     (row.inventory_id, row.name, (row.serial_number if row.serial_number else None), row.quantity)
                     for row in existing_rows
                 }
 
-                # 5. Фильтруем записи: оставляем только те, которых НЕТ в БД в таком же виде
+                # Фильтруем записи: оставляем только те, которых НЕТ в БД в таком же виде
                 records_to_insert = []
                 for r in records:
                     serial_num = r["serial_number"] if r["serial_number"] else None
@@ -99,7 +103,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     if row_tuple not in existing_set:
                         records_to_insert.append(r)
 
-                # 6. Вставляем только новые записи (обычный INSERT, без ON CONFLICT)
+                # Вставляем только новые записи (обычный INSERT, без ON CONFLICT)
                 if records_to_insert:
                     stmt = insert(Asset).values(records_to_insert)
                     await db.execute(stmt)

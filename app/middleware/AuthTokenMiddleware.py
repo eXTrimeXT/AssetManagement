@@ -39,14 +39,14 @@ class AuthTokenMiddleware(BaseHTTPMiddleware):
         token = None
         token_source = None
 
-        # 1. Из заголовка Authorization: Bearer <token>
+        # Из заголовка Authorization: Bearer <token>
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header[7:].strip()
             token_source = "Authorization header"
             logger.debug("[AuthTokenMiddleware] Токен найден в заголовке Authorization")
 
-        # 2. Из куки session_token
+        # Из куки session_token
         if not token:
             token = request.cookies.get("session_token")
             if token:

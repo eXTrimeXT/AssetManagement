@@ -20,9 +20,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# PROD OR TEST SAP_API_URL
-# SAP_API_URL = "http://10.168.143.7:8123/sap/base_materials"
-SAP_API_URL = "http://10.168.130.86:8123/sap/base_materials"
+SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/base_materials") # default - test
 X_API_TOKEN = os.getenv("X_API_TOKEN")
 
 # ID виртуального типа SAP-активов.

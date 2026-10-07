@@ -83,8 +83,8 @@ async def create_inventory_session(
     if asset_type_id is None and department_code is None:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
 
-    asset_type_name = "Смешанный тип (по департаментам)"
-    asset_type_en_name = "mixed_by_departments"
+    asset_type_name = f"По департаментам {department_code.replace('; ', ' ').replace(';', ' ')}"
+    asset_type_en_name = "by_departments"
 
     if asset_type_id is not None:
         asset_type_result = await db.execute(

@@ -17,7 +17,7 @@ max_overflow=20: Максимальное количество дополнит�
 pool_pre_ping=True: Перед использованием соединения отправляет простой запрос, чтобы убедиться, 
 что соединение с БД не разорвано. Критично для стабильности.
 """
-engine = create_async_engine(db_url, pool_size=10, max_overflow=20, pool_pre_ping=True)
+engine = create_async_engine(db_url, pool_size=20, max_overflow=40, pool_pre_ping=True)
 
 """
 Фабрика асинхронных сессий.

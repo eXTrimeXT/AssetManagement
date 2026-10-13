@@ -44,8 +44,8 @@ def parse_service_period_range(period_str: Optional[str]) -> tuple[Optional[date
         return None, None
 
     # Разделяем по дефису в формате запроса
-    period_str = period_str.replace("+%E2%80%94+", " - ")
-    parts = re.split(r' - ', period_str.strip()) # 06-10-2026 — 16-10-2026
+    period_str = period_str.replace("+%E2%80%94+", " — ").replace(" - ", " — ")
+    parts = re.split(r' — ', period_str.strip()) # 06-10-2026 — 16-10-2026
 
     if len(parts) == 2:
         try:

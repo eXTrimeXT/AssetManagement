@@ -92,7 +92,7 @@ async def get_assets(
         cost_center_code: Optional[str] = Query(None, description="Код департамента владельца"),
 
         # Фильтр по дате ТО:
-        service_period: Optional[str] = Query(None, description="Диапазон дат для next_service (например, '13-10-2026 — 23-10-2026')"),
+        service_period: Optional[str] = Query(None, description="Диапазон дат для next_service (например, '13-10-2026 - 23-10-2026')"),
 
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),

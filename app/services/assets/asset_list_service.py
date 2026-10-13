@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import date
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
 from sqlalchemy import select, func, inspect, Integer, or_, cast, null
@@ -57,6 +58,9 @@ async def get_assets_list_with_sap(
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_mode: SearchMode = "ALL",
         cost_center_code: Optional[str] = None,
+
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
 ) -> Dict[str, Any]:
     """
     Получение списка активов: Локальные данные имеют абсолютный приоритет.
@@ -92,7 +96,9 @@ async def get_assets_list_with_sap(
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            only_my=only_my
+            only_my=only_my,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
         )
 
         if local_orm_items:
@@ -107,32 +113,35 @@ async def get_assets_list_with_sap(
     # Если пользователь запросил конкретный тип, отличный от виртуального, —
     # ни один виртуальный актив не пройдёт фильтрацию → SAP не дёргаем.
     skip_sap_fetch = (
-            asset_type_id is not None
-            and asset_type_id != WITHOUT_TYPE_ASSET_ID
+            (asset_type_id is not None and asset_type_id != WITHOUT_TYPE_ASSET_ID)
+            or next_service_start is not None
+            or next_service_end is not None
     )
     logger.debug(f"skip_sap_fetch = {skip_sap_fetch}, has_cost_center_filter = {has_cost_center_filter}")
 
     # Если есть cost_center-фильтр, локальные активы всё равно не подойдут,
     # поэтому локальный total = 0.
-    if has_cost_center_filter:
-        local_total = 0
-    else:
-        local_total = await _get_local_assets_count(
-            db=db,
-            asset_id=asset_id,
-            material_id=material_id,
-            name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            asset_status=asset_status,
-            model_id=model_id,
-            asset_type_id=asset_type_id,
-            parent_id=parent_id,
-            employee_id=employee_id,
-            cost_center_code_from=cost_center_code_from,
-            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            only_my=only_my
-        )
+    # if has_cost_center_filter:
+    #     local_total = 0
+    # else:
+    local_total = await _get_local_assets_count(
+        db=db,
+        asset_id=asset_id,
+        material_id=material_id,
+        name=name,
+        inventory_id=inventory_id,
+        serial_number=serial_number,
+        asset_status=asset_status,
+        model_id=model_id,
+        asset_type_id=asset_type_id,
+        parent_id=parent_id,
+        employee_id=employee_id,
+        cost_center_code_from=cost_center_code_from,
+        cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+        only_my=only_my,
+        next_service_start=next_service_start,
+        next_service_end=next_service_end,
+    )
 
     skip = (page - 1) * page_size
     result_items: List[Any] = []
@@ -156,7 +165,9 @@ async def get_assets_list_with_sap(
             employee_id=employee_id,
             cost_center_code_from=cost_center_code_from,
             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            only_my=only_my
+            only_my=only_my,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
         )
 
         local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
@@ -196,7 +207,7 @@ async def get_assets_list_with_sap(
             result_items.extend(sap_items[:remaining_slots])
             sap_total = fetched_sap_total
     else:
-        # Либо локальные закончились, либо есть cost_center-фильтр — идём в SAP
+        # локальные закончились — идём в SAP
         if not skip_sap_fetch:
             sap_offset = 0 if has_cost_center_filter else max(0, skip - local_total)
 
@@ -253,7 +264,9 @@ async def _get_local_assets_count(
         employee_id: Optional[str],
         cost_center_code_from: Optional[str],
         cost_center_code_from_search_mode: SearchMode,
-        only_my: Optional[bool] = False
+        only_my: Optional[bool] = False,
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
 ) -> int:
     """Подсчет количества локальных активов по всем фильтрам."""
     query = select(func.count(Asset.asset_id))
@@ -303,6 +316,12 @@ async def _get_local_assets_count(
             if ccc_list:
                 query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
 
+    # Фильтрация по дате обслуживания
+    if next_service_start is not None:
+        query = query.where(Asset.next_service >= next_service_start)
+    if next_service_end is not None:
+        query = query.where(Asset.next_service <= next_service_end)
+
     result = await db.execute(query)
     return result.scalar_one() or 0
 
@@ -323,6 +342,8 @@ async def _get_local_assets_slice(
         cost_center_code_from: Optional[str],
         cost_center_code_from_search_mode: SearchMode = "ALL",
         only_my: Optional[bool] = False,
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
 ) -> Sequence[Asset]:
     """Получение среза локальных активов с полной загрузкой связей."""
     query = select(Asset).options(
@@ -393,6 +414,12 @@ async def _get_local_assets_slice(
         else:  # ALL
             if ccc_list:
                 query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
+
+    # Фильтрация по дате обслуживания
+    if next_service_start is not None:
+        query = query.where(Asset.next_service >= next_service_start)
+    if next_service_end is not None:
+        query = query.where(Asset.next_service <= next_service_end)
 
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)

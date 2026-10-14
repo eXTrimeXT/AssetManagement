@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.functions import func
 
 from app.models.assets.Asset import Asset
@@ -23,6 +24,10 @@ from app.schemas.assets.AssetTransferSchemas import (
 )
 from app.services.assets.asset_list_service import fetch_sap_materials
 from app.database.zup.crud_zup_employees import get_employee_full_name
+from app.database.assets.crud_asset import bulk_enrich_assets
+from app.models.map_assets.AssetPosition import AssetPosition
+from app.models.zup.department import ZupDepartment
+from app.schemas.assets.AssetSchemas import AssetResponse
 
 logger = logging.getLogger(__name__)
 
@@ -668,11 +673,51 @@ async def get_transfers_list(
             parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             employees_map[emp.employee_id] = " ".join(parts) if parts else None
 
+    # 2. Массовая загрузка ПОЛНЫХ данных активов (как в get_assets_list)
+    assets_map = {}
+    asset_ids = []
+    if asset_ids:
+        asset_query = select(Asset).where(Asset.asset_id.in_(asset_ids)).options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
+            selectinload(Asset.model),
+            selectinload(Asset.parent).options(
+                selectinload(Asset.asset_type),
+                selectinload(Asset.asset_status),
+                selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+            ),
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+            selectinload(Asset.assignments).options(
+                selectinload(AssetAssignment.employee).options(
+                    selectinload(Employee.position),
+                    selectinload(Employee.group).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent).options(
+                                selectinload(ZupDepartment.parent)
+                            )
+                        )
+                    )
+                )
+            ),
+        )
+        asset_result = await db.execute(asset_query)
+        assets = asset_result.scalars().all()
+
+        # Обогащаем активы (заполняет users, location, current_user и т.д.)
+        await bulk_enrich_assets(db, assets)
+
+        # Создаем словарь для быстрого доступа по asset_id
+        for asset in assets:
+            assets_map[asset.asset_id] = AssetResponse.model_validate(asset, from_attributes=True)
+
+    # 3. Формируем итоговый ответ
     items = []
     for t in transfers:
+        full_asset = assets_map.get(t.asset_id)
         items.append({
             "transfer_id": t.id,
             "asset_id": t.asset_id,
+            "asset": full_asset,
             "initiator": {
                 "employee_id": t.initiator_id,
                 "full_name": employees_map.get(t.initiator_id),

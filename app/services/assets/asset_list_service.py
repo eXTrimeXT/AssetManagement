@@ -80,7 +80,7 @@ async def get_assets_list_with_sap(
 
     # === ОПТИМИЗАЦИЯ 1: Прямой поиск по уникальным идентификаторам ===
     if material_id is not None or asset_id is not None:
-        local_orm_items = await _get_local_assets_slice(
+        local_orm_items = await get_local_assets_slice(
             db=db,
             skip=0,
             limit=1,
@@ -149,7 +149,7 @@ async def get_assets_list_with_sap(
 
     # Если на этой странице есть локальные активы, забираем их
     if not has_cost_center_filter and skip < local_total:
-        local_orm_items = await _get_local_assets_slice(
+        local_orm_items = await get_local_assets_slice(
             db=db,
             skip=skip,
             limit=page_size,
@@ -325,7 +325,7 @@ async def _get_local_assets_count(
     result = await db.execute(query)
     return result.scalar_one() or 0
 
-async def _get_local_assets_slice(
+async def get_local_assets_slice(
         db: AsyncSession,
         skip: int,
         limit: int,

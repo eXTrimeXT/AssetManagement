@@ -1,6 +1,7 @@
 from pydantic import BaseModel, model_validator, ConfigDict
 from typing import Optional, Literal
 from datetime import datetime
+from app.schemas.assets.AssetSchemas import AssetResponse
 
 class AssetTransferRequest(BaseModel):
     asset_id: Optional[int] = None
@@ -91,6 +92,7 @@ class AssetTransferExistsResponse(BaseModel):
 class AssetTransferListItem(BaseModel):
     transfer_id: int
     asset_id: int
+    asset: AssetResponse
     initiator: EmployeeInfoResponse
     target_employee: EmployeeInfoResponse
     assignment_type: str

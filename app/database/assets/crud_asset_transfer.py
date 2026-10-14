@@ -27,7 +27,7 @@ from app.database.zup.crud_zup_employees import get_employee_full_name
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
-from models.assets.AssetTransfer import AssetTransferStatus
+from app.models.assets.AssetTransfer import AssetTransferStatus
 
 logger = logging.getLogger(__name__)
 

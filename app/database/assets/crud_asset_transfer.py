@@ -1,10 +1,11 @@
 import logging
 from datetime import date, datetime
 from typing import Optional, Dict, Any
-from sqlalchemy import select
+
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql.functions import current_user, func
+from sqlalchemy.sql.functions import func
 
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
@@ -620,15 +621,26 @@ async def get_transfers_list(
         asset_id: Optional[int] = None,
         initiator_id: Optional[str] = None,
         target_employee_id: Optional[str] = None,
+        only_my: Optional[bool] = False,
+        employee_id: Optional[str] = None
 ) -> Dict[str, Any]:
     query = select(AssetTransfer)
 
     if asset_id is not None:
         query = query.where(AssetTransfer.asset_id == asset_id)
-    if initiator_id is not None:
-        query = query.where(AssetTransfer.initiator_id == initiator_id)
-    if target_employee_id is not None:
-        query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+
+    if only_my:
+        query = query.where(
+            or_(
+                AssetTransfer.initiator_id == employee_id,
+                AssetTransfer.target_employee_id == employee_id
+            )
+        )
+    else:
+        if initiator_id is not None:
+            query = query.where(AssetTransfer.initiator_id == initiator_id)
+        if target_employee_id is not None:
+            query = query.where(AssetTransfer.target_employee_id == target_employee_id)
 
     # Total
     count_query = select(func.count()).select_from(query.subquery())

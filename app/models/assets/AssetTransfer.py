@@ -15,8 +15,8 @@ class AssetTransferStatus:
     RU_LABELS = {
         PENDING: "в ожидании",
         ACCEPTED: "принято",
-        DECLINED: "отклоненно",
-        CANCELLED: "отмененно",
+        DECLINED: "отклонено",
+        CANCELLED: "отменено",
     }
 
     @classmethod

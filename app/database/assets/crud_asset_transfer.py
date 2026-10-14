@@ -72,7 +72,7 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
         logger.error(f"Ошибка при получении данных SAP для transfer (material_id={material_id}): {exc}")
         raise ValueError(f"Не удалось получить данные актива из SAP: {exc}")
 
-async def  create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
+async def create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
     sap_data = await fetch_sap_asset_data_for_transfer(db, material_id)
 
     new_asset = Asset(
@@ -194,7 +194,7 @@ async def request_asset_transfer(
     asset_id = request.asset_id
     asset_source = "local"
 
-    if request.material_id:
+    if request.material_id and asset_id is None:
         try:
             new_asset = await create_asset_from_sap_material(db, request.material_id, initiator_id)
             asset_id = new_asset.asset_id

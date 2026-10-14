@@ -48,7 +48,7 @@ async def get_transfers(
     return PaginatedResponse(**result)
 
 @router_asset_transfer.post(
-    "/request",
+    "/request/",
     response_model=AssetTransferResponse,
     summary="Создать запрос на передачу актива"
 )

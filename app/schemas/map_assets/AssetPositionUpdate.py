@@ -13,8 +13,8 @@ class AssetPositionUpdate(BaseModel):
     # Статус
     is_active: Optional[bool] = Field(None, description="Активна ли позиция")
 
-    place: str = Field(..., description="Местоположение")
-    level: str = Field(..., description="Этаж")
+    place: Optional[str] = Field(None, description="Местоположение")
+    level: Optional[str] = Field(None, description="Этаж")
 
     @field_validator('x', 'y')
     @classmethod

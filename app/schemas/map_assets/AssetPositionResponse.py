@@ -5,24 +5,24 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class AssetPositionResponse(BaseModel):
     """Схема ответа с информацией о позиции актива на карте"""
-    id: int = Field(..., description="ID позиции")
-    asset_id: int = Field(..., description="ID актива")
-    workshop_id: int = Field(..., description="ID цеха")
+    id: Optional[int] = None
+    asset_id: Optional[int] = None
+    workshop_id: Optional[int] = None
 
     # Координаты на карте
-    x: int = Field(..., description="Координата X (пиксели)")
-    y: int = Field(..., description="Координата Y (пиксели)")
-    rotation: int = Field(..., description="Угол поворота (0-360 градусов)")
-    scale: int = Field(..., description="Масштаб иконки (проценты)")
+    x: Optional[int] = None
+    y: Optional[int] = None
+    rotation: Optional[int] = None
+    scale: Optional[int] = None
 
     # Статус
-    is_active: bool = Field(..., description="Активна ли позиция")
+    is_active: Optional[bool] = None
 
     place: Optional[str] = None
     level: Optional[int] = None
 
     # Служебные поля
-    created_at: datetime = Field(..., description="Дата создания")
+    created_at: Optional[datetime] = Field(None, description="Дата создания")
     updated_at: Optional[datetime] = Field(None, description="Дата обновления")
 
     model_config = ConfigDict(from_attributes=True)

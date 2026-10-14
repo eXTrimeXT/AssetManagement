@@ -91,7 +91,7 @@ class AssetTransferExistsResponse(BaseModel):
 
 class AssetTransferListItem(BaseModel):
     transfer_id: int
-    asset_id: int
+    # asset_id: int
     asset: AssetResponse
     initiator: EmployeeInfoResponse
     target_employee: EmployeeInfoResponse

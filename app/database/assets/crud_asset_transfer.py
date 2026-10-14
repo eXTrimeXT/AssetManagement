@@ -619,6 +619,134 @@ async def cancel_asset_transfer(
         cancelled_at=transfer.responded_at
     )
 
+# async def get_transfers_list(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         asset_id: Optional[int] = None,
+#         initiator_id: Optional[str] = None,
+#         target_employee_id: Optional[str] = None,
+#         only_my: Optional[bool] = False,
+#         employee_id: Optional[str] = None
+# ) -> Dict[str, Any]:
+#     query = select(AssetTransfer)
+#
+#     if asset_id is not None:
+#         query = query.where(AssetTransfer.asset_id == asset_id)
+#
+#     if only_my:
+#         query = query.where(
+#             or_(
+#                 AssetTransfer.initiator_id == employee_id,
+#                 AssetTransfer.target_employee_id == employee_id
+#             )
+#         )
+#     else:
+#         if initiator_id is not None:
+#             query = query.where(AssetTransfer.initiator_id == initiator_id)
+#         if target_employee_id is not None:
+#             query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+#
+#     # Total
+#     count_query = select(func.count()).select_from(query.subquery())
+#     total_result = await db.execute(count_query)
+#     total = total_result.scalar_one() or 0
+#
+#     # Slice
+#     skip = (page - 1) * page_size
+#     query = query.order_by(AssetTransfer.created_at.desc()).offset(skip).limit(page_size)
+#     result = await db.execute(query)
+#     transfers = result.scalars().all()
+#
+#     # Собираем все employee_id для массовой загрузки
+#     employee_ids = set()
+#     for t in transfers:
+#         employee_ids.add(t.initiator_id)
+#         employee_ids.add(t.target_employee_id)
+#
+#     employees_map = {}
+#     if employee_ids:
+#         emp_result = await db.execute(
+#             select(Employee).where(Employee.employee_id.in_(employee_ids))
+#         )
+#         for emp in emp_result.scalars().all():
+#             parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+#             employees_map[emp.employee_id] = " ".join(parts) if parts else None
+#
+#     # 2. Массовая загрузка ПОЛНЫХ данных активов (как в get_assets_list)
+#     assets_map = {}
+#     asset_ids = [t.asset_id for t in transfers if t.asset_id is not None]
+#     if asset_ids:
+#         asset_query = select(Asset).where(Asset.asset_id.in_(asset_ids)).options(
+#             selectinload(Asset.asset_type),
+#             selectinload(Asset.asset_status),
+#             selectinload(Asset.model),
+#             selectinload(Asset.parent).options(
+#                 selectinload(Asset.asset_type),
+#                 selectinload(Asset.asset_status),
+#                 selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+#             ),
+#             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+#             selectinload(Asset.assignments).options(
+#                 selectinload(AssetAssignment.employee).options(
+#                     selectinload(Employee.position),
+#                     selectinload(Employee.group).options(
+#                         selectinload(ZupDepartment.parent).options(
+#                             selectinload(ZupDepartment.parent).options(
+#                                 selectinload(ZupDepartment.parent)
+#                             )
+#                         )
+#                     )
+#                 )
+#             ),
+#         )
+#         asset_result = await db.execute(asset_query)
+#         assets = asset_result.scalars().all()
+#
+#         # Обогащаем активы (заполняет users, location, current_user и т.д.)
+#         await bulk_enrich_assets(db, assets)
+#
+#         # Создаем словарь для быстрого доступа по asset_id
+#         for asset in assets:
+#             assets_map[asset.asset_id] = AssetResponse.model_validate(asset, from_attributes=True)
+#
+#     # 3. Формируем итоговый ответ
+#     items = []
+#     for t in transfers:
+#         full_asset = assets_map.get(t.asset_id)
+#         items.append({
+#             "transfer_id": t.id,
+#             "asset_id": t.asset_id,
+#             "asset": full_asset,
+#             "initiator": {
+#                 "employee_id": t.initiator_id,
+#                 "full_name": employees_map.get(t.initiator_id),
+#             },
+#             "target_employee": {
+#                 "employee_id": t.target_employee_id,
+#                 "full_name": employees_map.get(t.target_employee_id),
+#             },
+#             "assignment_type": t.assignment_type,
+#             "assignment_type_ru": "Пользователь" if t.assignment_type == "user" else "Ответственный",
+#             "status": t.status,
+#             "initiator_comment": t.initiator_comment,
+#             "responder_comment": t.responder_comment,
+#             "created_at": t.created_at,
+#             "responded_at": t.responded_at,
+#         })
+#
+#     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+#     return {
+#         "items": items,
+#         "total": total,
+#         "page": page,
+#         "page_size": page_size,
+#         "total_pages": total_pages,
+#         "has_next": page < total_pages,
+#         "has_previous": page > 1,
+#     }
+
+
 async def get_transfers_list(
         db: AsyncSession,
         page: int = 1,
@@ -658,7 +786,7 @@ async def get_transfers_list(
     result = await db.execute(query)
     transfers = result.scalars().all()
 
-    # Собираем все employee_id для массовой загрузки
+    # 1. Собираем все employee_id для массовой загрузки имен
     employee_ids = set()
     for t in transfers:
         employee_ids.add(t.initiator_id)
@@ -673,9 +801,10 @@ async def get_transfers_list(
             parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             employees_map[emp.employee_id] = " ".join(parts) if parts else None
 
-    # 2. Массовая загрузка ПОЛНЫХ данных активов (как в get_assets_list)
+    # 2. Массовая загрузка ПОЛНЫХ данных активов
+    asset_ids = [t.asset_id for t in transfers if t.asset_id is not None]
     assets_map = {}
-    asset_ids = []
+
     if asset_ids:
         asset_query = select(Asset).where(Asset.asset_id.in_(asset_ids)).options(
             selectinload(Asset.asset_type),
@@ -703,9 +832,6 @@ async def get_transfers_list(
         asset_result = await db.execute(asset_query)
         assets = asset_result.scalars().all()
 
-        # Обогащаем активы (заполняет users, location, current_user и т.д.)
-        await bulk_enrich_assets(db, assets)
-
         # Создаем словарь для быстрого доступа по asset_id
         for asset in assets:
             assets_map[asset.asset_id] = AssetResponse.model_validate(asset, from_attributes=True)
@@ -717,7 +843,7 @@ async def get_transfers_list(
         items.append({
             "transfer_id": t.id,
             "asset_id": t.asset_id,
-            "asset": full_asset,
+            "asset": full_asset,  # Теперь здесь будет полная структура AssetResponse
             "initiator": {
                 "employee_id": t.initiator_id,
                 "full_name": employees_map.get(t.initiator_id),

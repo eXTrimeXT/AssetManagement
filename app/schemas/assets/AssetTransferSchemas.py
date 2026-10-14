@@ -98,6 +98,7 @@ class AssetTransferListItem(BaseModel):
     assignment_type: str
     assignment_type_ru: str
     status: str
+    status_ru: Optional[str] = None
     initiator_comment: Optional[str] = None
     responder_comment: Optional[str] = None
     created_at: datetime

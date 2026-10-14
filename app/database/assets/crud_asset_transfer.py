@@ -24,7 +24,6 @@ from app.schemas.assets.AssetTransferSchemas import (
 )
 from app.services.assets.asset_list_service import fetch_sap_materials
 from app.database.zup.crud_zup_employees import get_employee_full_name
-from app.database.assets.crud_asset import bulk_enrich_assets
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
@@ -842,7 +841,6 @@ async def get_transfers_list(
         full_asset = assets_map.get(t.asset_id)
         items.append({
             "transfer_id": t.id,
-            "asset_id": t.asset_id,
             "asset": full_asset,  # Теперь здесь будет полная структура AssetResponse
             "initiator": {
                 "employee_id": t.initiator_id,
@@ -855,6 +853,7 @@ async def get_transfers_list(
             "assignment_type": t.assignment_type,
             "assignment_type_ru": "Пользователь" if t.assignment_type == "user" else "Ответственный",
             "status": t.status,
+            "status_ru": t.status_ru,
             "initiator_comment": t.initiator_comment,
             "responder_comment": t.responder_comment,
             "created_at": t.created_at,

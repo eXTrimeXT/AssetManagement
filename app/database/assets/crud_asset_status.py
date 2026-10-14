@@ -11,6 +11,23 @@ async def create_asset_status(db: AsyncSession, status_data: AssetStatusCreate):
     await db.refresh(db_status)
     return db_status
 
+async def get_or_create_status(session, status) -> AssetStatus:
+    """Получить статус или создать его."""
+    result = await session.execute(
+        select(AssetStatus).where(AssetStatus.status == status)
+    )
+    status_obj = result.scalars().first()
+
+    if status_obj:
+        # logger.debug(f"Статус '{status}' найден: id={status_obj.id}")
+        return status_obj
+
+    new_status = AssetStatus(status=status)
+    session.add(new_status)
+    await session.flush()
+    # logger.info(f"Создан статус '{status}': id={new_status.id}")
+    return new_status
+
 async def get_asset_statuses(db: AsyncSession, skip: int = 0, limit: int = 100):
     result = await db.execute(select(AssetStatus).offset(skip).limit(limit))
     return result.scalars().all()

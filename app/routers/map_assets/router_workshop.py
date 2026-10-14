@@ -71,7 +71,7 @@ async def endpoint_get_workshop(
     return workshop
 
 
-@router_workshop.put(
+@router_workshop.patch(
     "/{workshop_id}",
     response_model=WorkshopResponse,
     summary="Обновить цех",

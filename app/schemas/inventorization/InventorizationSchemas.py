@@ -37,6 +37,7 @@ class InventorizationSessionResponse(BaseModel):
     asset_type_name: Optional[str] = None
     asset_type_en_name: Optional[str] = None
     status: Optional[str] = None
+    status_ru: Optional[str] = None
     created_at: datetime
     # items: List[InventorizationItemResponse] = []
     start_date: Optional[datetime] = None
@@ -78,6 +79,7 @@ class InventorizationReportResponse(BaseModel):
     asset_type_name: Optional[str] = None
     department_codes: Optional[str] = None
     status: Optional[str] = None
+    status_ru: Optional[str] = None
     created_at: datetime
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

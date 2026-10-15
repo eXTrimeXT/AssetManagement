@@ -16,6 +16,7 @@ from app.models.assets.AssetType import AssetType
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.database.crud_notifications import notify_inventory_started, notify_inventory_completed
 from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_TYPE_ASSET_ID
+from app.models.inventorization.Inventorization import InventorizationStatus
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ async def create_inventory_session(
         department_codes=department_code,
         asset_type_name=asset_type_name,
         asset_type_en_name=asset_type_en_name,
-        status="in_progress",
+        status=InventorizationStatus.PENDING,
         created_by=creator_employee_id,
         start_date=start_date,
         end_date=end_date
@@ -294,7 +295,7 @@ async def check_inventory_item(
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         return False
-    if session.status == "completed":
+    if session.status == InventorizationStatus.COMPLETED:
         raise ValueError("Сессия уже завершена. Изменять items нельзя.")
     # ===================================================
 
@@ -325,7 +326,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         raise ValueError("Сессия не найдена.")
-    if session.status == "completed":
+    if session.status == InventorizationStatus.COMPLETED:
         raise ValueError("Сессия уже завершена.")
 
     # Обновляем количества в активах
@@ -346,7 +347,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
         )
 
     # Меняем статус сессии
-    session.status = "completed"
+    session.status = InventorizationStatus.COMPLETED
     session.end_date = datetime.now()
 
     # Находим всех ответственных для уведомлений
@@ -552,7 +553,8 @@ async def export_inventory_session_to_excel(
     # ================================================
 
     # Ru label for status
-    ru_status = "В работе" if session.status == "in_progress" else "Завершено"
+    # ru_status = "В работе" if session.status == "in_progress" else "Завершено"
+    ru_status = InventorizationStatus.get_ru_label(session.status)
 
     # Создаем Excel файл
     wb = Workbook()

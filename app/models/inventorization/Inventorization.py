@@ -6,6 +6,21 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.Base import Base
 
+class InventorizationStatus:
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+    RU_LABELS = {
+        PENDING: "В ожидании",
+        IN_PROGRESS: "В работе",
+        COMPLETED: "Завершено",
+    }
+
+    @classmethod
+    def get_ru_label(cls, status: str) -> str:
+        return cls.RU_LABELS.get(status, status)
+
 class InventorizationSession(Base):
     __tablename__ = "inventorization_sessions"
     session_id = Column(Integer, primary_key=True, index=True)
@@ -13,7 +28,7 @@ class InventorizationSession(Base):
     department_codes = Column(String(500), nullable=True)
     asset_type_name = Column(String(100), nullable=False)
     asset_type_en_name = Column(String(100), nullable=False)
-    status = Column(String(50), default="in_progress")  # in_progress, completed
+    status = Column(String(50), default=InventorizationStatus.PENDING)  # по умолчанию в ожидании
 
     created_at = Column(DateTime(timezone=True), server_default=func.now()) # Дата и время создания заявки*
     start_date = Column(DateTime(timezone=True), nullable=True) # Дата и время начала ивентаризации
@@ -26,6 +41,12 @@ class InventorizationSession(Base):
 
     # ДОБАВЛЯЕМ СВЯЗЬ с таблицей сотрудников (lazy="selectin" предотвращает N+1 запросы)
     creator = relationship("Employee", foreign_keys=[created_by], lazy="selectin")
+
+    @property
+    def status_ru(self) -> Optional[str]:
+        if not self.status:
+            return None
+        return InventorizationStatus.get_ru_label(self.status)
 
     @property
     def created_by_full_name(self) -> Optional[str]:

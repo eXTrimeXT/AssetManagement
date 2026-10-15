@@ -2,11 +2,13 @@ import logging
 from datetime import date, datetime
 from typing import Optional, Dict, Any
 
+from fastapi import HTTPException
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql.functions import func
+from starlette import status
 
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
@@ -28,6 +30,7 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
 from app.models.assets.AssetTransfer import AssetTransferStatus
+from app.database.assets.crud_asset_assignment import check_is_asset_employee
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +199,7 @@ async def request_asset_transfer(
         db: AsyncSession,
         request: AssetTransferRequest,
         initiator_id: str,
-) -> AssetTransferResponse:
+) -> AssetTransferResponse | None:
     asset_id = request.asset_id
     asset_source = "local"
 
@@ -213,6 +216,14 @@ async def request_asset_transfer(
     transfer_check = await check_pending_transfer_exists(db, asset_id, initiator_id)
     if transfer_check.is_exists:
         raise ValueError("На этот актив уже есть активная заявка на передачу")
+
+    # Проверяем владельцев актива
+    is_asset_employee = await check_is_asset_employee(db, asset_id, request.target_employee_id)
+    if is_asset_employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Выбранный пользователь уже является владельцев актива!"
+        )
 
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
     asset = result.scalar_one()

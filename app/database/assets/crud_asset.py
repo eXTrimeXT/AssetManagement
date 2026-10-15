@@ -655,43 +655,78 @@ async def _sync_asset_users(
                 )
 
 
+# async def _update_primary_assignment(
+#         db: AsyncSession,
+#         asset_id: int,
+#         # assignment_type: str,
+#         target_employee_id: Optional[str]
+# ) -> None:
+#     """
+#     Устанавливает is_current=True для указанной связки и сбрасывает для остальных.
+#     Если target_employee_id is None, просто сбрасывает is_current у всех активных связок этого типа.
+#     """
+#     # Сбрасываем флаг is_current у всех текущих активных привязок этого типа для данного актива
+#     await db.execute(
+#         update(AssetAssignment)
+#         .where(
+#             AssetAssignment.asset_id == asset_id,
+#             # AssetAssignment.assignment_type == assignment_type,
+#             AssetAssignment.end_date.is_(None),
+#             AssetAssignment.is_current == True
+#         )
+#         .values(is_current=False)
+#     )
+#
+#     # Если передан конкретный сотрудник, ищем его активную связку и ставим флаг
+#     if target_employee_id:
+#         result = await db.execute(
+#             select(AssetAssignment).where(
+#                 AssetAssignment.asset_id == asset_id,
+#                 AssetAssignment.employee_id == target_employee_id,
+#                 # AssetAssignment.assignment_type == assignment_type,
+#                 AssetAssignment.end_date.is_(None)
+#             )
+#         )
+#         assignment = result.scalar_one_or_none()
+#
+#         # Если есть связка изменяем флаг у записи
+#         if assignment:
+#             assignment.is_current = True
+
+
 async def _update_primary_assignment(
         db: AsyncSession,
         asset_id: int,
-        # assignment_type: str,
         target_employee_id: Optional[str]
 ) -> None:
     """
-    Устанавливает is_current=True для указанной связки и сбрасывает для остальных.
-    Если target_employee_id is None, просто сбрасывает is_current у всех активных связок этого типа.
+    Устанавливает is_current=True для указанного сотрудника и сбрасывает для остальных.
+    Использует прямой UPDATE для безопасной обработки случаев,
+    когда у сотрудника несколько активных привязок (например, 'user' и 'serving' одновременно).
     """
-    # Сбрасываем флаг is_current у всех текущих активных привязок этого типа для данного актива
+    # 1. Сбрасываем флаг is_current у ВСЕХ текущих активных привязок для данного актива
     await db.execute(
         update(AssetAssignment)
         .where(
             AssetAssignment.asset_id == asset_id,
-            # AssetAssignment.assignment_type == assignment_type,
             AssetAssignment.end_date.is_(None),
             AssetAssignment.is_current == True
         )
         .values(is_current=False)
     )
 
-    # Если передан конкретный сотрудник, ищем его активную связку и ставим флаг
+    # 2. Если передан конкретный сотрудник, устанавливаем is_current=True для ВСЕХ его активных привязок к этому активу
     if target_employee_id:
-        result = await db.execute(
-            select(AssetAssignment).where(
+        await db.execute(
+            update(AssetAssignment)
+            .where(
                 AssetAssignment.asset_id == asset_id,
                 AssetAssignment.employee_id == target_employee_id,
-                # AssetAssignment.assignment_type == assignment_type,
                 AssetAssignment.end_date.is_(None)
             )
+            .values(is_current=True)
         )
-        assignment = result.scalar_one_or_none()
 
-        # Если есть связка изменяем флаг у записи
-        if assignment:
-            assignment.is_current = True
 
 async def _sync_asset_location(
         db: AsyncSession,

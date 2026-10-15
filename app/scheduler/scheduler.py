@@ -19,7 +19,7 @@ def init_scheduler():
         check_service_assets,
         # trigger=CronTrigger(hour=9, minute=0),
         # для быстрой проверки
-        trigger=IntervalTrigger(minutes=20),
+        trigger=IntervalTrigger(minutes=2),
         id="asset_service_check",
         replace_existing=True,
     )
@@ -29,7 +29,7 @@ def init_scheduler():
         check_have_assets,
         # trigger=CronTrigger(hour=9, minute=0),
         # для быстрой проверки
-        trigger=IntervalTrigger(minutes=20),
+        trigger=IntervalTrigger(minutes=2),
         id="asset_check_period",
         replace_existing=True,
     )

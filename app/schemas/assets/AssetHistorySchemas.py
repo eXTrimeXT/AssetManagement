@@ -1,28 +1,16 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
-from enum import Enum
-
-
-class ActionType(str, Enum):
-    CREATE = "create"
-    UPDATE = "update"
-    DELETE = "delete"
-    ASSIGN = "assign"
-    UNASSIGN = "unassign"
-    MOVE = "move"
-    STATUS_CHANGE = "status_change"
-
 
 class AssetHistoryResponse(BaseModel):
     id: int
-    asset_id: int
-    action_type: str
+    asset_id: Optional[int] = None
+    action_type: Optional[str] = None
     field_name: Optional[str] = None
     old_value: Optional[str] = None
     new_value: Optional[str] = None
-    changed_by: str
-    changed_at: datetime
+    changed_by: Optional[str] = None
+    changed_at: Optional[datetime] = None
     comment: Optional[str] = None
     session_id: Optional[str] = None
 
@@ -35,12 +23,12 @@ class AssetHistoryResponse(BaseModel):
 
 class AssetHistoryGroupedResponse(BaseModel):
     """Группировка изменений по session_id"""
-    session_id: str
-    asset_id: int
-    changed_by: str
+    session_id: Optional[str] = None
+    asset_id: Optional[int] = None
+    changed_by: Optional[int] = None
     changer_full_name_ru: Optional[str] = None
-    changed_at: datetime
-    changes: List[AssetHistoryResponse]
+    changed_at: Optional[datetime] = None
+    changes: List[AssetHistoryResponse] = None
     comment: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -55,13 +43,3 @@ class AssetHistoryStatsResponse(BaseModel):
     most_active_users: List[dict]  # [{employee_id, full_name, count}]
     most_changed_assets: List[dict]  # [{asset_id, name, count}]
     action_type_breakdown: dict  # {action_type: count}
-
-
-class AssetHistoryFilterRequest(BaseModel):
-    """Фильтры для получения истории"""
-    asset_id: Optional[int] = None
-    changed_by: Optional[str] = None
-    action_type: Optional[ActionType] = None
-    date_from: Optional[datetime] = None
-    date_to: Optional[datetime] = None
-    session_id: Optional[str] = None

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 
 from app.database.connection import get_db
@@ -14,7 +14,6 @@ from app.schemas.assets.AssetHistorySchemas import (
     AssetHistoryResponse,
     AssetHistoryGroupedResponse,
     AssetHistoryStatsResponse,
-    ActionType
 )
 from app.services.auth.auth_service import require_authorized_user
 
@@ -29,7 +28,7 @@ router_asset_history = APIRouter(prefix="/asset-history", tags=["Asset History"]
 async def read_history_with_filters(
         asset_id: Optional[int] = Query(None),
         changed_by: Optional[str] = Query(None),
-        action_type: Optional[ActionType] = Query(None),
+        action_type: Optional[Literal["create", "update", "delete", "assign", "unassign", "move", "status_change"]] = Query(None),
         date_from: Optional[datetime] = Query(None),
         date_to: Optional[datetime] = Query(None),
         session_id: Optional[str] = Query(None),
@@ -43,7 +42,7 @@ async def read_history_with_filters(
         db=db,
         asset_id=asset_id,
         changed_by=changed_by,
-        action_type=action_type,
+        action_type=action_type if action_type else None,
         date_from=date_from,
         date_to=date_to,
         session_id=session_id,
@@ -52,7 +51,7 @@ async def read_history_with_filters(
     )
 
     if not history:
-        raise HTTPException(status_code=404, detail="У актива нет истории изменений")
+        raise HTTPException(status_code=404, detail="Нет истории изменений")
 
     return history
 

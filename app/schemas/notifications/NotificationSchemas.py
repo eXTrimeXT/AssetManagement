@@ -55,7 +55,7 @@ class NotificationResponse(BaseModel):
 
         messages = {
             NotificationEventType.SERVICE_REQUIRE: ("Требуется обслуживание актива", "Требуется обслуживание актива"),
-            NotificationEventType.CHECK_REQUIRE: ("Требуется проверить актив", "Требуется проверить актив"),
+            NotificationEventType.CHECK_REQUIRE: ("Требуется проверить наличие актива", "Требуется проверить наличие актива"),
             NotificationEventType.ASSET_STATUS_CHANGED: ("Изменение статуса актива", "Изменение статуса актива"),
             NotificationEventType.ASSIGNED_RESPONSIBLE: ("Вы назначили сотрудника ответственным за актив", "Вас назначили ответственным за актив"),
             NotificationEventType.ASSIGNED_USER: ("Вы назначили сотрудника пользователем актива", "Вас назначили пользователем актива"),

@@ -1,12 +1,10 @@
 from typing import List, Optional, Dict, Any, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_
 from datetime import datetime, timedelta
 import uuid
 
-from app.models.assets.AssetHistory import AssetHistory
-from app.models.assets.Asset import Asset
-
+from app.models.assets.AssetHistory import AssetHistory, AssetHistoryActionType
 
 async def create_history_record(
         db: AsyncSession,
@@ -15,7 +13,7 @@ async def create_history_record(
         old_value: Optional[str],
         new_value: Optional[str],
         changed_by: str,
-        action_type: str = "update",
+        action_type: str = AssetHistoryActionType.UPDATE,
         comment: Optional[str] = None,
         session_id: Optional[str] = None
 ) -> AssetHistory:
@@ -33,13 +31,12 @@ async def create_history_record(
     db.add(history)
     return history
 
-
 async def get_asset_history(
         db: AsyncSession,
         asset_id: int,
         skip: int = 0,
         limit: int = 100
-) -> List[AssetHistory]:
+) -> Sequence[Any]:
     """Получить историю изменений актива"""
     result = await db.execute(
         select(AssetHistory)
@@ -49,7 +46,6 @@ async def get_asset_history(
         .limit(limit)
     )
     return result.scalars().all()
-
 
 async def get_asset_history_grouped(
         db: AsyncSession,
@@ -87,9 +83,7 @@ async def get_asset_history_grouped(
         key=lambda x: x["changed_at"],
         reverse=True
     )
-
     return sorted_groups[skip:skip + limit]
-
 
 async def get_history_with_filters(
         db: AsyncSession,
@@ -125,7 +119,6 @@ async def get_history_with_filters(
     query = query.order_by(AssetHistory.changed_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
-
 
 async def get_history_stats(
         db: AsyncSession,
@@ -235,7 +228,6 @@ async def get_history_stats(
         "action_type_breakdown": action_type_breakdown
     }
 
-
 async def compare_and_save_changes(
         db: AsyncSession,
         asset_id: int,
@@ -252,12 +244,21 @@ async def compare_and_save_changes(
 
     # Поля, которые нужно отслеживать
     tracked_fields = [
-        'name', 'inventory_id', 'serial_number', 'comment',
-        'date_issue', 'date_purchasing', 'model_id', 'model_name',
-        'asset_type_id', 'parent_id',
+        'name',
+        'inventory_id',
+        'serial_number',
+        'comment',
+        'date_issue',
+        'date_purchasing',
+        'model_id',
+        'model_name',
+        'asset_type_id',
+        'parent_id',
         'asset_status_id',
-        'parent_name', 'manufacturer_name',
-        'vendor_name', 'os_name'
+        'parent_name',
+        'manufacturer_name',
+        'vendor_name',
+        'os_name'
     ]
 
     for field in tracked_fields:
@@ -279,14 +280,12 @@ async def compare_and_save_changes(
                 old_value=str(old_val) if old_val is not None else None,
                 new_value=str(new_val) if new_val is not None else None,
                 changed_by=changed_by,
-                action_type="update",
+                action_type=AssetHistoryActionType.UPDATE,
                 comment=comment,
                 session_id=session_id
             )
             changes.append(history)
-
     return changes
-
 
 async def log_asset_creation(
         db: AsyncSession,
@@ -302,10 +301,9 @@ async def log_asset_creation(
         old_value=None,
         new_value=str(asset_data),
         changed_by=created_by,
-        action_type="create",
-        comment="Создание актива"
+        action_type=AssetHistoryActionType.CREATE,
+        comment=AssetHistoryActionType.get_ru_label(action=AssetHistoryActionType.CREATE)
     )
-
 
 async def log_asset_deletion(
         db: AsyncSession,
@@ -320,10 +318,9 @@ async def log_asset_deletion(
         old_value=None,
         new_value=None,
         changed_by=deleted_by,
-        action_type="delete",
-        comment="Удаление актива"
+        action_type=AssetHistoryActionType.DELETE,
+        comment=AssetHistoryActionType.get_ru_label(action=AssetHistoryActionType.DELETE)
     )
-
 
 async def log_assignment_change(
         db: AsyncSession,
@@ -338,13 +335,12 @@ async def log_assignment_change(
         db=db,
         asset_id=asset_id,
         field_name=assignment_type,
-        old_value=None if action == "assign" else employee_id,
-        new_value=employee_id if action == "assign" else None,
+        old_value=None if action == AssetHistoryActionType.ASSIGN else employee_id,
+        new_value=employee_id if action == AssetHistoryActionType.ASSIGN else None,
         changed_by=changed_by,
         action_type=action,
-        comment=f"{'Назначение' if action == 'assign' else 'Снятие'} {assignment_type}: {employee_id}"
+        comment=AssetHistoryActionType.get_ru_label(action=action)
     )
-
 
 async def log_location_change(
         db: AsyncSession,
@@ -361,6 +357,6 @@ async def log_location_change(
         old_value=str(old_location) if old_location else None,
         new_value=str(new_location),
         changed_by=changed_by,
-        action_type="move",
-        comment="Перемещение актива"
+        action_type=AssetHistoryActionType.MOVE,
+        comment=AssetHistoryActionType.get_ru_label(action=AssetHistoryActionType.MOVE)
     )

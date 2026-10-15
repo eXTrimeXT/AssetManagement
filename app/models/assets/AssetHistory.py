@@ -6,6 +6,29 @@ from sqlalchemy.sql import func
 from app.models.Base import Base
 
 
+class AssetHistoryActionType:
+    CREATE = "create"
+    UPDATE= "update"
+    DELETE = "delete"
+    ASSIGN = "assign"
+    UNASSIGN = "unassign"
+    MOVE = "move"
+    STATUS_CHANGE = "status_change"
+
+    RU_LABELS = {
+        CREATE: "создание",
+        UPDATE: "обновление",
+        DELETE: "удаление",
+        ASSIGN: "привязка",
+        UNASSIGN: "отмена привязки",
+        MOVE: "изменение местоположения",
+        STATUS_CHANGE: "изменение статуса",
+    }
+
+    @classmethod
+    def get_ru_label(cls, action: str) -> str:
+        return cls.RU_LABELS.get(action, action)
+
 class AssetHistory(Base):
     __tablename__ = "asset_history"
 
@@ -16,7 +39,7 @@ class AssetHistory(Base):
     action_type = Column(
         String(50),
         nullable=False,
-        default="update",
+        default=AssetHistoryActionType.UPDATE,
         index=True
     )  # create, update, delete, assign, unassign, move, status_change
 
@@ -52,6 +75,12 @@ class AssetHistory(Base):
             return None
         parts = [p for p in [self.changer.last_name_en, self.changer.first_name_en, self.changer.middle_name_en] if p]
         return " ".join(parts) if parts else None
+
+    @property
+    def event_type_ru(self) -> Optional[str]:
+        if not self.action_type:
+            return None
+        return AssetHistoryActionType.get_ru_label(self.action_type)
 
     def __repr__(self):
         return f"<AssetHistory(id={self.id}, asset_id={self.asset_id}, action={self.action_type}, field={self.field_name})>"

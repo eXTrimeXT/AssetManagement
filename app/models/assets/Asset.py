@@ -227,6 +227,7 @@ class Asset(Base):
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
                 assignment_type=a.assignment_type,
+                is_current=a.is_current
             ))
         return result
 
@@ -300,6 +301,7 @@ class Asset(Base):
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
                 assignment_type=a.assignment_type,
+                is_current=a.is_current
             ))
         return result
 
@@ -373,6 +375,7 @@ class Asset(Base):
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
                 assignment_type=a.assignment_type,
+                is_current=a.is_current
             ))
         return result
 

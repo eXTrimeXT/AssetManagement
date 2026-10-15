@@ -102,14 +102,15 @@ async def create_write_off_request(
     )
 
     # Записываем в историю
-    await create_history_record(
-        db=db,
-        asset_id=asset_id,
-        field_name="write_off_requested",
-        old_value=None,
-        new_value=data.reason[:100],
-        changed_by=requested_by,
-    )
+    # TODO: Отслеживать поле 'количество' для истории
+    # await create_history_record(
+    #     db=db,
+    #     asset_id=asset_id,
+    #     field_name="write_off_requested",
+    #     old_value=None,
+    #     new_value=data.reason[:100],
+    #     changed_by=requested_by,
+    # )
 
     await db.commit()
     await db.refresh(write_off)

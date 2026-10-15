@@ -8,7 +8,8 @@ from app.database.assets.crud_asset_history import (
     get_asset_history,
     get_asset_history_grouped,
     get_history_with_filters,
-    get_history_stats
+    get_history_stats,
+    migrate_old_history_records
 )
 from app.schemas.assets.AssetHistorySchemas import (
     AssetHistoryResponse,
@@ -102,3 +103,28 @@ async def read_asset_history_grouped(
 ):
     """Получить историю изменений, сгруппированную по session_id"""
     return await get_asset_history_grouped(db, asset_id, skip=skip, limit=limit)
+
+
+@router_asset_history.post(
+    "/migrate-old-records",
+    summary="Одноразовая миграция старых записей истории",
+    description="Преобразует ID в названия и переводит field_name на русский язык для старых записей. Запускайте только один раз!"
+)
+async def trigger_history_migration(
+        batch_size: int = Query(500, ge=100, le=2000, description="Размер пакета для обработки"),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user) # В идеале здесь должна быть проверка на админа
+):
+    """
+    Запускает процесс обновления исторических данных.
+    Процесс разбит на пакеты, чтобы не блокировать БД надолго.
+    """
+    try:
+        result = await migrate_old_history_records(db, batch_size=batch_size)
+        return {
+            "message": "Миграция успешно завершена",
+            "records_updated": result["total_updated"]
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при миграции: {str(e)}")

@@ -30,7 +30,7 @@ from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.department import ZupDepartment
 from app.schemas.assets.AssetSchemas import AssetResponse
 from app.models.assets.AssetTransfer import AssetTransferStatus
-from app.database.assets.crud_asset_assignment import check_is_asset_employee
+from app.database.assets.crud_asset_assignment import check_is_asset_employee_as_user, check_is_asset_employee_as_serving
 
 logger = logging.getLogger(__name__)
 
@@ -221,11 +221,18 @@ async def request_asset_transfer(
     target_name = await get_employee_full_name(db, request.target_employee_id)
 
     # Проверяем владельцев актива
-    is_asset_employee = await check_is_asset_employee(db, asset_id, request.target_employee_id)
+    is_asset_employee = await check_is_asset_employee_as_user(db, asset_id, request.target_employee_id)
     if is_asset_employee:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{target_name} уже является владельцем актива!"
+        )
+
+    is_asset_employee = await check_is_asset_employee_as_serving(db, asset_id, request.target_employee_id)
+    if is_asset_employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{target_name} является обслуживающим этого актива!"
         )
 
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))

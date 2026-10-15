@@ -178,16 +178,33 @@ async def get_assignments_by_asset(
     result = await db.execute(query)
     return result.scalars().all()
 
-async def check_is_asset_employee(
+async def check_is_asset_employee_as_user(
         db: AsyncSession,
         asset_id: int,
         employee_id: str
 ):
-    """Проверяем привязан ли сотрудник к активу или нет"""
+    """Проверяем привязан ли сотрудник к активу как пользователь"""
     query = select(AssetAssignment).where(
         AssetAssignment.asset_id == asset_id,
         AssetAssignment.end_date.is_(None),
-        AssetAssignment.employee_id == employee_id
+        AssetAssignment.employee_id == employee_id,
+        AssetAssignment.assignment_type == "user"
+    )
+    result = await db.execute(query)
+    res = result.scalars().all()
+    return True if res else False
+
+async def check_is_asset_employee_as_serving(
+        db: AsyncSession,
+        asset_id: int,
+        employee_id: str
+):
+    """Проверяем привязан ли сотрудник к активу как обслуживающий"""
+    query = select(AssetAssignment).where(
+        AssetAssignment.asset_id == asset_id,
+        AssetAssignment.end_date.is_(None),
+        AssetAssignment.employee_id == employee_id,
+        AssetAssignment.assignment_type == "serving"
     )
     result = await db.execute(query)
     res = result.scalars().all()

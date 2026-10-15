@@ -79,7 +79,7 @@ async def create_transfer_request(
         if e.status_code == status.HTTP_400_BAD_REQUEST:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Выбранный пользователь уже является владельцев актива!"
+                detail=f"Выбранный пользователь уже является владельцем актива!"
             )
     except Exception as e:
         raise HTTPException(

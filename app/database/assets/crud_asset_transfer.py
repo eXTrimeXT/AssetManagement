@@ -217,19 +217,19 @@ async def request_asset_transfer(
     if transfer_check.is_exists:
         raise ValueError("На этот актив уже есть активная заявка на передачу")
 
+    initiator_name = await get_employee_full_name(db, initiator_id)
+    target_name = await get_employee_full_name(db, request.target_employee_id)
+
     # Проверяем владельцев актива
     is_asset_employee = await check_is_asset_employee(db, asset_id, request.target_employee_id)
     if is_asset_employee:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Выбранный пользователь уже является владельцев актива!"
+            detail=f"{target_name} уже является владельцем актива!"
         )
 
     result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
     asset = result.scalar_one()
-
-    initiator_name = await get_employee_full_name(db, initiator_id)
-    target_name = await get_employee_full_name(db, request.target_employee_id)
 
     # Создаем запись о передаче
     transfer = AssetTransfer(

@@ -199,7 +199,7 @@ async def request_asset_transfer(
         db: AsyncSession,
         request: AssetTransferRequest,
         initiator_id: str,
-) -> AssetTransferResponse | None:
+) -> AssetTransferResponse:
     asset_id = request.asset_id
     asset_source = "local"
 

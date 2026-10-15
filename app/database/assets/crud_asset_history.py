@@ -508,7 +508,7 @@ async def migrate_old_history_records(
     Преобразует ID в названия и переводит field_name на русский язык.
     Обрабатывает записи пакетами, чтобы не перегружать память.
     """
-    target_fields = ['asset_type_id', 'asset_status_id', 'parent_id']
+    target_fields = TRACKED_FIELDS
     total_updated = 0
     russian_labels = set(FIELD_LABELS_RU.values())
 

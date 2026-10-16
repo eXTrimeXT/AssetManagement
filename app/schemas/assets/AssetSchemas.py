@@ -96,9 +96,10 @@ class AssetUpdate(BaseModel):
 
     # Периоды обслуживания и проверки оборудования
     every_week_check: Optional[bool] = False    # true/false
-    next_service: Optional[date] = None         # datetime
-    service_period: Optional[int] = None        # Int (count days)
-    check_period: Optional[int] = None          # Int (count days)
+    next_service: Optional[date] = None         # Дата обслуживания
+    service_period: Optional[int] = None        # Период обслуживания
+    check_check: Optional[date] = None          # Дата проверки
+    check_period: Optional[int] = None          # Период проверки
 
     # Временные поля
     parent_name: Optional[str] = None

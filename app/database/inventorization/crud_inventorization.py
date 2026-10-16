@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Sequence, Tuple
 
 import logging
@@ -26,22 +26,21 @@ from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_
 from app.models.inventorization.Inventorization import InventorizationStatus
 
 logger = logging.getLogger(__name__)
+LOCAL_TZ = timezone(timedelta(hours=3), name="Europe/Moscow")
 
 def determine_inventory_status(start_date: Optional[datetime], end_date: Optional[datetime]) -> str:
     """
     Определяет актуальный статус сессии на основе дат.
-    ЗАЩИТНАЯ ПРОВЕРКА: Нормализует часовые пояса для сравнения,
-    чтобы избежать ошибок TypeError и рассинхрона с БД.
+    Использует локальный часовой пояс для корректного сравнения.
     """
-    # Получаем текущее время в UTC (как и хранится в БД с суффиксом 'Z')
-    now = datetime.now(timezone.utc)
+    # Получаем текущее время в нашем локальном часовом поясе
+    now = datetime.now(LOCAL_TZ)
 
-    # Если по какой-то причине даты приходят без часового пояса (naive),
-    # мы принудительно делаем их UTC, чтобы сравнение с now было корректным
+    # Страховка: если по какой-то причине время все еще без пояса, добавляем его
     if start_date and start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=timezone.utc)
+        start_date = start_date.replace(tzinfo=LOCAL_TZ)
     if end_date and end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=timezone.utc)
+        end_date = end_date.replace(tzinfo=LOCAL_TZ)
 
     # Если дата окончания уже наступила или прошла, сессия завершена
     if end_date and end_date <= now:
@@ -53,7 +52,6 @@ def determine_inventory_status(start_date: Optional[datetime], end_date: Optiona
 
     # Иначе она в ожидании
     return InventorizationStatus.PENDING
-
 async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
     result = await db.execute(
         select(InventorizationSession)
@@ -319,7 +317,7 @@ async def create_inventory_session(
     # ==============================================================================
     # 3. ПЛАНИРОВАНИЕ ЗАДАЧ В APSCHEDULER
     # ==============================================================================
-    now = datetime.now(timezone.utc)
+    now = datetime.now(LOCAL_TZ) # <-- ИЗМЕНЕНО: используем локальное время
 
     # Планируем задачу запуска, если start_date в будущем и сессия еще не запущена
     if start_date and start_date > now and initial_status == InventorizationStatus.PENDING:
@@ -346,7 +344,6 @@ async def create_inventory_session(
             name=f"Complete inventory session {session.session_id}"
         )
         logger.info(f"[INVENTORY SCHEDULER] Запланирована задача завершения сессии {session.session_id} на {end_date}")
-
 
     await db.commit()
     await db.refresh(session)

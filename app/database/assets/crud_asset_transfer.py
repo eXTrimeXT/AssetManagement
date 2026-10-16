@@ -626,7 +626,8 @@ async def get_transfers_list(
         initiator_id: Optional[str] = None,
         target_employee_id: Optional[str] = None,
         only_my: Optional[bool] = False,
-        employee_id: Optional[str] = None
+        employee_id: Optional[str] = None,
+        only_active: Optional[bool] = False
 ) -> Dict[str, Any]:
     query = select(AssetTransfer)
 
@@ -645,6 +646,9 @@ async def get_transfers_list(
             query = query.where(AssetTransfer.initiator_id == initiator_id)
         if target_employee_id is not None:
             query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+
+    if only_active:
+        query = query.where(AssetTransfer.status != AssetTransferStatus.ACCEPTED)
 
     # Total
     count_query = select(func.count()).select_from(query.subquery())

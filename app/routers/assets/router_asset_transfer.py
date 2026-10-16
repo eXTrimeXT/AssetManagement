@@ -35,6 +35,7 @@ async def get_transfers(
         initiator_id: Optional[str] = Query(None),
         target_employee_id: Optional[str] = Query(None),
         only_my: Optional[bool] = Query(False),
+        only_active: Optional[bool] = Query(False),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
@@ -46,7 +47,8 @@ async def get_transfers(
         initiator_id=initiator_id,
         target_employee_id=target_employee_id,
         only_my=only_my,
-        employee_id=current_user.employee_id
+        employee_id=current_user.employee_id,
+        only_active=only_active
     )
     return PaginatedResponse(**result)
 

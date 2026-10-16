@@ -98,7 +98,7 @@ class AssetUpdate(BaseModel):
     every_week_check: Optional[bool] = False    # true/false
     next_service: Optional[date] = None         # Дата обслуживания
     service_period: Optional[int] = None        # Период обслуживания
-    check_check: Optional[date] = None          # Дата проверки
+    next_check: Optional[date] = None          # Дата проверки
     check_period: Optional[int] = None          # Период проверки
 
     # Временные поля

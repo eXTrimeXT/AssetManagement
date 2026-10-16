@@ -1,6 +1,4 @@
 import logging
-from datetime import datetime
-
 from sqlalchemy import update, select, func
 from app.database.connection import async_session
 from app.models.inventorization.Inventorization import InventorizationSession, InventorizationStatus
@@ -24,7 +22,7 @@ async def check_inventorization_dates():
                 .where(
                     InventorizationSession.status == InventorizationStatus.PENDING,
                     InventorizationSession.start_date.isnot(None),
-                    InventorizationSession.start_date <= func.now()  # <-- ВКЛЮЧИТЬ ЭТО (время БД)
+                    InventorizationSession.start_date <= func.now()  # время как в БД
                 )
                 .values(status=InventorizationStatus.IN_PROGRESS)
             )
@@ -37,7 +35,7 @@ async def check_inventorization_dates():
                 .where(
                     InventorizationSession.status == InventorizationStatus.IN_PROGRESS,
                     InventorizationSession.end_date.isnot(None),
-                    InventorizationSession.end_date <= func.now()  # <-- ВКЛЮЧИТЬ ЭТО (время БД)
+                    InventorizationSession.end_date <= func.now()  # время как в БД
                 )
                 .values(status=InventorizationStatus.COMPLETED)
             )
@@ -55,7 +53,6 @@ async def check_inventorization_dates():
 
     except Exception as e:
         logger.error(f"[INVENTORY SCHEDULER] Ошибка при проверке дат инвентаризации: {e}", exc_info=True)
-
 
 async def start_inventory_session_job(session_id: int):
     logger.info(f"[INVENTORY SCHEDULER] Запуск задачи start_inventory_session_job для session_id={session_id}")
@@ -77,7 +74,6 @@ async def start_inventory_session_job(session_id: int):
             logger.info(f"[INVENTORY SCHEDULER] Сессия {session_id} автоматически переведена в статус IN_PROGRESS")
     except Exception as e:
         logger.error(f"[INVENTORY SCHEDULER] Ошибка при запуске сессии {session_id}: {e}", exc_info=True)
-
 
 async def complete_inventory_session_job(session_id: int):
     logger.info(f"[INVENTORY SCHEDULER] Запуск задачи complete_inventory_session_job для session_id={session_id}")

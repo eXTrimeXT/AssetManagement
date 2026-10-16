@@ -113,6 +113,15 @@ async def create_inventory_session(
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
 
+    # ==============================================================================
+    # ЗАЩИТНАЯ ПРОВЕРКА: Нормализуем часовые пояса перед любыми сравнениями
+    # Если фронтенд прислал дату без 'Z' (naive), принудительно делаем её UTC (aware)
+    # ==============================================================================
+    if start_date and start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+    if end_date and end_date.tzinfo is None:
+        end_date = end_date.replace(tzinfo=timezone.utc)
+
     logger.warning(f"{asset_type_id=} {department_code=}")
     if asset_type_id is None and department_code is None:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")

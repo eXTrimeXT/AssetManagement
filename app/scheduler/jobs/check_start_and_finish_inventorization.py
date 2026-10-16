@@ -10,13 +10,9 @@ logger = logging.getLogger(__name__)
 async def check_inventorization_dates():
     """
     Периодическая задача для автоматического изменения статуса сессий инвентаризации.
-
     ЗАЩИТНАЯ ПРОВЕРКА: Использует func.now() для сравнения времени НА СТОРОНЕ БД.
-    Это полностью исключает проблемы с рассинхроном часовых поясов (например, отставание на 3 часа)
-    между сервером приложений (Python) и сервером базы данных.
     """
     logger.info("[INVENTORY SCHEDULER] Запуск проверки дат инвентаризации...")
-
     try:
         async with async_session() as db:
             updated_start = 0
@@ -28,8 +24,7 @@ async def check_inventorization_dates():
                 .where(
                     InventorizationSession.status == InventorizationStatus.PENDING,
                     InventorizationSession.start_date.isnot(None),
-                    InventorizationSession.start_date <= datetime.now(),
-                    # InventorizationSession.start_date <= func.now()  # <-- ЗАЩИТНАЯ ПРОВЕРКА (время БД)
+                    InventorizationSession.start_date <= func.now()  # <-- ВКЛЮЧИТЬ ЭТО (время БД)
                 )
                 .values(status=InventorizationStatus.IN_PROGRESS)
             )
@@ -42,15 +37,13 @@ async def check_inventorization_dates():
                 .where(
                     InventorizationSession.status == InventorizationStatus.IN_PROGRESS,
                     InventorizationSession.end_date.isnot(None),
-                    InventorizationSession.end_date <= datetime.now(),
-                    # InventorizationSession.end_date <= func.now()  # <-- ЗАЩИТНАЯ ПРОВЕРКА (время БД)
+                    InventorizationSession.end_date <= func.now()  # <-- ВКЛЮЧИТЬ ЭТО (время БД)
                 )
                 .values(status=InventorizationStatus.COMPLETED)
             )
             result_end = await db.execute(stmt_end)
             updated_end = result_end.rowcount
 
-            # Сохраняем изменения, если они были
             if updated_start > 0 or updated_end > 0:
                 await db.commit()
                 logger.info(
@@ -58,9 +51,7 @@ async def check_inventorization_dates():
                     f"начато={updated_start}, завершено={updated_end}"
                 )
             else:
-                logger.debug(
-                    f"[INVENTORY SCHEDULER] Нет сессий, требующих изменения статуса"
-                )
+                logger.debug("[INVENTORY SCHEDULER] Нет сессий, требующих изменения статуса.")
 
     except Exception as e:
         logger.error(f"[INVENTORY SCHEDULER] Ошибка при проверке дат инвентаризации: {e}", exc_info=True)

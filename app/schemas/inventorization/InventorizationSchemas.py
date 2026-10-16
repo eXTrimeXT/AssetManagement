@@ -13,7 +13,7 @@ class InventorizationSessionCreate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
-    @field_validator('start_date', 'end_date', mode='before')
+    @field_validator('start_date', 'end_date', mode='after')
     @classmethod
     def apply_local_timezone(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Если время пришло без часового пояса, принудительно добавляем локальный"""

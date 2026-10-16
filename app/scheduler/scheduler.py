@@ -39,7 +39,7 @@ def init_scheduler():
     # Запуск задачи проверки дат начала и окончания инвентаризации
     scheduler.add_job(
         check_inventorization_dates,
-        trigger=IntervalTrigger(seconds=20), # Проверка каждые N минут
+        trigger=IntervalTrigger(minutes=2), # Проверка каждые N минут
         id="check_inventorization_dates",
         replace_existing=True,
         max_instances=1,  # Запретить параллельные запуски

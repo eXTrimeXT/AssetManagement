@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Sequence, Tuple
 
 import logging
@@ -9,6 +9,13 @@ from sqlalchemy import select, update, distinct, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi.responses import StreamingResponse
+
+from app.scheduler.scheduler import scheduler
+from apscheduler.triggers.date import DateTrigger
+from app.scheduler.jobs.check_start_and_finish_inventorization import (
+    start_inventory_session_job,
+    complete_inventory_session_job
+)
 
 from app.models.inventorization.Inventorization import InventorizationSession, InventorizationItem
 from app.models.assets.Asset import Asset
@@ -20,6 +27,32 @@ from app.models.inventorization.Inventorization import InventorizationStatus
 
 logger = logging.getLogger(__name__)
 
+def determine_inventory_status(start_date: Optional[datetime], end_date: Optional[datetime]) -> str:
+    """
+    Определяет актуальный статус сессии на основе дат.
+    ЗАЩИТНАЯ ПРОВЕРКА: Нормализует часовые пояса для сравнения,
+    чтобы избежать ошибок TypeError и рассинхрона с БД.
+    """
+    # Получаем текущее время в UTC (как и хранится в БД с суффиксом 'Z')
+    now = datetime.now(timezone.utc)
+
+    # Если по какой-то причине даты приходят без часового пояса (naive),
+    # мы принудительно делаем их UTC, чтобы сравнение с now было корректным
+    if start_date and start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+    if end_date and end_date.tzinfo is None:
+        end_date = end_date.replace(tzinfo=timezone.utc)
+
+    # Если дата окончания уже наступила или прошла, сессия завершена
+    if end_date and end_date <= now:
+        return InventorizationStatus.COMPLETED
+
+    # Если дата начала уже наступила или прошла, сессия в работе
+    if start_date and start_date <= now:
+        return InventorizationStatus.IN_PROGRESS
+
+    # Иначе она в ожидании
+    return InventorizationStatus.PENDING
 
 async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Optional[InventorizationSession]:
     result = await db.execute(
@@ -98,12 +131,15 @@ async def create_inventory_session(
         asset_type_name = asset_type.name
         asset_type_en_name = asset_type.en_name
 
+    # === ГЛАВНОЕ ИЗМЕНЕНИЕ: Вычисляем статус ПЕРЕД созданием объекта ===
+    initial_status = determine_inventory_status(start_date, end_date)
+
     session = InventorizationSession(
         asset_type_id=asset_type_id,
         department_codes=department_code,
         asset_type_name=asset_type_name,
         asset_type_en_name=asset_type_en_name,
-        status=InventorizationStatus.PENDING,
+        status=initial_status,
         created_by=creator_employee_id,
         start_date=start_date,
         end_date=end_date
@@ -271,6 +307,38 @@ async def create_inventory_session(
                 initiator_id=creator_employee_id,
             )
 
+    # ==============================================================================
+    # 3. ПЛАНИРОВАНИЕ ЗАДАЧ В APSCHEDULER
+    # ==============================================================================
+    now = datetime.now(timezone.utc)
+
+    # Планируем задачу запуска, если start_date в будущем и сессия еще не запущена
+    if start_date and start_date > now and initial_status == InventorizationStatus.PENDING:
+        job_id_start = f"inventory_start_{session.session_id}"
+        scheduler.add_job(
+            start_inventory_session_job,
+            trigger=DateTrigger(run_date=start_date),
+            args=[session.session_id],
+            id=job_id_start,
+            replace_existing=True,
+            name=f"Start inventory session {session.session_id}"
+        )
+        logger.info(f"[INVENTORY SCHEDULER] Запланирована задача запуска сессии {session.session_id} на {start_date}")
+
+    # Планируем задачу завершения, если end_date в будущем
+    if end_date and end_date > now:
+        job_id_end = f"inventory_end_{session.session_id}"
+        scheduler.add_job(
+            complete_inventory_session_job,
+            trigger=DateTrigger(run_date=end_date),
+            args=[session.session_id],
+            id=job_id_end,
+            replace_existing=True,
+            name=f"Complete inventory session {session.session_id}"
+        )
+        logger.info(f"[INVENTORY SCHEDULER] Запланирована задача завершения сессии {session.session_id} на {end_date}")
+
+
     await db.commit()
     await db.refresh(session)
     return session
@@ -321,8 +389,7 @@ async def check_inventory_item(
 
     return False
 
-async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[
-    InventorizationSession]:
+async def complete_inventory_session(db: AsyncSession, session_id: int, updated_by: str) -> Optional[InventorizationSession]:
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         raise ValueError("Сессия не найдена.")
@@ -518,6 +585,19 @@ async def delete_inventorization_session(db: AsyncSession, session_id: int) -> O
     obj = await get_inventory_session_by_id(db, session_id)
     if not obj:
         return None
+
+    # Удаляем запланированные задачи из APScheduler
+    job_id_start = f"inventory_start_{session_id}"
+    job_id_end = f"inventory_end_{session_id}"
+
+    if scheduler.get_job(job_id_start):
+        scheduler.remove_job(job_id_start)
+        logger.info(f"[INVENTORY SCHEDULER] Удалена задача запуска сессии {session_id}")
+
+    if scheduler.get_job(job_id_end):
+        scheduler.remove_job(job_id_end)
+        logger.info(f"[INVENTORY SCHEDULER] Удалена задача завершения сессии {session_id}")
+
 
     # Сначала удаляем все связанные элементы (items)
     # Используем прямой DELETE-запрос для эффективности

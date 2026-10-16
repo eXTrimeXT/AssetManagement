@@ -1,11 +1,13 @@
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.combining import AndTrigger
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 # Импорты наших задач для планировщика
 from app.scheduler.jobs.sync_zup_data import sync_zup_data_job
 from app.scheduler.jobs.asset_service_check import check_service_assets, check_have_assets
+from app.scheduler.jobs.check_start_and_finish_inventorization import check_inventorization_dates
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +36,20 @@ def init_scheduler():
         replace_existing=True,
     )
 
+    # Запуск задачи проверки дат начала и окончания инвентаризации
+    scheduler.add_job(
+        check_inventorization_dates,
+        trigger=IntervalTrigger(seconds=20), # Проверка каждые N минут
+        id="check_inventorization_dates",
+        replace_existing=True,
+        max_instances=1,  # Запретить параллельные запуски
+        coalesce=True,
+    )
+
     # 1С - синхронизация на 6:00
     scheduler.add_job(
         func=sync_zup_data_job,
         trigger=CronTrigger(hour=6),
-        # trigger=IntervalTrigger(minutes=1),
         id="sync_all_data",
         replace_existing=True,
         max_instances=1,  # Запретить параллельные запуски

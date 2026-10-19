@@ -34,13 +34,14 @@ def determine_inventory_status(start_date: Optional[datetime], end_date: Optiona
     Использует локальный часовой пояс для корректного сравнения.
     """
     # Получаем текущее время в нашем локальном часовом поясе
-    now = datetime.now(LOCAL_TZ)
+    # now = datetime.now(LOCAL_TZ)
+    now = datetime.now()
 
     # Страховка: если по какой-то причине время все еще без пояса, добавляем его
-    if start_date and start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=LOCAL_TZ)
-    if end_date and end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=LOCAL_TZ)
+    # if start_date and start_date.tzinfo is None:
+    #     start_date = start_date.replace(tzinfo=LOCAL_TZ)
+    # if end_date and end_date.tzinfo is None:
+    #     end_date = end_date.replace(tzinfo=LOCAL_TZ)
 
     # Если дата окончания уже наступила или прошла, сессия завершена
     if end_date and end_date <= now:
@@ -115,10 +116,10 @@ async def create_inventory_session(
     # ЗАЩИТНАЯ ПРОВЕРКА: Нормализуем часовые пояса перед любыми сравнениями
     # Если фронтенд прислал дату без 'Z' (naive), принудительно делаем её UTC (aware)
     # ==============================================================================
-    if start_date and start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=timezone.utc)
-    if end_date and end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=timezone.utc)
+    # if start_date and start_date.tzinfo is None:
+    #     start_date = start_date.replace(tzinfo=timezone.utc)
+    # if end_date and end_date.tzinfo is None:
+    #     end_date = end_date.replace(tzinfo=timezone.utc)
 
     logger.warning(f"{asset_type_id=} {department_code=}")
     if asset_type_id is None and department_code is None:
@@ -317,7 +318,8 @@ async def create_inventory_session(
     # ==============================================================================
     # 3. ПЛАНИРОВАНИЕ ЗАДАЧ В APSCHEDULER
     # ==============================================================================
-    now = datetime.now(LOCAL_TZ) # <-- ИЗМЕНЕНО: используем локальное время
+    # now = datetime.now(LOCAL_TZ) # <-- ИЗМЕНЕНО: используем локальное время
+    now = datetime.now()
 
     # Планируем задачу запуска, если start_date в будущем и сессия еще не запущена
     if start_date and start_date > now and initial_status == InventorizationStatus.PENDING:

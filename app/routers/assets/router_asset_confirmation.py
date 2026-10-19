@@ -51,7 +51,7 @@ async def endpoint_create_confirmation_request(
 @router_asset_confirmation.post(
     "/confirm",
     status_code=status.HTTP_200_OK,
-    summary="Подтвердить наличие актива (вручную или через QR-код)"
+    summary="Подтвердить наличие актива (по ID, серийному или инвентарному номеру)"
 )
 async def endpoint_confirm_asset(
         request: ConfirmAssetRequest,
@@ -60,16 +60,21 @@ async def endpoint_confirm_asset(
 ):
     """
     Подтверждает наличие актива.
-    Принимает либо прямой asset_id, либо qr_data.
-    QR-код должен содержать JSON: {"inventory_id": "...", "serial_number": "..."}
-    или просто строку с инвентарным/серийным номером.
-    """
-    if not request.asset_id and not request.qr_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Необходимо указать либо asset_id, либо qr_data"
-        )
 
+    Актив идентифицируется по одному из вариантов:
+    - `asset_id` — прямой ID актива из локальной БД
+    - `serial_number` — серийный номер
+    - `inventory_id` — инвентарный номер
+    - комбинация `serial_number` и/или `inventory_id` (поиск через OR)
+
+    Примеры запросов:
+    ```json
+    {"asset_id": 7, "status": "confirmed"}
+    {"serial_number": "SN123456", "status": "confirmed"}
+    {"inventory_id": "0110000062794", "status": "not_found", "comment": "Не могу найти"}
+    {"serial_number": "SN123456", "inventory_id": "0110000062794", "status": "damaged", "comment": "Треснул экран"}
+    ```
+    """
     if request.status in ["not_found", "damaged"] and not request.comment:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

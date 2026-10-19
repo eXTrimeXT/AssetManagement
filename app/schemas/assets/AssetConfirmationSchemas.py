@@ -16,11 +16,27 @@ class CreateConfirmationRequest(BaseModel):
         return self
 
 class ConfirmAssetRequest(BaseModel):
-    asset_id: Optional[int] = Field(None, description="ID актива (если не используется QR)")
-    qr_data: Optional[str] = Field(None, description="Данные из QR-кода (JSON или строка с инвентарным/серийным номером)")
+    """
+    Запрос на подтверждение наличия актива.
+    Идентификация актива происходит по одному из вариантов:
+    - asset_id (прямой ID из локальной БД)
+    - serial_number (серийный номер)
+    - inventory_id (инвентарный номер)
+    - комбинация serial_number и/или inventory_id (поиск через OR)
+    """
+    asset_id: Optional[int] = Field(None, description="ID актива (если известен)")
+    serial_number: Optional[str] = Field(None, description="Серийный номер актива")
+    inventory_id: Optional[str] = Field(None, description="Инвентарный номер актива")
     status: Literal["confirmed", "not_found", "damaged"] = Field(..., description="Результат проверки")
     comment: Optional[str] = Field(None, description="Комментарий (обязателен при not_found или damaged)")
 
+    @model_validator(mode='after')
+    def check_at_least_one_identifier(self):
+        if not self.asset_id and not self.serial_number and not self.inventory_id:
+            raise ValueError(
+                "Необходимо указать хотя бы один идентификатор: asset_id, serial_number или inventory_id"
+            )
+        return self
 
 class AssetConfirmationResponse(BaseModel):
     id: int

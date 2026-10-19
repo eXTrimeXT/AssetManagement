@@ -20,44 +20,38 @@ async def _get_asset_by_identifiers(
         db: AsyncSession,
         asset_id: Optional[int] = None,
         material_id: Optional[str] = None,
-        qr_data: Optional[str] = None
+        serial_number: Optional[str] = None,
+        inventory_id: Optional[str] = None
 ) -> Optional[Asset]:
-    """Поиск актива по ID, material_id или данным из QR-кода"""
+    """
+    Поиск актива по одному из идентификаторов.
+    Приоритет:
+    1. asset_id (точный поиск)
+    2. material_id (точный поиск)
+    3. serial_number и/или inventory_id (поиск через OR)
+    """
+    # 1. Прямой поиск по asset_id
     if asset_id:
         result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
         return result.scalar_one_or_none()
 
+    # 2. Поиск по material_id
     if material_id:
         result = await db.execute(select(Asset).where(Asset.material_id == material_id))
         return result.scalar_one_or_none()
 
-    if qr_data:
-        try:
-            qr_dict = json.loads(qr_data)
-            inv_id = qr_dict.get("inventory_id")
-            sn = qr_dict.get("serial_number")
-            conditions = []
-            if inv_id:
-                conditions.append(Asset.inventory_id == inv_id)
-            if sn:
-                conditions.append(Asset.serial_number == sn)
-            if conditions:
-                result = await db.execute(select(Asset).where(or_(*conditions)))
-                asset = result.scalar_one_or_none()
-                if asset:
-                    return asset
-        except json.JSONDecodeError:
-            result = await db.execute(
-                select(Asset).where(
-                    or_(
-                        Asset.inventory_id == qr_data.strip(),
-                        Asset.serial_number == qr_data.strip()
-                    )
-                )
-            )
-            return result.scalar_one_or_none()
-    return None
+    # 3. Поиск по serial_number и/или inventory_id
+    if serial_number or inventory_id:
+        conditions = []
+        if serial_number:
+            conditions.append(Asset.serial_number == serial_number.strip())
+        if inventory_id:
+            conditions.append(Asset.inventory_id == inventory_id.strip())
 
+        result = await db.execute(select(Asset).where(or_(*conditions)))
+        return result.scalar_one_or_none()
+
+    return None
 
 async def create_confirmation_request(
         db: AsyncSession,
@@ -248,16 +242,30 @@ async def process_confirmation(
         request: ConfirmAssetRequest,
         current_user_employee_id: str
 ) -> dict:
-    """Обрабатывает подтверждение актива (через QR или прямой ID)"""
+    """
+    Обрабатывает подтверждение актива.
+    Актив идентифицируется по asset_id, serial_number и/или inventory_id.
+    """
+    # 1. Идентифицируем актив
     asset = await _get_asset_by_identifiers(
         db,
         asset_id=request.asset_id,
-        qr_data=request.qr_data
+        serial_number=request.serial_number,
+        inventory_id=request.inventory_id
     )
 
     if not asset:
-        raise ValueError("Актив не найден по предоставленным данным или QR-коду")
+        # Формируем понятное сообщение об ошибке
+        identifiers = []
+        if request.asset_id:
+            identifiers.append(f"asset_id={request.asset_id}")
+        if request.serial_number:
+            identifiers.append(f"serial_number='{request.serial_number}'")
+        if request.inventory_id:
+            identifiers.append(f"inventory_id='{request.inventory_id}'")
+        raise ValueError(f"Актив не найден по указанным данным ({', '.join(identifiers)})")
 
+    # 2. Проверяем, что текущий пользователь действительно отвечает за этот актив
     assignment_stmt = select(AssetAssignment).where(
         AssetAssignment.asset_id == asset.asset_id,
         AssetAssignment.employee_id == current_user_employee_id,
@@ -268,6 +276,7 @@ async def process_confirmation(
     if not assignment:
         raise ValueError("Вы не числитесь ответственным за этот актив")
 
+    # 3. Ищем существующий запрос на подтверждение (если он был создан)
     confirmation_stmt = select(AssetConfirmation).where(
         AssetConfirmation.asset_id == asset.asset_id,
         AssetConfirmation.employee_id == current_user_employee_id,
@@ -277,14 +286,16 @@ async def process_confirmation(
     confirmation = (await db.execute(confirmation_stmt)).scalar_one_or_none()
 
     if confirmation:
+        # Обновляем существующий запрос
         confirmation.status = request.status
         confirmation.comment = request.comment or confirmation.comment
         confirmation.confirmed_at = datetime.now()
     else:
+        # Если запроса не было, создаем запись о факте подтверждения "задним числом"
         confirmation = AssetConfirmation(
             asset_id=asset.asset_id,
             employee_id=current_user_employee_id,
-            requested_by=current_user_employee_id,
+            requested_by=current_user_employee_id,  # Сам инициировал и подтвердил
             status=request.status,
             comment=request.comment or "Подтверждено без предварительного запроса",
             confirmed_at=datetime.now()
@@ -295,8 +306,10 @@ async def process_confirmation(
 
     return {
         "message": f"Статус актива '{asset.name}' успешно обновлен: {AssetConfirmationStatus.get_ru_label(status=request.status)}",
+        "asset_id": asset.asset_id,
         "asset_name": asset.name,
         "inventory_id": asset.inventory_id,
+        "serial_number": asset.serial_number,
         "status": request.status
     }
 

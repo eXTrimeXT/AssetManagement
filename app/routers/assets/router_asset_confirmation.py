@@ -136,10 +136,6 @@ async def endpoint_get_confirmations_list(
 )
 async def endpoint_get_last_confirmation(
         asset_id: int = Query(..., description="ID актива"),
-        employee_id: Optional[str] = Query(
-            None,
-            description="Табельный номер сотрудника. Если не указан — вернется последнее подтверждение любого сотрудника"
-        ),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -156,7 +152,7 @@ async def endpoint_get_last_confirmation(
         result = await get_last_confirmation(
             db=db,
             asset_id=asset_id,
-            employee_id=employee_id
+            employee_id=current_user.employee_id
         )
         return result
     except Exception as e:

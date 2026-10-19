@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
-LOCAL_TZ = timezone(timedelta(hours=3), name="Europe/Moscow")
+LOCAL_TZ = timezone(timedelta(hours=0), name="Europe/Moscow")
 
 class InventorizationSessionObj(BaseModel):
     obj: Optional[InventorizationSessionCreate]

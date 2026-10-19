@@ -26,7 +26,7 @@ from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_
 from app.models.inventorization.Inventorization import InventorizationStatus
 
 logger = logging.getLogger(__name__)
-LOCAL_TZ = timezone(timedelta(hours=3), name="Europe/Moscow")
+LOCAL_TZ = timezone(timedelta(hours=0), name="Europe/Moscow")
 
 def determine_inventory_status(start_date: Optional[datetime], end_date: Optional[datetime]) -> str:
     """

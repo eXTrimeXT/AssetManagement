@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import uuid
 
 from app.models.assets.AssetHistory import AssetHistory, AssetHistoryActionType
-from app.models.assets import AssetType, Asset
+from app.models.assets import AssetType, Asset, AssetModel
 from app.models.assets.AssetStatus import AssetStatus
 
 # === СЛОВАРЬ ДЛЯ МАППИНГА ПОЛЕЙ НА РУССКИЕ НАЗВАНИЯ ===
@@ -13,18 +13,28 @@ FIELD_LABELS_RU = {
     'name': 'Наименование',
     'inventory_id': 'Инвентарный номер',
     'serial_number': 'Серийный номер',
+    'asset_status_id': 'Статус актива',
+    'quantity': 'Количество',
     'comment': 'Комментарий',
+    'cost_center_code_from': 'Код ответственного ЦФО',
+    'cost_center_name_from': 'Название ответственного ЦФО',
+    'cost_center_shortname_from': 'Аббревиатура ответственного ЦФО',
+    'cost_center_code': 'Код ЦФО владельца',
+    'cost_center_name': 'Название ЦФО владельца',
+    'cost_center_shortname': 'Аббревиатура ЦФО владельца',
     'date_issue': 'Дата выдачи',
     'date_purchasing': 'Дата покупки',
-    'model_id': 'ID модели',
-    'model_name': 'Модель',
+    'model_id': 'Модель',
     'asset_type_id': 'Тип актива',
     'parent_id': 'Родительский актив',
-    'asset_status_id': 'Статус актива',
-    'parent_name': 'Родительский актив (имя)',
     'manufacturer_name': 'Производитель',
     'vendor_name': 'Поставщик',
-    'os_name': 'Операционная система'
+    'os_name': 'Операционная система',
+    'every_week_check': 'Еженедельная проверка',
+    'next_service': 'Дата следующего обслуживания',
+    'service_period': 'Период обслуживания (дней)',
+    'next_check': 'Дата следующей проверки',
+    'check_period': 'Период проверки (дней)'
 }
 
 # Список полей получается автоматически
@@ -252,65 +262,6 @@ async def get_history_stats(
         "action_type_breakdown": action_type_breakdown
     }
 
-# async def compare_and_save_changes(
-#         db: AsyncSession,
-#         asset_id: int,
-#         old_data: dict,
-#         new_data: dict,
-#         changed_by: str,
-#         comment: Optional[str] = None
-# ) -> List[AssetHistory]:
-#     """Сравнить старые и новые значения, сохранить изменения в историю"""
-#     changes = []
-#
-#     # Генерируем session_id для группировки изменений
-#     session_id = str(uuid.uuid4())
-#
-#     # Поля, которые нужно отслеживать
-#     tracked_fields = [
-#         'name',
-#         'inventory_id',
-#         'serial_number',
-#         'comment',
-#         'date_issue',
-#         'date_purchasing',
-#         'model_id',
-#         'model_name',
-#         'asset_type_id',
-#         'parent_id',
-#         'asset_status_id',
-#         'parent_name',
-#         'manufacturer_name',
-#         'vendor_name',
-#         'os_name'
-#     ]
-#
-#     for field in tracked_fields:
-#         old_val = old_data.get(field)
-#         new_val = new_data.get(field)
-#
-#         # Конвертируем даты в строки для сравнения
-#         if hasattr(old_val, 'isoformat'):
-#             old_val = old_val.isoformat()
-#         if hasattr(new_val, 'isoformat'):
-#             new_val = new_val.isoformat()
-#
-#         # Если значение изменилось
-#         if old_val != new_val:
-#             history = await create_history_record(
-#                 db=db,
-#                 asset_id=asset_id,
-#                 field_name=field,
-#                 old_value=str(old_val) if old_val is not None else None,
-#                 new_value=str(new_val) if new_val is not None else None,
-#                 changed_by=changed_by,
-#                 action_type=AssetHistoryActionType.UPDATE,
-#                 comment=comment,
-#                 session_id=session_id
-#             )
-#             changes.append(history)
-#     return changes
-
 async def compare_and_save_changes(
         db: AsyncSession,
         asset_id: int,
@@ -339,8 +290,14 @@ async def compare_and_save_changes(
         if old_val != new_val:
             # По умолчанию используем русское название поля и строковые значения
             display_field_name = FIELD_LABELS_RU.get(field, field)
-            display_old_val = str(old_val) if old_val is not None else None
-            display_new_val = str(new_val) if new_val is not None else None
+
+            # Специальная обработка для булевых значений
+            if field == 'every_week_check':
+                display_old_val = "Да" if old_val else "Нет"
+                display_new_val = "Да" if new_val else "Нет"
+            else:
+                display_old_val = str(old_val) if old_val is not None else None
+                display_new_val = str(new_val) if new_val is not None else None
 
             # === ЛОГИКА ПОДМЕНЫ ID НА ТЕКСТОВЫЕ НАЗВАНИЯ ===
 
@@ -374,26 +331,35 @@ async def compare_and_save_changes(
                     parent_obj = await db.get(Asset, new_val)
                     display_new_val = parent_obj.name if parent_obj else str(new_val)
 
+            # 4. Модель актива (НОВОЕ)
+            elif field == 'model_id' and (old_val or new_val):
+                display_field_name = "Модель"
+                if old_val:
+                    model_obj = await db.get(AssetModel, old_val)
+                    display_old_val = model_obj.name if model_obj else str(old_val)
+                if new_val:
+                    model_obj = await db.get(AssetModel, new_val)
+                    display_new_val = model_obj.name if model_obj else str(new_val)
+
             # Защита от дублирования: если мы уже обработали parent_id,
-            # и parent_name тоже изменился (что логично), можно пропустить запись parent_name,
-            # чтобы не засорять историю двумя одинаковыми по смыслу записями.
+            # и parent_name тоже изменился, пропускаем запись parent_name.
             if field == 'parent_name' and 'parent_id' in TRACKED_FIELDS:
-                # Проверяем, менялся ли parent_id в этом же цикле обновлений
                 if old_data.get('parent_id') != new_data.get('parent_id'):
-                    continue  # Пропускаем, так как изменение родителя уже записано выше с его именем
+                    continue
 
             history = await create_history_record(
                 db=db,
                 asset_id=asset_id,
-                field_name=display_field_name,  # <-- Сохраняем русское название поля
-                old_value=display_old_val,      # <-- Сохраняем имя, а не ID
-                new_value=display_new_val,      # <-- Сохраняем имя, а не ID
+                field_name=display_field_name,
+                old_value=display_old_val,
+                new_value=display_new_val,
                 changed_by=changed_by,
                 action_type=AssetHistoryActionType.UPDATE,
                 comment=comment,
                 session_id=session_id
             )
             changes.append(history)
+
     return changes
 
 async def log_asset_creation(
@@ -506,7 +472,6 @@ async def migrate_old_history_records(
     """
     Одноразовая функция для обновления старых записей истории.
     Преобразует ID в названия и переводит field_name на русский язык.
-    Обрабатывает записи пакетами, чтобы не перегружать память.
     """
     target_fields = TRACKED_FIELDS
     total_updated = 0
@@ -515,8 +480,6 @@ async def migrate_old_history_records(
     for field in target_fields:
         offset = 0
         while True:
-            # Ищем записи, которые еще не были мигрированы
-            # Условие: field_name равен старому английскому названию
             stmt = (
                 select(AssetHistory)
                 .where(AssetHistory.field_name == field)
@@ -528,24 +491,20 @@ async def migrate_old_history_records(
             records = result.scalars().all()
 
             if not records:
-                break # Записи закончились
+                break
 
             for record in records:
-                # Дополнительная защита: если поле уже на русском, пропускаем
                 if record.field_name in russian_labels:
                     continue
 
-                # Преобразуем значения
                 if record.old_value:
                     record.old_value = await _resolve_history_value(db, field, record.old_value)
                 if record.new_value:
                     record.new_value = await _resolve_history_value(db, field, record.new_value)
 
-                # Меняем название поля на русское
                 record.field_name = FIELD_LABELS_RU.get(field, field)
                 total_updated += 1
 
-            # Сохраняем изменения пакета
             await db.commit()
             offset += batch_size
 

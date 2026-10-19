@@ -29,6 +29,7 @@ class AssetConfirmationResponse(BaseModel):
     employee_id: str
     employee_full_name: Optional[str] = None
     requested_by: Optional[str] = None
+    requested_full_name: Optional[str] = None
     status: str
     status_ru: str
     comment: Optional[str] = None

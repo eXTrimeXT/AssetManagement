@@ -13,6 +13,7 @@ from app.models.assets.AssetConfirmation import AssetConfirmation, AssetConfirma
 from app.models.notifications.Notification import Notification, NotificationStatus, NotificationEventType
 from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
 from app.models.zup import Employee
+from database.zup.crud_zup_employees import get_employee_full_name
 
 logger = logging.getLogger(__name__)
 
@@ -254,15 +255,16 @@ async def get_confirmations_list(
     for row in rows:
         conf = row.AssetConfirmation
         parts = [p for p in [row.last_name, row.first_name, row.middle_name] if p]
-        full_name = " ".join(parts) if parts else None
-
+        employee_full_name = " ".join(parts) if parts else None
+        requested_full_name = get_employee_full_name(db=db, employee_id=conf.requested_by)
         items.append({
             "id": conf.id,
             "asset_id": conf.asset_id,
             "asset_name": row.asset_name,
             "employee_id": conf.employee_id,
-            "employee_full_name": full_name,
+            "employee_full_name": employee_full_name,
             "requested_by": conf.requested_by,
+            "requested_full_name": requested_full_name,
             "status": conf.status,
             "status_ru": conf.status_ru,
             "comment": conf.comment,

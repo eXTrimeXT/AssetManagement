@@ -1,8 +1,6 @@
 from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from datetime import datetime
 from typing import Optional, List
-from app.database.inventorization.crud_inventorization import LOCAL_TZ
-
 
 class InventorizationSessionObj(BaseModel):
     obj: Optional[InventorizationSessionCreate]
@@ -12,16 +10,6 @@ class InventorizationSessionCreate(BaseModel):
     department_code: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-
-    # @field_validator('start_date', 'end_date', mode='after')
-    # @classmethod
-    # def apply_local_timezone(cls, v: Optional[datetime]) -> Optional[datetime]:
-    #     """Если время пришло без часового пояса, принудительно добавляем локальный"""
-    #     if v is None:
-    #         return v
-    #     if v.tzinfo is None:
-    #         return v.replace(tzinfo=LOCAL_TZ)
-    #     return v
 
 class InventorizationItemResponse(BaseModel):
     inventorization_id: int
@@ -70,7 +58,6 @@ class CheckItemRequest(BaseModel):
             raise ValueError("Необходимо указать либо asset_id, либо material_id")
         return self
 
-
 """ Списание """
 class InventorizationItemDiscrepancy(BaseModel):
     """Расхождение по активу"""
@@ -82,7 +69,6 @@ class InventorizationItemDiscrepancy(BaseModel):
     quantity_fact: Optional[int] = None
     difference: Optional[int] = None  # quantity_fact - quantity, на сколько расхождение?
     discrepancy_type: str  # "missing" | "surplus" | "match" | "not_checked"
-
 
 class InventorizationReportResponse(BaseModel):
     """Отчёт по сессии инвентаризации"""
@@ -110,7 +96,6 @@ class InventorizationReportResponse(BaseModel):
     not_checked_count: int   # не проверено
 
     model_config = ConfigDict(from_attributes=True)
-
 
 class InventorizationDiscrepanciesResponse(BaseModel):
     """Список расхождений сессии"""

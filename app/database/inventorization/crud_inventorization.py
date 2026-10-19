@@ -26,22 +26,14 @@ from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_
 from app.models.inventorization.Inventorization import InventorizationStatus
 
 logger = logging.getLogger(__name__)
-LOCAL_TZ = timezone(timedelta(hours=0), name="Europe/Moscow")
 
 def determine_inventory_status(start_date: Optional[datetime], end_date: Optional[datetime]) -> str:
     """
     Определяет актуальный статус сессии на основе дат.
     Использует локальный часовой пояс для корректного сравнения.
     """
-    # Получаем текущее время в нашем локальном часовом поясе
-    # now = datetime.now(LOCAL_TZ)
+    # Получаем текущее время
     now = datetime.now()
-
-    # Страховка: если по какой-то причине время все еще без пояса, добавляем его
-    # if start_date and start_date.tzinfo is None:
-    #     start_date = start_date.replace(tzinfo=LOCAL_TZ)
-    # if end_date and end_date.tzinfo is None:
-    #     end_date = end_date.replace(tzinfo=LOCAL_TZ)
 
     # Если дата окончания уже наступила или прошла, сессия завершена
     if end_date and end_date <= now:
@@ -298,15 +290,16 @@ async def create_inventory_session(
     # ==============================================================================
     asset_ids = [item.asset_id for item in items if item.asset_id is not None]  # Только локальные ID
 
-    if asset_ids:
+    # ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ ТОЛЬКО ЕСЛИ СЕССИЯ СРАЗУ НАЧИНАЕТСЯ (IN_PROGRESS)
+    # Если она создана как PENDING, уведомления отправит планировщик в момент старта
+    if asset_ids and initial_status == InventorizationStatus.IN_PROGRESS:
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
-                AssetAssignment.end_date.is_(None)
+                AssetAssignment.end_date.is_(None)  # Только активные назначения
             )
         )
         responsible_employees = [row[0] for row in employees_result.all()]
-
         for emp_id in responsible_employees:
             await notify_inventory_started(
                 db=db,
@@ -315,10 +308,13 @@ async def create_inventory_session(
                 initiator_id=creator_employee_id,
             )
 
+    await db.commit()
+    await db.refresh(session)
+    return session
+
     # ==============================================================================
     # 3. ПЛАНИРОВАНИЕ ЗАДАЧ В APSCHEDULER
     # ==============================================================================
-    # now = datetime.now(LOCAL_TZ) # <-- ИЗМЕНЕНО: используем локальное время
     now = datetime.now()
 
     # Планируем задачу запуска, если start_date в будущем и сессия еще не запущена

@@ -279,7 +279,7 @@ async def process_confirmation(
     if confirmation:
         confirmation.status = request.status
         confirmation.comment = request.comment or confirmation.comment
-        confirmation.confirmed_at = datetime.utcnow()
+        confirmation.confirmed_at = datetime.now()
     else:
         confirmation = AssetConfirmation(
             asset_id=asset.asset_id,
@@ -287,7 +287,7 @@ async def process_confirmation(
             requested_by=current_user_employee_id,
             status=request.status,
             comment=request.comment or "Подтверждено без предварительного запроса",
-            confirmed_at=datetime.utcnow()
+            confirmed_at=datetime.now()
         )
         db.add(confirmation)
 

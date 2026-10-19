@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
 from app.database.assets.crud_asset_confirmation import (
     create_confirmation_request,
-    process_confirmation, get_confirmations_list
+    process_confirmation,
+    get_confirmations_list,
+    get_last_confirmation
 )
-from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
+from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest, AssetConfirmationResponse
 from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
 
@@ -122,4 +124,41 @@ async def endpoint_get_confirmations_list(
         return PaginatedResponse(**result)
     except Exception as e:
         logger.error(f"Ошибка при получении списка подтверждений: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера")
+
+# ==============================================================================
+# НОВЫЙ ЭНДПОИНТ: Получение последней записи о подтверждении актива
+# ==============================================================================
+@router_asset_confirmation.get(
+    "/last",
+    response_model=Optional[AssetConfirmationResponse],
+    summary="Получить последнюю запись о подтверждении наличия актива"
+)
+async def endpoint_get_last_confirmation(
+        asset_id: int = Query(..., description="ID актива"),
+        employee_id: Optional[str] = Query(
+            None,
+            description="Табельный номер сотрудника. Если не указан — вернется последнее подтверждение любого сотрудника"
+        ),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Возвращает последнюю запись о подтверждении наличия актива.
+
+    Полезные сценарии использования:
+    - UI показывает на карточке актива статус последнего подтверждения (когда и кем).
+    - Если указан employee_id — можно узнать, когда конкретный сотрудник последний раз
+      подтверждал наличие актива.
+    - Если записей нет — вернется null.
+    """
+    try:
+        result = await get_last_confirmation(
+            db=db,
+            asset_id=asset_id,
+            employee_id=employee_id
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Ошибка при получении последней записи о подтверждении: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера")

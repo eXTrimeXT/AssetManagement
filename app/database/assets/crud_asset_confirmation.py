@@ -95,7 +95,8 @@ async def create_confirmation_request(
             AssetAssignment.employee_id == request.employee_id,
             AssetAssignment.end_date.is_(None)
         )
-        assignment = (await db.execute(assignment_stmt)).scalar_one_or_none()
+        assignment = (await db.execute(assignment_stmt)).first()
+
 
         if not assignment:
             raise ValueError(
@@ -187,7 +188,7 @@ async def create_confirmation_request(
         assignments = (await db.execute(assignments_stmt)).scalars().all()
 
         if not assignments:
-            raise ValueError("У актива нет текущих ответственных сотрудников")
+            raise ValueError("У актива нет текущих сотрудников")
 
         for assignment in assignments:
             # Проверяем дубликаты
@@ -246,7 +247,7 @@ async def process_confirmation(
         AssetAssignment.employee_id == current_user_employee_id,
         AssetAssignment.end_date.is_(None)
     )
-    assignment = (await db.execute(assignment_stmt)).scalar_one_or_none()
+    assignment = (await db.execute(assignment_stmt)).scalars().first()
 
     if not assignment:
         raise ValueError("Вы не числитесь ответственным за этот актив")

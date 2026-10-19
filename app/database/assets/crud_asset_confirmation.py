@@ -1,15 +1,18 @@
 import json
 import logging
-from typing import Optional, List
+from typing import Optional
 from sqlalchemy import select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
+from sqlalchemy.sql.functions import func
+
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetConfirmation import AssetConfirmation, AssetConfirmationStatus
-from app.models.notifications.Notification import Notification, NotificationEventType, NotificationStatus
+from app.models.notifications.Notification import Notification, NotificationStatus
 from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
+from app.models.zup import Employee
 
 logger = logging.getLogger(__name__)
 
@@ -191,15 +194,92 @@ async def process_confirmation(
 
     await db.commit()
 
-    status_ru = {
-        "confirmed": "Подтверждено",
-        "not_found": "Не найдено",
-        "damaged": "Повреждено"
-    }.get(request.status, request.status)
-
     return {
-        "message": f"Статус актива '{asset.name}' успешно обновлен: {status_ru}",
+        "message": f"Статус актива '{asset.name}' успешно обновлен: {AssetConfirmationStatus.get_ru_label(status=request.status)}",
         "asset_name": asset.name,
         "inventory_id": asset.inventory_id,
         "status": request.status
+    }
+
+
+async def get_confirmations_list(
+        db: AsyncSession,
+        asset_id: Optional[int] = None,
+        employee_id: Optional[str] = None,
+        status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 50
+) -> dict:
+    """Получить список запросов на подтверждение с фильтрами и обогащенными данными"""
+
+    # Базовый запрос для получения данных с JOIN для избежания N+1
+    data_query = (
+        select(
+            AssetConfirmation,
+            Asset.name.label('asset_name'),
+            Employee.last_name,
+            Employee.first_name,
+            Employee.middle_name
+        )
+        .join(Asset, AssetConfirmation.asset_id == Asset.asset_id, isouter=True)
+        .join(Employee, AssetConfirmation.employee_id == Employee.employee_id, isouter=True)
+    )
+
+    # Базовый запрос для подсчета общего количества
+    count_query = select(func.count(AssetConfirmation.id))
+
+    # Применяем фильтры
+    filters = []
+    if asset_id is not None:
+        filters.append(AssetConfirmation.asset_id == asset_id)
+    if employee_id is not None:
+        filters.append(AssetConfirmation.employee_id == employee_id)
+    if status is not None:
+        filters.append(AssetConfirmation.status == status)
+
+    if filters:
+        data_query = data_query.where(and_(*filters))
+        count_query = count_query.select_from(AssetConfirmation).where(and_(*filters))
+
+    # 1. Получаем общее количество
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    # 2. Рассчитываем skip и получаем данные с пагинацией
+    skip = (page - 1) * page_size
+    data_query = data_query.order_by(AssetConfirmation.created_at.desc()).offset(skip).limit(page_size)
+    result = await db.execute(data_query)
+    rows = result.all()
+
+    # 3. Формируем список элементов
+    items = []
+    for row in rows:
+        conf = row.AssetConfirmation
+        parts = [p for p in [row.last_name, row.first_name, row.middle_name] if p]
+        full_name = " ".join(parts) if parts else None
+
+        items.append({
+            "id": conf.id,
+            "asset_id": conf.asset_id,
+            "asset_name": row.asset_name,
+            "employee_id": conf.employee_id,
+            "employee_full_name": full_name,
+            "requested_by": conf.requested_by,
+            "status": conf.status,
+            "comment": conf.comment,
+            "created_at": conf.created_at,
+            "confirmed_at": conf.confirmed_at
+        })
+
+    # 4. Рассчитываем метаданные пагинации
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1
     }

@@ -1,14 +1,17 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional, Literal
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
 from app.database.assets.crud_asset_confirmation import (
     create_confirmation_request,
-    process_confirmation
+    process_confirmation, get_confirmations_list
 )
 from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
 from app.services.auth.auth_service import require_authorized_user
+from app.schemas.PaginationResponse import PaginatedResponse
 
 logger = logging.getLogger(__name__)
 
@@ -82,4 +85,41 @@ async def endpoint_confirm_asset(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:
         logger.error(f"Ошибка при подтверждении актива: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера")
+
+
+@router_asset_confirmation.get(
+    "/",
+    response_model=PaginatedResponse,
+    summary="Получить список запросов на подтверждение"
+)
+async def endpoint_get_confirmations_list(
+        asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
+        status_confirmation: Optional[Literal["pending", "confirmed", "not_found", "damaged"]] = Query(None, description="Фильтр по статусу"),
+        only_my: Optional[bool] = Query(False, description="Показать только мои подтверждения"),
+        employee_id: Optional[str] = Query(None, description="Фильтр по табельному номеру сотрудника"),
+        page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
+        page_size: int = Query(50, ge=1, le=200, description="Размер страницы"),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Возвращает список запросов на подтверждение с возможностью фильтрации и пагинацией.
+    Данные обогащены названиями активов и ФИО сотрудников.
+    """
+    if only_my:
+        employee_id = current_user.employee_id
+
+    try:
+        result = await get_confirmations_list(
+            db=db,
+            asset_id=asset_id,
+            employee_id=employee_id,
+            status=status_confirmation,
+            page=page,
+            page_size=page_size
+        )
+        return PaginatedResponse(**result)
+    except Exception as e:
+        logger.error(f"Ошибка при получении списка подтверждений: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера")

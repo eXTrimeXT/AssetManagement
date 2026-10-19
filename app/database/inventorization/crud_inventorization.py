@@ -308,10 +308,6 @@ async def create_inventory_session(
                 initiator_id=creator_employee_id,
             )
 
-    await db.commit()
-    await db.refresh(session)
-    return session
-
     # ==============================================================================
     # 3. ПЛАНИРОВАНИЕ ЗАДАЧ В APSCHEDULER
     # ==============================================================================

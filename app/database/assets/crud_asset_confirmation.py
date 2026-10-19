@@ -65,10 +65,10 @@ async def create_confirmation_request(
         requested_by: str
 ) -> dict:
     """
-    Создает заявку на подтверждение.
+    Создает заявку на подтверждение и отправляет уведомления.
     Логика:
     - Если указаны И employee_id, И (asset_id или material_id) — создаем заявку ТОЛЬКО
-      для этого сотрудника и ТОЛЬКО для этого актива.
+      для этого сотрудника и ТОЛЬКО на этот актив.
     - Если указан только employee_id — создаем заявки на ВСЕ активы сотрудника.
     - Если указан только asset_id или material_id — создаем заявки для ВСЕХ текущих
       ответственных за этот актив.
@@ -86,19 +86,20 @@ async def create_confirmation_request(
 
     # ==============================================================================
     # СЦЕНАРИЙ 1: Указаны И сотрудник, И конкретный актив
-    # Создаем заявку ТОЛЬКО для этого сотрудника на ТОЛЬКО этот актив
+    # Создаем заявку ТОЛЬКО для этого сотрудника и ТОЛЬКО на этот актив
     # ==============================================================================
     if request.employee_id and target_asset:
-        # Проверяем, что сотрудник действительно числится за этим активом
+        # ИСПРАВЛЕНИЕ: используем all() вместо scalar_one_or_none(),
+        # так как у сотрудника может быть несколько привязок (user, serving и т.д.)
         assignment_stmt = select(AssetAssignment).where(
             AssetAssignment.asset_id == target_asset.asset_id,
             AssetAssignment.employee_id == request.employee_id,
             AssetAssignment.end_date.is_(None)
         )
-        assignment = (await db.execute(assignment_stmt)).first()
+        assignments_result = await db.execute(assignment_stmt)
+        assignments = assignments_result.scalars().all()
 
-
-        if not assignment:
+        if not assignments:
             raise ValueError(
                 f"Сотрудник {request.employee_id} не числится ответственным за актив {target_asset.asset_id}"
             )
@@ -115,6 +116,9 @@ async def create_confirmation_request(
                 "created_count": 0
             }
 
+        # Берем первую привязку для определения assignment_type уведомления
+        first_assignment = assignments[0]
+
         confirmation = AssetConfirmation(
             asset_id=target_asset.asset_id,
             employee_id=request.employee_id,
@@ -124,14 +128,14 @@ async def create_confirmation_request(
         )
         db.add(confirmation)
 
-        # Создаем уведомление для сотрудника
+        # Создаем ОДНО уведомление для сотрудника (не по каждой привязке, чтобы не спамить)
         notification = Notification(
             employee_id=request.employee_id,
             asset_id=target_asset.asset_id,
             event_type=NotificationEventType.CHECK_REQUIRE,
             initiator_id=requested_by,
             status=NotificationStatus.UNREAD,
-            assignment_type=assignment.assignment_type
+            assignment_type=first_assignment.assignment_type
         )
         db.add(notification)
         created_count += 1
@@ -147,9 +151,16 @@ async def create_confirmation_request(
         )
         assignments = (await db.execute(assignments_stmt)).scalars().all()
 
+        # Группируем привязки по asset_id, чтобы не создавать дубликаты заявок
+        # (у сотрудника может быть несколько привязок к одному активу: user + serving)
+        assets_to_confirm = {}
         for assignment in assignments:
+            if assignment.asset_id not in assets_to_confirm:
+                assets_to_confirm[assignment.asset_id] = assignment
+
+        for asset_id, first_assignment in assets_to_confirm.items():
             existing = await db.execute(select(AssetConfirmation).where(
-                AssetConfirmation.asset_id == assignment.asset_id,
+                AssetConfirmation.asset_id == asset_id,
                 AssetConfirmation.employee_id == request.employee_id,
                 AssetConfirmation.status == AssetConfirmationStatus.PENDING
             ))
@@ -157,7 +168,7 @@ async def create_confirmation_request(
                 continue
 
             confirmation = AssetConfirmation(
-                asset_id=assignment.asset_id,
+                asset_id=asset_id,
                 employee_id=request.employee_id,
                 requested_by=requested_by,
                 status=AssetConfirmationStatus.PENDING,
@@ -167,11 +178,11 @@ async def create_confirmation_request(
 
             notification = Notification(
                 employee_id=request.employee_id,
-                asset_id=assignment.asset_id,
+                asset_id=asset_id,
                 event_type=NotificationEventType.CHECK_REQUIRE,
                 initiator_id=requested_by,
                 status=NotificationStatus.UNREAD,
-                assignment_type=assignment.assignment_type
+                assignment_type=first_assignment.assignment_type
             )
             db.add(notification)
             created_count += 1
@@ -188,13 +199,18 @@ async def create_confirmation_request(
         assignments = (await db.execute(assignments_stmt)).scalars().all()
 
         if not assignments:
-            raise ValueError("У актива нет текущих сотрудников")
+            raise ValueError("У актива нет текущих ответственных сотрудников")
 
+        # Группируем по employee_id, чтобы не создавать дубликаты
+        employees_to_notify = {}
         for assignment in assignments:
-            # Проверяем дубликаты
+            if assignment.employee_id not in employees_to_notify:
+                employees_to_notify[assignment.employee_id] = assignment
+
+        for employee_id, first_assignment in employees_to_notify.items():
             existing = await db.execute(select(AssetConfirmation).where(
                 AssetConfirmation.asset_id == target_asset.asset_id,
-                AssetConfirmation.employee_id == assignment.employee_id,
+                AssetConfirmation.employee_id == employee_id,
                 AssetConfirmation.status == AssetConfirmationStatus.PENDING
             ))
             if existing.scalar_one_or_none():
@@ -202,7 +218,7 @@ async def create_confirmation_request(
 
             confirmation = AssetConfirmation(
                 asset_id=target_asset.asset_id,
-                employee_id=assignment.employee_id,
+                employee_id=employee_id,
                 requested_by=requested_by,
                 status=AssetConfirmationStatus.PENDING,
                 comment=request.comment
@@ -210,12 +226,12 @@ async def create_confirmation_request(
             db.add(confirmation)
 
             notification = Notification(
-                employee_id=assignment.employee_id,
+                employee_id=employee_id,
                 asset_id=target_asset.asset_id,
                 event_type=NotificationEventType.CHECK_REQUIRE,
                 initiator_id=requested_by,
                 status=NotificationStatus.UNREAD,
-                assignment_type=assignment.assignment_type
+                assignment_type=first_assignment.assignment_type
             )
             db.add(notification)
             created_count += 1

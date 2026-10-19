@@ -256,7 +256,7 @@ async def get_confirmations_list(
         conf = row.AssetConfirmation
         parts = [p for p in [row.last_name, row.first_name, row.middle_name] if p]
         employee_full_name = " ".join(parts) if parts else None
-        requested_full_name = get_employee_full_name(db=db, employee_id=conf.requested_by)
+        requested_full_name = await get_employee_full_name(db=db, employee_id=conf.requested_by)
         items.append({
             "id": conf.id,
             "asset_id": conf.asset_id,

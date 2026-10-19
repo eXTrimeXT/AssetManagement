@@ -132,7 +132,7 @@ async def endpoint_get_confirmations_list(
 @router_asset_confirmation.get(
     "/last",
     response_model=Optional[AssetConfirmationResponse],
-    summary="Получить последнюю запись о подтверждении наличия актива"
+    summary="Получить последнюю запись о подтверждении наличия актива для текущего пользователя"
 )
 async def endpoint_get_last_confirmation(
         asset_id: int = Query(..., description="ID актива"),

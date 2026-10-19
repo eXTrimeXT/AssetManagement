@@ -13,7 +13,7 @@ from app.models.assets.AssetConfirmation import AssetConfirmation, AssetConfirma
 from app.models.notifications.Notification import Notification, NotificationStatus, NotificationEventType
 from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
 from app.models.zup import Employee
-from database.zup.crud_zup_employees import get_employee_full_name
+from app.database.zup.crud_zup_employees import get_employee_full_name
 
 logger = logging.getLogger(__name__)
 

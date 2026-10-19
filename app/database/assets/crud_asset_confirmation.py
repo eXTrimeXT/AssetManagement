@@ -10,7 +10,7 @@ from sqlalchemy.sql.functions import func
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetConfirmation import AssetConfirmation, AssetConfirmationStatus
-from app.models.notifications.Notification import Notification, NotificationStatus
+from app.models.notifications.Notification import Notification, NotificationStatus, NotificationEventType
 from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
 from app.models.zup import Employee
 
@@ -122,7 +122,7 @@ async def create_confirmation_request(
             notification = Notification(
                 employee_id=assignment.employee_id,
                 asset_id=asset.asset_id,
-                event_type="CONFIRMATION_REQUEST", # Убедитесь, что этот тип добавлен в NotificationEventType или используйте строку
+                event_type=NotificationEventType.CHECK_REQUIRE,
                 initiator_id=requested_by,
                 status=NotificationStatus.UNREAD,
                 assignment_type=assignment.assignment_type
@@ -132,7 +132,6 @@ async def create_confirmation_request(
 
     await db.commit()
     return {"message": f"Создано {created_count} заявок на подтверждение", "created_count": created_count}
-
 
 async def process_confirmation(
         db: AsyncSession,
@@ -200,7 +199,6 @@ async def process_confirmation(
         "inventory_id": asset.inventory_id,
         "status": request.status
     }
-
 
 async def get_confirmations_list(
         db: AsyncSession,

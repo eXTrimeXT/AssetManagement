@@ -11,10 +11,10 @@ class AssetConfirmationStatus:
     DAMAGED = "damaged"
 
     RU_LABELS = {
-        PENDING: "в ожидании",
-        CONFIRMED: "подтвержденный",
-        NOT_FOUND: "не найдено",
-        DAMAGED: "поврежденный",
+        PENDING: "В ожидании",
+        CONFIRMED: "Подтвержденный",
+        NOT_FOUND: "Не найдено",
+        DAMAGED: "Поврежденный",
     }
 
     @classmethod
@@ -34,7 +34,7 @@ class AssetConfirmation(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     confirmed_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     @property
     def status_ru(self) -> Optional[str]:
         if not self.status:

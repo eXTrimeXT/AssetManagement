@@ -266,6 +266,7 @@ async def get_confirmations_list(
             "employee_full_name": full_name,
             "requested_by": conf.requested_by,
             "status": conf.status,
+            "status_ru": conf.status_ru,
             "comment": conf.comment,
             "created_at": conf.created_at,
             "confirmed_at": conf.confirmed_at

@@ -30,6 +30,7 @@ class AssetConfirmationResponse(BaseModel):
     employee_full_name: Optional[str] = None
     requested_by: Optional[str] = None
     status: str
+    status_ru: str
     comment: Optional[str] = None
     created_at: datetime
     confirmed_at: Optional[datetime] = None

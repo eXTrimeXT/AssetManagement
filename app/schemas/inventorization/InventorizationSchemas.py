@@ -1,8 +1,8 @@
 from pydantic import BaseModel, ConfigDict, model_validator, field_validator
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from typing import Optional, List
+from app.database.inventorization.crud_inventorization import LOCAL_TZ
 
-LOCAL_TZ = timezone(timedelta(hours=0), name="Europe/Moscow")
 
 class InventorizationSessionObj(BaseModel):
     obj: Optional[InventorizationSessionCreate]

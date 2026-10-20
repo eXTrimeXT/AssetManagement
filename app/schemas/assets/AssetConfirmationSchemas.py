@@ -2,41 +2,27 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 from typing import Optional, Literal, List
 
-
 class CreateConfirmationRequest(BaseModel):
     asset_id: Optional[int] = Field(None, description="ID актива (локальный)")
-    material_id: Optional[str] = Field(None, description="Material ID (из SAP)")
     employee_id: Optional[str] = Field(None, description="Табельный номер сотрудника (для массового запроса)")
     comment: Optional[str] = Field(None, description="Комментарий к запросу")
 
     @model_validator(mode='after')
     def check_at_least_one(self):
-        if not self.asset_id and not self.material_id and not self.employee_id:
+        if not self.asset_id and not self.employee_id:
             raise ValueError("Необходимо указать asset_id, material_id или employee_id")
         return self
 
 class ConfirmAssetRequest(BaseModel):
-    """
-    Запрос на подтверждение наличия актива.
-    Идентификация актива происходит по одному из вариантов:
-    - asset_id (прямой ID из локальной БД)
-    - serial_number (серийный номер)
-    - inventory_id (инвентарный номер)
-    - комбинация serial_number и/или inventory_id (поиск через OR)
-    """
-    asset_id: Optional[int] = Field(None, description="ID актива (если известен)")
-    serial_number: Optional[str] = Field(None, description="Серийный номер актива")
-    inventory_id: Optional[str] = Field(None, description="Инвентарный номер актива")
+    # asset_id теперь строго обязателен, так как мы всегда его знаем при подтверждении
+    asset_id: int = Field(..., description="ID актива (обязательно)")
+
+    # Поля для сверки. Если переданы, они должны строго совпадать с БД.
+    inventory_id: Optional[str] = Field(None, description="Инвентарный номер для сверки")
+    serial_number: Optional[str] = Field(None, description="Серийный номер для сверки")
+
     status: Literal["confirmed", "not_found", "damaged"] = Field(..., description="Результат проверки")
     comment: Optional[str] = Field(None, description="Комментарий (обязателен при not_found или damaged)")
-
-    @model_validator(mode='after')
-    def check_at_least_one_identifier(self):
-        if not self.asset_id and not self.serial_number and not self.inventory_id:
-            raise ValueError(
-                "Необходимо указать хотя бы один идентификатор: asset_id, serial_number или inventory_id"
-            )
-        return self
 
 class AssetConfirmationResponse(BaseModel):
     id: int
@@ -51,3 +37,5 @@ class AssetConfirmationResponse(BaseModel):
     comment: Optional[str] = None
     created_at: datetime
     confirmed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}

@@ -428,20 +428,7 @@ async def get_last_confirmation(
     row = result.first()
 
     if not row:
-        return {
-            "id": None,
-            "asset_id": None,
-            "asset_name": None,
-            "employee_id": None,
-            "employee_full_name": None,
-            "requested_by": None,
-            "requested_full_name": None,
-            "status": None,
-            "status_ru": None,
-            "comment": None,
-            "created_at": None,
-            "confirmed_at": None
-        }
+        return None
 
     conf = row.AssetConfirmation
     parts = [p for p in [row.last_name, row.first_name, row.middle_name] if p]

@@ -246,7 +246,7 @@ async def process_confirmation(
     Обрабатывает подтверждение актива.
     Актив идентифицируется по asset_id, serial_number и/или inventory_id.
     """
-    # 1. Идентифицируем актив
+    # Идентифицируем актив
     asset = await _get_asset_by_identifiers(
         db,
         asset_id=request.asset_id,
@@ -265,7 +265,7 @@ async def process_confirmation(
             identifiers.append(f"inventory_id='{request.inventory_id}'")
         raise ValueError(f"Актив не найден по указанным данным ({', '.join(identifiers)})")
 
-    # 2. Проверяем, что текущий пользователь действительно отвечает за этот актив
+    # Проверяем, что текущий пользователь действительно отвечает за этот актив
     assignment_stmt = select(AssetAssignment).where(
         AssetAssignment.asset_id == asset.asset_id,
         AssetAssignment.employee_id == current_user_employee_id,
@@ -276,7 +276,7 @@ async def process_confirmation(
     if not assignment:
         raise ValueError("Вы не числитесь ответственным за этот актив")
 
-    # 3. Ищем существующий запрос на подтверждение (если он был создан)
+    # Ищем существующий запрос на подтверждение (если он был создан)
     confirmation_stmt = select(AssetConfirmation).where(
         AssetConfirmation.asset_id == asset.asset_id,
         AssetConfirmation.employee_id == current_user_employee_id,
@@ -390,9 +390,7 @@ async def get_confirmations_list(
     }
 
 
-# ==============================================================================
-# НОВАЯ ФУНКЦИЯ: Получение последней записи о подтверждении актива
-# ==============================================================================
+# Получение последней записи о подтверждении актива
 async def get_last_confirmation(
         db: AsyncSession,
         asset_id: int,
@@ -430,7 +428,20 @@ async def get_last_confirmation(
     row = result.first()
 
     if not row:
-        return None
+        return {
+            "id": None,
+            "asset_id": None,
+            "asset_name": None,
+            "employee_id": None,
+            "employee_full_name": None,
+            "requested_by": None,
+            "requested_full_name": None,
+            "status": None,
+            "status_ru": None,
+            "comment": None,
+            "created_at": None,
+            "confirmed_at": None
+        }
 
     conf = row.AssetConfirmation
     parts = [p for p in [row.last_name, row.first_name, row.middle_name] if p]

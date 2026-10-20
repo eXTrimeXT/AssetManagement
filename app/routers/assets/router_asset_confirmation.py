@@ -66,14 +66,6 @@ async def endpoint_confirm_asset(
     - `serial_number` — серийный номер
     - `inventory_id` — инвентарный номер
     - комбинация `serial_number` и/или `inventory_id` (поиск через OR)
-
-    Примеры запросов:
-    ```json
-    {"asset_id": 7, "status": "confirmed"}
-    {"serial_number": "SN123456", "status": "confirmed"}
-    {"inventory_id": "0110000062794", "status": "not_found", "comment": "Не могу найти"}
-    {"serial_number": "SN123456", "inventory_id": "0110000062794", "status": "damaged", "comment": "Треснул экран"}
-    ```
     """
     if request.status in ["not_found", "damaged"] and not request.comment:
         raise HTTPException(

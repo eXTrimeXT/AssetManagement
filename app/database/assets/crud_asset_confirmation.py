@@ -179,19 +179,17 @@ async def process_confirmation(
 ) -> dict:
     """
     Обрабатывает подтверждение актива.
-    Строго требует asset_id и сверяет inventory_id / serial_number, если они переданы.
+    Строго требует asset_id, сверяет inventory_id / serial_number
+    и помечает исходное уведомление как прочитанное.
     """
-    # 1. Идентифицируем актив строго по asset_id
+    # Идентифицируем актив строго по asset_id
     result = await db.execute(select(Asset).where(Asset.asset_id == request.asset_id))
     asset = result.scalar_one_or_none()
 
     if not asset:
         raise ValueError(f"Актив с ID {request.asset_id} не найден")
 
-    # 2. СТРОГАЯ ВАЛИДАЦИЯ: сверяем переданные значения с теми, что в БД
-    # Если значение передано в запросе (не None), оно должно совпадать с БД.
-    # Если в БД None, а в запросе None, условие != вернет False, и ошибка не выбросится (проверка пропущена).
-
+    # СТРОГАЯ ВАЛИДАЦИЯ: сверяем переданные значения с теми, что в БД
     if request.inventory_id is not None and request.inventory_id != asset.inventory_id:
         raise ValueError(
             f"Несоответствие инвентарного номера. "
@@ -204,19 +202,18 @@ async def process_confirmation(
             f"В базе данных: '{asset.serial_number}', в запросе: '{request.serial_number}'"
         )
 
-    # 3. Проверяем, что текущий пользователь действительно отвечает за этот актив
+    # Проверяем, что текущий пользователь действительно отвечает за этот актив
     assignment_stmt = select(AssetAssignment).where(
         AssetAssignment.asset_id == asset.asset_id,
         AssetAssignment.employee_id == current_user_employee_id,
         AssetAssignment.end_date.is_(None)
     )
-    # Используем first(), так как привязок может быть несколько (user + serving)
     assignment = (await db.execute(assignment_stmt)).scalars().first()
 
     if not assignment:
         raise ValueError("Вы не числитесь ответственным за этот актив")
 
-    # 4. Ищем СУЩЕСТВУЮЩИЙ запрос на подтверждение (строго PENDING)
+    # Ищем СУЩЕСТВУЮЩИЙ запрос на подтверждение (строго PENDING)
     confirmation_stmt = select(AssetConfirmation).where(
         AssetConfirmation.asset_id == asset.asset_id,
         AssetConfirmation.employee_id == current_user_employee_id,
@@ -225,14 +222,28 @@ async def process_confirmation(
 
     confirmation = (await db.execute(confirmation_stmt)).scalar_one_or_none()
 
-    # === ГЛАВНОЕ ИЗМЕНЕНИЕ: Если заявки нет, выбрасываем ошибку ===
     if not confirmation:
         raise ValueError(
             f"У вас нет активной заявки на подтверждение наличия актива '{asset.name}'. "
             f"Обратитесь к администратору для создания заявки."
         )
 
-    # 5. Обновляем существующую заявку
+    # Помечаем соответствующее уведомление как прочитанное (READ)
+    notification_stmt = select(Notification).where(
+        Notification.employee_id == current_user_employee_id,
+        Notification.asset_id == asset.asset_id,
+        Notification.event_type == NotificationEventType.CHECK_REQUIRE,
+        Notification.status == NotificationStatus.UNREAD # Ищем именно непрочитанное
+    ).order_by(Notification.created_at.desc()).limit(1)
+
+    notification_result = await db.execute(notification_stmt)
+    notification = notification_result.scalar_one_or_none()
+
+    if notification:
+        notification.status = NotificationStatus.READ
+        notification.responded_at = datetime.now()
+
+    # Обновляем существующую заявку на подтверждение
     confirmation.status = request.status
     confirmation.comment = request.comment or confirmation.comment
     confirmation.confirmed_at = datetime.now()

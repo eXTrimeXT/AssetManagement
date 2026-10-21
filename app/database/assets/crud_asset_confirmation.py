@@ -334,7 +334,7 @@ async def get_last_confirmation(
         employee_id: Optional[str] = None
 ) -> Optional[dict]:
     """
-    Получить последнюю запись о подтверждении наличия актива.
+    Получить последнюю запись по времени создания.
     """
     query = (
         select(
@@ -352,7 +352,8 @@ async def get_last_confirmation(
     if employee_id is not None:
         query = query.where(AssetConfirmation.employee_id == employee_id)
 
-    query = query.order_by(AssetConfirmation.confirmed_at.desc().nullslast())
+    # query = query.order_by(AssetConfirmation.confirmed_at.desc().nullslast())
+    query = query.order_by(AssetConfirmation.created_at.desc())
     query = query.limit(1)
 
     result = await db.execute(query)

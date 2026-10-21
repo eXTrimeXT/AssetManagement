@@ -12,10 +12,14 @@ from app.models.notifications.Notification import (
 from app.models.assets import Asset
 from app.database.assets.crud_asset_status import get_or_create_status
 
+# === ДОБАВЛЕНЫ ИМПОРТЫ ДЛЯ СОЗДАНИЯ ЗАЯВКИ НА ПОДТВЕРЖДЕНИЕ ===
+from app.models.assets.AssetConfirmation import AssetConfirmation, AssetConfirmationStatus
+
 logger = logging.getLogger(__name__)
 
 SERVICE_REQUIRED_STATUS = "Требует обслуживания"
 CHECK_REQUIRED_STATUS = "Требует проверки"
+
 
 def _calculate_service_period(asset: Asset) -> int:
     """
@@ -28,6 +32,7 @@ def _calculate_service_period(asset: Asset) -> int:
         return asset.service_period
     return 0
 
+
 def _calculate_check_period(asset: Asset) -> int:
     """
     Определяет период проверки в днях.
@@ -37,13 +42,10 @@ def _calculate_check_period(asset: Asset) -> int:
         return asset.check_period
     return 0
 
+
 async def check_service_assets():
     """
     Планировщик обслуживания оборудования.
-
-    Логика:
-    - every_week_check=False, service_period IS NULL → пропуск
-    - every_week_check=False, service_period > 0 → период = service_period
     """
     today = date.today()
     logger.info(f"Запуск задачи обслуживания активов... {today=}")
@@ -72,7 +74,7 @@ async def check_service_assets():
         assets = result.scalars().all()
 
         if not assets:
-            logger.warning("Нет активов, требующих обслуживания")
+            logger.info("Нет активов, требующих обслуживания")
             return
 
         logger.warning(f"Найдено активов требующих обслуживания: {len(assets)}")
@@ -86,7 +88,7 @@ async def check_service_assets():
                 logger.warning(f"Актив {asset.asset_id}: пропущен (нет периода)")
                 continue
 
-            # Находим активных ответственных
+            # Находим активных ответственных за обслуживание
             serving_users = [
                 a for a in asset.assignments
                 if a.assignment_type == "serving" and a.end_date is None
@@ -131,15 +133,14 @@ async def check_service_assets():
                 f"{assets_updated} активов обновлено"
             )
         else:
-            pass
             logger.info("Нет изменений для сохранения")
 
 
 async def check_have_assets():
     """
     Планировщик проверки оборудования.
+    Также создает заявку на подтверждение наличия (AssetConfirmation).
     """
-
     today = date.today()
     logger.info(f"Запуск задачи проверки активов... {today=}")
 
@@ -158,18 +159,19 @@ async def check_have_assets():
             .where(
                 Asset.next_check == today,
                 Asset.next_check.isnot(None),
-            )
+                )
         )
         assets = result.scalars().all()
 
         if not assets:
-            logger.warning("Нет активов, требующих проверки")
+            logger.info("Нет активов, требующих проверки")
             return
 
         logger.warning(f"Найдено активов требующих проверку: {len(assets)}")
 
         notifications_created = 0
         assets_updated = 0
+        confirmations_created = 0  # <-- НОВАЯ ПЕРЕМЕННАЯ ДЛЯ ПОДСЧЕТА ЗАЯВОК
 
         for asset in assets:
             period = _calculate_check_period(asset)
@@ -187,8 +189,20 @@ async def check_have_assets():
                 logger.warning(f"Актив {asset.asset_id}: нет проверяющих!")
                 continue
 
-            # Создаём уведомления для каждого ответственного
             for assignment in users:
+                # 1. ЗАЩИТА ОТ ДУБЛИКАТОВ: Проверяем, нет ли уже активной заявки
+                existing_confirmation = await session.execute(
+                    select(AssetConfirmation).where(
+                        AssetConfirmation.asset_id == asset.asset_id,
+                        AssetConfirmation.employee_id == assignment.employee_id,
+                        AssetConfirmation.status == AssetConfirmationStatus.PENDING
+                    )
+                )
+                if existing_confirmation.scalar_one_or_none():
+                    logger.debug(f"Заявка на подтверждение для актива {asset.asset_id} и сотрудника {assignment.employee_id} уже существует.")
+                    continue
+
+                # 2. Создаём уведомление
                 notification = Notification(
                     employee_id=assignment.employee_id,
                     asset_id=asset.asset_id,
@@ -199,7 +213,18 @@ async def check_have_assets():
                 session.add(notification)
                 notifications_created += 1
 
-            # Изменяем статус
+                # 3. Создаём заявку на подтверждение наличия (AssetConfirmation)
+                confirmation = AssetConfirmation(
+                    asset_id=asset.asset_id,
+                    employee_id=assignment.employee_id,
+                    requested_by=None,  # None означает, что заявку инициировала система (планировщик)
+                    status=AssetConfirmationStatus.PENDING,
+                    comment="Автоматическая заявка по графику проверки"
+                )
+                session.add(confirmation)
+                confirmations_created += 1
+
+            # Изменяем статус актива (делаем это один раз на актив)
             old_status = asset.asset_status.status if asset.asset_status else None
             asset.asset_status_id = status.id
 
@@ -210,8 +235,7 @@ async def check_have_assets():
             logger.info(
                 f"Актив {asset.asset_id} ({asset.name}): "
                 f"статус '{old_status}' → '{CHECK_REQUIRED_STATUS}', "
-                f"next_check → {asset.next_check}, "
-                f"уведомлений: {len(users)}"
+                f"next_check → {asset.next_check}"
             )
 
         # Сохраняем изменения
@@ -219,8 +243,8 @@ async def check_have_assets():
             await session.commit()
             logger.info(
                 f"Завершено: {notifications_created} уведомлений, "
+                f"{confirmations_created} заявок на подтверждение создано, "
                 f"{assets_updated} активов обновлено"
             )
         else:
-            pass
             logger.info("Нет изменений для сохранения")

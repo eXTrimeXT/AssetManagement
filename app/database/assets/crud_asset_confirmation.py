@@ -216,7 +216,7 @@ async def process_confirmation(
     if not assignment:
         raise ValueError("Вы не числитесь ответственным за этот актив")
 
-    # 4. Ищем существующий запрос на подтверждение или создаем новый
+    # 4. Ищем СУЩЕСТВУЮЩИЙ запрос на подтверждение (строго PENDING)
     confirmation_stmt = select(AssetConfirmation).where(
         AssetConfirmation.asset_id == asset.asset_id,
         AssetConfirmation.employee_id == current_user_employee_id,
@@ -225,20 +225,17 @@ async def process_confirmation(
 
     confirmation = (await db.execute(confirmation_stmt)).scalar_one_or_none()
 
-    if confirmation:
-        confirmation.status = request.status
-        confirmation.comment = request.comment or confirmation.comment
-        confirmation.confirmed_at = datetime.now()
-    else:
-        confirmation = AssetConfirmation(
-            asset_id=asset.asset_id,
-            employee_id=current_user_employee_id,
-            requested_by=current_user_employee_id,
-            status=request.status,
-            comment=request.comment or "Подтверждено без предварительного запроса",
-            confirmed_at=datetime.now()
+    # === ГЛАВНОЕ ИЗМЕНЕНИЕ: Если заявки нет, выбрасываем ошибку ===
+    if not confirmation:
+        raise ValueError(
+            f"У вас нет активной заявки на подтверждение наличия актива '{asset.name}'. "
+            f"Обратитесь к администратору для создания заявки."
         )
-        db.add(confirmation)
+
+    # 5. Обновляем существующую заявку
+    confirmation.status = request.status
+    confirmation.comment = request.comment or confirmation.comment
+    confirmation.confirmed_at = datetime.now()
 
     await db.commit()
 

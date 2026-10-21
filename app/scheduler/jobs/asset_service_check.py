@@ -98,7 +98,7 @@ async def check_service_assets():
                 logger.warning(f"Актив {asset.asset_id}: обслуживающие отсутствуют!")
                 continue
 
-            # Создаём уведомления для каждого ответственного
+            # Создаём уведомления для каждого обслуживающего
             for assignment in serving_users:
                 notification = Notification(
                     employee_id=assignment.employee_id,

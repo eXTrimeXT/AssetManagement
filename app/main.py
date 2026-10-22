@@ -43,6 +43,7 @@ from app.routers.assets import (
     router_asset_assignments,   # Каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
     router_asset_history,       # История актива
     router_asset_write_off,     # Списание актива
+    router_asset_confirmation   # Подтверждение наличия актива
 )
 
 # Роутер инвентаризации
@@ -189,6 +190,8 @@ app.include_router(router_asset_transfer, prefix="/api")    # Роутер пе�
 app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
 app.include_router(router_asset_history, prefix="/api")     # История активов
 app.include_router(router_asset_write_off, prefix="/api")   # Списание активов
+from app.routers.assets.router_asset_confirmation import router_asset_confirmation
+app.include_router(router_asset_confirmation, prefix="/api")
 
 app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
 app.include_router(router_from_sap, prefix="/api")          # Импорт активов из SAP

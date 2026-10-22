@@ -1,10 +1,14 @@
 import logging
 from datetime import date, datetime
 from typing import Optional, Dict, Any
-from sqlalchemy import select
+
+from fastapi import HTTPException
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql.functions import current_user, func
+from sqlalchemy.orm import selectinload
+from sqlalchemy.sql.functions import func
+from starlette import status
 
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
@@ -21,16 +25,14 @@ from app.schemas.assets.AssetTransferSchemas import (
     NotificationInfoResponse, AssetTransferExistsResponse
 )
 from app.services.assets.asset_list_service import fetch_sap_materials
+from app.database.zup.crud_zup_employees import get_employee_full_name
+from app.models.map_assets.AssetPosition import AssetPosition
+from app.models.zup.department import ZupDepartment
+from app.schemas.assets.AssetSchemas import AssetResponse
+from app.models.assets.AssetTransfer import AssetTransferStatus
+from app.database.assets.crud_asset_assignment import check_is_asset_employee_as_user, check_is_asset_employee_as_serving
 
 logger = logging.getLogger(__name__)
-
-async def get_employee_full_name(db: AsyncSession, employee_id: str) -> Optional[str]:
-    result = await db.execute(select(Employee).where(Employee.employee_id == employee_id))
-    employee = result.scalar_one_or_none()
-    if not employee:
-        return None
-    parts = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
-    return " ".join(parts) if parts else None
 
 async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) -> Dict[str, Any]:
     try:
@@ -79,7 +81,7 @@ async def fetch_sap_asset_data_for_transfer(db: AsyncSession, material_id: str) 
         logger.error(f"Ошибка при получении данных SAP для transfer (material_id={material_id}): {exc}")
         raise ValueError(f"Не удалось получить данные актива из SAP: {exc}")
 
-async def  create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
+async def create_asset_from_sap_material(db: AsyncSession, material_id: str, created_by: str) -> Asset:
     sap_data = await fetch_sap_asset_data_for_transfer(db, material_id)
 
     new_asset = Asset(
@@ -144,7 +146,7 @@ async def check_pending_transfer_exists(
         select(AssetTransfer)
         .where(
             AssetTransfer.asset_id == asset_id,
-            AssetTransfer.status == "PENDING"  # <-- ИСПРАВЛЕНО: в модели статус "PENDING" (верхний регистр)
+            AssetTransfer.status == AssetTransferStatus.PENDING
         )
         .order_by(AssetTransfer.created_at.desc())
         .limit(1)
@@ -201,7 +203,7 @@ async def request_asset_transfer(
     asset_id = request.asset_id
     asset_source = "local"
 
-    if request.material_id:
+    if request.material_id and asset_id is None:
         try:
             new_asset = await create_asset_from_sap_material(db, request.material_id, initiator_id)
             asset_id = new_asset.asset_id
@@ -215,11 +217,26 @@ async def request_asset_transfer(
     if transfer_check.is_exists:
         raise ValueError("На этот актив уже есть активная заявка на передачу")
 
-    result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
-    asset = result.scalar_one()
-
     initiator_name = await get_employee_full_name(db, initiator_id)
     target_name = await get_employee_full_name(db, request.target_employee_id)
+
+    # Проверяем владельцев актива
+    is_asset_employee = await check_is_asset_employee_as_user(db, asset_id, request.target_employee_id)
+    if is_asset_employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{target_name} уже является владельцем актива!"
+        )
+
+    is_asset_employee = await check_is_asset_employee_as_serving(db, asset_id, request.target_employee_id)
+    if is_asset_employee:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{target_name} является обслуживающим этого актива!"
+        )
+
+    result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
+    asset = result.scalar_one()
 
     # Создаем запись о передаче
     transfer = AssetTransfer(
@@ -227,7 +244,7 @@ async def request_asset_transfer(
         initiator_id=initiator_id,
         target_employee_id=request.target_employee_id,
         assignment_type=request.assignment_type,
-        status="PENDING",
+        status=AssetTransferStatus.PENDING,
         initiator_comment=request.comment
     )
     db.add(transfer)
@@ -277,153 +294,6 @@ async def request_asset_transfer(
         created_at=transfer.created_at
     )
 
-# async def respond_to_asset_transfer(
-#         db: AsyncSession,
-#         transfer_id: int,
-#         action: str,
-#         responder_id: str,
-#         comment: Optional[str] = None
-# ) -> AssetTransferRespondResponse:
-#     # Получаем заявку на передачу
-#     result = await db.execute(select(AssetTransfer).where(AssetTransfer.id == transfer_id))
-#     transfer = result.scalar_one_or_none()
-#
-#     if not transfer:
-#         raise ValueError("Заявка на передачу не найдена")
-#     if transfer.target_employee_id != responder_id:
-#         raise ValueError("Вы не являетесь получателем этой заявки")
-#     if transfer.status != "PENDING":
-#         raise ValueError("Заявка уже обработана")
-#
-#     asset_id = transfer.asset_id
-#     initiator_id = transfer.initiator_id
-#     assignment_type = transfer.assignment_type
-#
-#     asset_result = await db.execute(select(Asset).where(Asset.asset_id == asset_id))
-#     asset = asset_result.scalar_one()
-#
-#     initiator_name = await get_employee_full_name(db, initiator_id)
-#     responder_name = await get_employee_full_name(db, responder_id)
-#
-#     transfer.responded_at = datetime.utcnow()
-#     transfer.responder_comment = comment
-#
-#     assignment_type_ru = "Пользователь" if assignment_type == "user" else "Ответственный"
-#     new_assignment_id = None
-#     previous_assignment_closed = False
-#
-#     if action == "decline":
-#         transfer.status = "DECLINED"
-#
-#         # Создаем уведомление для инициатора об отклонении
-#         decline_notification = Notification(
-#             employee_id=initiator_id,
-#             asset_id=asset_id,
-#             event_type=NotificationEventType.TRANSFER_ASSET_DECLINED,
-#             initiator_id=responder_id,
-#             status=NotificationStatus.UNREAD,
-#             assignment_type=assignment_type
-#         )
-#         db.add(decline_notification)
-#         response_msg = "Передача актива отклонена"
-#         response_notification = decline_notification
-#
-#     elif action == "accept":
-#         transfer.status = "ACCEPTED"
-#
-#         # Закрываем текущую привязку
-#         active_assignment_result = await db.execute(
-#             select(AssetAssignment).where(
-#                 AssetAssignment.asset_id == asset_id,
-#                 AssetAssignment.assignment_type == assignment_type,
-#                 AssetAssignment.end_date.is_(None)
-#             )
-#         )
-#         active_assignment = active_assignment_result.scalar_one_or_none()
-#
-#         if active_assignment:
-#             active_assignment.end_date = date.today()
-#             previous_assignment_closed = True
-#
-#         # Создаем новую привязку для получателя
-#         new_assignment = AssetAssignment(
-#             asset_id=asset_id,
-#             employee_id=responder_id,
-#             assignment_type=assignment_type,
-#             start_date=date.today(),
-#             end_date=None,
-#             assigned_by=initiator_id,
-#             comment=comment
-#         )
-#         db.add(new_assignment)
-#
-#         # Создаем уведомление для инициатора о принятии
-#         accept_notification = Notification(
-#             employee_id=initiator_id,
-#             asset_id=asset_id,
-#             event_type=NotificationEventType.TRANSFER_ASSET_ACCEPTED,
-#             initiator_id=responder_id,
-#             status=NotificationStatus.UNREAD,
-#             assignment_type=assignment_type
-#         )
-#         db.add(accept_notification)
-#         response_msg = "Передача актива успешно завершена"
-#         response_notification = accept_notification
-#     else:
-#         raise ValueError("Недопустимое действие")
-#
-#     await db.commit()
-#     await db.refresh(transfer)
-#     await db.refresh(response_notification)
-#
-#     if action == "accept":
-#         new_assignment_result = await db.execute(
-#             select(AssetAssignment).where(
-#                 AssetAssignment.asset_id == asset_id,
-#                 AssetAssignment.employee_id == responder_id,
-#                 AssetAssignment.assignment_type == assignment_type,
-#                 AssetAssignment.end_date.is_(None)
-#             ).order_by(AssetAssignment.id.desc())
-#         )
-#         new_assignment_obj = new_assignment_result.scalars().first()
-#         if new_assignment_obj:
-#             new_assignment_id = new_assignment_obj.id
-#
-#     event_type_ru_map = {
-#         NotificationEventType.TRANSFER_ASSET_DECLINED: "Передача актива отклонена",
-#         NotificationEventType.TRANSFER_ASSET_ACCEPTED: "Передача актива принята"
-#     }
-#
-#     return AssetTransferRespondResponse(
-#         message=response_msg,
-#         action=action,
-#         transfer_id=transfer.id,
-#         notification=NotificationInfoResponse(
-#             notification_id=response_notification.notification_id,
-#             event_type=response_notification.event_type,
-#             event_type_ru=event_type_ru_map.get(response_notification.event_type, "Ответ на передачу"),
-#             status=response_notification.status,
-#             created_at=response_notification.created_at
-#         ),
-#         asset=AssetInfoResponse(
-#             asset_id=asset.asset_id,
-#             inventory_id=asset.inventory_id,
-#             name=asset.name,
-#             serial_number=asset.serial_number,
-#             asset_type_id=asset.asset_type_id,
-#             model_id=asset.model_id,
-#             source="local"
-#         ),
-#         initiator=EmployeeInfoResponse(employee_id=initiator_id, full_name=initiator_name),
-#         responder=EmployeeInfoResponse(employee_id=responder_id, full_name=responder_name),
-#         assignment_type=assignment_type,
-#         assignment_type_ru=assignment_type_ru,
-#         comment=comment,
-#         responded_at=transfer.responded_at,
-#         new_assignment_id=new_assignment_id,
-#         previous_assignment_closed=previous_assignment_closed
-#     )
-
 async def respond_to_asset_transfer(
         db: AsyncSession,
         transfer_id: int,
@@ -439,7 +309,7 @@ async def respond_to_asset_transfer(
         raise ValueError("Заявка на передачу не найдена")
     if transfer.target_employee_id != responder_id:
         raise ValueError("Вы не являетесь получателем этой заявки")
-    if transfer.status != "PENDING":
+    if transfer.status != AssetTransferStatus.PENDING:
         raise ValueError("Заявка уже обработана")
 
     asset_id = transfer.asset_id
@@ -478,7 +348,7 @@ async def respond_to_asset_transfer(
         init_notification.responded_at = datetime.utcnow()
 
     if action == "decline":
-        transfer.status = "DECLINED"
+        transfer.status = AssetTransferStatus.DECLINED
 
         # Создаем уведомление для инициатора об отклонении
         decline_notification = Notification(
@@ -494,7 +364,7 @@ async def respond_to_asset_transfer(
         response_notification = decline_notification
 
     elif action == "accept":
-        transfer.status = "ACCEPTED"
+        transfer.status = AssetTransferStatus.ACCEPTED
 
         # Закрываем текущую привязку
         active_assignment_result = await db.execute(
@@ -604,10 +474,10 @@ async def cancel_asset_transfer(
         raise ValueError("Заявка на передачу не найдена")
     if transfer.initiator_id != initiator_id:
         raise ValueError("Вы не являетесь инициатором этой заявки")
-    if transfer.status != "PENDING":
+    if transfer.status != AssetTransferStatus.PENDING:
         raise ValueError("Заявка уже обработана и не может быть отменена")
 
-    transfer.status = "CANCELLED"
+    transfer.status = AssetTransferStatus.CANCELLED
     transfer.responded_at = datetime.utcnow()
 
     await db.commit()
@@ -620,6 +490,134 @@ async def cancel_asset_transfer(
         cancelled_at=transfer.responded_at
     )
 
+# async def get_transfers_list(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         asset_id: Optional[int] = None,
+#         initiator_id: Optional[str] = None,
+#         target_employee_id: Optional[str] = None,
+#         only_my: Optional[bool] = False,
+#         employee_id: Optional[str] = None
+# ) -> Dict[str, Any]:
+#     query = select(AssetTransfer)
+#
+#     if asset_id is not None:
+#         query = query.where(AssetTransfer.asset_id == asset_id)
+#
+#     if only_my:
+#         query = query.where(
+#             or_(
+#                 AssetTransfer.initiator_id == employee_id,
+#                 AssetTransfer.target_employee_id == employee_id
+#             )
+#         )
+#     else:
+#         if initiator_id is not None:
+#             query = query.where(AssetTransfer.initiator_id == initiator_id)
+#         if target_employee_id is not None:
+#             query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+#
+#     # Total
+#     count_query = select(func.count()).select_from(query.subquery())
+#     total_result = await db.execute(count_query)
+#     total = total_result.scalar_one() or 0
+#
+#     # Slice
+#     skip = (page - 1) * page_size
+#     query = query.order_by(AssetTransfer.created_at.desc()).offset(skip).limit(page_size)
+#     result = await db.execute(query)
+#     transfers = result.scalars().all()
+#
+#     # Собираем все employee_id для массовой загрузки
+#     employee_ids = set()
+#     for t in transfers:
+#         employee_ids.add(t.initiator_id)
+#         employee_ids.add(t.target_employee_id)
+#
+#     employees_map = {}
+#     if employee_ids:
+#         emp_result = await db.execute(
+#             select(Employee).where(Employee.employee_id.in_(employee_ids))
+#         )
+#         for emp in emp_result.scalars().all():
+#             parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+#             employees_map[emp.employee_id] = " ".join(parts) if parts else None
+#
+#     # 2. Массовая загрузка ПОЛНЫХ данных активов (как в get_assets_list)
+#     assets_map = {}
+#     asset_ids = [t.asset_id for t in transfers if t.asset_id is not None]
+#     if asset_ids:
+#         asset_query = select(Asset).where(Asset.asset_id.in_(asset_ids)).options(
+#             selectinload(Asset.asset_type),
+#             selectinload(Asset.asset_status),
+#             selectinload(Asset.model),
+#             selectinload(Asset.parent).options(
+#                 selectinload(Asset.asset_type),
+#                 selectinload(Asset.asset_status),
+#                 selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+#             ),
+#             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+#             selectinload(Asset.assignments).options(
+#                 selectinload(AssetAssignment.employee).options(
+#                     selectinload(Employee.position),
+#                     selectinload(Employee.group).options(
+#                         selectinload(ZupDepartment.parent).options(
+#                             selectinload(ZupDepartment.parent).options(
+#                                 selectinload(ZupDepartment.parent)
+#                             )
+#                         )
+#                     )
+#                 )
+#             ),
+#         )
+#         asset_result = await db.execute(asset_query)
+#         assets = asset_result.scalars().all()
+#
+#         # Обогащаем активы (заполняет users, location, current_user и т.д.)
+#         await bulk_enrich_assets(db, assets)
+#
+#         # Создаем словарь для быстрого доступа по asset_id
+#         for asset in assets:
+#             assets_map[asset.asset_id] = AssetResponse.model_validate(asset, from_attributes=True)
+#
+#     # 3. Формируем итоговый ответ
+#     items = []
+#     for t in transfers:
+#         full_asset = assets_map.get(t.asset_id)
+#         items.append({
+#             "transfer_id": t.id,
+#             "asset_id": t.asset_id,
+#             "asset": full_asset,
+#             "initiator": {
+#                 "employee_id": t.initiator_id,
+#                 "full_name": employees_map.get(t.initiator_id),
+#             },
+#             "target_employee": {
+#                 "employee_id": t.target_employee_id,
+#                 "full_name": employees_map.get(t.target_employee_id),
+#             },
+#             "assignment_type": t.assignment_type,
+#             "assignment_type_ru": "Пользователь" if t.assignment_type == "user" else "Ответственный",
+#             "status": t.status,
+#             "initiator_comment": t.initiator_comment,
+#             "responder_comment": t.responder_comment,
+#             "created_at": t.created_at,
+#             "responded_at": t.responded_at,
+#         })
+#
+#     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+#     return {
+#         "items": items,
+#         "total": total,
+#         "page": page,
+#         "page_size": page_size,
+#         "total_pages": total_pages,
+#         "has_next": page < total_pages,
+#         "has_previous": page > 1,
+#     }
+
+
 async def get_transfers_list(
         db: AsyncSession,
         page: int = 1,
@@ -627,15 +625,30 @@ async def get_transfers_list(
         asset_id: Optional[int] = None,
         initiator_id: Optional[str] = None,
         target_employee_id: Optional[str] = None,
+        only_my: Optional[bool] = False,
+        employee_id: Optional[str] = None,
+        only_active: Optional[bool] = False
 ) -> Dict[str, Any]:
     query = select(AssetTransfer)
 
     if asset_id is not None:
         query = query.where(AssetTransfer.asset_id == asset_id)
-    if initiator_id is not None:
-        query = query.where(AssetTransfer.initiator_id == initiator_id)
-    if target_employee_id is not None:
-        query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+
+    if only_my:
+        query = query.where(
+            or_(
+                AssetTransfer.initiator_id == employee_id,
+                AssetTransfer.target_employee_id == employee_id
+            )
+        )
+    else:
+        if initiator_id is not None:
+            query = query.where(AssetTransfer.initiator_id == initiator_id)
+        if target_employee_id is not None:
+            query = query.where(AssetTransfer.target_employee_id == target_employee_id)
+
+    if only_active:
+        query = query.where(AssetTransfer.status != AssetTransferStatus.ACCEPTED)
 
     # Total
     count_query = select(func.count()).select_from(query.subquery())
@@ -648,7 +661,7 @@ async def get_transfers_list(
     result = await db.execute(query)
     transfers = result.scalars().all()
 
-    # Собираем все employee_id для массовой загрузки
+    # 1. Собираем все employee_id для массовой загрузки имен
     employee_ids = set()
     for t in transfers:
         employee_ids.add(t.initiator_id)
@@ -663,11 +676,48 @@ async def get_transfers_list(
             parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             employees_map[emp.employee_id] = " ".join(parts) if parts else None
 
+    # 2. Массовая загрузка ПОЛНЫХ данных активов
+    asset_ids = [t.asset_id for t in transfers if t.asset_id is not None]
+    assets_map = {}
+
+    if asset_ids:
+        asset_query = select(Asset).where(Asset.asset_id.in_(asset_ids)).options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
+            selectinload(Asset.model),
+            selectinload(Asset.parent).options(
+                selectinload(Asset.asset_type),
+                selectinload(Asset.asset_status),
+                selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+            ),
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+            selectinload(Asset.assignments).options(
+                selectinload(AssetAssignment.employee).options(
+                    selectinload(Employee.position),
+                    selectinload(Employee.group).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent).options(
+                                selectinload(ZupDepartment.parent)
+                            )
+                        )
+                    )
+                )
+            ),
+        )
+        asset_result = await db.execute(asset_query)
+        assets = asset_result.scalars().all()
+
+        # Создаем словарь для быстрого доступа по asset_id
+        for asset in assets:
+            assets_map[asset.asset_id] = AssetResponse.model_validate(asset, from_attributes=True)
+
+    # 3. Формируем итоговый ответ
     items = []
     for t in transfers:
+        full_asset = assets_map.get(t.asset_id)
         items.append({
             "transfer_id": t.id,
-            "asset_id": t.asset_id,
+            "asset": full_asset,  # Теперь здесь будет полная структура AssetResponse
             "initiator": {
                 "employee_id": t.initiator_id,
                 "full_name": employees_map.get(t.initiator_id),
@@ -679,6 +729,7 @@ async def get_transfers_list(
             "assignment_type": t.assignment_type,
             "assignment_type_ru": "Пользователь" if t.assignment_type == "user" else "Ответственный",
             "status": t.status,
+            "status_ru": t.status_ru,
             "initiator_comment": t.initiator_comment,
             "responder_comment": t.responder_comment,
             "created_at": t.created_at,

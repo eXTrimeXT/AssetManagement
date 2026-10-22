@@ -1,5 +1,7 @@
 import base64
 import logging
+import re
+from datetime import datetime, date
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,9 +17,6 @@ from app.services.auth.auth_service import (
 )
 from app.services.auth.permission_checker import check_asset_permission
 from app.schemas.PaginationResponse import PaginatedResponse
-from app.database.zup import get_position_by_guid
-from app.database.zup.crud_zup_departments import get_hierarchy_departments
-from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
 from app.services.assets.asset_list_service import get_assets_list_with_sap
 
 # for QR-code
@@ -38,6 +37,28 @@ async def create_asset_endpoint(
     await check_asset_permission(db, request, data.asset_type_id, "write")
     return await create_asset(db, data, current_user.employee_id)
 
+
+def parse_service_period_range(period_str: Optional[str]) -> tuple[Optional[date], Optional[date]]:
+    """Парсит строку диапазона дат вида '15-10-2026 — 23-10-2026' или '15-10-2026 - 23-10-2026'"""
+    if not period_str:
+        return None, None
+
+    # Разделяем по дефису в формате запроса
+    period_str = period_str.replace("+%E2%80%94+", " — ").replace(" - ", " — ")
+    parts = re.split(r' — ', period_str.strip()) # 06-10-2026 — 16-10-2026
+
+    if len(parts) == 2:
+        try:
+            start_date = datetime.strptime(parts[0].strip(), "%d-%m-%Y").date()
+            end_date = datetime.strptime(parts[1].strip(), "%d-%m-%Y").date()
+            logger.info(f"Успешно распарсен диапазон дат: start={start_date}, end={end_date}")
+            return start_date, end_date
+        except ValueError as e:
+            logger.warning(f"Не удалось распарсить диапазон дат '{period_str}': {e}")
+            return None, None
+
+    logger.warning(f"Неверный формат диапазона дат: '{period_str}' (ожидается 2 части, разделенные тире)")
+    return None, None
 
 @router_assets.get(
     "/",
@@ -70,11 +91,18 @@ async def get_assets(
         cost_center_shortname_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL"),
         cost_center_code: Optional[str] = Query(None, description="Код департамента владельца"),
 
+        # Фильтр по дате ТО:
+        service_period: Optional[str] = Query(None, description="Диапазон дат для next_service (например, '13-10-2026 - 23-10-2026')"),
+
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
     if only_my:
         employee_id = current_user.employee_id
+
+    # Парсим диапазон дат
+    next_service_start, next_service_end = parse_service_period_range(service_period)
+
 
     result = await get_assets_list_with_sap(
         db=db,
@@ -101,7 +129,11 @@ async def get_assets(
         
         cost_center_shortname=cost_center_shortname,
         cost_center_shortname_mode=cost_center_shortname_mode,
-        cost_center_code=cost_center_code
+        cost_center_code=cost_center_code,
+
+        # Фильтр по датам обслуживания
+        next_service_start=next_service_start,
+        next_service_end=next_service_end,
     )
 
     return PaginatedResponse(**result)

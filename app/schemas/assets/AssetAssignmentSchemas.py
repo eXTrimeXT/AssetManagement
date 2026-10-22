@@ -65,6 +65,6 @@ class AssetUserFullResponse(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     assignment_type: Optional[str] = None
-    # is_current: bool
+    is_current: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)

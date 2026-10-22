@@ -33,8 +33,8 @@ class Asset(Base):
     cost_center_shortname = Column(String(12), nullable=True)   # Аббревиатура департамента владельца
 
     # Даты
-    date_issue = Column(Date)           # Дата выпуска
-    date_purchasing = Column(Date)      # Дата покупки
+    date_issue = Column(Date, nullable=True)           # Дата выпуска
+    date_purchasing = Column(Date, nullable=True)      # Дата покупки
 
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
@@ -52,8 +52,11 @@ class Asset(Base):
 
     # Еженедельная проверка оборудования
     every_week_check = Column(Boolean, default=false) # TODO: удалить
-    next_service = Column(Date)                     # Следующее обслуживание
+
+    next_service = Column(Date, nullable=True)      # Дата следующего обслуживания
     service_period = Column(Integer, default=0)     # Период обслуживания
+
+    next_check = Column(Date, nullable=True)        # Дата следующей проверки
     check_period = Column(Integer, default=0)       # Период проверки
 
     # Аудит
@@ -224,6 +227,7 @@ class Asset(Base):
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
                 assignment_type=a.assignment_type,
+                is_current=a.is_current
             ))
         return result
 
@@ -297,6 +301,7 @@ class Asset(Base):
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
                 assignment_type=a.assignment_type,
+                is_current=a.is_current
             ))
         return result
 
@@ -370,6 +375,7 @@ class Asset(Base):
                 start_date=a.start_date.strftime("%Y-%m-%d") if a.start_date else None,
                 end_date=a.end_date.strftime("%Y-%m-%d") if a.end_date else None,
                 assignment_type=a.assignment_type,
+                is_current=a.is_current
             ))
         return result
 

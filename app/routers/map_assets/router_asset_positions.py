@@ -148,7 +148,7 @@ async def endpoint_get_asset_position(
     return position
 
 
-@router_asset_positions.put(
+@router_asset_positions.patch(
     "/{position_id}",
     response_model=AssetPositionResponse,
     summary="Обновить позицию",

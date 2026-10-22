@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Optional, Tuple, Sequence, Literal
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -252,6 +253,7 @@ async def mark_as_read(
     if not notification or notification.employee_id != employee_id:
         return None
     notification.status = NotificationStatus.READ
+    notification.responded_at = datetime.now()
     await db.commit()
     await db.refresh(notification)
     return notification
@@ -268,6 +270,7 @@ async def mark_all_as_read(db: AsyncSession, employee_id: str) -> int:
     count = 0
     for n in notifications:
         n.status = NotificationStatus.READ
+        n.responded_at = datetime.now()
         count += 1
     if count > 0:
         await db.commit()

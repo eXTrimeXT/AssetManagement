@@ -34,6 +34,8 @@ async def get_transfers(
         asset_id: Optional[int] = Query(None),
         initiator_id: Optional[str] = Query(None),
         target_employee_id: Optional[str] = Query(None),
+        only_my: Optional[bool] = Query(False),
+        only_active: Optional[bool] = Query(False),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
@@ -44,11 +46,14 @@ async def get_transfers(
         asset_id=asset_id,
         initiator_id=initiator_id,
         target_employee_id=target_employee_id,
+        only_my=only_my,
+        employee_id=current_user.employee_id,
+        only_active=only_active
     )
     return PaginatedResponse(**result)
 
 @router_asset_transfer.post(
-    "/request",
+    "/request/",
     response_model=AssetTransferResponse,
     summary="Создать запрос на передачу актива"
 )
@@ -72,6 +77,8 @@ async def create_transfer_request(
         return response
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e.detail))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

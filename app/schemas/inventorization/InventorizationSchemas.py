@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from datetime import datetime
 from typing import Optional, List
 
@@ -37,10 +37,13 @@ class InventorizationSessionResponse(BaseModel):
     asset_type_name: Optional[str] = None
     asset_type_en_name: Optional[str] = None
     status: Optional[str] = None
+    status_ru: Optional[str] = None
     created_at: datetime
     # items: List[InventorizationItemResponse] = []
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    created_by: Optional[str] = None
+    created_by_full_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,7 +58,6 @@ class CheckItemRequest(BaseModel):
             raise ValueError("Необходимо указать либо asset_id, либо material_id")
         return self
 
-
 """ Списание """
 class InventorizationItemDiscrepancy(BaseModel):
     """Расхождение по активу"""
@@ -68,7 +70,6 @@ class InventorizationItemDiscrepancy(BaseModel):
     difference: Optional[int] = None  # quantity_fact - quantity, на сколько расхождение?
     discrepancy_type: str  # "missing" | "surplus" | "match" | "not_checked"
 
-
 class InventorizationReportResponse(BaseModel):
     """Отчёт по сессии инвентаризации"""
     session_id: int
@@ -76,6 +77,7 @@ class InventorizationReportResponse(BaseModel):
     asset_type_name: Optional[str] = None
     department_codes: Optional[str] = None
     status: Optional[str] = None
+    status_ru: Optional[str] = None
     created_at: datetime
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
@@ -94,7 +96,6 @@ class InventorizationReportResponse(BaseModel):
     not_checked_count: int   # не проверено
 
     model_config = ConfigDict(from_attributes=True)
-
 
 class InventorizationDiscrepanciesResponse(BaseModel):
     """Список расхождений сессии"""

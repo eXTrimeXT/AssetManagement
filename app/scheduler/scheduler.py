@@ -5,31 +5,50 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 # Импорты наших задач для планировщика
 from app.scheduler.jobs.sync_zup_data import sync_zup_data_job
-from app.scheduler.jobs.asset_service_check import check_service_assets
-from app.scheduler.jobs.daily_sap_sync_job import daily_sap_sync_job
+from app.scheduler.jobs.asset_service_check import check_service_assets, check_have_assets
+from app.scheduler.jobs.check_start_and_finish_inventorization import check_inventorization_dates
 
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
 
-
 def init_scheduler():
     """Инициализация планировщика"""
 
+    # Запуск задачи проверки обслуживания активов
     scheduler.add_job(
         check_service_assets,
         # trigger=CronTrigger(hour=9, minute=0),
         # для быстрой проверки
-        trigger=IntervalTrigger(minutes=20),
+        trigger=IntervalTrigger(minutes=2),
         id="asset_service_check",
         replace_existing=True,
+    )
+
+    # Запуск задачи проверки наличия активов
+    scheduler.add_job(
+        check_have_assets,
+        # trigger=CronTrigger(hour=9, minute=0),
+        # для быстрой проверки
+        trigger=IntervalTrigger(minutes=2),
+        id="asset_check_period",
+        replace_existing=True,
+    )
+
+    # Запуск задачи проверки дат начала и окончания инвентаризации
+    scheduler.add_job(
+        check_inventorization_dates,
+        trigger=IntervalTrigger(minutes=2), # Проверка каждые N минут
+        id="check_inventorization_dates",
+        replace_existing=True,
+        max_instances=1,  # Запретить параллельные запуски
+        coalesce=True,
     )
 
     # 1С - синхронизация на 6:00
     scheduler.add_job(
         func=sync_zup_data_job,
         trigger=CronTrigger(hour=6),
-        # trigger=IntervalTrigger(minutes=1),
         id="sync_all_data",
         replace_existing=True,
         max_instances=1,  # Запретить параллельные запуски

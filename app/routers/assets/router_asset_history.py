@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 
 from app.database.connection import get_db
@@ -8,13 +8,13 @@ from app.database.assets.crud_asset_history import (
     get_asset_history,
     get_asset_history_grouped,
     get_history_with_filters,
-    get_history_stats
+    get_history_stats,
+    migrate_old_history_records
 )
 from app.schemas.assets.AssetHistorySchemas import (
     AssetHistoryResponse,
     AssetHistoryGroupedResponse,
     AssetHistoryStatsResponse,
-    ActionType
 )
 from app.services.auth.auth_service import require_authorized_user
 
@@ -29,7 +29,7 @@ router_asset_history = APIRouter(prefix="/asset-history", tags=["Asset History"]
 async def read_history_with_filters(
         asset_id: Optional[int] = Query(None),
         changed_by: Optional[str] = Query(None),
-        action_type: Optional[ActionType] = Query(None),
+        action_type: Optional[Literal["create", "update", "delete", "assign", "unassign", "move", "status_change"]] = Query(None),
         date_from: Optional[datetime] = Query(None),
         date_to: Optional[datetime] = Query(None),
         session_id: Optional[str] = Query(None),
@@ -43,7 +43,7 @@ async def read_history_with_filters(
         db=db,
         asset_id=asset_id,
         changed_by=changed_by,
-        action_type=action_type,
+        action_type=action_type if action_type else None,
         date_from=date_from,
         date_to=date_to,
         session_id=session_id,
@@ -52,7 +52,7 @@ async def read_history_with_filters(
     )
 
     if not history:
-        raise HTTPException(status_code=404, detail="У актива нет истории изменений")
+        raise HTTPException(status_code=404, detail="Нет истории изменений")
 
     return history
 
@@ -103,3 +103,28 @@ async def read_asset_history_grouped(
 ):
     """Получить историю изменений, сгруппированную по session_id"""
     return await get_asset_history_grouped(db, asset_id, skip=skip, limit=limit)
+
+
+@router_asset_history.post(
+    "/migrate-old-records",
+    summary="Одноразовая миграция старых записей истории",
+    description="Преобразует ID в названия и переводит field_name на русский язык для старых записей. Запускайте только один раз!"
+)
+async def trigger_history_migration(
+        batch_size: int = Query(500, ge=100, le=2000, description="Размер пакета для обработки"),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user) # В идеале здесь должна быть проверка на админа
+):
+    """
+    Запускает процесс обновления исторических данных.
+    Процесс разбит на пакеты, чтобы не блокировать БД надолго.
+    """
+    try:
+        result = await migrate_old_history_records(db, batch_size=batch_size)
+        return {
+            "message": "Миграция успешно завершена",
+            "records_updated": result["total_updated"]
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при миграции: {str(e)}")

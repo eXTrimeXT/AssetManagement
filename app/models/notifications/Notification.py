@@ -9,7 +9,8 @@ from app.models.Base import Base
 class NotificationEventType:
     """Типы событий уведомлений"""
     # Сервисные события
-    SERVICE_DUE = "service_due"
+    SERVICE_REQUIRE = "service_require"
+    CHECK_REQUIRE = "check_require"
     ASSET_STATUS_CHANGED = "asset_status_changed"
 
     # Привязки/Отвязки пользователей и активов
@@ -41,7 +42,8 @@ class NotificationEventType:
 
     RU_LABELS = {
         # Сервисные события
-        SERVICE_DUE: "Требуется обслуживание",
+        SERVICE_REQUIRE: "Требуется обслуживание",
+        CHECK_REQUIRE: "Требуется проверка",
         ASSET_STATUS_CHANGED: "Изменение статуса актива",
 
         # Привязки/Отвязки пользователей и активов
@@ -151,7 +153,7 @@ class Notification(Base):
     @property
     def initiator_full_name(self) -> Optional[str]:
         if not self.initiator:
-            return "system"
+            return "Системное уведомление"
         parts = [
             p for p in [
                 self.initiator.last_name,

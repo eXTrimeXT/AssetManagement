@@ -219,7 +219,8 @@ async def preview_excel_row(
         allowed_cost_centers: List[str],
         row_index: int,
         asset_types_map: Dict[str, int],
-        asset_types_names: List[str]
+        asset_types_names: List[str],
+        # priority: Optional[str]
 ) -> Dict[str, Any]:
     name = normalize(excel_row.get("name"))
     inv_id = clean_inventory_id(excel_row.get("inventory_id"))
@@ -234,9 +235,12 @@ async def preview_excel_row(
 
     if not inv_id and not sn:
         return {
-            "excel_row_index": row_index, "status": "skipped",
+            "excel_row_index": row_index,
+            "status": "skipped",
             "reason": "Нет корректного inventory_id и serial_number",
-            "name": name, "inventory_id": inv_id, "serial_number": sn
+            "name": name,
+            "inventory_id": inv_id,
+            "serial_number": sn
         }
 
     conditions = []
@@ -258,14 +262,45 @@ async def preview_excel_row(
             for assignment in assignments:
                 enriched_user = await _get_enriched_user(db, assignment.employee_id)
                 if enriched_user: employees.append(enriched_user)
+
+        # Приоритет локального актива
+        # return {
+        #     "excel_row_index": row_index,
+        #     "status": "update",
+        #     "asset_id": local_asset.asset_id,
+        #     "name": local_asset.name or name,
+        #     "inventory_id": local_asset.inventory_id or inv_id,
+        #     "serial_number": local_asset.serial_number or sn,
+        #     "quantity": 1, "comment": local_asset.comment or comment,
+        #     "date_issue": local_asset.date_issue or date_issue,
+        #     "date_purchasing": local_asset.date_purchasing or date_purchasing,
+        #     "next_service": local_asset.next_service or next_service,
+        #     "service_period": local_asset.service_period or service_period,
+        #     "check_period": local_asset.check_period or check_period,
+        #     "asset_type_id": local_asset.asset_type_id,
+        #     "asset_status_id": local_asset.asset_status_id,
+        #     "material_id": local_asset.material_id,
+        #     "users": employees
+        # }
+
+        # Приоритет excel актива
         return {
-            "excel_row_index": row_index, "status": "update", "asset_id": local_asset.asset_id,
-            "name": local_asset.name or name, "inventory_id": local_asset.inventory_id or inv_id,
-            "serial_number": local_asset.serial_number or sn, "quantity": 1, "comment": local_asset.comment or comment,
-            "date_issue": local_asset.date_issue or date_issue, "date_purchasing": local_asset.date_purchasing or date_purchasing,
-            "next_service": local_asset.next_service or next_service, "service_period": local_asset.service_period or service_period,
-            "check_period": local_asset.check_period or check_period, "asset_type_id": local_asset.asset_type_id,
-            "asset_status_id": local_asset.asset_status_id, "material_id": local_asset.material_id, "users": employees
+            "excel_row_index": row_index,
+            "status": "update",
+            "asset_id": local_asset.asset_id,
+            "name": name or local_asset.name,
+            "inventory_id": inv_id or local_asset.inventory_id,
+            "serial_number": sn or local_asset.serial_number,
+            "quantity": 1, "comment":  comment or local_asset.comment,
+            "date_issue": date_issue or local_asset.date_issue,
+            "date_purchasing": date_purchasing or local_asset.date_purchasing,
+            "next_service": next_service or local_asset.next_service,
+            "service_period": service_period or local_asset.service_period,
+            "check_period": check_period or local_asset.check_period,
+            "asset_type_id": local_asset.asset_type_id,
+            "asset_status_id": local_asset.asset_status_id,
+            "material_id": local_asset.material_id,
+            "users": employees
         }
 
     sap_asset = await find_asset_in_sap(inv_id, sn)
@@ -295,25 +330,76 @@ async def preview_excel_row(
             logger.error(f"Ошибка AI агента при обогащении актива из SAP (строка {row_index}): {e}")
 
         resolved_asset_type_id_sap = asset_types_map.get(asset_type_name_sap, 0)
+
+        # Приоритет SAP актива
+        # return {
+        #     "excel_row_index": row_index,
+        #     "status": "create_from_sap",
+        #     "asset_id": None,
+        #     "name": sap_asset.get("base_material_name") or name or "Без имени",
+        #     "inventory_id": sap_asset.get("inventory_number") or inv_id,
+        #     "serial_number": sap_asset.get("serial_number") or sn,
+        #     "quantity": int(sap_asset.get("quantity", 1)) if sap_asset.get("quantity") else 1,
+        #     "comment": comment,
+        #     "date_issue": date_issue,
+        #     "date_purchasing": date_purchasing,
+        #     "next_service": next_service,
+        #     "service_period": service_period,
+        #     "check_period": check_period,
+        #     "material_id": sap_asset.get("material_id"),
+        #     "cost_center_code_from": sap_asset.get("cost_center_code_from"),
+        #     "cost_center_name_from": sap_asset.get("cost_center_name_from"),
+        #     "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
+        #     "cost_center_code": sap_asset.get("cost_center_code"),
+        #     "cost_center_name": sap_asset.get("cost_center_name"),
+        #     "cost_center_shortname": sap_asset.get("cost_center_shortname"),
+        #     "asset_type_id": resolved_asset_type_id_sap,
+        #     "asset_status_id": 10,
+        #     "model_name": model_name_sap,
+        #     "manufacturer_name": manufacturer_name_sap,
+        #     "asset_type_name": asset_type_name_sap,
+        #     "os_name": os_name_sap,
+        #     "users": employees
+        # }
+
+        # Приоритет Excel актива
         return {
-            "excel_row_index": row_index, "status": "create_from_sap", "asset_id": None,
-            "name": sap_asset.get("base_material_name") or name or "Без имени",
-            "inventory_id": sap_asset.get("inventory_number") or inv_id,
-            "serial_number": sap_asset.get("serial_number") or sn,
+            "excel_row_index": row_index,
+            "status": "create_from_sap",
+            "asset_id": None,
+            "name": name or sap_asset.get("base_material_name") or "Без имени",
+            "inventory_id": inv_id or sap_asset.get("inventory_number"),
+            "serial_number": sn or sap_asset.get("serial_number"),
             "quantity": int(sap_asset.get("quantity", 1)) if sap_asset.get("quantity") else 1,
-            "comment": comment, "date_issue": date_issue, "date_purchasing": date_purchasing,
-            "next_service": next_service, "service_period": service_period, "check_period": check_period,
-            "material_id": sap_asset.get("material_id"), "cost_center_code_from": sap_asset.get("cost_center_code_from"),
-            "cost_center_name_from": sap_asset.get("cost_center_name_from"), "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
-            "cost_center_code": sap_asset.get("cost_center_code"), "cost_center_name": sap_asset.get("cost_center_name"),
-            "cost_center_shortname": sap_asset.get("cost_center_shortname"), "asset_type_id": resolved_asset_type_id_sap,
-            "asset_status_id": 10, "model_name": model_name_sap, "manufacturer_name": manufacturer_name_sap,
-            "asset_type_name": asset_type_name_sap, "os_name": os_name_sap, "users": employees
+            "comment": comment,
+            "date_issue": date_issue,
+            "date_purchasing": date_purchasing,
+            "next_service": next_service,
+            "service_period": service_period,
+            "check_period": check_period,
+            "material_id": sap_asset.get("material_id"),
+            "cost_center_code_from": sap_asset.get("cost_center_code_from"),
+            "cost_center_name_from": sap_asset.get("cost_center_name_from"),
+            "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
+            "cost_center_code": sap_asset.get("cost_center_code"),
+            "cost_center_name": sap_asset.get("cost_center_name"),
+            "cost_center_shortname": sap_asset.get("cost_center_shortname"),
+            "asset_type_id": resolved_asset_type_id_sap,
+            "asset_status_id": 10,
+            "model_name": model_name_sap,
+            "manufacturer_name": manufacturer_name_sap,
+            "asset_type_name": asset_type_name_sap,
+            "os_name": os_name_sap,
+            "users": employees
         }
 
     temp_asset = AssetResponse(
-        name=name or "Без имени", inventory_id=inv_id or "UNKNOWN", serial_number=sn or "UNKNOWN",
-        asset_type_id=0, asset_status_id=10, quantity=1
+        name=name or "Без имени",
+        inventory_id=inv_id or "UNKNOWN",
+        serial_number=sn or "UNKNOWN",
+        asset_type_id=0,
+        asset_status_id=10,
+        quantity=1
     )
     model_name = manufacturer_name = asset_type_name = os_name = None
     try:
@@ -327,13 +413,25 @@ async def preview_excel_row(
 
     resolved_asset_type_id = asset_types_map.get(asset_type_name, 0)
     return {
-        "excel_row_index": row_index, "status": "create_new", "asset_id": None,
-        "name": name or "Без имени", "inventory_id": inv_id, "serial_number": sn, "quantity": 1,
-        "comment": comment, "date_issue": date_issue, "date_purchasing": date_purchasing,
-        "next_service": next_service, "service_period": service_period, "check_period": check_period,
-        "asset_type_id": resolved_asset_type_id, "asset_status_id": 10,
-        "model_name": model_name, "manufacturer_name": manufacturer_name,
-        "asset_type_name": asset_type_name, "os_name": os_name, "users": None
+        "excel_row_index": row_index,
+        "status": "create_new",
+        "asset_id": None,
+        "name": name or "Без имени",
+        "inventory_id": inv_id,
+        "serial_number": sn, "quantity": 1,
+        "comment": comment,
+        "date_issue": date_issue,
+        "date_purchasing": date_purchasing,
+        "next_service": next_service,
+        "service_period": service_period,
+        "check_period": check_period,
+        "asset_type_id": resolved_asset_type_id,
+        "asset_status_id": 10,
+        "model_name": model_name,
+        "manufacturer_name": manufacturer_name,
+        "asset_type_name": asset_type_name,
+        "os_name": os_name,
+        "users": None
     }
 
 # ==============================================================================
@@ -361,7 +459,7 @@ async def process_excel_import_job(
             task.allowed_cost_centers = allowed_cost_centers
             await db.commit()
 
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path, dtype=str)
             column_mapping_rules = {
                 "инвентарный номер": "inventory_id", "Комментарий": "comment",
                 "тип и модель пк": "name", "название": "name", "серийный номер": "serial_number",
@@ -404,15 +502,21 @@ async def process_excel_import_job(
                     # Вызываем логику предпросмотра (она же обогащает данные через AI)
                     # ВАЖНО: здесь мы НЕ вызываем create_asset или update_asset
                     preview_data = await preview_excel_row(
-                        excel_row=excel_row, db=db, allowed_cost_centers=allowed_cost_centers,
-                        row_index=row_index, asset_types_map=asset_types_map, asset_types_names=asset_types_names
+                        excel_row=excel_row,
+                        db=db,
+                        allowed_cost_centers=allowed_cost_centers,
+                        row_index=row_index,
+                        asset_types_map=asset_types_map,
+                        asset_types_names=asset_types_names,
                     )
                     items_results.append(preview_data)
 
                 except Exception as e:
                     logger.error(f"[IMPORT JOB] Ошибка в строке {row_index}: {e}")
                     items_results.append({
-                        "excel_row_index": row_index, "status": "error", "reason": str(e),
+                        "excel_row_index": row_index,
+                        "status": "error",
+                        "reason": str(e),
                         "name": normalize(excel_row.get("name")),
                         "inventory_id": clean_inventory_id(excel_row.get("inventory_id")),
                         "serial_number": normalize(excel_row.get("serial_number"))

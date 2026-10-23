@@ -5,11 +5,11 @@ import uuid
 import shutil
 import logging
 from datetime import date, datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 
 import pandas as pd
 import httpx
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response, Request
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Response, Request, Form
 from sqlalchemy import select, or_, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -220,7 +220,7 @@ async def preview_excel_row(
         row_index: int,
         asset_types_map: Dict[str, int],
         asset_types_names: List[str],
-        # priority: Optional[str]
+        priority: Optional[str]
 ) -> Dict[str, Any]:
     name = normalize(excel_row.get("name"))
     inv_id = clean_inventory_id(excel_row.get("inventory_id"))
@@ -264,44 +264,46 @@ async def preview_excel_row(
                 if enriched_user: employees.append(enriched_user)
 
         # Приоритет локального актива
-        # return {
-        #     "excel_row_index": row_index,
-        #     "status": "update",
-        #     "asset_id": local_asset.asset_id,
-        #     "name": local_asset.name or name,
-        #     "inventory_id": local_asset.inventory_id or inv_id,
-        #     "serial_number": local_asset.serial_number or sn,
-        #     "quantity": 1, "comment": local_asset.comment or comment,
-        #     "date_issue": local_asset.date_issue or date_issue,
-        #     "date_purchasing": local_asset.date_purchasing or date_purchasing,
-        #     "next_service": local_asset.next_service or next_service,
-        #     "service_period": local_asset.service_period or service_period,
-        #     "check_period": local_asset.check_period or check_period,
-        #     "asset_type_id": local_asset.asset_type_id,
-        #     "asset_status_id": local_asset.asset_status_id,
-        #     "material_id": local_asset.material_id,
-        #     "users": employees
-        # }
+        if priority == "sap" or priority == "local":
+            return {
+                "excel_row_index": row_index,
+                "status": "update",
+                "asset_id": local_asset.asset_id,
+                "name": local_asset.name or name,
+                "inventory_id": local_asset.inventory_id or inv_id,
+                "serial_number": local_asset.serial_number or sn,
+                "quantity": 1, "comment": local_asset.comment or comment,
+                "date_issue": local_asset.date_issue or date_issue,
+                "date_purchasing": local_asset.date_purchasing or date_purchasing,
+                "next_service": local_asset.next_service or next_service,
+                "service_period": local_asset.service_period or service_period,
+                "check_period": local_asset.check_period or check_period,
+                "asset_type_id": local_asset.asset_type_id,
+                "asset_status_id": local_asset.asset_status_id,
+                "material_id": local_asset.material_id,
+                "users": employees
+            }
 
         # Приоритет excel актива
-        return {
-            "excel_row_index": row_index,
-            "status": "update",
-            "asset_id": local_asset.asset_id,
-            "name": name or local_asset.name,
-            "inventory_id": inv_id or local_asset.inventory_id,
-            "serial_number": sn or local_asset.serial_number,
-            "quantity": 1, "comment":  comment or local_asset.comment,
-            "date_issue": date_issue or local_asset.date_issue,
-            "date_purchasing": date_purchasing or local_asset.date_purchasing,
-            "next_service": next_service or local_asset.next_service,
-            "service_period": service_period or local_asset.service_period,
-            "check_period": check_period or local_asset.check_period,
-            "asset_type_id": local_asset.asset_type_id,
-            "asset_status_id": local_asset.asset_status_id,
-            "material_id": local_asset.material_id,
-            "users": employees
-        }
+        if priority == "excel":
+            return {
+                "excel_row_index": row_index,
+                "status": "update",
+                "asset_id": local_asset.asset_id,
+                "name": name or local_asset.name,
+                "inventory_id": inv_id or local_asset.inventory_id,
+                "serial_number": sn or local_asset.serial_number,
+                "quantity": 1, "comment":  comment or local_asset.comment,
+                "date_issue": date_issue or local_asset.date_issue,
+                "date_purchasing": date_purchasing or local_asset.date_purchasing,
+                "next_service": next_service or local_asset.next_service,
+                "service_period": service_period or local_asset.service_period,
+                "check_period": check_period or local_asset.check_period,
+                "asset_type_id": local_asset.asset_type_id,
+                "asset_status_id": local_asset.asset_status_id,
+                "material_id": local_asset.material_id,
+                "users": employees
+            }
 
     sap_asset = await find_asset_in_sap(inv_id, sn)
     if sap_asset:
@@ -331,67 +333,70 @@ async def preview_excel_row(
 
         resolved_asset_type_id_sap = asset_types_map.get(asset_type_name_sap, 0)
 
+
         # Приоритет SAP актива
-        # return {
-        #     "excel_row_index": row_index,
-        #     "status": "create_from_sap",
-        #     "asset_id": None,
-        #     "name": sap_asset.get("base_material_name") or name or "Без имени",
-        #     "inventory_id": sap_asset.get("inventory_number") or inv_id,
-        #     "serial_number": sap_asset.get("serial_number") or sn,
-        #     "quantity": int(sap_asset.get("quantity", 1)) if sap_asset.get("quantity") else 1,
-        #     "comment": comment,
-        #     "date_issue": date_issue,
-        #     "date_purchasing": date_purchasing,
-        #     "next_service": next_service,
-        #     "service_period": service_period,
-        #     "check_period": check_period,
-        #     "material_id": sap_asset.get("material_id"),
-        #     "cost_center_code_from": sap_asset.get("cost_center_code_from"),
-        #     "cost_center_name_from": sap_asset.get("cost_center_name_from"),
-        #     "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
-        #     "cost_center_code": sap_asset.get("cost_center_code"),
-        #     "cost_center_name": sap_asset.get("cost_center_name"),
-        #     "cost_center_shortname": sap_asset.get("cost_center_shortname"),
-        #     "asset_type_id": resolved_asset_type_id_sap,
-        #     "asset_status_id": 10,
-        #     "model_name": model_name_sap,
-        #     "manufacturer_name": manufacturer_name_sap,
-        #     "asset_type_name": asset_type_name_sap,
-        #     "os_name": os_name_sap,
-        #     "users": employees
-        # }
+        if priority == "sap" or priority == "local":
+            return {
+                "excel_row_index": row_index,
+                "status": "create_from_sap",
+                "asset_id": None,
+                "name": sap_asset.get("base_material_name") or name or "Без имени",
+                "inventory_id": sap_asset.get("inventory_number") or inv_id,
+                "serial_number": sap_asset.get("serial_number") or sn,
+                "quantity": int(sap_asset.get("quantity", 1)) if sap_asset.get("quantity") else 1,
+                "comment": comment,
+                "date_issue": date_issue,
+                "date_purchasing": date_purchasing,
+                "next_service": next_service,
+                "service_period": service_period,
+                "check_period": check_period,
+                "material_id": sap_asset.get("material_id"),
+                "cost_center_code_from": sap_asset.get("cost_center_code_from"),
+                "cost_center_name_from": sap_asset.get("cost_center_name_from"),
+                "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
+                "cost_center_code": sap_asset.get("cost_center_code"),
+                "cost_center_name": sap_asset.get("cost_center_name"),
+                "cost_center_shortname": sap_asset.get("cost_center_shortname"),
+                "asset_type_id": resolved_asset_type_id_sap,
+                "asset_status_id": 10,
+                "model_name": model_name_sap,
+                "manufacturer_name": manufacturer_name_sap,
+                "asset_type_name": asset_type_name_sap,
+                "os_name": os_name_sap,
+                "users": employees
+            }
 
         # Приоритет Excel актива
-        return {
-            "excel_row_index": row_index,
-            "status": "create_from_sap",
-            "asset_id": None,
-            "name": name or sap_asset.get("base_material_name") or "Без имени",
-            "inventory_id": inv_id or sap_asset.get("inventory_number"),
-            "serial_number": sn or sap_asset.get("serial_number"),
-            "quantity": int(sap_asset.get("quantity", 1)) if sap_asset.get("quantity") else 1,
-            "comment": comment,
-            "date_issue": date_issue,
-            "date_purchasing": date_purchasing,
-            "next_service": next_service,
-            "service_period": service_period,
-            "check_period": check_period,
-            "material_id": sap_asset.get("material_id"),
-            "cost_center_code_from": sap_asset.get("cost_center_code_from"),
-            "cost_center_name_from": sap_asset.get("cost_center_name_from"),
-            "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
-            "cost_center_code": sap_asset.get("cost_center_code"),
-            "cost_center_name": sap_asset.get("cost_center_name"),
-            "cost_center_shortname": sap_asset.get("cost_center_shortname"),
-            "asset_type_id": resolved_asset_type_id_sap,
-            "asset_status_id": 10,
-            "model_name": model_name_sap,
-            "manufacturer_name": manufacturer_name_sap,
-            "asset_type_name": asset_type_name_sap,
-            "os_name": os_name_sap,
-            "users": employees
-        }
+        if priority == "excel":
+            return {
+                "excel_row_index": row_index,
+                "status": "create_from_sap",
+                "asset_id": None,
+                "name": name or sap_asset.get("base_material_name") or "Без имени",
+                "inventory_id": inv_id or sap_asset.get("inventory_number"),
+                "serial_number": sn or sap_asset.get("serial_number"),
+                "quantity": int(sap_asset.get("quantity", 1)) if sap_asset.get("quantity") else 1,
+                "comment": comment,
+                "date_issue": date_issue,
+                "date_purchasing": date_purchasing,
+                "next_service": next_service,
+                "service_period": service_period,
+                "check_period": check_period,
+                "material_id": sap_asset.get("material_id"),
+                "cost_center_code_from": sap_asset.get("cost_center_code_from"),
+                "cost_center_name_from": sap_asset.get("cost_center_name_from"),
+                "cost_center_shortname_from": sap_asset.get("cost_center_shortname_from"),
+                "cost_center_code": sap_asset.get("cost_center_code"),
+                "cost_center_name": sap_asset.get("cost_center_name"),
+                "cost_center_shortname": sap_asset.get("cost_center_shortname"),
+                "asset_type_id": resolved_asset_type_id_sap,
+                "asset_status_id": 10,
+                "model_name": model_name_sap,
+                "manufacturer_name": manufacturer_name_sap,
+                "asset_type_name": asset_type_name_sap,
+                "os_name": os_name_sap,
+                "users": employees
+            }
 
     temp_asset = AssetResponse(
         name=name or "Без имени",
@@ -441,7 +446,8 @@ async def process_excel_import_job(
         task_id: str,
         file_path: str,
         allowed_cost_centers: list[str],
-        employee_id: str
+        employee_id: str,
+        priority: str
 ):
     logger.info(f"[IMPORT JOB] Запуск задачи формирования превью импорта {task_id}")
     items_results = []
@@ -508,6 +514,7 @@ async def process_excel_import_job(
                         row_index=row_index,
                         asset_types_map=asset_types_map,
                         asset_types_names=asset_types_names,
+                        priority=priority
                     )
                     items_results.append(preview_data)
 
@@ -562,6 +569,7 @@ async def process_excel_import_job(
 async def start_excel_import(
         request: Request,
         file: UploadFile = File(..., description="Excel файл для импорта"),
+        priority: Literal["local", "sap", "excel"] = Form(..., description="Приоритет источника данных: local, sap или excel"),
         db: AsyncSession = Depends(get_db),
         current_user = Depends(require_authorized_user)
 ):
@@ -585,7 +593,7 @@ async def start_excel_import(
 
     scheduler.add_job(
         func=process_excel_import_job,
-        args=[task_id, file_path, allowed_cost_centers, current_user.employee_id],
+        args=[task_id, file_path, allowed_cost_centers, current_user.employee_id, priority],
         id=f"import_{task_id}",
         replace_existing=True
     )
@@ -599,7 +607,8 @@ async def start_excel_import(
         "progress_percent": 0,
         "error_message": new_task.error_message,
         "allowed_cost_centers_used": new_task.allowed_cost_centers or [],
-        "items": new_task.items_data or []
+        "items": new_task.items_data or [],
+        "priority": priority  # Возвращаем priority в ответе для подтверждения
     }
 
 @router_excel_import.delete("/import/cancel", status_code=200)

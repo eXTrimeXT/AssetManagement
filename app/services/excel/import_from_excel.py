@@ -42,15 +42,20 @@ router_excel_import = APIRouter(prefix="/excel/assets", tags=["Assets"])
 def clean_inventory_id(value: Any) -> Optional[str]:
     if pd.isna(value) or value is None:
         return None
+
     val = str(value).strip()
-    if val.lower() in ('nan', 'na', 'n/a', '?', 'не на балансе_ит', 'поставить на учет', 'new_поставить на учет'):
+
+    # На всякий случай убираем символы кавычек, если Excel вдруг передал их как часть строки
+    val = val.strip("'").strip('"')
+
+    if val.lower() in ('nan', 'na', 'n/a', '?', 'не на балансе_ит', 'поставить на учет', 'new_поставить на учет', ''):
         return None
+
+    # Если значение выглядит как число с .0 на конце (артефакт Excel), просто отрезаем ".0"
+    # ВАЖНО: Мы НЕ делаем int(float(val)), чтобы сохранить ведущие нули!
     if val.endswith('.0'):
         val = val[:-2]
-    try:
-        val = str(int(float(val)))
-    except ValueError:
-        pass
+
     return val.upper() if val else None
 
 def normalize(value: Any) -> Optional[str]:

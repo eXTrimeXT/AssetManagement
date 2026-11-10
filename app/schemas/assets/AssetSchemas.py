@@ -152,6 +152,7 @@ class AssetResponse(AssetBase):
 
     material_class: Optional[str] = None
     write_off_date: Optional[str] = None
+    material_class_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

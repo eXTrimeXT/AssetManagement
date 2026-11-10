@@ -906,6 +906,7 @@ def _build_virtual_asset(
         # Новые поля: класс материала (тип), дата списания
         "material_class": sap_item.get("material_class") or None,
         "write_off_date": sap_item.get("write_off_date") or None,
+        "material_class_name": sap_item.get("material_class_name") or None,
     }
 
 

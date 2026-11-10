@@ -689,7 +689,8 @@ async def fetch_sap_materials(
         cost_center_code_from_search_mode: SearchMode = "ALL",
         cost_center_shortname_from: Optional[str] = None,
         cost_center_code: Optional[str] = None,
-        cost_center_shortname: Optional[str] = None
+        cost_center_shortname: Optional[str] = None,
+        is_long_serial_number = True,
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
     # offset = (page - 1) * page_size
@@ -709,8 +710,9 @@ async def fetch_sap_materials(
         params["base_material_name_like"] = base_material_name_like
     if inventory_number:
         params["inventory_number"] = inventory_number
-    if serial_number:
+    if serial_number and is_long_serial_number:
         params["long_serial_number"] = serial_number
+    if serial_number and not is_long_serial_number:
         params["serial_number"] = serial_number
     if employee_id:
         params["employee_id"] = employee_id
@@ -728,7 +730,26 @@ async def fetch_sap_materials(
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(SAP_API_URL, params=params, headers=headers)
         response.raise_for_status()
-        return response.json()
+        resp = response.json()
+        logger.debug(f"{resp.get("response").get("data")=}")
+        if resp.get("response").get("data") == []:
+            return await fetch_sap_materials(
+                offset=offset,
+                page_size=page_size,
+                material_id=material_id,
+                search_mode=search_mode,
+                base_material_name_like=base_material_name_like,
+                inventory_number=inventory_number,
+                serial_number=serial_number,
+                employee_id=employee_id,
+                cost_center_code_from=cost_center_code_from,
+                cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+                cost_center_shortname_from=cost_center_shortname_from,
+                cost_center_code=cost_center_code,
+                cost_center_shortname=cost_center_shortname,
+                is_long_serial_number=False,
+            )
+        return resp
 
 
 # ============================================================

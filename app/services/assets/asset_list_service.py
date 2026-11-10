@@ -834,7 +834,8 @@ def _build_virtual_asset(
         "asset_id": None,
         "name": sap_item.get("base_material_name"),
         "inventory_id": sap_item.get("inventory_number"),
-        "serial_number": sap_item.get("serial_number"),
+        # в приоритете длинный серийный номер
+        "serial_number": sap_item.get("long_serial_number") if sap_item.get("long_serial_number") else sap_item.get("serial_number"),
         "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
         "asset_status": "В работе",
         "asset_status_id": 10,
@@ -877,6 +878,10 @@ def _build_virtual_asset(
         "current_user_full_name": current_user_full_name,
         "parent": None,
         "material_id": raw_material_id,
+
+        # Новые поля: класс материала (тип), дата списания
+        "material_class": sap_item.get("material_class") or None,
+        "write_off_date": sap_item.get("write_off_date") or None,
     }
 
 

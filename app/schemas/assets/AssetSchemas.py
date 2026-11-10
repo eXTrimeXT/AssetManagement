@@ -99,8 +99,10 @@ class AssetUpdate(BaseModel):
     every_week_check: Optional[bool] = False    # true/false
     next_service: Optional[date] = None         # Дата обслуживания
     service_period: Optional[int] = None        # Период обслуживания
-    next_check: Optional[date] = None          # Дата проверки
+    next_check: Optional[date] = None           # Дата проверки
     check_period: Optional[int] = None          # Период проверки
+    material_class: Optional[str] = None        # Код класса актива (тип)
+    write_off_date: Optional[str] = None        # Дата списания актива
 
     # Временные поля
     parent_name: Optional[str] = None
@@ -147,6 +149,9 @@ class AssetResponse(AssetBase):
     current_user_full_name: Optional[str] = None
 
     parent: Optional["AssetParentResponse"] = None
+
+    material_class: Optional[str] = None
+    write_off_date: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

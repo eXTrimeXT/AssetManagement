@@ -732,7 +732,7 @@ async def fetch_sap_materials(
         response.raise_for_status()
         resp = response.json()
         logger.debug(f"{resp.get("response").get("data")=}")
-        if resp.get("response").get("data") == []:
+        if resp.get("response").get("data") == [] and is_long_serial_number:
             return await fetch_sap_materials(
                 offset=offset,
                 page_size=page_size,

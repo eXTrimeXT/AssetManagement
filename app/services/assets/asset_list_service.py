@@ -749,6 +749,8 @@ async def fetch_sap_materials(
                 cost_center_shortname=cost_center_shortname,
                 is_long_serial_number=False,
             )
+        if resp.get("response").get("data") == [] and not is_long_serial_number:
+            return resp
         return resp
 
 

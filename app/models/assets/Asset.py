@@ -60,6 +60,7 @@ class Asset(Base):
     check_period = Column(Integer, default=0)       # Период проверки
 
     material_class = Column(String, nullable=True)  # Код класса SAP (тип)
+    material_class_name = Column(String, nullable=True)  # Название класса SAP (тип)
     write_off_date = Column(String, nullable=True)  # Дата списания актива
 
     # Аудит

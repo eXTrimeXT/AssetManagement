@@ -710,6 +710,8 @@ async def fetch_sap_materials(
     if inventory_number:
         params["inventory_number"] = inventory_number
     if serial_number:
+        params["long_serial_number"] = serial_number
+    if serial_number:
         params["serial_number"] = serial_number
     if employee_id:
         params["employee_id"] = employee_id

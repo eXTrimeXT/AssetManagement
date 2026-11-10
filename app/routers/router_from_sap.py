@@ -72,3 +72,48 @@ async def get_sap_departments(
             status_code=500,
             detail=f"Внутренняя ошибка сервера: {str(exc)}"
         )
+
+
+@router_from_sap.get(
+    "/asset-classes",
+    summary="Получить список классов активов из SAP API"
+)
+async def get_sap_asset_classes(
+        limit: int = Query(default=200, description="Лимит записей"),
+        offset: int = Query(default=0, description="Смещение (offset)"),
+        language: str = Query(default="R", description="Код языка")
+):
+    """
+    Обращается к внешнему SAP API и возвращает список классов активов.
+    """
+    sap_url = f"http://10.168.143.7:8123/sap/search_material_classes?limit={limit}&offset={offset}&language={language}"
+
+    try:
+        # Используем асинхронный клиент httpx
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(sap_url)
+
+            # Проверяем, что ответ успешный (2xx)
+            response.raise_for_status()
+
+            # Возвращаем JSON-ответ от SAP как есть
+            return response.json()
+
+    except httpx.RequestError as exc:
+        # Ошибка сети, таймаут или недоступность хоста
+        raise HTTPException(
+            status_code=502,
+            detail=f"Ошибка соединения с SAP API: {str(exc)}"
+        )
+    except httpx.HTTPStatusError as exc:
+        # SAP вернул ошибку (4xx или 5xx)
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=f"Ошибка SAP API: {exc.response.text}"
+        )
+    except Exception as exc:
+        # Любая другая непредвиденная ошибка
+        raise HTTPException(
+            status_code=500,
+            detail=f"Внутренняя ошибка сервера: {str(exc)}"
+        )

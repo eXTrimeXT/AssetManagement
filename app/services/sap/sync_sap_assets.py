@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/base_materials") # default - test
+SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/") # default - test
 
 async def sync_sap_assets(db: AsyncSession) -> dict:
     """
@@ -31,7 +31,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
         async with httpx.AsyncClient() as client:
             while True:
                 response = await client.get(
-                    SAP_API_URL,
+                    SAP_API_URL + "base_materials",
                     params={"limit": limit, "offset": offset}
                 )
 
@@ -124,3 +124,65 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
     except Exception as e:
         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)
         return {"success": False, "message": f"Ошибка синхронизации: {str(e)}", "total_synced": total_synced}
+
+
+async def get_sap_asset_classes(limit: int = 200, offset: int = 0, language: str = "R") -> dict:
+    """
+    Получение списка классов активов из SAP API.
+
+    :param limit: Количество записей за один запрос
+    :param offset: Смещение для пагинации
+    :param language: Код языка (по умолчанию "R")
+    :return: Словарь со списком классов активов и статистикой
+    """
+    logger.info("[SAP CLASSES] Запуск получения списка классов активов из SAP...")
+
+    all_classes = []
+    current_offset = offset
+
+    try:
+        async with httpx.AsyncClient() as client:
+            while True:
+                response = await client.get(
+                    SAP_API_URL + "search_material_classes",
+                    params={"limit": limit, "offset": current_offset, "language": language}
+                )
+
+                if response.status_code == 422:
+                    logger.error(f"[SAP CLASSES] Ошибка валидации SAP API: {response.text}")
+                    break
+
+                response.raise_for_status()
+                result = response.json()
+
+                if not result.get("success") or "response" not in result or "data" not in result["response"]:
+                    logger.error("[SAP CLASSES] Неверная структура ответа SAP API")
+                    break
+
+                data = result["response"]["data"]
+                if not data:
+                    break
+
+                all_classes.extend(data)
+
+                if len(data) < limit:
+                    break
+
+                current_offset += limit
+
+        logger.info(f"[SAP CLASSES] Получение завершено. Всего получено записей: {len(all_classes)}")
+        return {
+            "success": True,
+            "message": "Список классов активов получен",
+            "data": all_classes,
+            "total": len(all_classes)
+        }
+
+    except Exception as e:
+        logger.error(f"[SAP CLASSES] Критическая ошибка при получении данных из SAP: {e}", exc_info=True)
+        return {
+            "success": False,
+            "message": f"Ошибка получения: {str(e)}",
+            "data": all_classes,
+            "total": len(all_classes)
+        }

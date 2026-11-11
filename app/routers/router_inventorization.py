@@ -1,5 +1,7 @@
 import math
-from typing import List
+from typing import List, Optional, Literal
+
+from dns.rdtypes.ANY import OPT
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -47,13 +49,26 @@ async def get_session_items(
         session_id: int,
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
         page_size: int = Query(50, ge=1, le=200, description="Размер страницы"),
+        name: Optional[str] = Query(None, description="Поиск по имени"),
+        serial_number: Optional[str] = Query(None, description="Поиск по серийному номеру"),
+        inventory_id: Optional[str] = Query(None, description="Поиск по инвентарному номеру"),
+        is_checked: Optional[Literal["all", "checked", "not_checked"]] = Query("all", description="Фильтр по проверенным активам"),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
     """Получить список элементов инвентаризации сессии с пагинацией."""
 
     # Получаем данные и общее количество из CRUD
-    items, total = await get_inventory_items_by_session_id(db, session_id, page, page_size)
+    items, total = await get_inventory_items_by_session_id(
+        db=db,
+        session_id=session_id,
+        page=page,
+        page_size=page_size,
+        name=name,
+        serial_number=serial_number,
+        inventory_id=inventory_id,
+        is_checked=is_checked
+    )
 
     # Рассчитываем метаданные пагинации
     total_pages = math.ceil(total / page_size) if total > 0 else 0

@@ -66,13 +66,31 @@ async def get_inventory_items_by_session_id(
         db: AsyncSession,
         session_id: int,
         page: int = 1,
-        page_size: int = 50
+        page_size: int = 50,
+        name: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        inventory_id: Optional[str] = None,
+        is_checked: Optional[str] = None,
 ) -> Tuple[Sequence[InventorizationItem], int]:
     """Получить элементы сессии инвентаризации с пагинацией. Возвращает (items, total_count)"""
 
+    conditions = [InventorizationItem.session_id == session_id]
+
+    if name:
+        conditions.append(InventorizationItem.asset_name.ilike(f"%{name}%"))
+    if serial_number:
+        conditions.append(InventorizationItem.serial_number == serial_number)
+    if inventory_id:
+        conditions.append(InventorizationItem.inventory_id == inventory_id)
+
+    if is_checked == "checked":
+        conditions.append(InventorizationItem.is_checked == True)
+    elif is_checked == "not_checked":
+        conditions.append(InventorizationItem.is_checked == False)
+
     # Получаем общее количество записей для этой сессии
     count_query = select(func.count(InventorizationItem.inventorization_id)).where(
-        InventorizationItem.session_id == session_id
+        *conditions
     )
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
@@ -81,7 +99,7 @@ async def get_inventory_items_by_session_id(
     offset = (page - 1) * page_size
     items_query = (
         select(InventorizationItem)
-        .where(InventorizationItem.session_id == session_id)
+        .where(*conditions)
         .options(
             # === ДОБАВЛЕНО: Явная загрузка данных сотрудника ===
             selectinload(InventorizationItem.checked_employee)

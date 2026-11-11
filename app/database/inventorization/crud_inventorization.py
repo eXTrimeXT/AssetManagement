@@ -67,6 +67,7 @@ async def get_inventory_items_by_session_id(
         session_id: int,
         page: int = 1,
         page_size: int = 50,
+        material_id: Optional[str] = None,
         name: Optional[str] = None,
         serial_number: Optional[str] = None,
         inventory_id: Optional[str] = None,
@@ -76,6 +77,8 @@ async def get_inventory_items_by_session_id(
 
     conditions = [InventorizationItem.session_id == session_id]
 
+    if material_id:
+        conditions.append(InventorizationItem.material_id == material_id)
     if name:
         conditions.append(InventorizationItem.asset_name.ilike(f"%{name}%"))
     if serial_number:

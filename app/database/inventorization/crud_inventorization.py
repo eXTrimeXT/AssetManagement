@@ -124,61 +124,76 @@ async def create_inventory_sessions(
         creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-) -> List[InventorizationSession]:
+) -> List[dict]:  # <-- ИЗМЕНЕНО: возвращаем List[dict]
 
     if not asset_type_ids and not department_codes and not material_classes:
         raise ValueError("Необходимо указать хотя бы один из параметров: asset_type_ids, department_codes или material_classes!")
 
-    created_sessions = []
+    created_sessions_data = []
 
     depts = department_codes if department_codes else [None]
     classes = material_classes if material_classes else []
     types = asset_type_ids if asset_type_ids else []
 
     for dept in depts:
-        # Создаем сессии для каждого класса (если классы указаны)
-        for mc in classes:
-            session = await _create_single_inventory_session(
-                db=db,
-                asset_type_id=None,
-                department_code=dept,
-                material_class=mc,
-                creator_employee_id=creator_employee_id,
-                start_date=start_date,
-                end_date=end_date
-            )
-            if session is not None:
-                created_sessions.append(session)
+        if classes and types:
+            logger.debug("Создаем сессии для каждого класса и типа")
+            for mc in classes:
+                for at_id in types:
+                    session_data = await _create_single_inventory_session(
+                        db=db,
+                        asset_type_id=at_id,
+                        department_code=dept,
+                        material_class=mc,
+                        creator_employee_id=creator_employee_id,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    if session_data is not None:
+                        created_sessions_data.append(session_data)
+        else:
+            logger.debug("Создаем сессии для каждого класса или типа по отдельности")
+            for mc in classes:
+                session_data = await _create_single_inventory_session(
+                    db=db,
+                    asset_type_id=None,
+                    department_code=dept,
+                    material_class=mc,
+                    creator_employee_id=creator_employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if session_data is not None:
+                    created_sessions_data.append(session_data)
 
-        # Создаем сессии для каждого типа (если типы указаны)
-        for at_id in types:
-            session = await _create_single_inventory_session(
-                db=db,
-                asset_type_id=at_id,
-                department_code=dept,
-                material_class=None,
-                creator_employee_id=creator_employee_id,
-                start_date=start_date,
-                end_date=end_date
-            )
-            if session is not None:
-                created_sessions.append(session)
+            for at_id in types:
+                session_data = await _create_single_inventory_session(
+                    db=db,
+                    asset_type_id=at_id,
+                    department_code=dept,
+                    material_class=None,
+                    creator_employee_id=creator_employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if session_data is not None:
+                    created_sessions_data.append(session_data)
 
-        # Если не указаны ни классы, ни типы — создаем одну сессию только по департаменту
-        if not classes and not types:
-            session = await _create_single_inventory_session(
-                db=db,
-                asset_type_id=None,
-                department_code=dept,
-                material_class=None,
-                creator_employee_id=creator_employee_id,
-                start_date=start_date,
-                end_date=end_date
-            )
-            if session is not None:
-                created_sessions.append(session)
+            if not classes and not types:
+                logger.debug("Создаем одну сессию только по департаменту")
+                session_data = await _create_single_inventory_session(
+                    db=db,
+                    asset_type_id=None,
+                    department_code=dept,
+                    material_class=None,
+                    creator_employee_id=creator_employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if session_data is not None:
+                    created_sessions_data.append(session_data)
 
-    return created_sessions
+    return created_sessions_data
 
 
 # ==============================================================================
@@ -192,7 +207,7 @@ async def _create_single_inventory_session(
         creator_employee_id: Optional[str],
         start_date: Optional[datetime],
         end_date: Optional[datetime],
-) -> Optional[InventorizationSession]:
+) -> Optional[dict]:  # Возвращаем dict для защиты от MissingGreenlet
 
     # Формирование имени сессии
     name_parts = []
@@ -200,7 +215,8 @@ async def _create_single_inventory_session(
         name_parts.append(f"Департамент: {department_code}")
     if material_class:
         name_parts.append(f"Класс: {material_class}")
-    if asset_type_id:
+
+    if asset_type_id is not None:
         asset_type_result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type_id))
         asset_type = asset_type_result.scalar_one_or_none()
         if asset_type:
@@ -226,15 +242,17 @@ async def _create_single_inventory_session(
         end_date=end_date
     )
     db.add(session)
-    await db.flush()  # Получаем session_id для items
+    await db.flush()
 
     items = []
 
-    # 1. Локальные активы
+    # ==============================================================================
+    # 1. Локальные активы (ИСПРАВЛЕНО: is not None вместо просто if asset_type_id)
+    # ==============================================================================
     query = select(Asset)
     conditions = []
 
-    if asset_type_id:
+    if asset_type_id is not None:  # <-- ИСПРАВЛЕНИЕ 1: Теперь 0 ("Без типа") корректно фильтруется
         conditions.append(Asset.asset_type_id == asset_type_id)
     if department_code:
         codes_list = [code.strip().upper() for code in department_code.split(',') if code.strip()]
@@ -266,15 +284,19 @@ async def _create_single_inventory_session(
         for asset in assets
     ])
 
-    # 2. ЗАПРОС SAP-АКТИВОВ (С ПАГИНАЦИЕЙ)
+    # ==============================================================================
+    # 2. ЗАПРОС SAP-АКТИВОВ (ИСПРАВЛЕНО: SAP только для типа "Без типа")
+    # ==============================================================================
     should_fetch_sap = False
     sap_cost_center_code_from = None
 
-    if department_code:
-        should_fetch_sap = True
-        sap_cost_center_code_from = department_code.replace(',', ';')
-    if asset_type_id == WITHOUT_TYPE_ASSET_ID:
-        should_fetch_sap = True
+    # <-- ИСПРАВЛЕНИЕ 2: SAP-активы не имеют типа в БД, поэтому тянем их ТОЛЬКО для "Без типа"
+    if asset_type_id is None or asset_type_id == WITHOUT_TYPE_ASSET_ID:
+        if department_code:
+            should_fetch_sap = True
+            sap_cost_center_code_from = department_code.replace(',', ';')
+        elif material_class:
+            should_fetch_sap = True
 
     if should_fetch_sap:
         try:
@@ -282,7 +304,6 @@ async def _create_single_inventory_session(
             offset = 0
             limit = 1000
             total_sap_items = float('inf')
-
             logger.info(f"[SAP INVENTORY] Пагинация SAP для сессии. dept={department_code}, class={material_class}")
 
             while offset < total_sap_items:
@@ -318,16 +339,13 @@ async def _create_single_inventory_session(
             if all_sap_items:
                 local_inv_ids = {asset.inventory_id.strip().lower() for asset in assets if asset.inventory_id}
                 local_mat_ids = {asset.material_id.strip().lower() for asset in assets if asset.material_id}
-
                 for sap_item in all_sap_items:
                     inv_num = str(sap_item.get("inventory_number", "")).strip().lower()
                     mat_id = str(sap_item.get("material_id", "")).strip().lower()
-
                     if inv_num and inv_num in local_inv_ids:
                         continue
                     if mat_id and mat_id in local_mat_ids:
                         continue
-
                     items.append(
                         InventorizationItem(
                             session_id=session.session_id,
@@ -352,16 +370,16 @@ async def _create_single_inventory_session(
             f"[INVENTORY] Сессия по комбинации (dept={department_code}, class={material_class}, type={asset_type_id}) "
             f"оказалась пустой — отменяем создание."
         )
-        # Откатываем flush: удаляем session из БД и из памяти SQLAlchemy
         await db.delete(session)
         await db.rollback()
         return None
 
-    # Если items не пустые — добавляем их в сессию
     db.add_all(items)
     await db.flush()
 
+    # ==============================================================================
     # 3. ЛОГИКА УВЕДОМЛЕНИЙ И ПЛАНИРОВЩИКА
+    # ==============================================================================
     asset_ids = [item.asset_id for item in items if item.asset_id is not None]
 
     if asset_ids and initial_status == InventorizationStatus.IN_PROGRESS:
@@ -405,7 +423,31 @@ async def _create_single_inventory_session(
 
     await db.commit()
     await db.refresh(session)
-    return session
+
+    # ==============================================================================
+    # === БЕЗОПАСНОЕ ФОРМИРОВАНИЕ ОТВЕТА (СЛОВАРЬ) ===
+    # ==============================================================================
+    status_map = {
+        "pending": "Ожидает начала",
+        "in_progress": "В работе",
+        "completed": "Завершена"
+    }
+    status_ru = status_map.get(session.status, "Неизвестно")
+
+    return {
+        "session_id": session.session_id,
+        "asset_type_id": session.asset_type_id,
+        "department_codes": session.department_codes,
+        "asset_type_name": session.asset_type_name,
+        "asset_type_en_name": session.asset_type_en_name,
+        "status": session.status,
+        "status_ru": status_ru,
+        "created_at": session.created_at,
+        "start_date": session.start_date,
+        "end_date": session.end_date,
+        "created_by": session.created_by,
+        "created_by_full_name": None
+    }
 
 async def check_inventory_item(
         db: AsyncSession,

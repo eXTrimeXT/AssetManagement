@@ -8,15 +8,15 @@ from starlette import status
 
 from app.database.connection import get_db
 from app.schemas.inventorization.InventorizationSchemas import (
-    InventorizationSessionCreate,
     InventorizationSessionResponse,
     CheckItemRequest,
     InventorizationItemResponse,
     InventorizationReportResponse,
-    InventorizationDiscrepanciesResponse, InventorizationSessionObj,
+    InventorizationDiscrepanciesResponse,
+    InventorizationSessionObj,
 )
 from app.database.inventorization.crud_inventorization import (
-    create_inventory_session,
+    create_inventory_sessions,
     check_inventory_item,
     complete_inventory_session,
     get_inventory_sessions_list,
@@ -25,7 +25,7 @@ from app.database.inventorization.crud_inventorization import (
     get_inventorization_report,
     get_inventorization_discrepancies,
     delete_inventorization_session,
-    export_inventory_session_to_excel
+    export_inventory_session_to_excel,
 )
 from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
@@ -57,9 +57,6 @@ async def get_session_items(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    """Получить список элементов инвентаризации сессии с пагинацией."""
-
-    # Получаем данные и общее количество из CRUD
     items, total = await get_inventory_items_by_session_id(
         db=db,
         session_id=session_id,
@@ -71,10 +68,7 @@ async def get_session_items(
         inventory_id=inventory_id,
         is_checked=is_checked
     )
-
-    # Рассчитываем метаданные пагинации
     total_pages = math.ceil(total / page_size) if total > 0 else 0
-
     return PaginatedResponse(
         items=list(items),
         total=total,
@@ -85,22 +79,25 @@ async def get_session_items(
         has_previous=page > 1,
     )
 
-@router_inventorization.post("/sessions/", response_model=InventorizationSessionResponse)
+@router_inventorization.post("/sessions/", response_model=List[InventorizationSessionResponse]) # <-- Возвращаем список
 async def start_session(
         data: InventorizationSessionObj,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
     if data.obj:
-        return await create_inventory_session(
+        # Вызываем новую функцию, которая создаст N сессий по комбинациям
+        sessions = await create_inventory_sessions(
             db=db,
-            asset_type_id=data.obj.asset_type_id,
-            department_code=data.obj.department_code,
+            asset_type_ids=data.obj.asset_type_ids,
+            department_codes=data.obj.department_codes,
+            material_classes=data.obj.material_classes,
             creator_employee_id=current_user.employee_id,
             start_date=data.obj.start_date,
             end_date=data.obj.end_date
         )
-    return None
+        return sessions
+    return []
 
 @router_inventorization.post("/sessions/{session_id}/check")
 async def check_item(

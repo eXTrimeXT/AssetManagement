@@ -6,8 +6,9 @@ class InventorizationSessionObj(BaseModel):
     obj: Optional[InventorizationSessionCreate]
 
 class InventorizationSessionCreate(BaseModel):
-    asset_type_id: Optional[int] = None
-    department_code: Optional[str] = None
+    asset_type_ids: Optional[List[int]] = None
+    department_codes: Optional[List[str]] = None
+    material_classes: Optional[List[str]] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 

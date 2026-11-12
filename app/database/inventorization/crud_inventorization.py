@@ -119,7 +119,8 @@ async def create_inventory_session(
         department_code: Optional[str] = None,
         creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        material_class: Optional[str] = None
 ) -> InventorizationSession:
     logger.warning(f"{asset_type_id=} {department_code=}")
     if asset_type_id is None and department_code is None:
@@ -232,7 +233,8 @@ async def create_inventory_session(
                     cost_center_code_from_search_mode="ALL",
                     cost_center_shortname_from=None,
                     cost_center_code=None,
-                    cost_center_shortname=None
+                    cost_center_shortname=None,
+                    material_class=material_class
                 )
 
                 if not sap_response.get("success") or "response" not in sap_response:

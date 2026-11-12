@@ -104,6 +104,8 @@ async def get_assets(
         # Фильтр по дате ТО:
         service_period: Optional[str] = Query(None, description="Диапазон дат для next_service (например, '13-10-2026 - 23-10-2026')"),
 
+        material_class: Optional[str] = Query(None, description="Фильтр по классу актива"),
+
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
 ):
@@ -144,6 +146,9 @@ async def get_assets(
         # Фильтр по датам обслуживания
         next_service_start=next_service_start,
         next_service_end=next_service_end,
+
+        # Фильтр по классу актива
+        material_class=material_class
     )
 
     return PaginatedResponse(**result)

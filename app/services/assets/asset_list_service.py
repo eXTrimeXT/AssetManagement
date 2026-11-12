@@ -61,6 +61,8 @@ async def get_assets_list_with_sap(
 
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
+
+        material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Получение списка активов: Локальные данные имеют абсолютный приоритет.
@@ -99,6 +101,7 @@ async def get_assets_list_with_sap(
             only_my=only_my,
             next_service_start=next_service_start,
             next_service_end=next_service_end,
+            material_class=material_class
         )
 
         if local_orm_items:
@@ -141,6 +144,7 @@ async def get_assets_list_with_sap(
         only_my=only_my,
         next_service_start=next_service_start,
         next_service_end=next_service_end,
+        material_class=material_class
     )
 
     skip = (page - 1) * page_size
@@ -168,6 +172,7 @@ async def get_assets_list_with_sap(
             only_my=only_my,
             next_service_start=next_service_start,
             next_service_end=next_service_end,
+            material_class=material_class
         )
 
         local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
@@ -202,7 +207,8 @@ async def get_assets_list_with_sap(
                 cost_center_code_from_search_mode=cost_center_code_from_search_mode,
                 cost_center_shortname=cost_center_shortname,
                 cost_center_shortname_mode=cost_center_shortname_mode,
-                cost_center_code=cost_center_code
+                cost_center_code=cost_center_code,
+                material_class=material_class
             )
             result_items.extend(sap_items[:remaining_slots])
             sap_total = fetched_sap_total
@@ -234,7 +240,8 @@ async def get_assets_list_with_sap(
                 cost_center_code_from_search_mode=cost_center_code_from_search_mode,
                 cost_center_shortname=cost_center_shortname,
                 cost_center_shortname_mode=cost_center_shortname_mode,
-                cost_center_code=cost_center_code
+                cost_center_code=cost_center_code,
+                material_class=material_class
             )
             result_items.extend(sap_items)
             sap_total = fetched_sap_total
@@ -267,6 +274,7 @@ async def _get_local_assets_count(
         only_my: Optional[bool] = False,
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None
 ) -> int:
     """Подсчет количества локальных активов по всем фильтрам."""
     query = select(func.count(Asset.asset_id))
@@ -321,6 +329,8 @@ async def _get_local_assets_count(
         query = query.where(Asset.next_service >= next_service_start)
     if next_service_end is not None:
         query = query.where(Asset.next_service <= next_service_end)
+    if material_class:
+        query = query.where(Asset.material_class == material_class)
 
     result = await db.execute(query)
     return result.scalar_one() or 0
@@ -344,6 +354,7 @@ async def get_local_assets_slice(
         only_my: Optional[bool] = False,
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None
 ) -> Sequence[Asset]:
     """Получение среза локальных активов с полной загрузкой связей."""
     query = select(Asset).options(
@@ -420,6 +431,8 @@ async def get_local_assets_slice(
         query = query.where(Asset.next_service >= next_service_start)
     if next_service_end is not None:
         query = query.where(Asset.next_service <= next_service_end)
+    if material_class:
+        query = query.where(Asset.material_class == material_class)
 
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
@@ -478,6 +491,7 @@ async def _fetch_and_merge_sap_assets(
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_mode: SearchMode = "ALL",
         cost_center_code: Optional[str] = None,
+        material_class: Optional[str] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
     """Запрос к SAP и слияние с исключением дубликатов и 'призрачных' SAP активов."""
     try:
@@ -494,7 +508,8 @@ async def _fetch_and_merge_sap_assets(
             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             cost_center_shortname_from=cost_center_shortname_from,
             cost_center_code=cost_center_code,
-            cost_center_shortname=cost_center_shortname
+            cost_center_shortname=cost_center_shortname,
+            material_class=material_class
         )
 
         if not sap_response.get("success") or "data" not in sap_response.get("response", {}):
@@ -691,6 +706,7 @@ async def fetch_sap_materials(
         cost_center_code: Optional[str] = None,
         cost_center_shortname: Optional[str] = None,
         is_long_serial_number = True,
+        material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Запрос к SAP API для получения списка материалов."""
     # offset = (page - 1) * page_size
@@ -726,6 +742,8 @@ async def fetch_sap_materials(
         params["cost_center_code"] = cost_center_code
     if cost_center_shortname:
         params["cost_center_shortname"] = cost_center_shortname
+    if material_class:
+        params["material_class"] = material_class
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(SAP_API_URL, params=params, headers=headers)
@@ -748,6 +766,7 @@ async def fetch_sap_materials(
                 cost_center_code=cost_center_code,
                 cost_center_shortname=cost_center_shortname,
                 is_long_serial_number=False,
+                material_class=material_class
             )
         if resp.get("response").get("data") == [] and not is_long_serial_number:
             return resp
@@ -971,7 +990,6 @@ def _build_user_response(employee: Employee, assignment_type: str, start_date: s
 # ============================================================
 # Пагинация
 # ============================================================
-
 def _build_paginated_response(
         items: List[Any], total: int, page: int, page_size: int
 ) -> Dict[str, Any]:

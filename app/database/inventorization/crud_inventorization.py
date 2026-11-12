@@ -132,37 +132,40 @@ async def create_inventory_sessions(
     created_sessions = []
 
     depts = department_codes if department_codes else [None]
-    classes = material_classes if material_classes else [None]
-    types = asset_type_ids if asset_type_ids else [None]
+    classes = material_classes if material_classes else []
+    types = asset_type_ids if asset_type_ids else []
 
     for dept in depts:
-        if classes[0] is not None:
-            for mc in classes:
-                session = await _create_single_inventory_session(
-                    db=db,
-                    asset_type_id=None,
-                    department_code=dept,
-                    material_class=mc,
-                    creator_employee_id=creator_employee_id,
-                    start_date=start_date,
-                    end_date=end_date
-                )
-                if session is not None:
-                    created_sessions.append(session)
-        elif types[0] is not None:
-            for at_id in types:
-                session = await _create_single_inventory_session(
-                    db=db,
-                    asset_type_id=at_id,
-                    department_code=dept,
-                    material_class=None,
-                    creator_employee_id=creator_employee_id,
-                    start_date=start_date,
-                    end_date=end_date
-                )
-                if session is not None:
-                    created_sessions.append(session)
-        else:
+        # Создаем сессии для каждого класса (если классы указаны)
+        for mc in classes:
+            session = await _create_single_inventory_session(
+                db=db,
+                asset_type_id=None,
+                department_code=dept,
+                material_class=mc,
+                creator_employee_id=creator_employee_id,
+                start_date=start_date,
+                end_date=end_date
+            )
+            if session is not None:
+                created_sessions.append(session)
+
+        # Создаем сессии для каждого типа (если типы указаны)
+        for at_id in types:
+            session = await _create_single_inventory_session(
+                db=db,
+                asset_type_id=at_id,
+                department_code=dept,
+                material_class=None,
+                creator_employee_id=creator_employee_id,
+                start_date=start_date,
+                end_date=end_date
+            )
+            if session is not None:
+                created_sessions.append(session)
+
+        # Если не указаны ни классы, ни типы — создаем одну сессию только по департаменту
+        if not classes and not types:
             session = await _create_single_inventory_session(
                 db=db,
                 asset_type_id=None,

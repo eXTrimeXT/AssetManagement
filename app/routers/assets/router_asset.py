@@ -47,6 +47,16 @@ def parse_service_period_range(period_str: Optional[str]) -> tuple[Optional[date
     period_str = period_str.replace("+%E2%80%94+", " — ").replace(" - ", " — ")
     parts = re.split(r' — ', period_str.strip()) # 06-10-2026 — 16-10-2026
 
+    if len(parts) == 1:
+        try:
+            start_date = datetime.strptime(parts[0].strip(), "%d-%m-%Y").date()
+            end_date = start_date
+            logger.info(f"Дата является одним днём: start={start_date}")
+            return start_date, end_date
+        except ValueError as e:
+            logger.warning(f"Не удалось распарсить диапазон дат '{period_str}': {e}")
+            return None, None
+
     if len(parts) == 2:
         try:
             start_date = datetime.strptime(parts[0].strip(), "%d-%m-%Y").date()

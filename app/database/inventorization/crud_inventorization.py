@@ -55,10 +55,7 @@ async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Opti
 
 async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[
     InventorizationSession]:
-    query = select(InventorizationSession).options(
-        # selectinload(InventorizationSession.items)
-        # .selectinload(InventorizationSession.creator)
-    ).offset(skip).limit(limit).order_by(InventorizationSession.session_id.desc())
+    query = select(InventorizationSession).offset(skip).limit(limit).order_by(InventorizationSession.session_id.desc())
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -124,16 +121,6 @@ async def create_inventory_session(
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
 ) -> InventorizationSession:
-
-    # ==============================================================================
-    # ЗАЩИТНАЯ ПРОВЕРКА: Нормализуем часовые пояса перед любыми сравнениями
-    # Если фронтенд прислал дату без 'Z' (naive), принудительно делаем её UTC (aware)
-    # ==============================================================================
-    # if start_date and start_date.tzinfo is None:
-    #     start_date = start_date.replace(tzinfo=timezone.utc)
-    # if end_date and end_date.tzinfo is None:
-    #     end_date = end_date.replace(tzinfo=timezone.utc)
-
     logger.warning(f"{asset_type_id=} {department_code=}")
     if asset_type_id is None and department_code is None:
         raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")

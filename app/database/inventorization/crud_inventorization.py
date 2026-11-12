@@ -131,12 +131,10 @@ async def create_inventory_sessions(
 
     created_sessions = []
 
-    # Если список не передан, используем [None] для одного прохода цикла
     depts = department_codes if department_codes else [None]
     classes = material_classes if material_classes else [None]
     types = asset_type_ids if asset_type_ids else [None]
 
-    # Логика формирования комбинаций: Департамент × (Класс ИЛИ Тип)
     for dept in depts:
         if classes[0] is not None:
             for mc in classes:
@@ -149,7 +147,8 @@ async def create_inventory_sessions(
                     start_date=start_date,
                     end_date=end_date
                 )
-                created_sessions.append(session)
+                if session is not None:
+                    created_sessions.append(session)
         elif types[0] is not None:
             for at_id in types:
                 session = await _create_single_inventory_session(
@@ -161,9 +160,9 @@ async def create_inventory_sessions(
                     start_date=start_date,
                     end_date=end_date
                 )
-                created_sessions.append(session)
+                if session is not None:
+                    created_sessions.append(session)
         else:
-            # Только департамент
             session = await _create_single_inventory_session(
                 db=db,
                 asset_type_id=None,
@@ -173,7 +172,8 @@ async def create_inventory_sessions(
                 start_date=start_date,
                 end_date=end_date
             )
-            created_sessions.append(session)
+            if session is not None:
+                created_sessions.append(session)
 
     return created_sessions
 
@@ -189,7 +189,7 @@ async def _create_single_inventory_session(
         creator_employee_id: Optional[str],
         start_date: Optional[datetime],
         end_date: Optional[datetime],
-) -> InventorizationSession:
+) -> Optional[InventorizationSession]:
 
     # Формирование имени сессии
     name_parts = []
@@ -214,7 +214,7 @@ async def _create_single_inventory_session(
 
     session = InventorizationSession(
         asset_type_id=asset_type_id,
-        department_codes=department_code, # В БД хранится как строка (один код или через запятую, здесь один)
+        department_codes=department_code,
         asset_type_name=session_asset_type_name,
         asset_type_en_name=asset_type_en_name,
         status=initial_status,
@@ -223,7 +223,9 @@ async def _create_single_inventory_session(
         end_date=end_date
     )
     db.add(session)
-    await db.flush()
+    await db.flush()  # Получаем session_id для items
+
+    items = []
 
     # 1. Локальные активы
     query = select(Asset)
@@ -246,7 +248,7 @@ async def _create_single_inventory_session(
     result = await db.execute(query)
     assets = result.scalars().all()
 
-    items = [
+    items.extend([
         InventorizationItem(
             session_id=session.session_id,
             asset_id=asset.asset_id,
@@ -259,10 +261,7 @@ async def _create_single_inventory_session(
             quantity_fact=None,
         )
         for asset in assets
-    ]
-    if items:
-        db.add_all(items)
-        await db.flush()
+    ])
 
     # 2. ЗАПРОС SAP-АКТИВОВ (С ПАГИНАЦИЕЙ)
     should_fetch_sap = False
@@ -310,14 +309,12 @@ async def _create_single_inventory_session(
                 all_sap_items.extend(current_batch)
                 offset += limit
 
-                logger.info(f"[SAP INVENTORY] Загружено {len(current_batch)} элементов. Всего: {len(all_sap_items)} / {total_sap_items}")
                 if len(current_batch) < limit:
                     break
 
             if all_sap_items:
                 local_inv_ids = {asset.inventory_id.strip().lower() for asset in assets if asset.inventory_id}
                 local_mat_ids = {asset.material_id.strip().lower() for asset in assets if asset.material_id}
-                sap_items_to_add = []
 
                 for sap_item in all_sap_items:
                     inv_num = str(sap_item.get("inventory_number", "")).strip().lower()
@@ -328,7 +325,7 @@ async def _create_single_inventory_session(
                     if mat_id and mat_id in local_mat_ids:
                         continue
 
-                    sap_items_to_add.append(
+                    items.append(
                         InventorizationItem(
                             session_id=session.session_id,
                             asset_id=None,
@@ -341,14 +338,25 @@ async def _create_single_inventory_session(
                             quantity_fact=None,
                         )
                     )
-
-                if sap_items_to_add:
-                    db.add_all(sap_items_to_add)
-                    items.extend(sap_items_to_add)
-                    await db.flush()
-                    logger.info(f"[SAP INVENTORY] Добавлено {len(sap_items_to_add)} уникальных SAP-активов в сессию {session.session_id}.")
         except Exception as e:
             logger.error(f"[SAP INVENTORY] Ошибка при запросе SAP-активов: {e}", exc_info=True)
+
+    # ==============================================================================
+    # === ЗАЩИТА ОТ ПУСТЫХ СЕССИЙ ===
+    # ==============================================================================
+    if not items:
+        logger.warning(
+            f"[INVENTORY] Сессия по комбинации (dept={department_code}, class={material_class}, type={asset_type_id}) "
+            f"оказалась пустой — отменяем создание."
+        )
+        # Откатываем flush: удаляем session из БД и из памяти SQLAlchemy
+        await db.delete(session)
+        await db.rollback()
+        return None
+
+    # Если items не пустые — добавляем их в сессию
+    db.add_all(items)
+    await db.flush()
 
     # 3. ЛОГИКА УВЕДОМЛЕНИЙ И ПЛАНИРОВЩИКА
     asset_ids = [item.asset_id for item in items if item.asset_id is not None]

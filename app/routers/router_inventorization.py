@@ -79,25 +79,32 @@ async def get_session_items(
         has_previous=page > 1,
     )
 
-@router_inventorization.post("/sessions/", response_model=List[InventorizationSessionResponse]) # <-- Возвращаем список
+@router_inventorization.post("/sessions/", response_model=List[InventorizationSessionResponse])
 async def start_session(
         data: InventorizationSessionObj,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
-    if data.obj:
-        # Вызываем новую функцию, которая создаст N сессий по комбинациям
-        sessions = await create_inventory_sessions(
-            db=db,
-            asset_type_ids=data.obj.asset_type_ids,
-            department_codes=data.obj.department_codes,
-            material_classes=data.obj.material_classes,
-            creator_employee_id=current_user.employee_id,
-            start_date=data.obj.start_date,
-            end_date=data.obj.end_date
+    if not data.obj:
+        raise HTTPException(status_code=400, detail="Тело запроса пустое")
+
+    sessions = await create_inventory_sessions(
+        db=db,
+        asset_type_ids=data.obj.asset_type_ids,
+        department_codes=data.obj.department_codes,
+        material_classes=data.obj.material_classes,
+        creator_employee_id=current_user.employee_id,
+        start_date=data.obj.start_date,
+        end_date=data.obj.end_date
+    )
+
+    if not sessions:
+        raise HTTPException(
+            status_code=400,
+            detail="По указанным параметрам не найдено ни одного актива. Сессии не созданы."
         )
-        return sessions
-    return []
+
+    return sessions
 
 @router_inventorization.post("/sessions/{session_id}/check")
 async def check_item(

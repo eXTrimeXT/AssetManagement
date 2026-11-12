@@ -550,7 +550,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
 
     if not responsible_employees:
         logger.debug(f"Ответственные не найдены для сессии {session.session_id}. Уведомляем создателя.")
-        await notify_inventory_started(
+        await notify_inventory_completed(
             db=db,
             employee_id=updated_by,
             session_id=session.session_id,

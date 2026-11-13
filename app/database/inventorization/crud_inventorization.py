@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from typing import Optional, Sequence, Tuple, List
 
 import logging
@@ -209,20 +209,30 @@ async def _create_single_inventory_session(
         creator_employee_id: Optional[str],
         start_date: Optional[datetime],
         end_date: Optional[datetime],
-) -> Optional[dict]:  # Возвращаем dict для защиты от MissingGreenlet
+) -> Optional[dict]:
+    # ==============================================================================
+    # === ПРОВЕРКА ДАТ ===
+    # ==============================================================================
+    if start_date is None or end_date is None:
+        raise ValueError("Необходимо указать как дату начала, так и дату окончания сессии.")
+
+    if start_date > end_date:
+        raise ValueError(f"Дата начала ({start_date}) не может быть позже даты окончания ({end_date}).")
 
     # Формирование имени сессии
     name_parts = []
     if department_code:
         sap_department_result = await db.execute(select(SapDepartment).where(SapDepartment.department_code == department_code))
         sap_department = sap_department_result.scalar_one_or_none()
-        name_parts.append(f"Департамент: {sap_department.department_name}")
+        if sap_department:
+            name_parts.append(f"Департамент: {sap_department.department_name}")
         name_parts.append(f"Код департамента: {department_code}")
 
     if material_class:
         sap_material_class_result = await db.execute(select(SapMaterialClass).where(SapMaterialClass.material_class == material_class))
         sap_material_class = sap_material_class_result.scalar_one_or_none()
-        name_parts.append(f"Класс: {sap_material_class.material_class_name}")
+        if sap_material_class:
+            name_parts.append(f"Класс: {sap_material_class.material_class_name}")
         name_parts.append(f"Код класса: {material_class}")
 
     if asset_type_id is not None:
@@ -261,7 +271,7 @@ async def _create_single_inventory_session(
     query = select(Asset)
     conditions = []
 
-    if asset_type_id is not None:  # <-- ИСПРАВЛЕНИЕ 1: Теперь 0 ("Без типа") корректно фильтруется
+    if asset_type_id is not None:
         conditions.append(Asset.asset_type_id == asset_type_id)
     if department_code:
         codes_list = [code.strip().upper() for code in department_code.split(',') if code.strip()]
@@ -299,7 +309,6 @@ async def _create_single_inventory_session(
     should_fetch_sap = False
     sap_cost_center_code_from = None
 
-    # SAP-активы не имеют типа в БД, поэтому тянем их ТОЛЬКО для "Без типа"
     if asset_type_id is None or asset_type_id == WITHOUT_TYPE_ASSET_ID:
         if department_code:
             should_fetch_sap = True

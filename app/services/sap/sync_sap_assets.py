@@ -125,6 +125,8 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)
         return {"success": False, "message": f"Ошибка синхронизации: {str(e)}", "total_synced": total_synced}
 
+async def get_sap_departments():
+    pass
 
 async def get_sap_asset_classes(limit: int = 200, offset: int = 0, language: str = "R") -> dict:
     """

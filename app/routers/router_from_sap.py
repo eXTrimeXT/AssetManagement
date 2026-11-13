@@ -1,17 +1,63 @@
 from typing import Optional
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
 from app.services.auth.auth_service import require_authorized_user
-from app.services.sap.sync_sap_assets import sync_sap_assets
+from app.services.sap.sync_sap_assets import (
+    sync_sap_assets,
+    get_sap_departments,
+    get_sap_asset_classes,
+    sync_sap_departments,
+    sync_sap_material_classes
+)
 
 router_from_sap = APIRouter(prefix="/sap", tags=["SAP API"])
 
+@router_from_sap.get(
+    "/departments",
+    summary="Получить список подразделений из SAP API"
+)
+async def get_sap_departments_endpoint(
+        limit: int = Query(default=1000, description="Лимит записей"),
+        offset: int = Query(default=0, description="Смещение (offset)"),
+        department: Optional[str] = Query(None, description="Аббревиатура департамента"),
+        department_name_like: Optional[str] = Query(None, description="Поиск по названию департамента"),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Прокси-запрос к внешнему SAP API для получения подразделений.
+    """
+    return await get_sap_departments(
+        limit=limit,
+        offset=offset,
+        department=department,
+        department_name_like=department_name_like
+    )
 
-@router_from_sap.post("/sync-from-sap")
+
+@router_from_sap.get(
+    "/asset-classes",
+    summary="Получить список классов активов из SAP API"
+)
+async def get_sap_asset_classes_endpoint(
+        limit: int = Query(default=200, description="Лимит записей"),
+        offset: int = Query(default=0, description="Смещение (offset)"),
+        language: str = Query(default="R", description="Код языка"),
+        current_user=Depends(require_authorized_user)
+):
+    """
+    Прокси-запрос к внешнему SAP API для получения классов активов.
+    """
+    return await get_sap_asset_classes(
+        limit=limit,
+        offset=offset,
+        language=language
+    )
+
+
+@router_from_sap.post("/sync-assets-from-sap")
 async def sync_assets_from_sap(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
@@ -23,97 +69,35 @@ async def sync_assets_from_sap(
 
     return result
 
-@router_from_sap.get(
-    "/departments",
-    summary="Получить список подразделений из SAP API"
-)
-async def get_sap_departments(
-        limit: int = Query(default=1000, description="Лимит записей"),
-        offset: int = Query(default=0, description="Смещение (offset)"),
-        department: Optional[str] = Query(None, description="Аббревиатура департамента"),
-        department_name_like: str = Query(None, description="Поиск по названию департамента"),
+@router_from_sap.post("/sync-departments", summary="Синхронизировать справочник подразделений (MVZ) в БД")
+async def sync_departments_to_db_endpoint(
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """
-    Обращается к внешнему SAP API и возвращает его ответ.
+    Загружает актуальный список подразделений из SAP API и сохраняет/обновляет
+    их в локальной таблице sap_departments (использует UPSERT).
     """
-    sap_url = f"http://10.168.143.7:8123/sap/mvz?limit={limit}&offset={offset}"
+    result = await sync_sap_departments(db)
 
-    if department:
-        sap_url += f"&department={department}"
-    if department_name_like:
-        sap_url += f"&department_name_like={department_name_like}"
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("message"))
 
-    try:
-        # Используем асинхронный клиент httpx
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(sap_url)
-
-            # Проверяем, что ответ успешный (2xx)
-            response.raise_for_status()
-
-            # Возвращаем JSON-ответ от SAP как есть
-            return response.json()
-
-    except httpx.RequestError as exc:
-        # Ошибка сети, таймаут или недоступность хоста
-        raise HTTPException(
-            status_code=502,
-            detail=f"Ошибка соединения с SAP API: {str(exc)}"
-        )
-    except httpx.HTTPStatusError as exc:
-        # SAP вернул ошибку (4xx или 5xx)
-        raise HTTPException(
-            status_code=exc.response.status_code,
-            detail=f"Ошибка SAP API: {exc.response.text}"
-        )
-    except Exception as exc:
-        # Любая другая непредвиденная ошибка
-        raise HTTPException(
-            status_code=500,
-            detail=f"Внутренняя ошибка сервера: {str(exc)}"
-        )
+    return result
 
 
-@router_from_sap.get(
-    "/asset-classes",
-    summary="Получить список классов активов из SAP API"
-)
-async def get_sap_asset_classes(
-        limit: int = Query(default=200, description="Лимит записей"),
-        offset: int = Query(default=0, description="Смещение (offset)"),
-        language: str = Query(default="R", description="Код языка")
+@router_from_sap.post("/sync-material-classes", summary="Синхронизировать справочник классов материалов в БД")
+async def sync_material_classes_to_db_endpoint(
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
 ):
     """
-    Обращается к внешнему SAP API и возвращает список классов активов.
+    Загружает актуальный список классов материалов из SAP API и сохраняет/обновляет
+    их в локальной таблице sap_material_classes (использует UPSERT).
     """
-    sap_url = f"http://10.168.143.7:8123/sap/search_material_classes?limit={limit}&offset={offset}&language={language}"
+    result = await sync_sap_material_classes(db)
 
-    try:
-        # Используем асинхронный клиент httpx
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(sap_url)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("message"))
 
-            # Проверяем, что ответ успешный (2xx)
-            response.raise_for_status()
-
-            # Возвращаем JSON-ответ от SAP как есть
-            return response.json()
-
-    except httpx.RequestError as exc:
-        # Ошибка сети, таймаут или недоступность хоста
-        raise HTTPException(
-            status_code=502,
-            detail=f"Ошибка соединения с SAP API: {str(exc)}"
-        )
-    except httpx.HTTPStatusError as exc:
-        # SAP вернул ошибку (4xx или 5xx)
-        raise HTTPException(
-            status_code=exc.response.status_code,
-            detail=f"Ошибка SAP API: {exc.response.text}"
-        )
-    except Exception as exc:
-        # Любая другая непредвиденная ошибка
-        raise HTTPException(
-            status_code=500,
-            detail=f"Внутренняя ошибка сервера: {str(exc)}"
-        )
+    return result

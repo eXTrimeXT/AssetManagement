@@ -21,7 +21,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/base_materials") # default - test
+SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/") # default - test
 X_API_TOKEN = os.getenv("X_API_TOKEN")
 
 # ID виртуального типа SAP-активов.
@@ -746,7 +746,7 @@ async def fetch_sap_materials(
         params["material_class"] = material_class
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(SAP_API_URL, params=params, headers=headers)
+        response = await client.get(SAP_API_URL + "base_materials", params=params, headers=headers)
         response.raise_for_status()
         resp = response.json()
         logger.debug(f"{resp.get("response").get("data")=}")

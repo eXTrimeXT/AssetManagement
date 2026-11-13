@@ -32,7 +32,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/base_materials") # default - test
+SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/") # default - test
 
 router_excel_import = APIRouter(prefix="/excel/assets", tags=["Assets"])
 
@@ -135,7 +135,7 @@ async def find_asset_in_sap(inventory_id: Optional[str], serial_number: Optional
         params["employee_id_search_mode"] = "ALL"
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.get(SAP_API_URL, params=params)
+                response = await client.get(SAP_API_URL + "base_materials", params=params)
                 response.raise_for_status()
                 data = response.json()
                 if data.get("success") and "data" in data.get("response", {}):

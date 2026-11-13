@@ -24,6 +24,8 @@ from app.models.assets.AssetAssignment import AssetAssignment
 from app.database.crud_notifications import notify_inventory_started, notify_inventory_completed
 from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_TYPE_ASSET_ID
 from app.models.inventorization.Inventorization import InventorizationStatus
+from app.models.sap.SapDepartment import SapDepartment
+from app.models.sap.SapMaterialClass import SapMaterialClass
 
 logger = logging.getLogger(__name__)
 
@@ -212,9 +214,16 @@ async def _create_single_inventory_session(
     # Формирование имени сессии
     name_parts = []
     if department_code:
-        name_parts.append(f"Департамент: {department_code}")
+        sap_department_result = await db.execute(select(SapDepartment).where(SapDepartment.department_code == department_code))
+        sap_department = sap_department_result.scalar_one_or_none()
+        name_parts.append(f"Департамент: {sap_department.department_name}")
+        name_parts.append(f"Код департамента: {department_code}")
+
     if material_class:
-        name_parts.append(f"Класс: {material_class}")
+        sap_material_class_result = await db.execute(select(SapMaterialClass).where(SapMaterialClass.material_class == material_class))
+        sap_material_class = sap_material_class_result.scalar_one_or_none()
+        name_parts.append(f"Класс: {sap_material_class.material_class_name}")
+        name_parts.append(f"Код класса: {material_class}")
 
     if asset_type_id is not None:
         asset_type_result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type_id))
@@ -247,7 +256,7 @@ async def _create_single_inventory_session(
     items = []
 
     # ==============================================================================
-    # 1. Локальные активы (ИСПРАВЛЕНО: is not None вместо просто if asset_type_id)
+    # 1. Локальные активы
     # ==============================================================================
     query = select(Asset)
     conditions = []
@@ -285,12 +294,12 @@ async def _create_single_inventory_session(
     ])
 
     # ==============================================================================
-    # 2. ЗАПРОС SAP-АКТИВОВ (ИСПРАВЛЕНО: SAP только для типа "Без типа")
+    # 2. ЗАПРОС SAP-АКТИВОВ (только для типа "Без типа")
     # ==============================================================================
     should_fetch_sap = False
     sap_cost_center_code_from = None
 
-    # <-- ИСПРАВЛЕНИЕ 2: SAP-активы не имеют типа в БД, поэтому тянем их ТОЛЬКО для "Без типа"
+    # SAP-активы не имеют типа в БД, поэтому тянем их ТОЛЬКО для "Без типа"
     if asset_type_id is None or asset_type_id == WITHOUT_TYPE_ASSET_ID:
         if department_code:
             should_fetch_sap = True

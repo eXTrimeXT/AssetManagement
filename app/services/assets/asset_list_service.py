@@ -1190,17 +1190,41 @@ async def get_assets_list_with_sap(
 # Функции слияния и обогащения (SAP-FIRST)
 # ============================================================
 async def _get_local_override(db: AsyncSession, material_id: Optional[str], inventory_id: Optional[str]) -> Optional[Asset]:
-    """Ищет локальное переопределение по material_id или inventory_id."""
+    """Ищет локальное переопределение по material_id или inventory_id с полной загрузкой связей."""
     conditions = []
     if material_id:
-        conditions.append(Asset.material_id == material_id) is not None
+        conditions.append(Asset.material_id == material_id)
     if inventory_id:
         conditions.append(Asset.inventory_id == inventory_id)
 
     if not conditions:
         return None
 
-    query = select(Asset).where(or_(*conditions)).limit(1)
+    # ДОБАВЛЕНО: Полная загрузка связей, чтобы избежать MissingGreenlet при доступе к asset_type и другим полям
+    query = select(Asset).where(or_(*conditions)).options(
+        selectinload(Asset.asset_type),
+        selectinload(Asset.asset_status),
+        selectinload(Asset.model),
+        selectinload(Asset.parent).options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+        ),
+        selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+        selectinload(Asset.assignments).options(
+            selectinload(AssetAssignment.employee).options(
+                selectinload(Employee.position),
+                selectinload(Employee.group).options(
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent)
+                        )
+                    )
+                )
+            )
+        ),
+    ).limit(1)
+
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -1221,7 +1245,7 @@ def _merge_sap_with_local(sap_item: Dict[str, Any], local_asset: Asset, db: Asyn
     if local_asset.model_id: merged['model_id'] = local_asset.model_id
     if local_asset.model_name: merged['model_name'] = local_asset.model_name
     if local_asset.asset_type_id: merged['asset_type_id'] = local_asset.asset_type_id
-    if local_asset.asset_type: merged['asset_type_name'] = local_asset.asset_type.name
+    if local_asset.asset_type: merged['asset_type_name'] = local_asset.asset_type.name or None
     if local_asset.parent_id: merged['parent_id'] = local_asset.parent_id
     if local_asset.asset_status_id: merged['asset_status_id'] = local_asset.asset_status_id
     if local_asset.asset_status: merged['asset_status'] = local_asset.asset_status.status
@@ -1344,18 +1368,10 @@ async def _get_local_overrides_for_list(db: AsyncSession, sap_items: List[Dict[s
                 )
             )
         ),
-    )
+    ).limit(1)
 
     result = await db.execute(query)
-
-    overrides = {}
-    for asset in result.scalars().all():
-        if asset.material_id:
-            overrides[asset.material_id] = asset
-        if asset.inventory_id:
-            overrides[asset.inventory_id] = asset
-
-    return overrides
+    return result.scalar_one_or_none()
 
 
 async def _get_local_only_assets_slice(

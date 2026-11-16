@@ -1210,7 +1210,7 @@ def _merge_sap_with_local(sap_item: Dict[str, Any], local_asset: Asset, db: Asyn
     Объединяет данные: SAP является базой, локальные поля перезаписывают её, если они не None.
     """
     # 1. Строим базовый виртуальный актив из SAP
-    merged = _build_virtual_asset(sap_item, {}, {}) # Мапы передадим отдельно при необходимости, но здесь упростим
+    merged = _build_virtual_asset(sap_item, {}, {})
 
     # 2. Перезаписываем локальными данными (приоритет локальной системе)
     if local_asset.name: merged['name'] = local_asset.name
@@ -1254,14 +1254,58 @@ def _merge_sap_with_local(sap_item: Dict[str, Any], local_asset: Asset, db: Asyn
     if local_asset.assignments:
         active_assignments = [a for a in local_asset.assignments if a.end_date is None]
         if active_assignments:
-            # Здесь можно вызвать bulk_enrich_assets или упрощенно собрать данные
-            merged['users'] = [{"employee_id": a.employee_id, "assignment_type": a.assignment_type.value if hasattr(a.assignment_type, 'value') else a.assignment_type} for a in active_assignments]
-            # Устанавливаем current_user из первой привязки для совместимости
-            if active_assignments[0].employee_id:
-                merged['current_user'] = active_assignments[0].employee_id
+            users_list = []
+            for a in active_assignments:
+                emp = a.employee
+                if emp:
+                    parts_ru = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
+                    parts_en = [p for p in [emp.last_name_en, emp.first_name_en, emp.middle_name_en] if p]
+
+                    user_dict = {
+                        "guid": emp.guid,
+                        "employee_id": emp.employee_id,
+                        "full_name_ru": " ".join(parts_ru) if parts_ru else None,
+                        "full_name_en": " ".join(parts_en) if parts_en else None,
+                        "assignment_type": a.assignment_type.value if hasattr(a.assignment_type, 'value') else str(a.assignment_type),
+                        "start_date": a.start_date.isoformat() if a.start_date else None,
+                        "end_date": None,
+                        "birth_date": emp.birth_date,
+                        "employment_date": emp.employment_date,
+                        "dismissal_date": emp.dismissal_date,
+                        "phone": emp.phone,
+                        "email": emp.email,
+                        "comment": emp.comment,
+                        "position_guid": emp.position_guid,
+                        "department_guid": emp.department_guid,
+                        "created_at": emp.created_at.isoformat() if emp.created_at else None,
+                        "updated_at": emp.updated_at.isoformat() if emp.updated_at else None,
+                    }
+
+                    if hasattr(emp, 'position') and emp.position:
+                        user_dict["position"] = {"name": emp.position.name, "name_en": emp.position.name_en}
+
+                    # Добавляем иерархию подразделений, если она загружена через selectinload
+                    if hasattr(emp, 'society') and emp.society:
+                        user_dict["society"] = {"guid": emp.society.guid, "name": emp.society.name, "short_name": getattr(emp.society, 'short_name', None)}
+                    if hasattr(emp, 'department') and emp.department:
+                        user_dict["department"] = {"guid": emp.department.guid, "name": emp.department.name, "short_name": getattr(emp.department, 'short_name', None)}
+                    if hasattr(emp, 'division') and emp.division:
+                        user_dict["division"] = {"guid": emp.division.guid, "name": emp.division.name, "short_name": getattr(emp.division, 'short_name', None)}
+                    if hasattr(emp, 'group') and emp.group:
+                        user_dict["group"] = {"guid": emp.group.guid, "name": emp.group.name, "short_name": getattr(emp.group, 'short_name', None)}
+
+                    users_list.append(user_dict)
+
+            merged['users'] = users_list
+
+            # Устанавливаем current_user из первой активной привязки для совместимости
+            first_emp = active_assignments[0].employee
+            if first_emp:
+                merged['current_user'] = first_emp.employee_id
+                parts = [p for p in [first_emp.last_name, first_emp.first_name, first_emp.middle_name] if p]
+                merged['current_user_full_name'] = " ".join(parts) if parts else None
 
     return merged
-
 
 async def _get_local_overrides_for_list(db: AsyncSession, sap_items: List[Dict[str, Any]]) -> Dict[str, Asset]:
     """Массовая загрузка локальных переопределений для списка SAP-активов с полной загрузкой связей."""

@@ -851,7 +851,6 @@ async def _get_departments_by_codes(
 # ============================================================
 # Построение виртуального актива
 # ============================================================
-
 def _build_virtual_asset(
         sap_item: Dict[str, Any],
         employees_map: Dict[str, Employee],

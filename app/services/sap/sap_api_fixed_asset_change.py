@@ -14,65 +14,26 @@ SAP_AUTH_HEADER = os.getenv("SAP_AUTH_HEADER", "Basic TOKEN")
 
 # Маппинг полей локальной модели Asset на FieldName в SAP (согласно спецификации)
 LOCAL_TO_SAP_FIELD_MAPPING = {
-    # === Основные идентификаторы и названия ===
-    "name": "DESCRIPT",                          # Название основного средства (в SAP: base_material_name)
-    "model_name": "DESCRIPT2",                   # Название ОС (продолжение) / Описание модели
-    "material_id": "MATERIAL",                   # Номер материала в SAP (в SAP: material_id)
-    "inventory_id": "INVENT_NO",                 # Инвентарный номер (в SAP: inventory_number)
-
-    # === Серийные номера и количество ===
-    "serial_number": "SERIAL_NUM_LONG",          # Длинный серийный номер (в SAP: long_serial_number)
-    "serial_no": "SERIAL_NO",                    # Короткий серийный номер (в SAP: serial_number)
-    "quantity": "QUANTITY",                      # Количество (в SAP: quantity)
-    "base_uom": "BASE_UOM",                      # Базовая единица измерения
-
-    # === Текстовые описания и примечания ===
-    "comment": "NOTE",                           # Дополнительные данные / Примечание (документ инвентаризации)
-    "main_descript": "MAIN_DESCRIPT",            # Текст основного номера ОС
-
-    # === Даты (функция _format_sap_value автоматически конвертирует их в YYYYMMDD) ===
-    "date_purchasing": "ORIG_ACQ_DATE",          # Дата поступления / покупки
-    "date_issue": "DATE",                        # Дата последней инвентаризации / выдачи (в SAP: changed_date)
-    "from_date": "FROM_DATE",                    # Дата начала срока действия
-    "orig_acq_date": "ORIG_ACQ_DATE",            # Дата поступления исходного объекта
-    "orig_acq_yr": "ORIG_ACQ_YR",                # Финансовый год первоначального приобретения
-
-    # === Организационные единицы (должны передаваться вместе с FROM_DATE) ===
-    "cost_center_code": "COSTCENTER",            # Место возникновения затрат (в SAP: cost_center_code)
-    "department_code": "RESP_CCTR",              # МВЗ, ответственное за ОС (в SAP: department_code)
-    "intern_ord": "INTERN_ORD",                  # Номер заказа
-    "plant": "PLANT",                            # Завод
-    "location_code": "LOCATION",                 # Местоположение основного средства
-    "room": "ROOM",                              # Помещение
-    "plate_no": "PLATE_NO",                      # Код транспортного средства
-    "employee_id": "PERSON_NO",                  # Табельный номер сотрудника (в SAP: employee_id)
-    "shutdown": "SHUTDOWN",                      # Основное средство остановлено
-
-    # === Классификация (поля EVALGROUP) ===
-    "material_class": "EVALGROUP1",              # Поле классификации 1 (в SAP: material_class)
-    "evalgroup1": "EVALGROUP1",                  # Поле классификации 1
-    "evalgroup2": "EVALGROUP2",                  # Поле классификации 2
-    "evalgroup3": "EVALGROUP3",                  # Поле классификации 3
-    "evalgroup4": "EVALGROUP4",                  # Поле классификации 4
-    "evalgroup5": "EVALGROUP5",                  # Поле классификации 5
-
-    # === Контрагенты и производители ===
-    "vendor_name": "VENDOR_NO",                  # Номер счета поставщика (в SAP: supplier_number)
-    "supplier_number": "VENDOR_NO",              # Номер поставщика (альтернативное имя)
-    "manufacturer_name": "MANUFACTURER",         # Изготовитель основного средства
-    "country": "COUNTRY",                        # Страна происхождения
-
-    # === Перемещения и исходные данные ===
-    "parent_id": "ORIG_ASSET",                   # Исходное основное средство при перемещениях
-    "orig_asset": "ORIG_ASSET",                  # Исходное ОС (альтернативное имя)
-    "orig_asset_subno": "ORIG_ASSET_SUBNO",      # Субномер исходного ОС (стандартно 0000)
-    "orig_value": "ORIG_VALUE",                  # Исходная первоначальная стоимость
-    "currency": "CURRENCY",                      # Код валюты
-
-    # === Дополнительные поля ===
-    "okof_code_new": "OKOF_CODE_NEW",            # Новый код ОКОФ
-    "depr_group_new": "DEPR_GROUP_NEW",          # Группа амортизации
+    "name": "MAIN_DESCRIPT",
+    "inventory_id": "INVENT_NO",
+    "serial_number": "SERIAL_NUM_LONG",
+    "quantity": "QUANTITY",
+    "comment": "DESCRIPT",
+    # "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
+    # "date_issue": "DATE",                 # Пример: дата выдачи -> дата инвентаризации
+    "manufacturer_name": "MANUFACTURER",
+    "vendor_name": "VENDOR_NO",
+    "cost_center_code_from": "RESP_CCTR",
+    "cost_center_code": "COSTCENTER",
 }
+
+#     "date_issue": null,
+#     "date_purchasing": null,
+#     "location": null,
+#     "users": [],
+#     "material_class": null,
+#     "write_off_date": null,
+#     "material_class_name": null
 
 
 def _format_sap_value(field_name: str, value: Any) -> str:

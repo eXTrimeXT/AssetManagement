@@ -1345,7 +1345,7 @@ async def _get_local_overrides_for_list(db: AsyncSession, sap_items: List[Dict[s
     if inventory_ids:
         conditions.append(Asset.inventory_id.in_(inventory_ids))
 
-    # ДОБАВЛЕНО: Полная загрузка связей, чтобы избежать MissingGreenlet при сериализации
+    # Полная загрузка связей, чтобы избежать MissingGreenlet при сериализации
     query = select(Asset).where(or_(*conditions)).options(
         selectinload(Asset.asset_type),
         selectinload(Asset.asset_status),
@@ -1368,11 +1368,18 @@ async def _get_local_overrides_for_list(db: AsyncSession, sap_items: List[Dict[s
                 )
             )
         ),
-    ).limit(1)
+    )
 
     result = await db.execute(query)
-    return result.scalar_one_or_none()
 
+    overrides = {}
+    for asset in result.scalars().all():
+        if asset.material_id:
+            overrides[asset.material_id] = asset
+        if asset.inventory_id:
+            overrides[asset.inventory_id] = asset
+
+    return overrides
 
 async def _get_local_only_assets_slice(
         db: AsyncSession,

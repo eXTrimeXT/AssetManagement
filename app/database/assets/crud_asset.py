@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from typing import Optional, Sequence, List, Any, Tuple, Dict
 
@@ -26,7 +27,9 @@ from app.database.crud_notifications import notify_unassigned_serving
 from app.database.crud_notifications import notify_assigned_serving
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
 from app.models.zup import Employee, ZupDepartment
+from app.services.sap.sap_api_fixed_asset_change import sync_asset_changes_to_sap
 
+logger = logging.getLogger(__name__)
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
     # === ПРОВЕРКА: Наличие актива по инвентарному и серийному номеру ===
@@ -265,7 +268,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             exclude_unset=True,
             exclude={
                 "users",
-                # "responsible_users",
                 "serving_users",
                 "location"
             }
@@ -293,13 +295,11 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             await _sync_asset_location(db, obj.asset_id, data.location, employee_id)
 
         # Обработка пользователей
-        # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
         if data.users is not None or data.serving_users is not None:
             await _sync_asset_users(
                 db=db,
                 asset_id=obj.asset_id,
                 users=data.users or [],
-                # responsible_users=data.responsible_users or [],
                 serving_users=data.serving_users or [],
                 assigned_by=employee_id
             )
@@ -346,7 +346,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         exclude_unset=True,
         exclude={
             "users",
-            # "responsible_users",
             "serving_users",
             "location"
         }
@@ -369,10 +368,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     # Проверяем изменения пользователей
     users_changed = False
-    # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
     if data.users is not None or data.serving_users is not None:
-        # Проверяем, есть ли изменения в пользователях
-        # (упрощенная проверка - всегда считаем что есть изменения если переданы)
         users_changed = True
         has_changes = True
 
@@ -423,12 +419,29 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             db=db,
             asset_id=asset_id,
             users=data.users or [],
-            # responsible_users=data.responsible_users or [],
             serving_users=data.serving_users or [],
             assigned_by=employee_id
         )
 
+    # 1. Сначала коммитим локальные изменения в БД
     await db.commit()
+
+    # 2. === ИНТЕГРАЦИЯ С SAP: Синхронизация изменений ===
+    # Определяем номер актива в SAP (приоритет: material_id -> inventory_id)
+    sap_asset_number = str(getattr(obj, 'material_id', None) or obj.inventory_id)
+
+    try:
+        await sync_asset_changes_to_sap(
+            asset_number=sap_asset_number,
+            old_data=old_data,
+            new_data=new_data
+        )
+    except Exception as sap_error:
+        # Ошибка логируется, но не прерывает локальный коммит (стандартная практика для асинхронных внешних вызовов).
+        # Если требуется строгая согласованность (откат БД при ошибке SAP), этот блок нужно перенести ДО await db.commit()
+        # и добавить: raise HTTPException(status_code=502, detail=f"Ошибка синхронизации с SAP: {str(sap_error)}")
+        logger.error(f"[CRUD ASSET] Не удалось синхронизировать актив {asset_id} (SAP №{sap_asset_number}) с SAP: {sap_error}")
+
     return await get_asset_by_id(db, asset_id)
 
 def _enrich_users_from_cache(
@@ -501,6 +514,7 @@ async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
         #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
         if asset.serving_users:
             asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
+
 
 async def _sync_asset_users(
         db: AsyncSession,
@@ -653,45 +667,6 @@ async def _sync_asset_users(
                     asset_id=asset_id,
                     initiator_id=assigned_by,
                 )
-
-
-# async def _update_primary_assignment(
-#         db: AsyncSession,
-#         asset_id: int,
-#         # assignment_type: str,
-#         target_employee_id: Optional[str]
-# ) -> None:
-#     """
-#     Устанавливает is_current=True для указанной связки и сбрасывает для остальных.
-#     Если target_employee_id is None, просто сбрасывает is_current у всех активных связок этого типа.
-#     """
-#     # Сбрасываем флаг is_current у всех текущих активных привязок этого типа для данного актива
-#     await db.execute(
-#         update(AssetAssignment)
-#         .where(
-#             AssetAssignment.asset_id == asset_id,
-#             # AssetAssignment.assignment_type == assignment_type,
-#             AssetAssignment.end_date.is_(None),
-#             AssetAssignment.is_current == True
-#         )
-#         .values(is_current=False)
-#     )
-#
-#     # Если передан конкретный сотрудник, ищем его активную связку и ставим флаг
-#     if target_employee_id:
-#         result = await db.execute(
-#             select(AssetAssignment).where(
-#                 AssetAssignment.asset_id == asset_id,
-#                 AssetAssignment.employee_id == target_employee_id,
-#                 # AssetAssignment.assignment_type == assignment_type,
-#                 AssetAssignment.end_date.is_(None)
-#             )
-#         )
-#         assignment = result.scalar_one_or_none()
-#
-#         # Если есть связка изменяем флаг у записи
-#         if assignment:
-#             assignment.is_current = True
 
 
 async def _update_primary_assignment(

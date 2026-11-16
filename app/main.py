@@ -68,7 +68,7 @@ from app.routers.router_notifications import router_notifications
 from app.services.zup.zup_integration import close_http_client
 
 # Импорт роутера для импорта из SAP
-from app.routers.router_from_sap import router_from_sap
+from app.routers.router_sap_read_only import router_from_sap
 from app.routers.assets.router_asset_transfer import router_asset_transfer
 
 # Роутер для excel импорта

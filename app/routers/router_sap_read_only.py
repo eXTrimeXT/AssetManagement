@@ -13,7 +13,7 @@ from app.services.sap.sync_sap_assets import (
     sync_sap_material_classes
 )
 
-router_from_sap = APIRouter(prefix="/sap", tags=["SAP API"])
+router_from_sap = APIRouter(prefix="/sap", tags=["SAP API [READ ONLY]"])
 
 @router_from_sap.get(
     "/departments",

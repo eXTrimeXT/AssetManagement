@@ -78,6 +78,10 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
 def format_asset_number(asset_number: str) -> str:
     if not asset_number:
         raise ValueError("AssetNumber (номер основного средства) обязателен")
+    if len(asset_number) == 12:
+        return asset_number
+    elif len(asset_number) > 12:
+        return asset_number[:12]
     return str(asset_number).strip().zfill(12)
 
 
@@ -152,3 +156,6 @@ async def sync_asset_changes_to_sap(asset_number: str, old_data: Dict[str, Any],
     if item_set:
         return await change_fixed_asset(asset_number, item_set, req_id)
     return None
+
+# 010000003130 - in SAP
+# 0100000031300000 - with subnumber

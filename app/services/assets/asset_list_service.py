@@ -2,12 +2,10 @@ import logging
 import os
 from datetime import date
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
-
 from sqlalchemy import select, func, inspect, Integer, or_, cast, null
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
-
 from app.models.assets.Asset import Asset
 from app.models.assets.AssetAssignment import AssetAssignment
 from app.models.assets.AssetStatus import AssetStatus
@@ -23,11 +21,9 @@ logger = logging.getLogger(__name__)
 
 SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/") # default - test
 X_API_TOKEN = os.getenv("X_API_TOKEN")
-
 # ID виртуального типа SAP-активов.
 # ID типа "Без типа" (публичный, права на него не выдаются).
 WITHOUT_TYPE_ASSET_ID = 0
-
 SearchMode = Literal["ALL", "NOT_NULLS", "NULLS"]
 
 # ============================================================

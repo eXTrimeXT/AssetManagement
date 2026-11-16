@@ -339,6 +339,11 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
         'os_name': obj.os_name,
+        # Поля для синхронизации с SAP
+        'cost_center_code': getattr(obj, 'cost_center_code', None),
+        'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
+        'material_class': getattr(obj, 'material_class', None),
+        'material_id': getattr(obj, 'material_id', None),
     }
 
     # Применяем изменения из запроса
@@ -398,7 +403,12 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
-        'os_name': obj.os_name
+        'os_name': obj.os_name,
+        # Поля для синхронизации с SAP
+        'cost_center_code': getattr(obj, 'cost_center_code', None),
+        'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
+        'material_class': getattr(obj, 'material_class', None),
+        'material_id': getattr(obj, 'material_id', None),
     }
 
     await compare_and_save_changes(

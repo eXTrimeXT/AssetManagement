@@ -19,7 +19,7 @@ LOCAL_TO_SAP_FIELD_MAPPING = {
     "serial_number": "SERIAL_NUM_LONG",
     "quantity": "QUANTITY",
     "comment": "MAIN_DESCRIPT",
-    # "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
+    "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
     # "date_issue": "DATE",                 # Пример: дата выдачи -> дата инвентаризации
     "manufacturer_name": "MANUFACTURER",
     "vendor_name": "VENDOR_NO",
@@ -192,6 +192,3 @@ async def sync_asset_changes_to_sap(asset_number: str, old_data: Dict[str, Any],
     if item_set:
         return await change_fixed_asset(asset_number, item_set, req_id)
     return None
-
-# 010000003130 - in SAP
-# 0100000031300000 - with subnumber

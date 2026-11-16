@@ -20,7 +20,7 @@ LOCAL_TO_SAP_FIELD_MAPPING = {
     "quantity": "QUANTITY",
     "comment": "MAIN_DESCRIPT",
     "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
-    # "date_issue": "DATE",                 # Пример: дата выдачи -> дата инвентаризации
+    # "date_issue": "DATE",              # Пример: дата выдачи -> дата инвентаризации
     "manufacturer_name": "MANUFACTURER",
     "vendor_name": "VENDOR_NO",
     "cost_center_code_from": "RESP_CCTR",

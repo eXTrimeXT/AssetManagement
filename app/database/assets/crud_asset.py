@@ -344,6 +344,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
         'material_class': getattr(obj, 'material_class', None),
         'material_id': getattr(obj, 'material_id', None),
+        # табельный номер владельца
+        'employee_id': getattr(obj, 'current_user', None)
     }
 
     # Применяем изменения из запроса
@@ -409,6 +411,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
         'material_class': getattr(obj, 'material_class', None),
         'material_id': getattr(obj, 'material_id', None),
+        # табельный номер владельца
+        'employee_id': getattr(obj, 'current_user', None)
     }
 
     await compare_and_save_changes(

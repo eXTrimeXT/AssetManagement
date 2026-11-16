@@ -322,6 +322,10 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             }
             break
 
+    # 1. Извлекаем старый табельный номер из первого пользователя в массиве users (если он есть)
+    old_users_list = getattr(obj, 'users', []) or []
+    old_employee_id = old_users_list[0].employee_id if len(old_users_list) > 0 else None
+
     old_data = {
         'name': obj.name,
         'inventory_id': obj.inventory_id,
@@ -344,8 +348,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
         'material_class': getattr(obj, 'material_class', None),
         'material_id': getattr(obj, 'material_id', None),
-        # табельный номер владельца
-        'employee_id': getattr(obj, 'current_user', None)
+        # Табельный номер владельца (берем из users[0])
+        'employee_id': old_employee_id,
     }
 
     # Применяем изменения из запроса
@@ -383,6 +387,17 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         # Нет изменений, возвращаем текущий объект без сохранения
         return obj
 
+    # 2. Определяем новый табельный номер на основе переданного запроса
+    new_employee_id = old_employee_id
+    if "users" in data.model_fields_set and data.users is not None:
+        if len(data.users) > 0:
+            # Берем employee_id из первого пользователя в запросе
+            first_user = data.users[0]
+            new_employee_id = first_user.employee_id if hasattr(first_user, 'employee_id') else first_user.get('employee_id')
+        else:
+            # Если передан пустой список, значит пользователей снимают
+            new_employee_id = None
+
     # Есть изменения - сохраняем
     obj.updated_by = employee_id
 
@@ -411,8 +426,8 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
         'material_class': getattr(obj, 'material_class', None),
         'material_id': getattr(obj, 'material_id', None),
-        # табельный номер владельца
-        'employee_id': getattr(obj, 'current_user', None)
+        # Табельный номер владельца (берем из users[0] запроса или оставляем старый)
+        'employee_id': new_employee_id,
     }
 
     await compare_and_save_changes(
@@ -437,10 +452,10 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             assigned_by=employee_id
         )
 
-    # 1. Сначала коммитим локальные изменения в БД
+    # Сначала коммитим локальные изменения в БД
     await db.commit()
 
-    # 2. === ИНТЕГРАЦИЯ С SAP: Синхронизация изменений ===
+    # ИНТЕГРАЦИЯ С SAP: Синхронизация изменений
     # Определяем номер актива в SAP (приоритет: material_id -> inventory_id)
     sap_asset_number = str(getattr(obj, 'material_id', None) or obj.inventory_id)
 

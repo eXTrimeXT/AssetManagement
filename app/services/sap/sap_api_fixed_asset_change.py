@@ -28,13 +28,12 @@ LOCAL_TO_SAP_FIELD_MAPPING = {
     "employee_id": "PERSON_NO",
 }
 
-#     "date_issue": null,
-#     "date_purchasing": null,
+#     "date_issue": null, # дата выпуска
+#     "date_purchasing": null, # дата покупки
 #     "location": null,
 #     "users": [],
-#     "material_class": null,
-#     "write_off_date": null,
-#     "material_class_name": null
+#     "material_class": null, # не изменяем
+#     "write_off_date": null, # просто отображение
 
 
 def _format_sap_value(field_name: str, value: Any) -> str:
@@ -47,6 +46,12 @@ def _format_sap_value(field_name: str, value: Any) -> str:
         if isinstance(value, (date, datetime)):
             return value.strftime("%Y%m%d")
         return str(value).strip()
+
+    # PERSON_NO в SAP имеет тип NUMC 8.
+    # Если локально хранится с префиксом "00" (10 символов), берем последние 8. Иначе дополняем нулями.
+    if field_name == "PERSON_NO":
+        val = str(value).strip()
+        return val[-8:].zfill(8) if len(val) > 8 else val.zfill(8)
 
     # Для числовых и строковых значений
     return str(value).strip()

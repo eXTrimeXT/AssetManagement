@@ -13,19 +13,65 @@ SAP_CHANGE_FA_URL = os.getenv("SAP_CHANGE_FA_URL", "http://sap-qas-app.hmmr.ru:6
 SAP_AUTH_HEADER = os.getenv("SAP_AUTH_HEADER", "Basic TOKEN")
 
 # Маппинг полей локальной модели Asset на FieldName в SAP (согласно спецификации)
-# Ты можешь легко добавить или изменить соответствия здесь
 LOCAL_TO_SAP_FIELD_MAPPING = {
-    "name": "DESCRIPT",
-    "inventory_id": "INVENT_NO",
-    "serial_number": "SERIAL_NUM_LONG",
-    "quantity": "QUANTITY",
-    "comment": "NOTE",
-    "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
-    "date_issue": "DATE",                 # Пример: дата выдачи -> дата инвентаризации
-    "manufacturer_name": "MANUFACTURER",
-    "vendor_name": "VENDOR_NO",
-    # Добавь сюда другие поля по мере необходимости, например:
-    # "model_name": "MATERIAL",
+    # === Основные идентификаторы и названия ===
+    "name": "DESCRIPT",                          # Название основного средства (в SAP: base_material_name)
+    "model_name": "DESCRIPT2",                   # Название ОС (продолжение) / Описание модели
+    "material_id": "MATERIAL",                   # Номер материала в SAP (в SAP: material_id)
+    "inventory_id": "INVENT_NO",                 # Инвентарный номер (в SAP: inventory_number)
+
+    # === Серийные номера и количество ===
+    "serial_number": "SERIAL_NUM_LONG",          # Длинный серийный номер (в SAP: long_serial_number)
+    "serial_no": "SERIAL_NO",                    # Короткий серийный номер (в SAP: serial_number)
+    "quantity": "QUANTITY",                      # Количество (в SAP: quantity)
+    "base_uom": "BASE_UOM",                      # Базовая единица измерения
+
+    # === Текстовые описания и примечания ===
+    "comment": "NOTE",                           # Дополнительные данные / Примечание (документ инвентаризации)
+    "main_descript": "MAIN_DESCRIPT",            # Текст основного номера ОС
+
+    # === Даты (функция _format_sap_value автоматически конвертирует их в YYYYMMDD) ===
+    "date_purchasing": "ORIG_ACQ_DATE",          # Дата поступления / покупки
+    "date_issue": "DATE",                        # Дата последней инвентаризации / выдачи (в SAP: changed_date)
+    "from_date": "FROM_DATE",                    # Дата начала срока действия
+    "orig_acq_date": "ORIG_ACQ_DATE",            # Дата поступления исходного объекта
+    "orig_acq_yr": "ORIG_ACQ_YR",                # Финансовый год первоначального приобретения
+
+    # === Организационные единицы (должны передаваться вместе с FROM_DATE) ===
+    "cost_center_code": "COSTCENTER",            # Место возникновения затрат (в SAP: cost_center_code)
+    "department_code": "RESP_CCTR",              # МВЗ, ответственное за ОС (в SAP: department_code)
+    "intern_ord": "INTERN_ORD",                  # Номер заказа
+    "plant": "PLANT",                            # Завод
+    "location_code": "LOCATION",                 # Местоположение основного средства
+    "room": "ROOM",                              # Помещение
+    "plate_no": "PLATE_NO",                      # Код транспортного средства
+    "employee_id": "PERSON_NO",                  # Табельный номер сотрудника (в SAP: employee_id)
+    "shutdown": "SHUTDOWN",                      # Основное средство остановлено
+
+    # === Классификация (поля EVALGROUP) ===
+    "material_class": "EVALGROUP1",              # Поле классификации 1 (в SAP: material_class)
+    "evalgroup1": "EVALGROUP1",                  # Поле классификации 1
+    "evalgroup2": "EVALGROUP2",                  # Поле классификации 2
+    "evalgroup3": "EVALGROUP3",                  # Поле классификации 3
+    "evalgroup4": "EVALGROUP4",                  # Поле классификации 4
+    "evalgroup5": "EVALGROUP5",                  # Поле классификации 5
+
+    # === Контрагенты и производители ===
+    "vendor_name": "VENDOR_NO",                  # Номер счета поставщика (в SAP: supplier_number)
+    "supplier_number": "VENDOR_NO",              # Номер поставщика (альтернативное имя)
+    "manufacturer_name": "MANUFACTURER",         # Изготовитель основного средства
+    "country": "COUNTRY",                        # Страна происхождения
+
+    # === Перемещения и исходные данные ===
+    "parent_id": "ORIG_ASSET",                   # Исходное основное средство при перемещениях
+    "orig_asset": "ORIG_ASSET",                  # Исходное ОС (альтернативное имя)
+    "orig_asset_subno": "ORIG_ASSET_SUBNO",      # Субномер исходного ОС (стандартно 0000)
+    "orig_value": "ORIG_VALUE",                  # Исходная первоначальная стоимость
+    "currency": "CURRENCY",                      # Код валюты
+
+    # === Дополнительные поля ===
+    "okof_code_new": "OKOF_CODE_NEW",            # Новый код ОКОФ
+    "depr_group_new": "DEPR_GROUP_NEW",          # Группа амортизации
 }
 
 
@@ -49,11 +95,21 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
     Сравнивает old_data и new_data, находит изменения и формирует ItemSet для SAP.
     Передаются только те поля, которые реально изменились.
     """
+    # Поля, которые согласно ТЗ должны передаваться вместе с FROM_DATE
+    TIME_DEPENDENT_FIELDS = {
+        "COSTCENTER", "RESP_CCTR", "INTERN_ORD", "PLANT",
+        "LOCATION", "ROOM", "PLATE_NO", "PERSON_NO", "SHUTDOWN"
+    }
+
     item_set = []
-    for idx, (key, new_val) in enumerate(new_data.items(), start=1):
+    has_time_fields = False
+    has_from_date = False
+
+    # === ШАГ 1: Собираем все изменения ===
+    for key, new_val in new_data.items():
         old_val = old_data.get(key)
 
-        # Если значение не изменилось, пропускаем (согласно п.1 ТЗ: "Отсутствующие поля не затрагиваются")
+        # Если значение не изменилось, пропускаем (п.1 ТЗ)
         if old_val == new_val:
             continue
 
@@ -65,15 +121,34 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
 
         formatted_value = _format_sap_value(sap_field_name, new_val)
 
+        # Отслеживаем наличие временных полей и FROM_DATE
+        if sap_field_name in TIME_DEPENDENT_FIELDS:
+            has_time_fields = True
+        if sap_field_name == "FROM_DATE":
+            has_from_date = True
+
         item_set.append({
-            "ReqID": req_id,
-            "ItemNo": idx,
             "FieldName": sap_field_name,
             "FieldValue": formatted_value
         })
 
-    return item_set
+    # === ШАГ 2: Если есть временные поля, но нет FROM_DATE — добавляем текущую дату сервера ===
+    # (Согласно ТЗ п.6: "при изменении временных данных без даты предполагается SY-DATUM")
+    if has_time_fields and not has_from_date:
+        from datetime import date
+        today_str = date.today().strftime("%Y%m%d")
+        item_set.append({
+            "FieldName": "FROM_DATE",
+            "FieldValue": today_str
+        })
+        logger.info(f"[SAP FA CHANGE] Автоматически добавлен FROM_DATE={today_str} (SY-DATUM)")
 
+    # === ШАГ 3: Проставляем последовательные ReqID и ItemNo ===
+    for idx, item in enumerate(item_set, start=1):
+        item["ReqID"] = req_id
+        item["ItemNo"] = idx
+
+    return item_set
 
 def format_asset_number(asset_number: str) -> str:
     if not asset_number:

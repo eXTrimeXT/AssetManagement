@@ -358,7 +358,17 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         exclude={
             "users",
             "serving_users",
-            "location"
+            "location",
+            "current_user",               # обрабатывается отдельно
+            "current_user_full_name",     # вычисляемое поле
+            "parent",                     # отношение/вложенный объект
+            "material_class_name",        # вычисляемое поле
+            "selected",                   # поле только для UI
+            "asset_type_name",            # вычисляемое поле
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by"
         }
     )
 

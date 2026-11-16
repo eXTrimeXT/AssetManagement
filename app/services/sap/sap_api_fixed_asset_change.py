@@ -25,6 +25,7 @@ LOCAL_TO_SAP_FIELD_MAPPING = {
     "vendor_name": "VENDOR_NO",
     "cost_center_code_from": "RESP_CCTR",
     "cost_center_code": "COSTCENTER",
+    "current_user": "PERSON_NO",
 }
 
 #     "date_issue": null,

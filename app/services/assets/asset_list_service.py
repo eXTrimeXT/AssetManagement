@@ -1545,19 +1545,59 @@ def _build_virtual_asset(sap_item: Dict[str, Any], employees_map: Dict, departme
 
 def _build_user_response(employee: Employee, assignment_type: str, start_date: str) -> Dict[str, Any]:
     parts_ru = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
-    format_start_date = start_date[:4] + "-" + start_date[4:6] + "-" + start_date[6:] if start_date and len(start_date) >= 8 else None
+    parts_en = [p for p in [employee.last_name_en, employee.first_name_en, employee.middle_name_en] if p]
 
-    position_data = {"name": employee.position.name, "name_en": employee.position.name_en} if getattr(employee, 'position', None) else None
+    format_start_date = (
+        start_date[:4] + "-" + start_date[4:6] + "-" + start_date[6:]
+        if start_date and len(start_date) >= 8 else None
+    )
+
+    position_data = None
+    if getattr(employee, 'position', None):
+        position_data = {
+            "name": employee.position.name,
+            "name_en": employee.position.name_en,
+        }
+
+    def _get_dept_dict(dept_obj):
+        if not dept_obj:
+            return None
+        return {
+            "guid": dept_obj.guid,
+            "name": dept_obj.name,
+            "name_en": getattr(dept_obj, 'name_en', None),
+            "short_name": getattr(dept_obj, 'short_name', None),
+            "creation_date": getattr(dept_obj, 'creation_date', None),
+            "closure_date": getattr(dept_obj, 'closure_date', None),
+            "parent_guid": getattr(dept_obj, 'parent_guid', None),
+        }
+
+    created_at = employee.__dict__.get('created_at')
+    updated_at = employee.__dict__.get('updated_at')
 
     return {
         "guid": employee.guid,
         "employee_id": employee.employee_id,
+        "birth_date": employee.birth_date,
+        "employment_date": employee.employment_date,
+        "dismissal_date": employee.dismissal_date,
+        "phone": employee.phone,
+        "email": employee.email,
+        "comment": employee.comment,
+        "position_guid": employee.position_guid,
+        "department_guid": employee.department_guid,
+        "created_at": created_at,
+        "updated_at": updated_at,
         "full_name_ru": " ".join(parts_ru) if parts_ru else None,
+        "full_name_en": " ".join(parts_en) if parts_en else None,
+        "society": _get_dept_dict(getattr(employee, 'society', None)),
+        "department": _get_dept_dict(getattr(employee, 'department', None)),
+        "division": _get_dept_dict(getattr(employee, 'division', None)),
+        "group": employee.__dict__.get('group'),
         "position": position_data,
         "start_date": format_start_date,
         "end_date": None,
         "assignment_type": assignment_type,
-        # Остальные поля можно добавить по аналогии с оригинальной функцией
     }
 
 

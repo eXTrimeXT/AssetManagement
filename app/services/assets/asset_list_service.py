@@ -1245,7 +1245,7 @@ def _merge_sap_with_local(sap_item: Dict[str, Any], local_asset: Asset, db: Asyn
     if local_asset.model_id: merged['model_id'] = local_asset.model_id
     if local_asset.model_name: merged['model_name'] = local_asset.model_name
     if local_asset.asset_type_id: merged['asset_type_id'] = local_asset.asset_type_id
-    if local_asset.asset_type: merged['asset_type_name'] = local_asset.asset_type.name or None
+    if local_asset.asset_type: merged['asset_type_name'] = local_asset.asset_type.name
     if local_asset.parent_id: merged['parent_id'] = local_asset.parent_id
     if local_asset.asset_status_id: merged['asset_status_id'] = local_asset.asset_status_id
     if local_asset.asset_status: merged['asset_status'] = local_asset.asset_status.status

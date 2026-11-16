@@ -14,11 +14,11 @@ SAP_AUTH_HEADER = os.getenv("SAP_AUTH_HEADER", "Basic TOKEN")
 
 # Маппинг полей локальной модели Asset на FieldName в SAP (согласно спецификации)
 LOCAL_TO_SAP_FIELD_MAPPING = {
-    "name": "MAIN_DESCRIPT",
+    "name": "DESCRIPT",
     "inventory_id": "INVENT_NO",
     "serial_number": "SERIAL_NUM_LONG",
     "quantity": "QUANTITY",
-    "comment": "DESCRIPT",
+    "comment": "MAIN_DESCRIPT",
     # "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
     # "date_issue": "DATE",                 # Пример: дата выдачи -> дата инвентаризации
     "manufacturer_name": "MANUFACTURER",

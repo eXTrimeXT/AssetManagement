@@ -39,7 +39,7 @@ router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
 )
 async def sync_zup_data(
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """
     Универсальный эндпоинт для заполнения/обновления всех таблиц из 1С-ЗУП.

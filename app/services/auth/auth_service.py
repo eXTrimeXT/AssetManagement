@@ -165,21 +165,21 @@ async def require_authorized_user(
             employee = await get_employee_by_email(db, email=str(user_data.email))
 
         # Если всё ещё не нашли, выполняем синхронизацию
-        if not employee:
-            logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхronизации из 1С...")
-            try:
-                await sync_all_data(db)
-            except Exception as e:
-                logger.error(f"Ошибка синхронизации из 1С: {e}")
+        # if not employee:
+        #     logger.info(f"Сотрудник {user_data.login} не найден")
+            # try:
+            #     await sync_all_data(db)
+            # except Exception as e:
+            #     logger.error(f"Ошибка синхронизации из 1С: {e}")
                 # Не прерываем выполнение сразу, даем шанс найти сотрудника,
                 # если синхронизация частично прошла или сотрудник уже был в БД
 
             # После обновления ищем еще раз по active_directory_login
-            employee = await get_employee_by_active_directory_login(db, login=user_data.login)
+            # employee = await get_employee_by_active_directory_login(db, login=user_data.login)
 
             # Если всё ещё не нашли, ищем еще раз по почте
-            if not employee:
-                employee = await get_employee_by_email(db, email=str(user_data.email))
+            # if not employee:
+            #     employee = await get_employee_by_email(db, email=str(user_data.email))
 
         # Финальная проверка, нашли ли мы сотрудника
         if not employee:

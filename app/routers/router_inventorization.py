@@ -180,57 +180,6 @@ async def check_item(
             status_code=400,
             detail="Сессия уже завершена. Изменять items нельзя."
         )
-    if data.quantity_fact is not None and data.quantity_fact < 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Количество не может быть меньше 0"
-        )
-    success = await check_inventory_item(
-        db=db,
-        session_id=session_id,
-        asset_id=data.asset_id,
-        material_id=data.material_id,
-        checked_by=current_user.employee_id,
-        quantity_fact=data.quantity_fact
-    )
-    if not success:
-        raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
-    return {"message": "success"}
-
-
-@router_inventorization.post(
-    "/sessions/{session_id}/check",
-    summary="Отметить актив как проверенный / Mark Asset as Checked",
-    description=(
-            "RU: Отмечает актив как проверенный в рамках указанной сессии инвентаризации. "
-            "Актив идентифицируется по `asset_id` или `material_id`. "
-            "Можно указать фактическое количество `quantity_fact` (не может быть меньше 0). "
-            "Если сессия уже завершена (`status=completed`) — возвращается ошибка 400. "
-            "Если актив не найден в сессии — возвращается ошибка 404. "
-            "Требуется авторизация пользователя.\n\n"
-            "EN: Marks an asset as checked within the specified inventory session. "
-            "The asset is identified by `asset_id` or `material_id`. "
-            "An optional actual quantity `quantity_fact` can be specified (must not be less than 0). "
-            "If the session is already completed (`status=completed`), a 400 error is returned. "
-            "If the asset is not found in the session, a 404 error is returned. "
-            "User authorization is required."
-    )
-)
-async def check_item(
-        session_id: int,
-        data: CheckItemRequest,
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
-):
-    # === ПРОВЕРКА: сессия не должна быть completed ===
-    session = await get_inventory_session_by_id(db, session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
-    if session.status == "completed":
-        raise HTTPException(
-            status_code=400,
-            detail="Сессия уже завершена. Изменять items нельзя."
-        )
 
     if data.quantity_fact is not None and data.quantity_fact < 0:
         raise HTTPException(
@@ -384,7 +333,7 @@ async def delete_status(
 async def export_session_to_excel(
         session_id: int,
         db: AsyncSession = Depends(get_db),
-        # current_user=Depends(require_authorized_user)
+        current_user=Depends(require_authorized_user)
 ):
     """Скачать сессию инвентаризации в формате Excel."""
     try:

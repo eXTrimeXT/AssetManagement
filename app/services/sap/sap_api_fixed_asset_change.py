@@ -48,7 +48,6 @@ def _format_sap_value(field_name: str, value: Any) -> str:
     # Для числовых и строковых значений
     return str(value).strip()
 
-
 def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str, Any], req_id: str) -> List[Dict[str, Any]]:
     """
     Сравнивает old_data и new_data, находит изменения и формирует ItemSet для SAP.
@@ -117,7 +116,6 @@ def format_asset_number(asset_number: str) -> str:
     elif len(asset_number) > 12:
         return asset_number[:12]
     return str(asset_number).strip().zfill(12)
-
 
 async def change_fixed_asset(
         asset_number: str,

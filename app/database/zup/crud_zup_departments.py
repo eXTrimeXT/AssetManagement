@@ -1,5 +1,5 @@
 from typing import Optional, Sequence, List
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.zup.department import ZupDepartment
 from app.schemas.zup.DepartmentSchemas import DepartmentCreate, DepartmentUpdate, WorkplaceResponse, DepartmentDivisionGroupResponse
@@ -8,7 +8,6 @@ async def get_department_by_guid(db: AsyncSession, guid: str) -> Optional[ZupDep
     result = await db.execute(select(ZupDepartment).where(ZupDepartment.guid == guid))
     return result.scalar_one_or_none()
 
-from sqlalchemy import select, and_, func
 
 async def get_department_by_more_params(
         db: AsyncSession,
@@ -61,9 +60,7 @@ async def get_hierarchy_departments(
         guid: Optional[str] = None,
         short_name: Optional[str] = None,
 ) -> Optional[DepartmentDivisionGroupResponse]:
-    """
-    Получить плоскую иерархию подразделений от группы до общества.
-    """
+    """ Получить плоскую иерархию подразделений от группы до общества """
     NULL_GUID = "00000000-0000-0000-0000-000000000000"
 
     # Ищем стартовый департамент

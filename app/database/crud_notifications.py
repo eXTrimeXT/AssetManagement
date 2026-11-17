@@ -463,7 +463,7 @@ async def notify_inventory_started(db: AsyncSession, employee_id: str, session_i
     await create_notification(
         db=db,
         employee_id=employee_id,
-        asset_id=None, # Привязка идет к сессии, а не к конкретному активу
+        asset_id=None,              # Привязка идет к сессии, а не к конкретному активу
         session_id=session_id,
         event_type=NotificationEventType.INVENTORY_STARTED,
         initiator_id=initiator_id,

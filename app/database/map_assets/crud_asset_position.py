@@ -25,7 +25,7 @@ async def create_asset_position(db: AsyncSession, position_data: AssetPositionCr
     if not asset:
         raise ValueError(f"Asset with id {position_data.asset_id} not found.")
 
-    # === ВАЛИДАЦИЯ: проверяем, что координаты в пределах workshop ===
+    # проверяем, что координаты в пределах workshop
     if workshop.workshop_width and (position_data.x < 0 or position_data.x > workshop.workshop_width):
         raise ValueError(
             f"Coordinate x={position_data.x} is out of bounds. Workshop width={workshop.workshop_width}"
@@ -68,9 +68,7 @@ async def get_all_asset_positions(
         skip: int = 0,
         limit: int = 100
 ) -> List[AssetPosition]:
-    """
-    Получение всех активных позиций всех активов.
-    """
+    """ Получение всех активных позиций всех активов """
     result = await db.execute(
         select(AssetPosition)
         .where(AssetPosition.is_active == True)
@@ -143,7 +141,7 @@ async def update_asset_position(
     if not update_data:
         return position
 
-    # === ВАЛИДАЦИЯ: если меняются координаты, проверяем границы workshop ===
+    # ВАЛИДАЦИЯ: если меняются координаты, проверяем границы workshop
     if 'x' in update_data or 'y' in update_data:
         workshop = await db.get(Workshop, position.workshop_id)
         if workshop:

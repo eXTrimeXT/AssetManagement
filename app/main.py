@@ -69,7 +69,7 @@ from app.routers.router_sap_read_only import router_from_sap
 from app.routers.assets.router_asset_transfer import router_asset_transfer
 
 # Роутер для excel импорта
-from app.services.excel.import_from_excel import router_excel_import
+from app.routers.router_excel_import import router_excel_import
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,7 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
-# from app.schemas.map_assets.AssetPositionResponse import AssetPositionResponse
 
 class WorkshopResponse(BaseModel):
     """Схема ответа с информацией о цехе"""
@@ -34,12 +33,6 @@ class WorkshopResponse(BaseModel):
     created_at: datetime = Field(..., description="Дата создания")
     updated_at: Optional[datetime] = Field(None, description="Дата обновления")
 
-    # Связанные данные (опционально)
-    # asset_positions: Optional[List[AssetPositionResponse]] = Field(
-    #     None,
-    #     description="Список позиций активов в цехе"
-    # )
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -60,5 +53,3 @@ class WorkshopResponse(BaseModel):
                 "asset_positions": []
             }
         }
-
-    # model_config = ConfigDict(from_attributes=True)

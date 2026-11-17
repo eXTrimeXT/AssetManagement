@@ -114,10 +114,7 @@ async def get_inventory_items_by_session_id(
 
     return items, total
 
-
-# ==============================================================================
-# НОВАЯ ЛОГИКА: Создание нескольких сессий (декартово произведение)
-# ==============================================================================
+# Создание нескольких сессий (декартово произведение)
 async def create_inventory_sessions(
         db: AsyncSession,
         asset_type_ids: Optional[List[int]] = None,
@@ -126,7 +123,7 @@ async def create_inventory_sessions(
         creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-) -> List[dict]:  # <-- ИЗМЕНЕНО: возвращаем List[dict]
+) -> List[dict]:
 
     if not asset_type_ids and not department_codes and not material_classes:
         raise ValueError("Необходимо указать хотя бы один из параметров: asset_type_ids, department_codes или material_classes!")
@@ -198,9 +195,7 @@ async def create_inventory_sessions(
     return created_sessions_data
 
 
-# ==============================================================================
-# ВНУТРЕННЯЯ ФУНКЦИЯ: Создание одной конкретной сессии
-# ==============================================================================
+# Создание одной конкретной сессии
 async def _create_single_inventory_session(
         db: AsyncSession,
         asset_type_id: Optional[int],
@@ -210,9 +205,7 @@ async def _create_single_inventory_session(
         start_date: Optional[datetime],
         end_date: Optional[datetime],
 ) -> Optional[dict]:
-    # ==============================================================================
-    # === ПРОВЕРКА ДАТ ===
-    # ==============================================================================
+    # ПРОВЕРКА ДАТ
     if start_date is None or end_date is None:
         raise ValueError("Необходимо указать как дату начала, так и дату окончания сессии.")
 
@@ -265,9 +258,7 @@ async def _create_single_inventory_session(
 
     items = []
 
-    # ==============================================================================
-    # 1. Локальные активы
-    # ==============================================================================
+    # Локальные активы
     query = select(Asset)
     conditions = []
 
@@ -303,9 +294,7 @@ async def _create_single_inventory_session(
         for asset in assets
     ])
 
-    # ==============================================================================
-    # 2. ЗАПРОС SAP-АКТИВОВ (только для типа "Без типа")
-    # ==============================================================================
+    # ЗАПРОС SAP-АКТИВОВ (только для типа "Без типа")
     should_fetch_sap = False
     sap_cost_center_code_from = None
 
@@ -380,9 +369,7 @@ async def _create_single_inventory_session(
         except Exception as e:
             logger.error(f"[SAP INVENTORY] Ошибка при запросе SAP-активов: {e}", exc_info=True)
 
-    # ==============================================================================
-    # === ЗАЩИТА ОТ ПУСТЫХ СЕССИЙ ===
-    # ==============================================================================
+    # ЗАЩИТА ОТ ПУСТЫХ СЕССИЙ
     if not items:
         logger.warning(
             f"[INVENTORY] Сессия по комбинации (dept={department_code}, class={material_class}, type={asset_type_id}) "
@@ -395,9 +382,7 @@ async def _create_single_inventory_session(
     db.add_all(items)
     await db.flush()
 
-    # ==============================================================================
-    # 3. ЛОГИКА УВЕДОМЛЕНИЙ И ПЛАНИРОВЩИКА
-    # ==============================================================================
+    # ЛОГИКА УВЕДОМЛЕНИЙ И ПЛАНИРОВЩИКА
     asset_ids = [item.asset_id for item in items if item.asset_id is not None]
 
     if asset_ids and initial_status == InventorizationStatus.IN_PROGRESS:
@@ -442,9 +427,7 @@ async def _create_single_inventory_session(
     await db.commit()
     await db.refresh(session)
 
-    # ==============================================================================
-    # === БЕЗОПАСНОЕ ФОРМИРОВАНИЕ ОТВЕТА (СЛОВАРЬ) ===
-    # ==============================================================================
+    # БЕЗОПАСНОЕ ФОРМИРОВАНИЕ ОТВЕТА (СЛОВАРЬ)
     status_map = {
         "pending": "Ожидает начала",
         "in_progress": "В работе",
@@ -475,21 +458,20 @@ async def check_inventory_item(
         checked_by: str = None, # Сделал без дефолта, так как он обязателен из роутера
         quantity_fact: Optional[int] = None,
 ) -> bool:
-    # === ПРОВЕРКА: quantity_fact не может быть меньше 0 ===
+    # quantity_fact не может быть меньше 0
     if quantity_fact is not None and quantity_fact < 0:
         raise ValueError("quantity_fact не может быть меньше 0")
 
-    # === ПРОВЕРКА: должен быть указан хотя бы один идентификатор ===
+    # должен быть указан хотя бы один идентификатор
     if asset_id is None and material_id is None:
         raise ValueError("Необходимо указать либо asset_id, либо material_id")
 
-    # === ПРОВЕРКА: сессия не должна быть completed ===
+    # сессия не должна быть completed
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         return False
     if session.status == InventorizationStatus.COMPLETED:
         raise ValueError("Сессия уже завершена. Изменять items нельзя.")
-    # ===================================================
 
     # Динамически формируем условия поиска
     conditions = [InventorizationItem.session_id == session_id]
@@ -682,12 +664,6 @@ async def get_inventorization_discrepancies(
         else:
             continue
 
-        # Получаем serial_number из актива
-        # asset_result = await db.execute(
-        #     select(Asset.serial_number).where(Asset.asset_id == item.asset_id)
-        # )
-        # serial_number = asset_result.scalar_one_or_none()
-
         discrepancies.append({
             "inventorization_id": item.inventorization_id,
             "asset_id": item.asset_id,
@@ -750,14 +726,12 @@ async def export_inventory_session_to_excel(
     )
     items = result.scalars().all()
 
-    # === НОВАЯ ЛОГИКА: Расчет сводной статистики ===
+    # Расчет сводной статистики
     total_assets = len(items)
     checked_assets = sum(1 for item in items if item.is_checked)
     dept_codes_str = session.department_codes if session.department_codes else "Не указаны"
-    # ================================================
 
     # Ru label for status
-    # ru_status = "В работе" if session.status == "in_progress" else "Завершено"
     ru_status = InventorizationStatus.get_ru_label(session.status)
 
     # Создаем Excel файл
@@ -782,14 +756,13 @@ async def export_inventory_session_to_excel(
     ws['A8'] = "Дата окончания:"
     ws['B8'] = session.end_date.strftime("%Y-%m-%d %H:%M:%S") if session.end_date else ""
 
-    # === НОВАЯ ЛОГИКА: Добавляем строки со статистикой ===
+    # Добавляем строки со статистикой
     ws['A9'] = "Коды департаментов:"
     ws['B9'] = dept_codes_str
     ws['A10'] = "Всего активов в сессии:"
     ws['B10'] = total_assets
     ws['A11'] = "Проверено активов:"
     ws['B11'] = checked_assets
-    # =====================================================
 
     # Заголовки таблицы (сдвинуты вниз на 3 строки, было 10, стало 13)
     headers = [
@@ -805,7 +778,7 @@ async def export_inventory_session_to_excel(
         "Разница"
     ]
 
-    start_row = 13  # <-- ИЗМЕНЕНО: начало таблицы
+    start_row = 13  # начало таблицы
     for col, header in enumerate(headers, start=1):
         cell = ws.cell(row=start_row, column=col, value=header)
         cell.font = cell.font.copy(bold=True)

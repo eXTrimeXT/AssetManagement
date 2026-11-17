@@ -803,9 +803,6 @@ async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
         select(Asset)
         .options(
             selectinload(Asset.asset_type),
-            # selectinload(Asset.model).options(
-            #     selectinload(AssetModel.asset_type)
-            # ),
             selectinload(Asset.parent)
         )
         .where(Asset.parent_id == asset_id)

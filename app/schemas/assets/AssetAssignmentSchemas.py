@@ -31,12 +31,6 @@ class AssetUserFullResponse(BaseModel):
     # Базовые поля сотрудника
     guid: str
     employee_id: str
-    # last_name: Optional[str] = None
-    # first_name: Optional[str] = None
-    # middle_name: Optional[str] = None
-    # last_name_en: Optional[str] = None
-    # first_name_en: Optional[str] = None
-    # middle_name_en: Optional[str] = None
     birth_date: Optional[date] = None
     employment_date: Optional[date] = None
     dismissal_date: Optional[date] = None

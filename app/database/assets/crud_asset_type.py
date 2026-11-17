@@ -1,12 +1,10 @@
 from typing import Optional, Sequence
 
-from django.db.models.expressions import result
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.assets.AssetType import AssetType
 from app.schemas.assets.AssetTypeSchemas import AssetTypeCreate, AssetTypeUpdate
-
 
 async def create_asset_type(db: AsyncSession, data: AssetTypeCreate, employee_id: str) -> AssetType:
     db_obj = AssetType(**data.model_dump(), created_by=employee_id)
@@ -15,7 +13,6 @@ async def create_asset_type(db: AsyncSession, data: AssetTypeCreate, employee_id
     await db.refresh(db_obj)
     return db_obj
 
-
 async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> Optional[AssetType]:
     res = await db.execute(
         select(AssetType)
@@ -23,10 +20,6 @@ async def get_asset_type_by_id(db: AsyncSession, asset_type_id: int) -> Optional
         .where(AssetType.asset_type_id == asset_type_id)
     )
     return res.scalar_one_or_none()
-
-# async def get_asset_type_by_name(db: AsyncSession, name: str) -> Optional[AssetType]:
-#     res = await db.execute(select(AssetType).where(AssetType.name == name))
-#     return res.scalar_one_or_none()
 
 async def get_asset_types_list(
         db: AsyncSession,
@@ -46,8 +39,6 @@ async def get_asset_types_list(
     res = await db.execute(query)
     return res.scalars().all()
 
-
-
 async def update_asset_type(db: AsyncSession, asset_type_id: int, data: AssetTypeUpdate) -> Optional[AssetType]:
     obj = await get_asset_type_by_id(db, asset_type_id)
     if not obj:
@@ -60,7 +51,6 @@ async def update_asset_type(db: AsyncSession, asset_type_id: int, data: AssetTyp
     await db.commit()
     await db.refresh(obj)
     return obj
-
 
 async def delete_asset_type(db: AsyncSession, asset_type_id: int) -> bool:
     obj = await get_asset_type_by_id(db, asset_type_id)

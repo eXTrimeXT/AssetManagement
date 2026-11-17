@@ -3,7 +3,7 @@ import os
 from datetime import date
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
-from sqlalchemy import select, func, inspect, Integer, or_, cast
+from sqlalchemy import select, inspect, Integer, or_, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -28,9 +28,7 @@ WITHOUT_TYPE_ASSET_ID = 0
 SearchMode = Literal["ALL", "NOT_NULLS", "NULLS"]
 
 
-# ============================================================
 # Публичная точка входа (SAP-FIRST логика)
-# ============================================================
 async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
@@ -59,7 +57,7 @@ async def get_assets_list_with_sap(
         material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
 
-    # === ОПТИМИЗАЦИЯ: Прямой поиск по уникальному идентификатору ===
+    # ОПТИМИЗАЦИЯ: Прямой поиск по уникальному идентификатору
     if material_id is not None or asset_id is not None:
         # 1. Сначала ищем в SAP
         sap_response = await fetch_sap_materials(
@@ -102,7 +100,7 @@ async def get_assets_list_with_sap(
             local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
 
-    # === ОСНОВНАЯ ПАГИНАЦИЯ: SAP как драйвер ===
+    # ОСНОВНАЯ ПАГИНАЦИЯ: SAP как драйвер
     skip = (page - 1) * page_size
 
     # Определяем, можно ли вообще показывать SAP-активы при текущих фильтрах
@@ -183,9 +181,7 @@ async def get_assets_list_with_sap(
     return _build_paginated_response(result_items, final_total, page, page_size)
 
 
-# ============================================================
 # Функции слияния и обогащения (SAP-FIRST)
-# ============================================================
 async def _get_local_override(db: AsyncSession, material_id: Optional[str], inventory_id: Optional[str]) -> Optional[Asset]:
     """Ищет локальное переопределение по material_id или inventory_id с полной загрузкой связей."""
     conditions = []
@@ -197,7 +193,7 @@ async def _get_local_override(db: AsyncSession, material_id: Optional[str], inve
     if not conditions:
         return None
 
-    # ДОБАВЛЕНО: Полная загрузка связей, чтобы избежать MissingGreenlet при доступе к asset_type и другим полям
+    # Полная загрузка связей, чтобы избежать MissingGreenlet при доступе к asset_type и другим полям
     query = select(Asset).where(or_(*conditions)).options(
         selectinload(Asset.asset_type),
         selectinload(Asset.asset_status),
@@ -455,9 +451,7 @@ async def _get_local_only_assets_slice(
     return result.scalars().all()
 
 
-# ============================================================
 # Вспомогательные функции SAP и БД (без существенных изменений логики)
-# ============================================================
 async def _load_maps_for_sap_items(db: AsyncSession, sap_items: List[Dict[str, Any]]) -> Tuple[Dict, Dict]:
     employee_ids = set()
     department_codes = set()
@@ -611,9 +605,7 @@ def _build_paginated_response(items: List[Any], total: int, page: int, page_size
     }
 
 
-# ============================================================
 # Оригинальные функции запросов к БД и SAP (оставлены без изменений для сохранения фильтров)
-# ============================================================
 async def get_local_assets_slice(
         db: AsyncSession,
         skip: int,
@@ -690,7 +682,7 @@ async def get_local_assets_slice(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
 
-    # === ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from ===
+    # ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from
     if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
         ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
 
@@ -717,9 +709,7 @@ async def get_local_assets_slice(
     result = await db.execute(query)
     return result.scalars().all()
 
-# ============================================================
 # Загрузка сотрудников и департаментов
-# ============================================================
 async def _get_employees_by_ids(
         db: AsyncSession,
         employee_ids: List[str],

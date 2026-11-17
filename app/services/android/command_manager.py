@@ -42,10 +42,10 @@ class CommandManager:
         if serial_number in self.pending_commands:
             # Мгновенно "будим" висящий запрос app1
             self.pending_commands[serial_number].set()
-            logger.info(f"🔊 Команда мгновенно доставлена на {serial_number}")
+            logger.info(f"Команда мгновенно доставлена на {serial_number}")
             return True
         else:
-            logger.warning(f"⚠️ Устройство {serial_number} сейчас не опрашивает сервер. Команда сохранена, но будет доставлена с задержкой.")
+            logger.warning(f"Устройство {serial_number} сейчас не опрашивает сервер. Команда сохранена, но будет доставлена с задержкой.")
             # В простой реализации мы просто теряем команду, если app1 не ждет.
             # Можно доработать, чтобы команда хранилась до следующего опроса.
             return False

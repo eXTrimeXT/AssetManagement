@@ -28,8 +28,8 @@ async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Emp
     result = await db.execute(
         select(Employee)
         .options(
-            selectinload(Employee.position),  # Загружаем должность
-            selectinload(Employee.group),  # Загружаем департамент
+            selectinload(Employee.position),    # Загружаем должность
+            selectinload(Employee.group),       # Загружаем департамент
         )
         .where(Employee.employee_id == employee_id)
     )
@@ -137,7 +137,6 @@ async def get_employees_count(
 ) -> int:
     query = select(func.count(Employee.employee_id))
     if employee_id:
-        # query = query.where(Employee.employee_id == employee_id)
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if search_name:
         query = _apply_name_search(query, search_name)
@@ -279,7 +278,6 @@ async def get_employees_list(
     )
 
     if employee_id:
-        # query = query.where(Employee.employee_id == employee_id)
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if search_name:
         query = _apply_name_search(query, search_name)

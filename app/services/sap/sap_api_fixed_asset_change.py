@@ -28,14 +28,6 @@ LOCAL_TO_SAP_FIELD_MAPPING = {
     "employee_id": "PERSON_NO",
 }
 
-#     "date_issue": null, # дата выпуска
-#     "date_purchasing": null, # дата покупки
-#     "location": null,
-#     "users": [],
-#     "material_class": null, # не изменяем
-#     "write_off_date": null, # просто отображение
-
-
 def _format_sap_value(field_name: str, value: Any) -> str:
     """Форматирует значение для отправки в SAP согласно правилам спецификации."""
     if value is None:
@@ -72,7 +64,7 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
     has_time_fields = False
     has_from_date = False
 
-    # === ШАГ 1: Собираем все изменения ===
+    # Собираем все изменения
     for key, new_val in new_data.items():
         old_val = old_data.get(key)
 
@@ -99,7 +91,7 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
             "FieldValue": formatted_value
         })
 
-    # === ШАГ 2: Если есть временные поля, но нет FROM_DATE — добавляем текущую дату сервера ===
+    # Если есть временные поля, но нет FROM_DATE — добавляем текущую дату сервера
     # (Согласно ТЗ п.6: "при изменении временных данных без даты предполагается SY-DATUM")
     if has_time_fields and not has_from_date:
         from datetime import date
@@ -110,7 +102,7 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
         })
         logger.info(f"[SAP FA CHANGE] Автоматически добавлен FROM_DATE={today_str} (SY-DATUM)")
 
-    # === ШАГ 3: Проставляем последовательные ReqID и ItemNo ===
+    # Проставляем последовательные ReqID и ItemNo
     for idx, item in enumerate(item_set, start=1):
         item["ReqID"] = req_id
         item["ItemNo"] = idx

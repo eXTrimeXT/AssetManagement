@@ -26,18 +26,6 @@ logger = logging.getLogger(__name__)
 router_assets = APIRouter(prefix="/assets", tags=["Assets"])
 
 
-@router_assets.post("/", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
-async def create_asset_endpoint(
-        request: Request,
-        data: AssetCreate,
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
-):
-    """Создать актив. Проверка права write на тип актива."""
-    await check_asset_permission(db, request, data.asset_type_id, "write")
-    return await create_asset(db, data, current_user.employee_id)
-
-
 def parse_service_period_range(period_str: Optional[str]) -> tuple[Optional[date], Optional[date]]:
     """Парсит строку диапазона дат вида '15-10-2026 — 23-10-2026' или '15-10-2026 - 23-10-2026'"""
     if not period_str:
@@ -70,10 +58,39 @@ def parse_service_period_range(period_str: Optional[str]) -> tuple[Optional[date
     logger.warning(f"Неверный формат диапазона дат: '{period_str}' (ожидается 2 части, разделенные тире)")
     return None, None
 
+
+@router_assets.post(
+    "/",
+    response_model=AssetResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создание актива / Create Asset",
+    description=(
+            "RU: Создает новый актив в системе. Выполняет проверку прав доступа на запись (write) для указанного типа актива.\n\n"
+            "EN: Creates a new asset in the system. Performs a write permission check for the specified asset type."
+    )
+)
+async def create_asset_endpoint(
+        request: Request,
+        data: AssetCreate,
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(require_authorized_user)
+):
+    """Создать актив. Проверка права write на тип актива."""
+    await check_asset_permission(db, request, data.asset_type_id, "write")
+    return await create_asset(db, data, current_user.employee_id)
+
 @router_assets.get(
     "/",
     response_model=PaginatedResponse[AssetResponse],
-    summary="Получить список активов с слиянием данных из SAP и локальной БД"
+    summary="Получение списка активов / Get Assets List",
+    description=(
+            "RU: Возвращает пагинированный список активов с объединением данных из локальной базы данных и системы SAP. "
+            "Поддерживает расширенную фильтрацию по названию, статусу, инвентарному и серийному номерам, сотрудникам, "
+            "центрам затрат (MVZ), датам технического обслуживания и режимам поиска.\n\n"
+            "EN: Returns a paginated list of assets merging data from the local database and the SAP system. "
+            "Supports advanced filtering by name, status, inventory and serial numbers, employees, "
+            "cost centers (MVZ), service dates, and search modes."
+    )
 )
 async def get_assets(
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
@@ -153,7 +170,17 @@ async def get_assets(
 
     return PaginatedResponse(**result)
 
-@router_assets.get("/{asset_id}", response_model=AssetResponse)
+@router_assets.get(
+    "/{asset_id}",
+    response_model=AssetResponse,
+    summary="Получение актива по ID / Get Asset by ID",
+    description=(
+            "RU: Возвращает подробную информацию об активе по его уникальному идентификатору. "
+            "Проверяет наличие прав на чтение (read) для данного типа актива и обогащает данные актива.\n\n"
+            "EN: Returns detailed information about an asset by its unique identifier. "
+            "Checks for read permissions for the given asset type and enriches the asset data."
+    )
+)
 async def get_asset(
         request: Request,
         asset_id: int,
@@ -171,7 +198,17 @@ async def get_asset(
     
     return obj
 
-@router_assets.patch("/{asset_id}", response_model=AssetResponse)
+@router_assets.patch(
+    "/{asset_id}",
+    response_model=AssetResponse,
+    summary="Обновление данных актива / Update Asset",
+    description=(
+            "RU: Обновляет данные существующего актива по его ID. "
+            "Проверяет наличие прав на запись (write) для типа актива (используется новый тип из запроса или существующий).\n\n"
+            "EN: Updates the data of an existing asset by its ID. "
+            "Checks for write permissions for the asset type (uses the new type from the request or the existing one)."
+    )
+)
 async def update_asset_endpoint(
         request: Request,
         asset_id: int,
@@ -196,7 +233,17 @@ async def update_asset_endpoint(
 
     return updated
 
-@router_assets.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_assets.delete(
+    "/{asset_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удаление актива / Delete Asset",
+    description=(
+            "RU: Удаляет актив из системы по его ID. "
+            "Проверяет наличие прав на запись (write) для типа актива перед выполнением удаления.\n\n"
+            "EN: Deletes an asset from the system by its ID. "
+            "Checks for write permissions for the asset type before performing the deletion."
+    )
+)
 async def delete_asset_endpoint(
         request: Request,
         asset_id: int,
@@ -214,7 +261,17 @@ async def delete_asset_endpoint(
     if not success:
         raise HTTPException(status_code=404, detail="Актив не найден")
 
-@router_assets.get("/{asset_id}/children", response_model=List[AssetShortResponse])
+@router_assets.get(
+    "/{asset_id}/children",
+    response_model=List[AssetShortResponse],
+    summary="Получение дочерних активов / Get Child Assets",
+    description=(
+            "RU: Возвращает список всех дочерних активов, связанных с указанным родительским активом через `parent_id`. "
+            "Проверяет права на чтение (read) родительского актива.\n\n"
+            "EN: Returns a list of all child assets associated with the specified parent asset via `parent_id`. "
+            "Checks for read permissions on the parent asset."
+    )
+)
 async def get_asset_children_endpoint(
         request: Request,
         asset_id: int,
@@ -260,7 +317,16 @@ def wrap_text(text: str, max_length: int = 15, max_lines: int = 3) -> list:
     # Обрезаем до максимального количества строк, чтобы не сломать верстку этикетки
     return lines[:max_lines]
 
-@router_assets.post("/generate-qr")
+@router_assets.post(
+    "/generate-qr",
+    summary="Генерация QR-кода для этикетки / Generate QR Code for Label",
+    description=(
+            "RU: Генерирует SVG-изображение этикетки (70x25 мм) с QR-кодом, инвентарным или серийным номерами, "
+            "а также наименованием актива с автоматическим переносом строк. Возвращает изображение в формате Base64 Data URI.\n\n"
+            "EN: Generates an SVG label image (70x25 mm) containing a QR code, inventory or serial numbers, "
+            "and the asset name with automatic line wrapping. Returns the image as a Base64 Data URI."
+    )
+)
 async def generate_qr_code(request: QRCodeRequest):
     qr_data = request.serial_number if request.serial_number else request.inventory_id
 

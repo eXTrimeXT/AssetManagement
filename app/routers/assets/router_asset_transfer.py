@@ -1,6 +1,5 @@
 from typing import Optional
 
-from anyio import current_effective_deadline
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +25,17 @@ router_asset_transfer = APIRouter(prefix="/assets/transfers", tags=["Asset Trans
 @router_asset_transfer.get(
     "/",
     response_model=PaginatedResponse,
-    summary="Получить список передач активов"
+    summary="Получить список передач активов / Get Asset Transfers List",
+    description=(
+            "RU: Возвращает пагинированный список запросов на передачу активов с поддержкой фильтрации: "
+            "по `asset_id`, инициатору (`initiator_id`), получателю (`target_employee_id`), "
+            "параметрам `only_my` (только мои передачи) и `only_active` (только активные запросы). "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a paginated list of asset transfer requests with filtering support: "
+            "by `asset_id`, initiator (`initiator_id`), target employee (`target_employee_id`), "
+            "and the `only_my` (only my transfers) and `only_active` (only active requests) parameters. "
+            "User authorization is required."
+    )
 )
 async def get_transfers(
         page: int = Query(1, ge=1),
@@ -55,7 +64,19 @@ async def get_transfers(
 @router_asset_transfer.post(
     "/request/",
     response_model=AssetTransferResponse,
-    summary="Создать запрос на передачу актива"
+    summary="Создать запрос на передачу актива / Create Asset Transfer Request",
+    description=(
+            "RU: Создает запрос на передачу актива другому сотруднику. "
+            "Если указан `asset_id` — передается существующий локальный актив. "
+            "Если указан `material_id` — актив сначала создается локально из данных SAP. "
+            "Автоматически создается уведомление для получателя. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Creates a request to transfer an asset to another employee. "
+            "If `asset_id` is specified, an existing local asset is transferred. "
+            "If `material_id` is specified, the asset is first created locally from SAP data. "
+            "A notification is automatically created for the recipient. "
+            "User authorization is required."
+    )
 )
 async def create_transfer_request(
         request: AssetTransferRequest,
@@ -89,7 +110,17 @@ async def create_transfer_request(
 @router_asset_transfer.post(
     "/check-request",
     response_model=AssetTransferExistsResponse,
-    summary="Проверяем есть ли у нас запрос на передачу актива"
+    summary="Проверить наличие запроса на передачу актива / Check Asset Transfer Request Existence",
+    description=(
+            "RU: Проверяет наличие активного запроса на передачу указанного актива для текущего пользователя. "
+            "Возвращает информацию о направлении передачи (входящий/исходящий). "
+            "Если запрос не найден или доступ не разрешен — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Checks for an active transfer request for the specified asset for the current user. "
+            "Returns information about the transfer direction (incoming/outgoing). "
+            "If the request is not found or access is not allowed, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def check_transfer_exists(
         asset_id: int,
@@ -108,7 +139,17 @@ async def check_transfer_exists(
 @router_asset_transfer.post(
     "/{transfer_id}/respond",
     response_model=AssetTransferRespondResponse,
-    summary="Ответить на запрос передачи актива (принять или отклонить)"
+    summary="Ответить на запрос передачи актива / Respond to Asset Transfer Request",
+    description=(
+            "RU: Позволяет получателю ответить на запрос передачи актива. "
+            "Доступные действия: `action=\"accept\"` — принять актив, `action=\"decline\"` — отклонить передачу. "
+            "Может содержать необязательный комментарий. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Allows the recipient to respond to an asset transfer request. "
+            "Available actions: `action=\"accept\"` — accept the asset, `action=\"decline\"` — decline the transfer. "
+            "May include an optional comment. "
+            "User authorization is required."
+    )
 )
 async def respond_transfer_request(
         transfer_id: int,
@@ -141,7 +182,17 @@ async def respond_transfer_request(
 @router_asset_transfer.post(
     "/{transfer_id}/cancel",
     response_model=AssetTransferCancelResponse,
-    summary="Отменить запрос на передачу актива"
+    summary="Отменить запрос на передачу актива / Cancel Asset Transfer Request",
+    description=(
+            "RU: Отменяет активный запрос на передачу актива. "
+            "Доступно только инициатору запроса (`initiator_id` должен совпадать с текущим пользователем). "
+            "При попытке отмены чужого запроса возвращается ошибка. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Cancels an active asset transfer request. "
+            "Only available to the request initiator (`initiator_id` must match the current user). "
+            "An error is returned if attempting to cancel someone else's request. "
+            "User authorization is required."
+    )
 )
 async def cancel_transfer_request(
         transfer_id: int,

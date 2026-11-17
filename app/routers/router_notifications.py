@@ -4,7 +4,7 @@ import math
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 
 from starlette.responses import StreamingResponse
 
@@ -30,7 +30,25 @@ logger = logging.getLogger(__name__)
 
 router_notifications = APIRouter(prefix="/notifications", tags=["Notifications"])
 
-@router_notifications.get("/my")
+
+@router_notifications.get(
+    "/my",
+    summary="Получить мои уведомления / Get My Notifications",
+    description=(
+            "RU: Возвращает пагинированный список уведомлений текущего пользователя с поддержкой "
+            "расширенной фильтрации: по `asset_id`, `session_id`, направлению (`incoming`, `outgoing`, `all`), "
+            "типу уведомления (`asset`, `session`, `all`) и параметру `only_unread`. "
+            "Также возвращает счётчики прочитанных и непрочитанных уведомлений. "
+            "Computed-поля (`event_type_ru`, `direction_ru`, `status_ru`) вычисляются с учётом роли текущего пользователя. "
+            "Требуется авторизация.\n\n"
+            "EN: Returns a paginated list of notifications for the current user with advanced filtering support: "
+            "by `asset_id`, `session_id`, direction (`incoming`, `outgoing`, `all`), "
+            "notification type (`asset`, `session`, `all`), and the `only_unread` parameter. "
+            "Also returns counters of read and unread notifications. "
+            "Computed fields (`event_type_ru`, `direction_ru`, `status_ru`) are calculated based on the current user's role. "
+            "Authorization is required."
+    )
+)
 async def get_my_notifications(
         page: int = Query(1, ge=1),
         page_size: int = Query(200, ge=1, le=200),
@@ -94,7 +112,23 @@ async def get_my_notifications(
         checked_count=counts["checked_count"],
     ).model_dump(mode="json")
 
-@router_notifications.get("/stream")
+
+@router_notifications.get(
+    "/stream",
+    summary="Стрим уведомлений через SSE / Stream Notifications via SSE",
+    description=(
+            "RU: Эндпоинт Server-Sent Events (SSE) для получения уведомлений в реальном времени. "
+            "При подключении отправляется текущее состояние (источник `initial`), "
+            "затем при каждом изменении — обновлённое состояние (источник `update`). "
+            "Поддерживает фильтрацию по `asset_id`, `session_id`, направлению и типу уведомления. "
+            "Соединение поддерживается до отключения клиента. Требуется авторизация.\n\n"
+            "EN: Server-Sent Events (SSE) endpoint for receiving notifications in real time. "
+            "Upon connection, the current state is sent (source `initial`), "
+            "then on each change — the updated state (source `update`). "
+            "Supports filtering by `asset_id`, `session_id`, direction, and notification type. "
+            "The connection is maintained until the client disconnects. Authorization is required."
+    )
+)
 async def stream_notifications(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
@@ -176,7 +210,23 @@ async def stream_notifications(
         },
     )
 
-@router_notifications.get("/my/grouped")
+
+@router_notifications.get(
+    "/my/grouped",
+    summary="Получить уведомления, сгруппированные по активу / Get Notifications Grouped by Asset",
+    description=(
+            "RU: Возвращает список уведомлений текущего пользователя, сгруппированных по `asset_id`. "
+            "Для каждой группы указывается информация об активе (название, инвентарный номер), "
+            "общее количество уведомлений и количество непрочитанных. "
+            "Computed-поля вычисляются с учётом роли текущего пользователя. "
+            "Требуется авторизация.\n\n"
+            "EN: Returns a list of notifications for the current user, grouped by `asset_id`. "
+            "For each group, asset information is provided (name, inventory number), "
+            "total number of notifications, and the number of unread ones. "
+            "Computed fields are calculated based on the current user's role. "
+            "Authorization is required."
+    )
+)
 async def get_my_notifications_grouped(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -221,7 +271,19 @@ async def get_my_notifications_grouped(
     # валидацию через response_model (без context).
     return [item.model_dump(mode="json") for item in result]
 
-@router_notifications.get("/my/unread-count")
+
+@router_notifications.get(
+    "/my/unread-count",
+    summary="Получить количество непрочитанных уведомлений / Get Unread Notifications Count",
+    description=(
+            "RU: Возвращает количество непрочитанных уведомлений для текущего авторизованного пользователя. "
+            "Полезно для отображения бейджа с числом новых уведомлений в интерфейсе. "
+            "Требуется авторизация.\n\n"
+            "EN: Returns the number of unread notifications for the current authenticated user. "
+            "Useful for displaying a badge with the number of new notifications in the UI. "
+            "Authorization is required."
+    )
+)
 async def get_my_unread_count(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -230,7 +292,21 @@ async def get_my_unread_count(
     count = await get_unread_count(db, current_user.employee_id)
     return {"count": count}
 
-@router_notifications.get("/my/counts")
+
+@router_notifications.get(
+    "/my/counts",
+    summary="Получить счётчики уведомлений по группам / Get Notification Counts by Groups",
+    description=(
+            "RU: Возвращает счётчики уведомлений, сгруппированные по `asset_id` и `session_id`. "
+            "Поддерживает фильтрацию по направлению (`incoming`, `outgoing`, `all`), "
+            "идентификатору актива и идентификатору сессии инвентаризации. "
+            "Полезно для отображения сводной информации в UI. Требуется авторизация.\n\n"
+            "EN: Returns notification counts grouped by `asset_id` and `session_id`. "
+            "Supports filtering by direction (`incoming`, `outgoing`, `all`), "
+            "asset identifier, and inventory session identifier. "
+            "Useful for displaying summary information in the UI. Authorization is required."
+    )
+)
 async def get_my_notification_counts_grouped(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
         session_id: Optional[int] = Query(None, description="Фильтр по ID сессии инвентаризации"),
@@ -253,7 +329,23 @@ async def get_my_notification_counts_grouped(
     )
     return counts
 
-@router_notifications.patch("/{notification_id}/read")
+
+@router_notifications.patch(
+    "/{notification_id}/read",
+    summary="Пометить уведомление как прочитанное / Mark Notification as Read",
+    description=(
+            "RU: Помечает указанное уведомление как прочитанное для текущего пользователя. "
+            "Возвращает обновлённые данные уведомления с вычисленными computed-полями "
+            "с учётом роли текущего пользователя. "
+            "Если уведомление не найдено — возвращается ошибка 404. "
+            "Требуется авторизация.\n\n"
+            "EN: Marks the specified notification as read for the current user. "
+            "Returns the updated notification data with computed fields "
+            "calculated based on the current user's role. "
+            "If the notification is not found, a 404 error is returned. "
+            "Authorization is required."
+    )
+)
 async def read_notification(
         notification_id: int,
         db: AsyncSession = Depends(get_db),
@@ -268,7 +360,19 @@ async def read_notification(
         context={"viewer_id": current_user.employee_id, "direction": "all"},
     ).model_dump(mode="json")
 
-@router_notifications.patch("/my/read-all")
+
+@router_notifications.patch(
+    "/my/read-all",
+    summary="Пометить все уведомления как прочитанные / Mark All Notifications as Read",
+    description=(
+            "RU: Помечает все уведомления текущего пользователя как прочитанные. "
+            "Возвращает количество уведомлений, которые были помечены как прочитанные. "
+            "Требуется авторизация.\n\n"
+            "EN: Marks all notifications of the current user as read. "
+            "Returns the number of notifications that were marked as read. "
+            "Authorization is required."
+    )
+)
 async def read_all_my_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),
@@ -277,7 +381,24 @@ async def read_all_my_notifications(
     count = await mark_all_as_read(db, current_user.employee_id)
     return {"marked_as_read": count}
 
-@router_notifications.delete("/{notification_id}", status_code=204)
+
+@router_notifications.delete(
+    "/{notification_id}",
+    status_code=204,
+    summary="Удалить уведомление / Delete Notification",
+    description=(
+            "RU: Удаляет указанное уведомление (мягкое или жёсткое удаление в зависимости от роли и статуса). "
+            "Удалять можно только свои уведомления. "
+            "Если уведомление не найдено или у пользователя нет прав на удаление — возвращается ошибка 404. "
+            "При успешном удалении возвращается статус 204 (No Content). "
+            "Требуется авторизация.\n\n"
+            "EN: Deletes the specified notification (soft or hard deletion depending on role and status). "
+            "Only own notifications can be deleted. "
+            "If the notification is not found or the user has no deletion rights, a 404 error is returned. "
+            "On successful deletion, a 204 (No Content) status is returned. "
+            "Authorization is required."
+    )
+)
 async def delete_notification_endpoint(
         notification_id: int,
         db: AsyncSession = Depends(get_db),
@@ -288,7 +409,21 @@ async def delete_notification_endpoint(
     if not success:
         raise HTTPException(status_code=404, detail="Уведомление не найдено или нет прав на удаление")
 
-@router_notifications.delete("/my/clear-read")
+
+@router_notifications.delete(
+    "/my/clear-read",
+    summary="Удалить все прочитанные уведомления / Clear All Read Notifications",
+    description=(
+            "RU: Мягко удаляет все прочитанные уведомления текущего пользователя. "
+            "Возвращает количество удалённых уведомлений. "
+            "Непрочитанные уведомления остаются нетронутыми. "
+            "Требуется авторизация.\n\n"
+            "EN: Soft-deletes all read notifications of the current user. "
+            "Returns the number of deleted notifications. "
+            "Unread notifications remain untouched. "
+            "Authorization is required."
+    )
+)
 async def clear_read_notifications(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user),

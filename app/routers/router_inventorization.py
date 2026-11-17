@@ -1,7 +1,6 @@
 import math
 from typing import List, Optional, Literal
 
-from dns.rdtypes.ANY import OPT
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -32,7 +31,19 @@ from app.schemas.PaginationResponse import PaginatedResponse
 
 router_inventorization = APIRouter(prefix="/inventorization", tags=["Assets Inventorization"])
 
-@router_inventorization.get("/sessions/", response_model=List[InventorizationSessionResponse])
+@router_inventorization.get(
+    "/sessions/",
+    response_model=List[InventorizationSessionResponse],
+    summary="Получить список сессий инвентаризации / Get Inventory Sessions List",
+    description=(
+            "RU: Возвращает список всех сессий инвентаризации с поддержкой пагинации "
+            "через параметры `skip` и `limit`. По умолчанию возвращается до 50 записей. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a list of all inventory sessions with pagination support "
+            "via `skip` and `limit` parameters. By default, up to 50 records are returned. "
+            "User authorization is required."
+    )
+)
 async def get_sessions(
         skip: int = 0,
         limit: int = 50,
@@ -41,9 +52,21 @@ async def get_sessions(
 ):
     return await get_inventory_sessions_list(db, skip, limit)
 
+
 @router_inventorization.get(
     "/sessions/{session_id}/items/",
-    response_model=PaginatedResponse[InventorizationItemResponse]
+    response_model=PaginatedResponse[InventorizationItemResponse],
+    summary="Получить позиции сессии инвентаризации / Get Inventory Session Items",
+    description=(
+            "RU: Возвращает пагинированный список позиций (активов) указанной сессии инвентаризации. "
+            "Поддерживает фильтрацию по `material_id`, `name`, `serial_number`, `inventory_id` "
+            "и параметр `is_checked` для отображения только проверенных или непроверенных активов. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a paginated list of items (assets) for the specified inventory session. "
+            "Supports filtering by `material_id`, `name`, `serial_number`, `inventory_id`, "
+            "and the `is_checked` parameter to display only checked or unchecked assets. "
+            "User authorization is required."
+    )
 )
 async def get_session_items(
         session_id: int,
@@ -79,7 +102,24 @@ async def get_session_items(
         has_previous=page > 1,
     )
 
-@router_inventorization.post("/sessions/", response_model=List[InventorizationSessionResponse])
+
+@router_inventorization.post(
+    "/sessions/",
+    response_model=List[InventorizationSessionResponse],
+    summary="Создать сессию инвентаризации / Create Inventory Session",
+    description=(
+            "RU: Создает одну или несколько сессий инвентаризации на основе указанных параметров: "
+            "типов активов (`asset_type_ids`), кодов подразделений (`department_codes`), "
+            "классов материалов (`material_classes`) и диапазона дат. "
+            "Если по указанным параметрам не найдено ни одного актива — возвращается ошибка 400. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Creates one or more inventory sessions based on the specified parameters: "
+            "asset types (`asset_type_ids`), department codes (`department_codes`), "
+            "material classes (`material_classes`), and date range. "
+            "If no assets are found for the specified parameters, a 400 error is returned. "
+            "User authorization is required."
+    )
+)
 async def start_session(
         data: InventorizationSessionObj,
         db: AsyncSession = Depends(get_db),
@@ -106,7 +146,25 @@ async def start_session(
 
     return sessions
 
-@router_inventorization.post("/sessions/{session_id}/check")
+
+@router_inventorization.post(
+    "/sessions/{session_id}/check",
+    summary="Отметить актив как проверенный / Mark Asset as Checked",
+    description=(
+            "RU: Отмечает актив как проверенный в рамках указанной сессии инвентаризации. "
+            "Актив идентифицируется по `asset_id` или `material_id`. "
+            "Можно указать фактическое количество `quantity_fact` (не может быть меньше 0). "
+            "Если сессия уже завершена (`status=completed`) — возвращается ошибка 400. "
+            "Если актив не найден в сессии — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Marks an asset as checked within the specified inventory session. "
+            "The asset is identified by `asset_id` or `material_id`. "
+            "An optional actual quantity `quantity_fact` can be specified (must not be less than 0). "
+            "If the session is already completed (`status=completed`), a 400 error is returned. "
+            "If the asset is not found in the session, a 404 error is returned. "
+            "User authorization is required."
+    )
+)
 async def check_item(
         session_id: int,
         data: CheckItemRequest,
@@ -139,7 +197,25 @@ async def check_item(
         raise HTTPException(status_code=404, detail="Актив не найден в этой сессии инвентаризации")
     return {"message": "success"}
 
-@router_inventorization.post("/sessions/{session_id}/check")
+
+@router_inventorization.post(
+    "/sessions/{session_id}/check",
+    summary="Отметить актив как проверенный / Mark Asset as Checked",
+    description=(
+            "RU: Отмечает актив как проверенный в рамках указанной сессии инвентаризации. "
+            "Актив идентифицируется по `asset_id` или `material_id`. "
+            "Можно указать фактическое количество `quantity_fact` (не может быть меньше 0). "
+            "Если сессия уже завершена (`status=completed`) — возвращается ошибка 400. "
+            "Если актив не найден в сессии — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Marks an asset as checked within the specified inventory session. "
+            "The asset is identified by `asset_id` or `material_id`. "
+            "An optional actual quantity `quantity_fact` can be specified (must not be less than 0). "
+            "If the session is already completed (`status=completed`), a 400 error is returned. "
+            "If the asset is not found in the session, a 404 error is returned. "
+            "User authorization is required."
+    )
+)
 async def check_item(
         session_id: int,
         data: CheckItemRequest,
@@ -176,7 +252,24 @@ async def check_item(
 
     return {"message": "success"}
 
-@router_inventorization.post("/sessions/{session_id}/complete", response_model=InventorizationSessionResponse)
+
+@router_inventorization.post(
+    "/sessions/{session_id}/complete",
+    response_model=InventorizationSessionResponse,
+    summary="Завершить сессию инвентаризации / Complete Inventory Session",
+    description=(
+            "RU: Завершает сессию инвентаризации, устанавливая статус `completed`. "
+            "После завершения изменение позиций (items) становится невозможным. "
+            "Если сессия уже завершена — возвращается ошибка 400. "
+            "Если сессия не найдена — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Completes an inventory session by setting the status to `completed`. "
+            "After completion, modifying items is no longer possible. "
+            "If the session is already completed, a 400 error is returned. "
+            "If the session is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
+)
 async def complete_session(
         session_id: int,
         db: AsyncSession = Depends(get_db),
@@ -200,7 +293,17 @@ async def complete_session(
 @router_inventorization.get(
     "/sessions/{session_id}/report",
     response_model=InventorizationReportResponse,
-    summary="Получить отчёт по сессии инвентаризации"
+    summary="Получить отчёт по сессии инвентаризации / Get Inventory Session Report",
+    description=(
+            "RU: Возвращает сводный отчёт по указанной сессии инвентаризации: "
+            "прогресс проверки, количество расхождений, излишков и недостач. "
+            "Если сессия не найдена — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a summary report for the specified inventory session: "
+            "check progress, number of discrepancies, surpluses, and shortages. "
+            "If the session is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def get_session_report(
         session_id: int,
@@ -213,10 +316,21 @@ async def get_session_report(
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return report
 
+
 @router_inventorization.get(
     "/sessions/{session_id}/report/discrepancies",
     response_model=InventorizationDiscrepanciesResponse,
-    summary="Получить список расхождений"
+    summary="Получить список расхождений инвентаризации / Get Inventory Discrepancies List",
+    description=(
+            "RU: Возвращает детальный список расхождений по указанной сессии инвентаризации: "
+            "недостачи, излишки и непроверенные активы. "
+            "Если сессия не найдена — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a detailed list of discrepancies for the specified inventory session: "
+            "shortages, surpluses, and unchecked assets. "
+            "If the session is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def get_session_discrepancies(
         session_id: int,
@@ -229,7 +343,20 @@ async def get_session_discrepancies(
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return result
 
-@router_inventorization.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
+
+@router_inventorization.delete(
+    "/sessions/{session_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Удалить сессию инвентаризации / Delete Inventory Session",
+    description=(
+            "RU: Удаляет все позиции (items) указанной сессии инвентаризации, "
+            "а затем удаляет саму сессию. Если сессия не найдена — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Deletes all items of the specified inventory session, "
+            "and then deletes the session itself. If the session is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
+)
 async def delete_status(
         session_id: int,
         db: AsyncSession = Depends(get_db),
@@ -241,9 +368,18 @@ async def delete_status(
         raise HTTPException(status_code=404, detail="Сессия инвентаризации не найдена")
     return {"message": "success"}
 
+
 @router_inventorization.get(
     "/sessions/{session_id}/export/excel",
-    summary="Экспорт сессии инвентаризации в Excel"
+    summary="Экспорт сессии инвентаризации в Excel / Export Inventory Session to Excel",
+    description=(
+            "RU: Экспортирует данные указанной сессии инвентаризации в файл формата Excel (`.xlsx`) "
+            "и возвращает его для скачивания. Если сессия не найдена или данные некорректны — "
+            "возвращается ошибка 404. Авторизация не требуется (публичный эндпоинт для скачивания).\n\n"
+            "EN: Exports the data of the specified inventory session to an Excel (`.xlsx`) file "
+            "and returns it for download. If the session is not found or the data is invalid, "
+            "a 404 error is returned. Authorization is not required (public endpoint for download)."
+    )
 )
 async def export_session_to_excel(
         session_id: int,

@@ -23,7 +23,20 @@ logger = logging.getLogger(__name__)
 
 router_zup = APIRouter(prefix="/zup", tags=["1С-ЗУП Integration"])
 
-@router_zup.post("/sync", summary="Синхронизировать все данные из 1С-ЗУП")
+@router_zup.post(
+    "/sync",
+    summary="Синхронизировать все данные из 1С-ЗУП / Sync All Data from 1C-ZUP",
+    description=(
+            "RU: Универсальный эндпоинт для заполнения/обновления всех таблиц из 1С-ЗУП. "
+            "Синхронизирует: подразделения, должности, сотрудников, руководителей, назначения, отчёты. "
+            "Возвращает статистику по выполненной синхронизации. "
+            "В случае ошибки возвращается HTTP 500 с описанием проблемы.\n\n"
+            "EN: Universal endpoint for populating/updating all tables from 1C-ZUP. "
+            "Synchronizes: departments, positions, employees, managers, assignments, reports. "
+            "Returns statistics on the performed synchronization. "
+            "In case of an error, HTTP 500 is returned with a description of the issue."
+    )
+)
 async def sync_zup_data(
         db: AsyncSession = Depends(get_db),
         # current_user=Depends(require_authorized_user)
@@ -43,7 +56,23 @@ async def sync_zup_data(
         logger.error(f"Ошибка синхронизации: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка синхронизации: {str(e)}")
 
-@router_zup.post("/sync-employee", summary="Синхронизировать все данные сотрудников из 1С-ЗУП")
+
+@router_zup.post(
+    "/sync-employee",
+    summary="Синхронизировать данные сотрудников из 1С-ЗУП / Sync Employee Data from 1C-ZUP",
+    description=(
+            "RU: Эндпоинт для заполнения/обновления данных сотрудников из 1С-ЗУП. "
+            "Синхронизирует: подразделения, должности, сотрудников, руководителей, назначения, отчёты. "
+            "Возвращает статистику по выполненной синхронизации. "
+            "Требуется авторизация пользователя. "
+            "В случае ошибки возвращается HTTP 500 с описанием проблемы.\n\n"
+            "EN: Endpoint for populating/updating employee data from 1C-ZUP. "
+            "Synchronizes: departments, positions, employees, managers, assignments, reports. "
+            "Returns statistics on the performed synchronization. "
+            "User authorization is required. "
+            "In case of an error, HTTP 500 is returned with a description of the issue."
+    )
+)
 async def sync_zup_employee_data(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
@@ -67,7 +96,21 @@ async def sync_zup_employee_data(
 @router_zup.get(
     "/employees",
     response_model=PaginatedResponse[EmployeeShortResponse],
-    summary="Получить список сотрудников (с пагинацией)"
+    summary="Получить список сотрудников / Get Employees List",
+    description=(
+            "RU: Возвращает пагинированный список сотрудников с поддержкой расширенной фильтрации: "
+            "по табельному номеру (`employee_id`), поиску по ФИО в любом порядке (`search_name`), "
+            "статусу активности (`is_active`), поиску по подразделению (`search_department`) "
+            "и поиску по должности на русском или английском языке (`search_position`). "
+            "Поддерживает пагинацию через параметры `page` и `page_size`. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a paginated list of employees with advanced filtering support: "
+            "by employee ID (`employee_id`), full name search in any order (`search_name`), "
+            "active status (`is_active`), department search (`search_department`), "
+            "and position search in Russian or English (`search_position`). "
+            "Supports pagination via `page` and `page_size` parameters. "
+            "User authorization is required."
+    )
 )
 async def get_employees(
         page: int = Query(1, ge=1, description="Номер страницы (начинается с 1)"),
@@ -109,7 +152,20 @@ async def get_employees(
         has_previous=page > 1
     )
 
-@router_zup.get("/employees/guid/{guid}", response_model=EmployeeResponse, summary="Получить сотрудника по GUID")
+
+@router_zup.get(
+    "/employees/guid/{guid}",
+    response_model=EmployeeResponse,
+    summary="Получить сотрудника по GUID / Get Employee by GUID",
+    description=(
+            "RU: Возвращает полную информацию о сотруднике по его уникальному GUID. "
+            "Если сотрудник не найден — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns full information about an employee by their unique GUID. "
+            "If the employee is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
+)
 async def get_employee(
         guid: str,
         db: AsyncSession = Depends(get_db),
@@ -121,7 +177,24 @@ async def get_employee(
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return employee
 
-@router_zup.get("/employees/me", response_model=EmployeePersonalResponse)
+
+@router_zup.get(
+    "/employees/me",
+    response_model=EmployeePersonalResponse,
+    summary="Получить данные текущего сотрудника / Get Current Employee Data",
+    description=(
+            "RU: Возвращает полную информацию о текущем авторизованном сотруднике, "
+            "включая иерархию подразделений (группа, отдел, департамент, общество) "
+            "и данные о должности. Определяется по `employee_id` текущего пользователя. "
+            "Если сотрудник не найден — возвращается ошибка 404. "
+            "Требуется авторизация.\n\n"
+            "EN: Returns full information about the current authenticated employee, "
+            "including the department hierarchy (group, division, department, society) "
+            "and position data. Determined by the `employee_id` of the current user. "
+            "If the employee is not found, a 404 error is returned. "
+            "Authorization is required."
+    )
+)
 async def get_employee(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
@@ -152,7 +225,20 @@ async def get_employee(
 
     return response
 
-@router_zup.get("/employees/id/{id}", response_model=EmployeeResponse, summary="Получить сотрудника по ID")
+
+@router_zup.get(
+    "/employees/id/{id}",
+    response_model=EmployeeResponse,
+    summary="Получить сотрудника по ID / Get Employee by ID",
+    description=(
+            "RU: Возвращает полную информацию о сотруднике по его табельному номеру (ID). "
+            "Если сотрудник не найден — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns full information about an employee by their employee ID. "
+            "If the employee is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
+)
 async def get_employee(
         id: str,
         db: AsyncSession = Depends(get_db),
@@ -164,10 +250,19 @@ async def get_employee(
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return employee
 
+
 @router_zup.patch(
     "/employees/{employee_id}/comment",
     response_model=EmployeeResponse,
-    summary="Обновить комментарий сотрудника"
+    summary="Обновить комментарий сотрудника / Update Employee Comment",
+    description=(
+            "RU: Обновляет только поле `comment` для указанного сотрудника по его `employee_id`. "
+            "Если сотрудник не найден — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Updates only the `comment` field for the specified employee by their `employee_id`. "
+            "If the employee is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def update_employee_comment_endpoint(
         employee_id: str,
@@ -184,7 +279,19 @@ async def update_employee_comment_endpoint(
     return employee
 
 
-@router_zup.get("/positions", response_model=List[PositionResponse], summary="Получить список должностей")
+@router_zup.get(
+    "/positions",
+    response_model=List[PositionResponse],
+    summary="Получить список должностей / Get Positions List",
+    description=(
+            "RU: Возвращает список должностей с поддержкой пагинации через параметры `skip` и `limit`. "
+            "По умолчанию возвращается до 50 записей. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a list of positions with pagination support via `skip` and `limit` parameters. "
+            "By default, up to 50 records are returned. "
+            "User authorization is required."
+    )
+)
 async def get_positions(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
@@ -195,7 +302,19 @@ async def get_positions(
     return await get_positions_list(db, skip, limit)
 
 
-@router_zup.get("/departments", response_model=List[WorkplaceResponse], summary="Получить список подразделений")
+@router_zup.get(
+    "/departments",
+    response_model=List[WorkplaceResponse],
+    summary="Получить список подразделений / Get Departments List",
+    description=(
+            "RU: Возвращает список подразделений с иерархией и поддержкой пагинации "
+            "через параметры `skip` и `limit`. По умолчанию возвращается до 50 записей. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a list of departments with hierarchy and pagination support "
+            "via `skip` and `limit` parameters. By default, up to 50 records are returned. "
+            "User authorization is required."
+    )
+)
 async def get_departments(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
@@ -209,7 +328,21 @@ async def get_departments(
 @router_zup.get(
     "/hierarchy-departments",
     response_model=DepartmentDivisionGroupResponse,
-    summary="Получить иерархию подразделений по GUID"
+    summary="Получить иерархию подразделений / Get Departments Hierarchy",
+    description=(
+            "RU: Возвращает плоскую иерархию подразделений от группы до общества по GUID подразделения "
+            "или строгому совпадению `short_name`. Структура ответа включает: `group` (группа, исходный GUID), "
+            "`division` (отдел, parent от группы), `department` (департамент, parent от отдела), "
+            "`society` (общество, parent от департамента). "
+            "Если подразделение не найдено — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a flat hierarchy of departments from group to society by department GUID "
+            "or exact `short_name` match. The response structure includes: `group` (group, source GUID), "
+            "`division` (division, parent of the group), `department` (department, parent of the division), "
+            "`society` (society, parent of the department). "
+            "If the department is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def get_hierarchy_departments_endpoint(
         guid: Optional[str] = Query(None, description="GUID подразделения (группы)"),
@@ -231,7 +364,20 @@ async def get_hierarchy_departments_endpoint(
         raise HTTPException(status_code=404, detail="Подразделение не найдено")
     return result
 
-@router_zup.get("/managers", response_model=List[ManagerResponse], summary="Получить список связей руководитель-сотрудник")
+
+@router_zup.get(
+    "/managers",
+    response_model=List[ManagerResponse],
+    summary="Получить список связей руководитель-сотрудник / Get Manager-Employee Relations List",
+    description=(
+            "RU: Возвращает список связей между сотрудниками и их руководителями с поддержкой пагинации "
+            "через параметры `skip` и `limit`. По умолчанию возвращается до 50 записей. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a list of relations between employees and their managers with pagination support "
+            "via `skip` and `limit` parameters. By default, up to 50 records are returned. "
+            "User authorization is required."
+    )
+)
 async def get_managers(
         skip: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),

@@ -120,8 +120,8 @@ async def check_service_assets():
 
             logger.info(
                 f"Актив {asset.asset_id} ({asset.name}): "
-                f"статус '{old_status}' → '{SERVICE_REQUIRED_STATUS}', "
-                f"next_service → {asset.next_service}, "
+                f"статус '{old_status}' -> '{SERVICE_REQUIRED_STATUS}', "
+                f"next_service -> {asset.next_service}, "
                 f"уведомлений: {len(serving_users)}"
             )
 
@@ -234,8 +234,8 @@ async def check_have_assets():
 
             logger.info(
                 f"Актив {asset.asset_id} ({asset.name}): "
-                f"статус '{old_status}' → '{CHECK_REQUIRED_STATUS}', "
-                f"next_check → {asset.next_check}"
+                f"статус '{old_status}' -> '{CHECK_REQUIRED_STATUS}', "
+                f"next_check -> {asset.next_check}"
             )
 
         # Сохраняем изменения

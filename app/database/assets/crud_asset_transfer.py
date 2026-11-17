@@ -25,6 +25,7 @@ from app.schemas.assets.AssetTransferSchemas import (
     NotificationInfoResponse, AssetTransferExistsResponse
 )
 from app.services.assets.asset_list_service import fetch_sap_materials
+from app.services.sap.sap_api_fixed_asset_change import sync_asset_changes_to_sap
 from app.database.zup.crud_zup_employees import get_employee_full_name
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.zup.department import ZupDepartment

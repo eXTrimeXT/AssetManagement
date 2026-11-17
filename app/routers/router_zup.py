@@ -166,7 +166,7 @@ async def get_employees(
             "User authorization is required."
     )
 )
-async def get_employee_by_guid(
+async def employee_by_guid(
         guid: str,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
@@ -195,7 +195,7 @@ async def get_employee_by_guid(
             "Authorization is required."
     )
 )
-async def get_employee_me(
+async def employee_by_me(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):
@@ -239,7 +239,7 @@ async def get_employee_me(
             "User authorization is required."
     )
 )
-async def get_employee_by_id(
+async def employee_by_id(
         id: str,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)

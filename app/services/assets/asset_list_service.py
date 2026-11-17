@@ -58,8 +58,38 @@ async def get_assets_list_with_sap(
 ) -> Dict[str, Any]:
 
     # ОПТИМИЗАЦИЯ: Прямой поиск по уникальному идентификатору
-    if material_id is not None or asset_id is not None:
-        # Сначала ищем в SAP
+    # Если ищем по локальному asset_id, SAP нам не поможет, идем сразу в локальную БД
+    if asset_id is not None:
+        local_orm_items = await get_local_assets_slice(
+            db=db,
+            skip=0,
+            limit=1,
+            asset_id=asset_id,
+            material_id=material_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+            cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+            only_my=only_my,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
+            material_class=material_class
+        )
+        if local_orm_items:
+            local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
+            return _build_paginated_response(local_items, total=1, page=1, page_size=1)
+        else:
+            # Если локально не найдено, возвращаем пустой ответ, а не случайный актив из SAP
+            return _build_paginated_response([], total=0, page=1, page_size=1)
+
+    # Если ищем по material_id, тогда имеет смысл сделать запрос к SAP
+    if material_id is not None:
         sap_response = await fetch_sap_materials(
             offset=0, page_size=1, material_id=material_id, search_mode=search_mode,
             base_material_name_like=name, inventory_number=inventory_id,
@@ -84,21 +114,6 @@ async def get_assets_list_with_sap(
                 employees_map, departments_map = await _load_maps_for_sap_items(db, [sap_item])
                 virtual = _build_virtual_asset(sap_item, employees_map, departments_map)
                 return _build_paginated_response([virtual], total=1, page=1, page_size=1)
-
-        # Если в SAP нет, ищем чисто локальный актив
-        local_orm_items = await get_local_assets_slice(
-            db=db, skip=0, limit=1, asset_id=asset_id, material_id=material_id,
-            name=name, inventory_id=inventory_id, serial_number=serial_number,
-            asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id,
-            cost_center_code_from=cost_center_code_from,
-            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            only_my=only_my, next_service_start=next_service_start,
-            next_service_end=next_service_end, material_class=material_class
-        )
-        if local_orm_items:
-            local_items = [AssetResponse.model_validate(item, from_attributes=True) for item in local_orm_items]
-            return _build_paginated_response(local_items, total=1, page=1, page_size=1)
 
     # ОСНОВНАЯ ПАГИНАЦИЯ: SAP как драйвер
     skip = (page - 1) * page_size

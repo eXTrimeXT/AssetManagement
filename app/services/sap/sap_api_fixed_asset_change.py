@@ -145,7 +145,7 @@ async def change_fixed_asset(
     logger.info(f"[SAP FA CHANGE] Начало процесса изменения ОС {formatted_asset_number}, ReqID: {request_id}")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # Шаг 1: Получение X-CSRF-Token
+        # Получение X-CSRF-Token
         fetch_headers = {
             "X-CSRF-Token": "Fetch",
             "Accept": "application/json",
@@ -159,7 +159,7 @@ async def change_fixed_asset(
             logger.error(f"[SAP FA CHANGE] Не удалось получить X-CSRF-Token. Статус: {fetch_response.status_code}")
             raise ValueError(f"Не удалось получить X-CSRF-Token. Статус: {fetch_response.status_code}")
 
-        # Шаг 2: POST-запрос на изменение
+        # POST-запрос на изменение
         post_headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",

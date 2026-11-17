@@ -116,7 +116,7 @@ async def check_permission(
         if is_assets_admin:
             return True
 
-        # 2. "Без типа" — публичный ресурс, права не требуются
+        # "Без типа" — публичный ресурс, права не требуются
         if _is_public_resource(resource):
             return True
 

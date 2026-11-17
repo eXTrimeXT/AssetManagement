@@ -27,8 +27,8 @@ security = HTTPBearer(auto_error=False)
 async def get_token_from_request(request: Request) -> str:
     """
     Получает токен из:
-    1. Заголовка Authorization: Bearer <token>
-    2. Куки session_token
+    Заголовка Authorization: Bearer <token>
+    Куки session_token
     """
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):

@@ -80,8 +80,8 @@ async def lifespan(app: FastAPI):
     Функция, выполняемая при запуске и завершении работы приложения.
 
     STARTUP:
-    1. engine.begin() открывает транзакцию с БД.
-    2. conn.run_sync(Base.metadata.create_all) синхронно создает все таблицы,
+    engine.begin() открывает транзакцию с БД.
+    conn.run_sync(Base.metadata.create_all) синхронно создает все таблицы,
        описанные в моделях (классы, наследующие Base), если они еще не существуют в БД.
     """
 
@@ -107,16 +107,16 @@ async def lifespan(app: FastAPI):
 
 async def db_notification_listener():
     try:
-        # 1. Берем URL из переменных окружения
+        # Берем URL из переменных окружения
         db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets_db")
 
-        # 2. Убираем префикс "+asyncpg", так как чистый asyncpg его не понимает
+        # Убираем префикс "+asyncpg", так как чистый asyncpg его не понимает
         clean_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
 
-        # 3. Создаем ПРЯМОЕ соединение asyncpg
+        # Создаем ПРЯМОЕ соединение asyncpg
         conn = await asyncpg.connect(clean_url)
 
-        # 4. Функция обратного вызова, которая сработает при получении уведомления
+        # Функция обратного вызова, которая сработает при получении уведомления
         async def notification_callback(connection, pid, channel, payload):
             logger.debug(f"ПОЛУЧЕНО ИЗ БД: канал={channel}, payload={payload}")
             try:
@@ -125,11 +125,11 @@ async def db_notification_listener():
             except json.JSONDecodeError as e:
                 logger.error(f"Ошибка парсинга JSON из БД: {e}")
 
-        # 5. Подписываемся на канал через add_listener, как вы и просили
+        # Подписываемся на канал через add_listener, как вы и просили
         await conn.add_listener("notification_channel", notification_callback)
         logger.info("Слушатель уведомлений БД успешно запущен через add_listener.")
 
-        # 6. Держим задачу живой, пока работает приложение
+        # Держим задачу живой, пока работает приложение
         stop_event = asyncio.Event()
         try:
             await stop_event.wait()
@@ -145,7 +145,7 @@ async def db_notification_listener():
         import traceback
         traceback.print_exc()
 
-# --- Создание экземпляра приложения ---
+# Создание экземпляра приложения
 app = FastAPI(
     lifespan=lifespan,
     title="IT Assets API",
@@ -153,7 +153,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# --- Подключение MiddleWare ---
+# Подключение MiddleWare
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # В продакшене укажи конкретные домены
@@ -165,7 +165,7 @@ app.add_middleware(
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(AuthTokenMiddleware)
 
-# --- Подключение API Маршрутов ---
+# Подключение API Маршрутов
 app.include_router(router_auth, prefix="/api")                  # Роутер авторизации
 app.include_router(router_pc_data, prefix="/api")               # PC DATA
 app.include_router(router_android_data, prefix="/api")          # Android DATA

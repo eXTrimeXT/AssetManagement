@@ -19,10 +19,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. Удаляем старый ошибочный констрейнт, который включает end_date
+    # Удаляем старый ошибочный констрейнт, который включает end_date
     op.drop_constraint('uq_asset_employee_type_active', 'asset_assignments', type_='unique')
 
-    # 2. Создаем правильный ЧАСТИЧНЫЙ уникальный индекс (Partial Unique Index)
+    # Создаем правильный ЧАСТИЧНЫЙ уникальный индекс (Partial Unique Index)
     # Он гарантирует, что у одного сотрудника может быть только ОДНА активная (end_date IS NULL)
     # привязка к конкретному активу и типу.
     # При этом исторические записи с одинаковыми end_date больше не будут вызывать ошибку.

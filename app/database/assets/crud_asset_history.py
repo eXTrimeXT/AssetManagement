@@ -301,7 +301,7 @@ async def compare_and_save_changes(
 
             # === ЛОГИКА ПОДМЕНЫ ID НА ТЕКСТОВЫЕ НАЗВАНИЯ ===
 
-            # 1. Статус актива
+            # Статус актива
             if field == 'asset_status_id' and (old_val or new_val):
                 display_field_name = "Статус актива"
                 if old_val:
@@ -311,7 +311,7 @@ async def compare_and_save_changes(
                     status_obj = await db.get(AssetStatus, new_val)
                     display_new_val = status_obj.status if status_obj else str(new_val)
 
-            # 2. Тип актива
+            # Тип актива
             elif field == 'asset_type_id' and (old_val or new_val):
                 display_field_name = "Тип актива"
                 if old_val:
@@ -321,7 +321,7 @@ async def compare_and_save_changes(
                     type_obj = await db.get(AssetType, new_val)
                     display_new_val = type_obj.name if type_obj else str(new_val)
 
-            # 3. Родительский актив
+            # Родительский актив
             elif field == 'parent_id' and (old_val or new_val):
                 display_field_name = "Родительский актив"
                 if old_val:
@@ -331,7 +331,7 @@ async def compare_and_save_changes(
                     parent_obj = await db.get(Asset, new_val)
                     display_new_val = parent_obj.name if parent_obj else str(new_val)
 
-            # 4. Модель актива (НОВОЕ)
+            # Модель актива
             elif field == 'model_id' and (old_val or new_val):
                 display_field_name = "Модель"
                 if old_val:
@@ -436,9 +436,6 @@ async def log_location_change(
         comment=AssetHistoryActionType.get_ru_label(action=AssetHistoryActionType.MOVE)
     )
 
-
-# Миграция со старого формата на новый
-# ... (ваш существующий код выше) ...
 
 async def _resolve_history_value(db: AsyncSession, field: str, val_str: str) -> str:
     """Вспомогательная функция: преобразует строковый ID в текстовое название"""

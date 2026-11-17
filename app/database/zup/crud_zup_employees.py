@@ -67,8 +67,8 @@ async def get_employee_by_login_or_email(
 ) -> Employee | None:
     """
     Ищет сотрудника:
-    1. Сначала по active_directory_login (быстрый путь)
-    2. Если не найден - по email
+    Сначала по active_directory_login (быстрый путь)
+    Если не найден - по email
     """
     # Сначала пытаемся найти по active_directory_login
     employee = await get_employee_by_active_directory_login(db, login)

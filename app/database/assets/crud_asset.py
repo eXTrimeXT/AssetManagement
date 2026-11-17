@@ -322,7 +322,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             }
             break
 
-    # 1. Извлекаем старый табельный номер из первого пользователя в массиве users (если он есть)
+    # Извлекаем старый табельный номер из первого пользователя в массиве users (если он есть)
     old_users_list = getattr(obj, 'users', []) or []
     old_employee_id = old_users_list[0].employee_id if len(old_users_list) > 0 else None
 
@@ -397,7 +397,7 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         # Нет изменений, возвращаем текущий объект без сохранения
         return obj
 
-    # 2. Определяем новый табельный номер на основе переданного запроса
+    # Определяем новый табельный номер на основе переданного запроса
     new_employee_id = old_employee_id
     if "users" in data.model_fields_set and data.users is not None:
         if len(data.users) > 0:
@@ -493,7 +493,7 @@ def _enrich_users_from_cache(
     for user in users_data:
         user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
 
-        # 1. Обогащаем иерархией подразделения из кэша
+        # Обогащаем иерархией подразделения из кэша
         dept_guid = user_dict.get("department_guid")
         if dept_guid and dept_guid in dept_hierarchy_cache:
             hierarchy = dept_hierarchy_cache[dept_guid]
@@ -503,7 +503,7 @@ def _enrich_users_from_cache(
                 user_dict["division"] = hierarchy.division
                 user_dict["group"] = hierarchy.group
 
-        # 2. Обогащаем должностью из кэша
+        # Обогащаем должностью из кэша
         pos_guid = user_dict.get("position_guid")
         if pos_guid and pos_guid in pos_cache:
             pos = pos_cache[pos_guid]
@@ -718,7 +718,7 @@ async def _update_primary_assignment(
     Использует прямой UPDATE для безопасной обработки случаев,
     когда у сотрудника несколько активных привязок (например, 'user' и 'serving' одновременно).
     """
-    # 1. Сбрасываем флаг is_current у ВСЕХ текущих активных привязок для данного актива
+    # Сбрасываем флаг is_current у ВСЕХ текущих активных привязок для данного актива
     await db.execute(
         update(AssetAssignment)
         .where(
@@ -729,7 +729,7 @@ async def _update_primary_assignment(
         .values(is_current=False)
     )
 
-    # 2. Если передан конкретный сотрудник, устанавливаем is_current=True для ВСЕХ его активных привязок к этому активу
+    # Если передан конкретный сотрудник, устанавливаем is_current=True для ВСЕХ его активных привязок к этому активу
     if target_employee_id:
         await db.execute(
             update(AssetAssignment)

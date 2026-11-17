@@ -8,7 +8,7 @@ from starlette.responses import HTMLResponse, FileResponse
 from app.database.connection import get_db
 from app.database.map_assets.crud_workshop import get_all_workshop
 
-# 2. Получаем все активные позиции активов
+# Получаем все активные позиции активов
 from sqlalchemy import select
 from app.models.map_assets.AssetPosition import AssetPosition
 from app.models.assets.Asset import Asset
@@ -29,7 +29,7 @@ async def get_all_workshops_map(
     MAP_WIDTH = 2000
     MAP_HEIGHT = 2000
 
-    # 1. Получаем все активные цеха из PostgreSQL
+    # Получаем все активные цеха из PostgreSQL
     workshops = await get_all_workshop(db, skip=0, limit=1000)
 
     result = await db.execute(
@@ -40,7 +40,7 @@ async def get_all_workshops_map(
     )
     positions = result.scalars().all()
 
-    # 3. Преобразуем цеха в словари
+    # Преобразуем цеха в словари
     workshops_data = []
     for w in workshops:
         workshops_data.append({
@@ -56,7 +56,7 @@ async def get_all_workshops_map(
             "color": w.color or "#546E7A"
         })
 
-    # 4. Преобразуем позиции активов в словари с информацией об активе
+    # Преобразуем позиции активов в словари с информацией об активе
     assets_data = []
     for pos in positions:
         asset = pos.asset
@@ -83,11 +83,11 @@ async def get_all_workshops_map(
             "icon": icon
         })
 
-    # 5. Сериализуем данные
+    # Сериализуем данные
     workshops_json = json.dumps(workshops_data, ensure_ascii=False)
     assets_json = json.dumps(assets_data, ensure_ascii=False)
 
-    # 6. Формируем HTML с отображением активов (ОПТИМИЗИРОВАН ДЛЯ МОБИЛЬНЫХ)
+    # Формируем HTML с отображением активов (ОПТИМИЗИРОВАН ДЛЯ МОБИЛЬНЫХ)
     html_content = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>

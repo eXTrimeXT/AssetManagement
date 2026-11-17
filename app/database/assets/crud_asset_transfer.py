@@ -533,7 +533,7 @@ async def get_transfers_list(
     result = await db.execute(query)
     transfers = result.scalars().all()
 
-    # 1. Собираем все employee_id для массовой загрузки имен
+    # Собираем все employee_id для массовой загрузки имен
     employee_ids = set()
     for t in transfers:
         employee_ids.add(t.initiator_id)
@@ -548,7 +548,7 @@ async def get_transfers_list(
             parts = [p for p in [emp.last_name, emp.first_name, emp.middle_name] if p]
             employees_map[emp.employee_id] = " ".join(parts) if parts else None
 
-    # 2. Массовая загрузка ПОЛНЫХ данных активов
+    # Массовая загрузка ПОЛНЫХ данных активов
     asset_ids = [t.asset_id for t in transfers if t.asset_id is not None]
     assets_map = {}
 
@@ -583,7 +583,7 @@ async def get_transfers_list(
         for asset in assets:
             assets_map[asset.asset_id] = AssetResponse.model_validate(asset, from_attributes=True)
 
-    # 3. Формируем итоговый ответ
+    # Формируем итоговый ответ
     items = []
     for t in transfers:
         full_asset = assets_map.get(t.asset_id)

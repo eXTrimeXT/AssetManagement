@@ -59,7 +59,7 @@ async def get_assets_list_with_sap(
 
     # ОПТИМИЗАЦИЯ: Прямой поиск по уникальному идентификатору
     if material_id is not None or asset_id is not None:
-        # 1. Сначала ищем в SAP
+        # Сначала ищем в SAP
         sap_response = await fetch_sap_materials(
             offset=0, page_size=1, material_id=material_id, search_mode=search_mode,
             base_material_name_like=name, inventory_number=inventory_id,
@@ -85,7 +85,7 @@ async def get_assets_list_with_sap(
                 virtual = _build_virtual_asset(sap_item, employees_map, departments_map)
                 return _build_paginated_response([virtual], total=1, page=1, page_size=1)
 
-        # 2. Если в SAP нет, ищем чисто локальный актив
+        # Если в SAP нет, ищем чисто локальный актив
         local_orm_items = await get_local_assets_slice(
             db=db, skip=0, limit=1, asset_id=asset_id, material_id=material_id,
             name=name, inventory_id=inventory_id, serial_number=serial_number,
@@ -226,10 +226,10 @@ def _merge_sap_with_local(sap_item: Dict[str, Any], local_asset: Asset, db: Asyn
     """
     Объединяет данные: SAP является базой, локальные поля перезаписывают её, если они не None.
     """
-    # 1. Строим базовый виртуальный актив из SAP
+    # Строим базовый виртуальный актив из SAP
     merged = _build_virtual_asset(sap_item, {}, {})
 
-    # 2. Перезаписываем локальными данными (приоритет локальной системе)
+    # Перезаписываем локальными данными (приоритет локальной системе)
     if local_asset.name: merged['name'] = local_asset.name
     if local_asset.serial_number: merged['serial_number'] = local_asset.serial_number
     if local_asset.comment: merged['comment'] = local_asset.comment
@@ -383,7 +383,7 @@ async def _get_local_only_assets_slice(
         **filters
 ) -> Sequence[Asset]:
     """Получает локальные активы, исключая те, что уже показаны с этой страницы SAP."""
-    # ДОБАВЛЕНО: Полная загрузка связей, идентичная get_local_assets_slice
+    # Полная загрузка связей, идентичная get_local_assets_slice
     query = select(Asset).options(
         selectinload(Asset.asset_type),
         selectinload(Asset.asset_status),

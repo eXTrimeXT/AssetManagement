@@ -1,6 +1,6 @@
 import logging
 from datetime import date
-from typing import Optional, Sequence, List, Any, Tuple, Dict
+from typing import Optional, Sequence, List, Any, Tuple, Dict, Literal
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, update, or_
@@ -30,6 +30,7 @@ from app.models.zup import Employee, ZupDepartment
 from app.services.sap.sap_api_fixed_asset_change import sync_asset_changes_to_sap
 
 logger = logging.getLogger(__name__)
+SearchMode = Literal["ALL", "NOT_NULLS", "NULLS"]
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
     # === ПРОВЕРКА: Наличие актива по инвентарному и серийному номеру ===
@@ -841,5 +842,111 @@ async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> S
         )
         .distinct()
     )
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+
+# Оригинальные функции запросов к БД и SAP (оставлены без изменений для сохранения фильтров)
+async def get_local_assets_slice(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        asset_id: Optional[int],
+        material_id: Optional[str],
+        name: Optional[str],
+        inventory_id: Optional[str],
+        serial_number: Optional[str],
+        asset_status: Optional[str],
+        model_id: Optional[int],
+        asset_type_id: Optional[int],
+        parent_id: Optional[int],
+        employee_id: Optional[str],
+        cost_center_code_from: Optional[str],
+        cost_center_code_from_search_mode: SearchMode = "ALL",
+        only_my: Optional[bool] = False,
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None
+) -> Sequence[Asset]:
+    """Получение среза локальных активов с полной загрузкой связей."""
+    query = select(Asset).options(
+        selectinload(Asset.asset_type),
+        selectinload(Asset.asset_status),
+        selectinload(Asset.model),
+        selectinload(Asset.parent).options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+        ),
+        selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+        selectinload(Asset.assignments).options(
+            selectinload(AssetAssignment.employee).options(
+                selectinload(Employee.position),
+                selectinload(Employee.group).options(
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent)
+                        )
+                    )
+                )
+            )
+        ),
+    )
+
+    if asset_id:
+        query = query.where(Asset.asset_id == asset_id)
+    if material_id:
+        query = query.where(Asset.material_id == material_id)
+    if name:
+        query = query.where(Asset.name.ilike(f"%{name}%"))
+    if inventory_id:
+        query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
+    if serial_number:
+        query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
+    if model_id is not None:
+        query = query.where(Asset.model_id == model_id)
+    if asset_type_id is not None:
+        query = query.where(Asset.asset_type_id == asset_type_id)
+    if parent_id is not None:
+        query = query.where(Asset.parent_id == parent_id)
+    if asset_status:
+        query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
+        query = query.where(AssetStatus.status == asset_status)
+    if employee_id:
+        emp_asset_subq = (
+            select(AssetAssignment.asset_id)
+            .where(AssetAssignment.employee_id == employee_id)
+            .scalar_subquery()
+        )
+        if only_my:
+            emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
+
+        query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
+
+    # ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from
+    if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
+
+        if cost_center_code_from_search_mode == "NULLS":
+            query = query.where(Asset.cost_center_code_from.is_(None))
+        elif cost_center_code_from_search_mode == "NOT_NULLS":
+            if ccc_list:
+                query = query.where(Asset.cost_center_code_from.in_(ccc_list))
+            else:
+                query = query.where(Asset.cost_center_code_from.isnot(None))
+        else:  # ALL
+            if ccc_list:
+                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
+
+    # Фильтрация по дате обслуживания
+    if next_service_start is not None:
+        query = query.where(Asset.next_service >= next_service_start)
+    if next_service_end is not None:
+        query = query.where(Asset.next_service <= next_service_end)
+    if material_class:
+        query = query.where(Asset.material_class == material_class)
+
+    query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()

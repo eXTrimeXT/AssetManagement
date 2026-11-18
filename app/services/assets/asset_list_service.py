@@ -119,16 +119,17 @@ async def get_assets_list_with_sap(
     skip = (page - 1) * page_size
 
     # Определяем, можно ли вообще показывать SAP-активы при текущих фильтрах
-    skip_sap_fetch = (
-            (asset_type_id is not None and asset_type_id != WITHOUT_TYPE_ASSET_ID)
-            or next_service_start is not None
-            or next_service_end is not None
-    )
+    # skip_sap_fetch = (
+    #         (asset_type_id is not None and asset_type_id != WITHOUT_TYPE_ASSET_ID)
+    #         or next_service_start is not None
+    #         or next_service_end is not None
+    # )
 
     sap_items_raw = []
     sap_total = 0
 
-    if not skip_sap_fetch:
+    # if not skip_sap_fetch:
+    if True:
         # Запрашиваем у SAP именно нужный срез данных
         sap_response = await fetch_sap_materials(
             offset=skip,
@@ -176,7 +177,8 @@ async def get_assets_list_with_sap(
     # Если SAP вернул меньше записей, чем нужно для заполнения страницы (мы на "стыке" или SAP закончился),
     # дополняем страницу чисто локальными активами, которых нет в SAP.
     remaining_slots = page_size - len(result_items)
-    if remaining_slots > 0 and not skip_sap_fetch:
+    # if remaining_slots > 0 and not skip_sap_fetch:
+    if remaining_slots > 0:
         # Исключаем из локальной выборки те material_id/inventory_id, которые уже есть на этой странице SAP
         exclude_material_ids = [item.get("material_id") for item in sap_items_raw if item.get("material_id")]
         exclude_inventory_ids = [item.get("inventory_number") for item in sap_items_raw if item.get("inventory_number")]

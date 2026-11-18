@@ -1036,7 +1036,7 @@ async def get_assets_list_with_sap(
         material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
 
-    # 1. ОПТИМИЗАЦИЯ: Прямой поиск по уникальному локальному asset_id (SAP тут бесполезен)
+    # 1. ОПТИМИЗАЦИЯ: Прямой поиск по уникальному локальному asset_id
     if asset_id is not None:
         local_orm_items = await get_local_assets_slice(
             db=db, skip=0, limit=1, asset_id=asset_id, material_id=material_id,
@@ -1085,8 +1085,6 @@ async def get_assets_list_with_sap(
             asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
             parent_id=parent_id, allowed_type_en_names=None
         )
-        # Примечание: get_local_assets_slice должен поддерживать все фильтры.
-        # Если нет, используем _get_local_only_assets_slice с skip=0 и limit=page_size
         local_orm_items = await _get_local_only_assets_slice(
             db=db, skip=skip, limit=page_size,
             exclude_material_ids=[], exclude_inventory_ids=[], exclude_asset_ids=[],
@@ -1111,15 +1109,24 @@ async def get_assets_list_with_sap(
         else:
             merged_items.append(_build_virtual_asset(sap_item, employees_map, departments_map))
 
-    # 5. ПРИМЕНЯЕМ ЛОКАЛЬНЫЕ ФИЛЬТРЫ к результатам SAP (Python-side filtering)
+    # =========================================================================
+    # 5. ИСПРАВЛЕНИЕ: ПРИМЕНЯЕМ СТРОГИЕ ЛОКАЛЬНЫЕ ФИЛЬТРЫ СРАЗУ
+    # Если мы отфильтруем asset_status ПОСЛЕ проверки remaining_slots,
+    # то нерелевантные элементы из SAP займут места в page_size, и локальный
+    # добар (filler) НИКОГДА не сработает!
+    # =========================================================================
     filtered_items = _filter_items_by_local_params(
-        merged_items,
+        items=merged_items,
+        asset_status=asset_status,          # <--- ДОБАВЛЕНО: теперь статус проверяется сразу
         asset_type_id=asset_type_id,
+        model_id=model_id,
+        parent_id=parent_id,
         next_service_start=next_service_start,
-        next_service_end=next_service_end
+        next_service_end=next_service_end,
+        material_class=material_class,
     )
 
-    # 6. Если после фильтрации не хватает записей до page_size, добираем из локальной БД
+    # 6. Если после строгой фильтрации не хватает записей до page_size, добираем из локальной БД
     if len(filtered_items) < page_size:
         remaining_slots = page_size - len(filtered_items)
 
@@ -1137,7 +1144,7 @@ async def get_assets_list_with_sap(
             name=name,
             inventory_id=inventory_id,
             serial_number=serial_number,
-            asset_status=asset_status,
+            asset_status=asset_status,      # <--- Здесь локальная БД найдет нужный актив
             model_id=model_id,
             asset_type_id=asset_type_id,
             parent_id=parent_id,
@@ -1150,45 +1157,72 @@ async def get_assets_list_with_sap(
         local_fillers_dicts = [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_fillers_orm]
         filtered_items.extend(local_fillers_dicts)
 
-    # 7. Расчет total для пагинации
-    # Поскольку мы фильтровали SAP на стороне Python, точный total неизвестен.
-    # Мы используем эвристику: количество найденных на этой странице + локальный total (как нижняя граница)
-    # Если записей меньше page_size, значит это последняя страница, total = len(filtered_items)
-    if len(filtered_items) < page_size:
-        final_total = len(filtered_items)
-    else:
-        # Грубая, но рабочая оценка: текущая страница заполнена, значит есть еще данные
-        # final_total = (page * page_size) + 1
-        final_total = sap_total
-
-    return _build_paginated_response(filtered_items, total=final_total, page=page, page_size=page_size)
+    # 7. Итоговый total: берем масштаб SAP, как вы и просили.
+    final_total = sap_total
+    return _build_paginated_response(filtered_items, final_total, page, page_size)
 
 
 def _filter_items_by_local_params(
         items: List[Dict[str, Any]],
-        asset_type_id: Optional[int],
-        next_service_start: Optional[date],
-        next_service_end: Optional[date]
+        asset_status: Optional[str] = None,
+        asset_type_id: Optional[int] = None,
+        model_id: Optional[int] = None,
+        parent_id: Optional[int] = None,
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Фильтрует список словарей по параметрам, которые SAP не поддерживает."""
+    """
+    Фильтрует список активов (словарей) по параметрам, которые SAP API не поддерживает.
+    Применяется к SAP-активам после обогащения локальными данными.
+    """
     filtered = []
     for item in items:
+        # Фильтр по статусу актива
+        if asset_status is not None:
+            item_status = item.get('asset_status')
+            if item_status != asset_status:
+                continue
+
         # Фильтр по типу актива
-        if asset_type_id is not None and item.get('asset_type_id') != asset_type_id:
-            continue
+        if asset_type_id is not None:
+            if item.get('asset_type_id') != asset_type_id:
+                continue
+
+        # Фильтр по модели
+        if model_id is not None:
+            if item.get('model_id') != model_id:
+                continue
+
+        # Фильтр по родителю
+        if parent_id is not None:
+            if item.get('parent_id') != parent_id:
+                continue
+
+        # Фильтр по классу материала
+        if material_class is not None:
+            if item.get('material_class') != material_class:
+                continue
 
         # Фильтр по дате начала ТО
-        ns = item.get('next_service')
-        if next_service_start and ns:
-            # ns может быть строкой 'YYYY-MM-DD' или объектом date
-            ns_date = ns if isinstance(ns, date) else (date.fromisoformat(ns) if isinstance(ns, str) else None)
-            if ns_date and ns_date < next_service_start:
+        if next_service_start is not None:
+            ns = item.get('next_service')
+            if ns:
+                ns_date = ns if isinstance(ns, date) else (date.fromisoformat(str(ns)) if str(ns) else None)
+                if ns_date and ns_date < next_service_start:
+                    continue
+            else:
+                # Если next_service отсутствует, а фильтр задан — пропускаем
                 continue
 
         # Фильтр по дате конца ТО
-        if next_service_end and ns:
-            ns_date = ns if isinstance(ns, date) else (date.fromisoformat(ns) if isinstance(ns, str) else None)
-            if ns_date and ns_date > next_service_end:
+        if next_service_end is not None:
+            ns = item.get('next_service')
+            if ns:
+                ns_date = ns if isinstance(ns, date) else (date.fromisoformat(str(ns)) if str(ns) else None)
+                if ns_date and ns_date > next_service_end:
+                    continue
+            else:
                 continue
 
         filtered.append(item)

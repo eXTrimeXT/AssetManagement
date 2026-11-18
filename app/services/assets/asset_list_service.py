@@ -1158,7 +1158,8 @@ async def get_assets_list_with_sap(
         final_total = len(filtered_items)
     else:
         # Грубая, но рабочая оценка: текущая страница заполнена, значит есть еще данные
-        final_total = (page * page_size) + 1
+        # final_total = (page * page_size) + 1
+        final_total = sap_total
 
     return _build_paginated_response(filtered_items, total=final_total, page=page, page_size=page_size)
 

@@ -708,7 +708,7 @@ async def get_transfers_list(
             query = query.where(AssetTransfer.target_employee_id == target_employee_id)
 
     if only_active:
-        query = query.where(AssetTransfer.status != AssetTransferStatus.ACCEPTED)
+        query = query.where(AssetTransfer.status == AssetTransferStatus.PENDING)
 
     # Total
     count_query = select(func.count()).select_from(query.subquery())

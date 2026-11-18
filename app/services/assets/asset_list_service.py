@@ -3,7 +3,7 @@ import os
 from datetime import date
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
-from sqlalchemy import select, inspect, Integer, or_, cast
+from sqlalchemy import select, inspect, Integer, or_, cast, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -151,6 +151,7 @@ async def get_assets_list_with_sap(
             sap_total = sap_response["response"].get("total", 0)
 
     result_items = []
+    merged_local_asset_ids = set()  # <--- НОВОЕ: Отслеживаем уже добавленные локальные активы
 
     # Если мы в диапазоне SAP-данных, обогащаем их локальными переопределениями
     if sap_items_raw:
@@ -160,8 +161,14 @@ async def get_assets_list_with_sap(
         for sap_item in sap_items_raw:
             local_asset = local_overrides.get(sap_item.get("material_id")) or local_overrides.get(sap_item.get("inventory_number"))
             if local_asset:
+                # === ЗАЩИТА ОТ ДУБЛЕЙ ===
+                # Если этот локальный актив уже был смержен с другой SAP-записью, пропускаем его
+                if local_asset.asset_id in merged_local_asset_ids:
+                    continue
+
                 # SAP как база + локальные данные поверх
                 result_items.append(_merge_sap_with_local(sap_item, local_asset, db))
+                merged_local_asset_ids.add(local_asset.asset_id)
             else:
                 # Чистый SAP-актив
                 result_items.append(_build_virtual_asset(sap_item, employees_map, departments_map))
@@ -176,14 +183,22 @@ async def get_assets_list_with_sap(
 
         filler_items = await _get_local_only_assets_slice(
             db=db,
-            skip=0, # Для filler мы всегда начинаем с 0 относительно "хвоста", но ограничиваем remaining_slots
+            skip=0,
             limit=remaining_slots,
             exclude_material_ids=exclude_material_ids,
             exclude_inventory_ids=exclude_inventory_ids,
-            name=name, inventory_id=inventory_id, serial_number=serial_number,
-            asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id, only_my=only_my,
-            next_service_start=next_service_start, next_service_end=next_service_end,
+            exclude_asset_ids=list(merged_local_asset_ids),  # передаем ID уже смерженных активов
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+            only_my=only_my,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
             material_class=material_class
         )
         result_items.extend(filler_items)
@@ -389,16 +404,93 @@ async def _get_local_overrides_for_list(db: AsyncSession, sap_items: List[Dict[s
 
     return overrides
 
+# async def _get_local_only_assets_slice(
+#         db: AsyncSession,
+#         skip: int,
+#         limit: int,
+#         exclude_material_ids: List[str],
+#         exclude_inventory_ids: List[str],
+#         **filters
+# ) -> Sequence[Asset]:
+#     """Получает локальные активы, исключая те, что уже показаны с этой страницы SAP."""
+#     # Полная загрузка связей, идентичная get_local_assets_slice
+#     query = select(Asset).options(
+#         selectinload(Asset.asset_type),
+#         selectinload(Asset.asset_status),
+#         selectinload(Asset.model),
+#         selectinload(Asset.parent).options(
+#             selectinload(Asset.asset_type),
+#             selectinload(Asset.asset_status),
+#             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+#         ),
+#         selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+#         selectinload(Asset.assignments).options(
+#             selectinload(AssetAssignment.employee).options(
+#                 selectinload(Employee.position),
+#                 selectinload(Employee.group).options(
+#                     selectinload(ZupDepartment.parent).options(
+#                         selectinload(ZupDepartment.parent).options(
+#                             selectinload(ZupDepartment.parent)
+#                         )
+#                     )
+#                 )
+#             )
+#         ),
+#     )
+#
+#     # Исключаем дубликаты с текущей страницы SAP
+#     exclude_conditions = []
+#     if exclude_material_ids:
+#         exclude_conditions.append(Asset.material_id.notin_(exclude_material_ids))
+#     if exclude_inventory_ids:
+#         exclude_conditions.append(Asset.inventory_id.notin_(exclude_inventory_ids))
+#
+#     if exclude_conditions:
+#         query = query.where(or_(*exclude_conditions))
+#
+#     # Применяем стандартные фильтры
+#     if filters.get('name'):
+#         query = query.where(Asset.name.ilike(f"%{filters['name']}%"))
+#     if filters.get('inventory_id'):
+#         query = query.where(Asset.inventory_id.ilike(f"%{filters['inventory_id']}%"))
+#     if filters.get('serial_number'):
+#         query = query.where(Asset.serial_number.ilike(f"%{filters['serial_number']}%"))
+#     if filters.get('asset_status'):
+#         query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
+#         query = query.where(AssetStatus.status == filters['asset_status'])
+#     if filters.get('model_id') is not None:
+#         query = query.where(Asset.model_id == filters['model_id'])
+#     if filters.get('asset_type_id') is not None:
+#         query = query.where(Asset.asset_type_id == filters['asset_type_id'])
+#     if filters.get('parent_id') is not None:
+#         query = query.where(Asset.parent_id == filters['parent_id'])
+#     if filters.get('employee_id'):
+#         emp_asset_subq = (
+#             select(AssetAssignment.asset_id)
+#             .where(AssetAssignment.employee_id == filters['employee_id'])
+#             .scalar_subquery()
+#         )
+#         if filters.get('only_my'):
+#             emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
+#         query = query.where(Asset.asset_id.in_(emp_asset_subq))
+#     if filters.get('material_class'):
+#         query = query.where(Asset.material_class == filters['material_class'])
+#
+#     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
+#     result = await db.execute(query)
+#     return result.scalars().all()
+
+
 async def _get_local_only_assets_slice(
         db: AsyncSession,
         skip: int,
         limit: int,
         exclude_material_ids: List[str],
         exclude_inventory_ids: List[str],
+        exclude_asset_ids: List[int] = None,  # <--- НОВОЕ
         **filters
 ) -> Sequence[Asset]:
     """Получает локальные активы, исключая те, что уже показаны с этой страницы SAP."""
-    # Полная загрузка связей, идентичная get_local_assets_slice
     query = select(Asset).options(
         selectinload(Asset.asset_type),
         selectinload(Asset.asset_status),
@@ -425,13 +517,18 @@ async def _get_local_only_assets_slice(
 
     # Исключаем дубликаты с текущей страницы SAP
     exclude_conditions = []
+    if exclude_asset_ids:
+        exclude_conditions.append(Asset.asset_id.notin_(exclude_asset_ids))
     if exclude_material_ids:
         exclude_conditions.append(Asset.material_id.notin_(exclude_material_ids))
     if exclude_inventory_ids:
         exclude_conditions.append(Asset.inventory_id.notin_(exclude_inventory_ids))
 
     if exclude_conditions:
-        query = query.where(or_(*exclude_conditions))
+        # ИСПРАВЛЕНО: Используем AND вместо OR!
+        # Нам нужно исключить активы, которые совпадают по ЛЮБОМУ из этих полей.
+        # По закону де Моргана: NOT (A OR B OR C) == (NOT A) AND (NOT B) AND (NOT C)
+        query = query.where(and_(*exclude_conditions))
 
     # Применяем стандартные фильтры
     if filters.get('name'):
@@ -464,7 +561,6 @@ async def _get_local_only_assets_slice(
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
-
 
 # Вспомогательные функции SAP и БД (без существенных изменений логики)
 async def _load_maps_for_sap_items(db: AsyncSession, sap_items: List[Dict[str, Any]]) -> Tuple[Dict, Dict]:

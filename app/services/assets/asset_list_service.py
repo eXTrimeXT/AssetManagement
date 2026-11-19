@@ -1036,7 +1036,7 @@ async def get_assets_list_with_sap(
         material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
 
-    # ОПТИМИЗАЦИЯ: Прямой поиск по уникальному локальному asset_id
+    # 1. ОПТИМИЗАЦИЯ: Прямой поиск по уникальному локальному asset_id
     if asset_id is not None:
         local_orm_items = await get_local_assets_slice(
             db=db, skip=0, limit=1, asset_id=asset_id, material_id=material_id,
@@ -1053,7 +1053,7 @@ async def get_assets_list_with_sap(
             return _build_paginated_response(local_items, total=1, page=1, page_size=1)
         return _build_paginated_response([], total=0, page=1, page_size=1)
 
-    # ВСЕГДА стучимся в SAP
+    # 2. ВСЕГДА стучимся в SAP
     skip = (page - 1) * page_size
     sap_response = await fetch_sap_materials(
         offset=skip,
@@ -1110,7 +1110,7 @@ async def get_assets_list_with_sap(
             merged_items.append(_build_virtual_asset(sap_item, employees_map, departments_map))
 
     # =========================================================================
-    # ПРИМЕНЯЕМ СТРОГИЕ ЛОКАЛЬНЫЕ ФИЛЬТРЫ СРАЗУ
+    # 5. ИСПРАВЛЕНИЕ: ПРИМЕНЯЕМ СТРОГИЕ ЛОКАЛЬНЫЕ ФИЛЬТРЫ СРАЗУ
     # Если мы отфильтруем asset_status ПОСЛЕ проверки remaining_slots,
     # то нерелевантные элементы из SAP займут места в page_size, и локальный
     # добар (filler) НИКОГДА не сработает!
@@ -1126,7 +1126,7 @@ async def get_assets_list_with_sap(
         material_class=material_class,
     )
 
-    # Если после строгой фильтрации не хватает записей до page_size, добираем из локальной БД
+    # 6. Если после строгой фильтрации не хватает записей до page_size, добираем из локальной БД
     if len(filtered_items) < page_size:
         remaining_slots = page_size - len(filtered_items)
 
@@ -1157,96 +1157,10 @@ async def get_assets_list_with_sap(
         local_fillers_dicts = [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_fillers_orm]
         filtered_items.extend(local_fillers_dicts)
 
-    # =========================================================================
-    # Если используются локальные фильтры, SAP total неверен (он не знает о них).
-    # Мы должны посчитать точное количество в локальной БД.
-    # =========================================================================
-    has_local_only_filters = any([
-        asset_status,
-        asset_type_id,
-        model_id,
-        parent_id,
-        next_service_start,
-        next_service_end,
-        material_class,
-        employee_id  # Привязки пользователей тоже хранятся только локально
-    ])
-
-    if has_local_only_filters:
-        # Считаем реальное количество записей в локальной БД, подходящих под все фильтры
-        final_total = await _get_local_assets_count_with_filters(
-            db=db,
-            name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            asset_status=asset_status,
-            model_id=model_id,
-            asset_type_id=asset_type_id,
-            parent_id=parent_id,
-            employee_id=employee_id,
-            only_my=only_my,
-            material_class=material_class,
-            next_service_start=next_service_start,
-            next_service_end=next_service_end,
-        )
-    else:
-        # Если локальных фильтров нет, доверяем total от SAP API
-        final_total = sap_total
-
+    # 7. Итоговый total: берем масштаб SAP, как вы и просили.
+    final_total = sap_total
     return _build_paginated_response(filtered_items, final_total, page, page_size)
 
-
-async def _get_local_assets_count_with_filters(
-        db: AsyncSession,
-        name: Optional[str] = None,
-        inventory_id: Optional[str] = None,
-        serial_number: Optional[str] = None,
-        asset_status: Optional[str] = None,
-        model_id: Optional[int] = None,
-        asset_type_id: Optional[int] = None,
-        parent_id: Optional[int] = None,
-        employee_id: Optional[str] = None,
-        only_my: Optional[bool] = False,
-        material_class: Optional[str] = None,
-        next_service_start: Optional[date] = None,
-        next_service_end: Optional[date] = None,
-) -> int:
-    """Подсчитывает точное количество локальных активов с учетом всех фильтров."""
-    query = select(func.count(Asset.asset_id))
-
-    if name:
-        query = query.where(Asset.name.ilike(f"%{name}%"))
-    if inventory_id:
-        query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
-    if serial_number:
-        query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
-    if asset_status:
-        query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
-        query = query.where(AssetStatus.status == asset_status)
-    if model_id is not None:
-        query = query.where(Asset.model_id == model_id)
-    if asset_type_id is not None:
-        query = query.where(Asset.asset_type_id == asset_type_id)
-    if parent_id is not None:
-        query = query.where(Asset.parent_id == parent_id)
-    if employee_id:
-        emp_asset_subq = (
-            select(AssetAssignment.asset_id)
-            .where(AssetAssignment.employee_id == employee_id)
-            .scalar_subquery()
-        )
-        if only_my:
-            emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
-        query = query.where(Asset.asset_id.in_(emp_asset_subq))
-    if material_class:
-        query = query.where(Asset.material_class == material_class)
-    if next_service_start:
-        query = query.where(Asset.next_service >= next_service_start)
-    if next_service_end:
-        query = query.where(Asset.next_service <= next_service_end)
-
-    result = await db.execute(query)
-    return result.scalar_one()
 
 def _filter_items_by_local_params(
         items: List[Dict[str, Any]],

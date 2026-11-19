@@ -138,134 +138,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     )
     return result.scalar_one_or_none()
 
-# def _apply_assets_filters(
-#         query,
-#         name,
-#         inventory_id,
-#         serial_number,
-#         asset_status,
-#         model_id,
-#         asset_type_id,
-#         parent_id,
-#         allowed_type_en_names
-# ):
-#     if name:
-#         query = query.where(Asset.name.ilike(f"%{name}%"))
-#     if inventory_id:
-#         query = query.where(Asset.inventory_id == inventory_id)
-#         # query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
-#     if serial_number:
-#         query = query.where(Asset.serial_number == serial_number)
-#         # query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
-#     if asset_status:
-#         query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
-#         query = query.where(AssetStatus.status == asset_status)
-#     if model_id is not None:
-#         query = query.where(Asset.model_id == model_id)
-#     if asset_type_id is not None:
-#         query = query.where(Asset.asset_type_id == asset_type_id)
-#     if parent_id is not None:
-#         query = query.where(Asset.parent_id == parent_id)
-#
-#     if allowed_type_en_names is not None:
-#         query = (
-#             query.outerjoin(Asset.asset_type)
-#             .where(
-#                 or_(
-#                     AssetType.en_name.in_(allowed_type_en_names),
-#                     Asset.asset_type_id.is_(None)  # <-- Явно разрешаем активы без типа
-#                 )
-#             )
-#         )
-#
-#     return query
-
-# async def get_assets_count(
-#         db: AsyncSession,
-#         name: Optional[str] = None,
-#         inventory_id: Optional[str] = None,
-#         serial_number: Optional[str] = None,
-#         asset_status: Optional[str] = None,
-#         model_id: Optional[int] = None,
-#         asset_type_id: Optional[int] = None,
-#         parent_id: Optional[int] = None,
-#         allowed_type_en_names: Optional[List[str]] = None,
-# ) -> int:
-#     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
-#         return 0
-#
-#     query = select(func.count(Asset.asset_id)).select_from(Asset)
-#     query = _apply_assets_filters(
-#         query = query,
-#         name = name,
-#         inventory_id = inventory_id,
-#         serial_number = serial_number,
-#         asset_status = asset_status,
-#         model_id = model_id,
-#         asset_type_id = asset_type_id,
-#         parent_id = parent_id,
-#         allowed_type_en_names = allowed_type_en_names
-#     )
-#     result = await db.execute(query)
-#     return result.scalar_one()
-
-# async def get_assets_list(
-#         db: AsyncSession,
-#         page: int = 1,
-#         page_size: int = 50,
-#         name: Optional[str] = None,
-#         inventory_id: Optional[str] = None,
-#         serial_number: Optional[str] = None,
-#         asset_status: Optional[str] = None,
-#         model_id: Optional[int] = None,
-#         asset_type_id: Optional[int] = None,
-#         parent_id: Optional[int] = None,
-#         allowed_type_en_names: Optional[List[str]] = None,
-# ) -> Tuple[Sequence[Asset], int]:
-#     if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
-#         return [], 0
-#
-#     total = await get_assets_count(
-#         db, name, inventory_id, serial_number, asset_status,
-#         model_id, asset_type_id, parent_id, allowed_type_en_names
-#     )
-#
-#     skip = (page - 1) * page_size
-#
-#     query = select(Asset).options(
-#         selectinload(Asset.asset_type),
-#         selectinload(Asset.asset_status),
-#         selectinload(Asset.model),
-#         selectinload(Asset.parent).options(
-#             selectinload(Asset.asset_type),
-#             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-#         ),
-#         selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-#         selectinload(Asset.assignments).options(
-#             selectinload(AssetAssignment.employee)
-#         ),
-#     )
-#
-#     query = _apply_assets_filters(
-#         query = query,
-#         name = name,
-#         inventory_id = inventory_id,
-#         serial_number = serial_number,
-#         asset_status = asset_status,
-#         model_id = model_id,
-#         asset_type_id = asset_type_id,
-#         parent_id = parent_id,
-#         allowed_type_en_names = allowed_type_en_names,
-#     )
-#
-#     query = query.order_by(Asset.asset_id)
-#     query = query.offset(skip).limit(page_size)
-#
-#     result = await db.execute(query)
-#     assets = result.scalars().all()
-#
-#     return assets, total
-
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     # Пытаемся найти актив в локальной БД
     obj = await get_asset_by_id(db, asset_id)
@@ -526,7 +398,6 @@ def _enrich_users_from_cache(
 
     return enriched
 
-
 async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
     """
     Оптимизированное обогащение с кэшированием.
@@ -565,7 +436,6 @@ async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
         #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
         if asset.serving_users:
             asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
-
 
 async def _sync_asset_users(
         db: AsyncSession,
@@ -719,7 +589,6 @@ async def _sync_asset_users(
                     initiator_id=assigned_by,
                 )
 
-
 async def _update_primary_assignment(
         db: AsyncSession,
         asset_id: int,
@@ -752,7 +621,6 @@ async def _update_primary_assignment(
             )
             .values(is_current=True)
         )
-
 
 async def _sync_asset_location(
         db: AsyncSession,
@@ -799,7 +667,6 @@ async def _sync_asset_location(
         "y": new_position.y,
     }
 
-
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -808,7 +675,6 @@ async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     await db.delete(obj)
     await db.commit()
     return True
-
 
 async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
     result = await db.execute(
@@ -820,7 +686,6 @@ async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
         .where(Asset.parent_id == asset_id)
     )
     return result.scalars().all()
-
 
 async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> Sequence[Asset]:
     """Получить все текущие (активные) активы сотрудника."""
@@ -855,108 +720,3 @@ async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> S
     )
     result = await db.execute(query)
     return result.scalars().all()
-
-
-# Оригинальные функции запросов к БД и SAP (оставлены без изменений для сохранения фильтров)
-# async def get_local_assets_slice(
-#         db: AsyncSession,
-#         skip: int,
-#         limit: int,
-#         asset_id: Optional[int],
-#         material_id: Optional[str],
-#         name: Optional[str],
-#         inventory_id: Optional[str],
-#         serial_number: Optional[str],
-#         asset_status: Optional[str],
-#         model_id: Optional[int],
-#         asset_type_id: Optional[int],
-#         parent_id: Optional[int],
-#         employee_id: Optional[str],
-#         cost_center_code_from: Optional[str],
-#         cost_center_code_from_search_mode: SearchMode = "ALL",
-#         only_my: Optional[bool] = False,
-#         next_service_start: Optional[date] = None,
-#         next_service_end: Optional[date] = None,
-#         material_class: Optional[str] = None
-# ) -> Sequence[Asset]:
-#     """Получение среза локальных активов с полной загрузкой связей."""
-#     query = select(Asset).options(
-#         selectinload(Asset.asset_type),
-#         selectinload(Asset.asset_status),
-#         selectinload(Asset.model),
-#         selectinload(Asset.parent).options(
-#             selectinload(Asset.asset_type),
-#             selectinload(Asset.asset_status),
-#             selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-#         ),
-#         selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-#         selectinload(Asset.assignments).options(
-#             selectinload(AssetAssignment.employee).options(
-#                 selectinload(Employee.position),
-#                 selectinload(Employee.group).options(
-#                     selectinload(ZupDepartment.parent).options(
-#                         selectinload(ZupDepartment.parent).options(
-#                             selectinload(ZupDepartment.parent)
-#                         )
-#                     )
-#                 )
-#             )
-#         ),
-#     )
-#
-#     if asset_id:
-#         query = query.where(Asset.asset_id == asset_id)
-#     if material_id:
-#         query = query.where(Asset.material_id == material_id)
-#     if name:
-#         query = query.where(Asset.name.ilike(f"%{name}%"))
-#     if inventory_id:
-#         query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
-#     if serial_number:
-#         query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
-#     if model_id is not None:
-#         query = query.where(Asset.model_id == model_id)
-#     if asset_type_id is not None:
-#         query = query.where(Asset.asset_type_id == asset_type_id)
-#     if parent_id is not None:
-#         query = query.where(Asset.parent_id == parent_id)
-#     if asset_status:
-#         query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
-#         query = query.where(AssetStatus.status == asset_status)
-#     if employee_id:
-#         emp_asset_subq = (
-#             select(AssetAssignment.asset_id)
-#             .where(AssetAssignment.employee_id == employee_id)
-#             .scalar_subquery()
-#         )
-#         if only_my:
-#             emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
-#
-#         query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
-#
-#     # ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from
-#     if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
-#         ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
-#
-#         if cost_center_code_from_search_mode == "NULLS":
-#             query = query.where(Asset.cost_center_code_from.is_(None))
-#         elif cost_center_code_from_search_mode == "NOT_NULLS":
-#             if ccc_list:
-#                 query = query.where(Asset.cost_center_code_from.in_(ccc_list))
-#             else:
-#                 query = query.where(Asset.cost_center_code_from.isnot(None))
-#         else:  # ALL
-#             if ccc_list:
-#                 query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
-#
-#     # Фильтрация по дате обслуживания
-#     if next_service_start is not None:
-#         query = query.where(Asset.next_service >= next_service_start)
-#     if next_service_end is not None:
-#         query = query.where(Asset.next_service <= next_service_end)
-#     if material_class:
-#         query = query.where(Asset.material_class == material_class)
-#
-#     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
-#     result = await db.execute(query)
-#     return result.scalars().all()

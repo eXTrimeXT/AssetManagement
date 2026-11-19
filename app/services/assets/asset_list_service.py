@@ -238,7 +238,6 @@ async def get_assets_list_with_sap(
 
     return _build_paginated_response(filtered_items, total=final_total, page=page, page_size=page_size)
 
-
 # ==============================================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Четко разделены по задачам)
 # ==============================================================================
@@ -308,7 +307,6 @@ def _filter_items_by_local_params(
 
         filtered.append(item)
     return filtered
-
 
 async def _get_local_only_assets_slice(
         db: AsyncSession, skip: int, limit: int,
@@ -390,7 +388,6 @@ async def _get_local_only_assets_slice(
     if next_service_end: query = query.where(Asset.next_service <= next_service_end)
 
     return (await db.execute(query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit))).scalars().all()
-
 
 async def _get_local_assets_count(
         db: AsyncSession, name: Optional[str] = None, inventory_id: Optional[str] = None,
@@ -696,9 +693,6 @@ async def _get_local_overrides_for_list(db: AsyncSession, sap_items: List[Dict[s
             overrides[asset.inventory_id] = asset
     return overrides
 
-# =========================================================================
-# Вспомогательные функции SAP и БД
-# =========================================================================
 async def _load_maps_for_sap_items(db: AsyncSession, sap_items: List[Dict[str, Any]]) -> Tuple[Dict, Dict]:
     employee_ids = set()
     department_codes = set()
@@ -779,51 +773,71 @@ def _build_virtual_asset(sap_item: Dict[str, Any], employees_map: Dict, departme
         "material_class_name": sap_item.get("material_class_name"),
     }
 
-def _build_user_response(employee: Employee, assignment_type: str, start_date: str) -> Dict[str, Any]:
-    parts_ru = [p for p in [employee.last_name, employee.first_name, employee.middle_name] if p]
-    parts_en = [p for p in [employee.last_name_en, employee.first_name_en, employee.middle_name_en] if p]
+def _build_user_response(employee: Any, assignment_type: str, start_date: str) -> Dict[str, Any]:
+    """
+    Безопасно извлекает данные из объекта сотрудника, полностью избегая
+    триггеров ленивой загрузки SQLAlchemy (MissingGreenlet).
+    """
+    # Прямой доступ к словарю атрибутов объекта, минуя дескрипторы SQLAlchemy
+    emp_dict = getattr(employee, '__dict__', {})
+
+    def safe_get(key, default=None):
+        val = emp_dict.get(key, default)
+        # Если это дата/время, безопасно преобразуем в строку ISO
+        if val is not None and hasattr(val, 'isoformat'):
+            return val.isoformat()
+        return val
+
+    parts_ru = [p for p in [safe_get('last_name'), safe_get('first_name'), safe_get('middle_name')] if p]
+    parts_en = [p for p in [safe_get('last_name_en'), safe_get('first_name_en'), safe_get('middle_name_en')] if p]
 
     format_start_date = (
-        start_date[:4] + "-" + start_date[4:6] + "-" + start_date[6:]
-        if start_date and len(start_date) >= 8 else None
+        str(start_date)[:4] + "-" + str(start_date)[4:6] + "-" + str(start_date)[6:]
+        if start_date and len(str(start_date)) >= 8 else None
     )
 
     position_data = None
-    if getattr(employee, 'position', None):
-        position_data = {"name": employee.position.name, "name_en": employee.position.name_en}
+    pos = safe_get('position')
+    if pos:
+        pos_dict = getattr(pos, '__dict__', {})
+        position_data = {
+            "name": pos_dict.get('name'),
+            "name_en": pos_dict.get('name_en'),
+        }
 
     def _get_dept_dict(dept_obj):
         if not dept_obj:
             return None
+        d = getattr(dept_obj, '__dict__', {})
         return {
-            "guid": dept_obj.guid,
-            "name": dept_obj.name,
-            "name_en": getattr(dept_obj, 'name_en', None),
-            "short_name": getattr(dept_obj, 'short_name', None),
-            "creation_date": getattr(dept_obj, 'creation_date', None),
-            "closure_date": getattr(dept_obj, 'closure_date', None),
-            "parent_guid": getattr(dept_obj, 'parent_guid', None),
+            "guid": d.get('guid'),
+            "name": d.get('name'),
+            "name_en": d.get('name_en'),
+            "short_name": d.get('short_name'),
+            "creation_date": safe_get('creation_date', d.get('creation_date')),
+            "closure_date": safe_get('closure_date', d.get('closure_date')),
+            "parent_guid": d.get('parent_guid'),
         }
 
     return {
-        "guid": employee.guid,
-        "employee_id": employee.employee_id,
-        "birth_date": employee.birth_date.isoformat() if employee.birth_date else None,
-        "employment_date": employee.employment_date.isoformat() if employee.employment_date else None,
-        "dismissal_date": employee.dismissal_date.isoformat() if employee.dismissal_date else None,
-        "phone": employee.phone,
-        "email": employee.email,
-        "comment": employee.comment,
-        "position_guid": employee.position_guid,
-        "department_guid": employee.department_guid,
-        "created_at": employee.created_at.isoformat() if employee.created_at else None,
-        "updated_at": employee.updated_at.isoformat() if employee.updated_at else None,
+        "guid": safe_get('guid'),
+        "employee_id": safe_get('employee_id'),
+        "birth_date": safe_get('birth_date'),
+        "employment_date": safe_get('employment_date'),
+        "dismissal_date": safe_get('dismissal_date'),
+        "phone": safe_get('phone'),
+        "email": safe_get('email'),
+        "comment": safe_get('comment'),
+        "position_guid": safe_get('position_guid'),
+        "department_guid": safe_get('department_guid'),
+        "created_at": safe_get('created_at'),
+        "updated_at": safe_get('updated_at'),
         "full_name_ru": " ".join(parts_ru) if parts_ru else None,
         "full_name_en": " ".join(parts_en) if parts_en else None,
-        "society": _get_dept_dict(getattr(employee, 'society', None)),
-        "department": _get_dept_dict(getattr(employee, 'department', None)),
-        "division": _get_dept_dict(getattr(employee, 'division', None)),
-        "group": getattr(employee, 'group', None),
+        "society": _get_dept_dict(safe_get('society')),
+        "department": _get_dept_dict(safe_get('department')),
+        "division": _get_dept_dict(safe_get('division')),
+        "group": safe_get('group'),
         "position": position_data,
         "start_date": format_start_date,
         "end_date": None,

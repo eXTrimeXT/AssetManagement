@@ -1479,6 +1479,47 @@ async def _get_local_only_assets_slice(
     if filters.get('next_service_end'):
         query = query.where(Asset.next_service <= filters['next_service_end'])
 
+    # =========================================================================
+    # Фильтрация по MVZ (Cost Centers) через **filters
+    # =========================================================================
+    if filters.get('cost_center_code'):
+        ccc_list = [c.strip() for c in filters['cost_center_code'].split(";") if c.strip()]
+        if ccc_list:
+            query = query.where(Asset.cost_center_code.in_(ccc_list))
+
+    if filters.get('cost_center_code_from'):
+        ccc_from_list = [c.strip() for c in filters['cost_center_code_from'].split(";") if c.strip()]
+        search_mode = filters.get('cost_center_code_from_search_mode', 'ALL')
+        if search_mode == "NULLS":
+            query = query.where(Asset.cost_center_code_from.is_(None))
+        elif search_mode == "NOT_NULLS":
+            if ccc_from_list:
+                query = query.where(Asset.cost_center_code_from.in_(ccc_from_list))
+            else:
+                query = query.where(Asset.cost_center_code_from.isnot(None))
+        else:  # ALL
+            if ccc_from_list:
+                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_from_list), Asset.cost_center_code_from.is_(None)))
+
+    if filters.get('cost_center_shortname'):
+        ccs_list = [c.strip() for c in filters['cost_center_shortname'].split(";") if c.strip()]
+        if ccs_list:
+            query = query.where(Asset.cost_center_shortname.in_(ccs_list))
+
+    if filters.get('cost_center_shortname_from'):
+        ccs_from_list = [c.strip() for c in filters['cost_center_shortname_from'].split(";") if c.strip()]
+        search_mode_from = filters.get('cost_center_shortname_from_mode', 'ALL')
+        if search_mode_from == "NULLS":
+            query = query.where(Asset.cost_center_shortname_from.is_(None))
+        elif search_mode_from == "NOT_NULLS":
+            if ccs_from_list:
+                query = query.where(Asset.cost_center_shortname_from.in_(ccs_from_list))
+            else:
+                query = query.where(Asset.cost_center_shortname_from.isnot(None))
+        else:  # ALL
+            if ccs_from_list:
+                query = query.where(or_(Asset.cost_center_shortname_from.in_(ccs_from_list), Asset.cost_center_shortname_from.is_(None)))
+
     query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()

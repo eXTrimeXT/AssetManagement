@@ -54,23 +54,30 @@ async def get_assets_list_with_sap(
         material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
 
-    # 1. ОПТИМИЗАЦИЯ: Если ищем по конкретному локальному asset_id, SAP не нужен
+    # ОПТИМИЗАЦИЯ: Если ищем по конкретному локальному asset_id, SAP не нужен
     if asset_id is not None:
         local_items = await _get_local_only_assets_slice(
             db=db, skip=0, limit=1,
-            exclude_material_ids=[], exclude_inventory_ids=[], exclude_asset_ids=[],
-            asset_id=asset_id, material_id=material_id, name=name,
-            inventory_id=inventory_id, serial_number=serial_number, asset_status=asset_status,
-            model_id=model_id, asset_type_id=asset_type_id, parent_id=parent_id,
-            employee_id=employee_id, only_my=only_my,
+            exclude_material_ids=[],
+            exclude_inventory_ids=[],
+            exclude_asset_ids=[],
+            asset_id=asset_id,
+            material_id=material_id,
+            name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+            only_my=only_my,
             cost_center_code_from=cost_center_code_from,
-            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             cost_center_code=cost_center_code,
             cost_center_shortname=cost_center_shortname,
             cost_center_shortname_from=cost_center_shortname_from,
-            cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-            cost_center_shortname_mode=cost_center_shortname_mode,
-            next_service_start=next_service_start, next_service_end=next_service_end,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
             material_class=material_class
         )
         if local_items:
@@ -83,12 +90,20 @@ async def get_assets_list_with_sap(
     # 2. ВСЕГДА делаем запрос к SAP
     skip = (page - 1) * page_size
     sap_response = await fetch_sap_materials(
-        offset=skip, page_size=page_size, material_id=material_id, search_mode=search_mode,
-        base_material_name_like=name, inventory_number=inventory_id, serial_number=serial_number,
-        employee_id=employee_id, cost_center_code_from=cost_center_code_from,
+        offset=skip,
+        page_size=page_size,
+        material_id=material_id,
+        search_mode=search_mode,
+        base_material_name_like=name,
+        inventory_number=inventory_id,
+        serial_number=serial_number,
+        employee_id=employee_id,
+        cost_center_code_from=cost_center_code_from,
         cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-        cost_center_shortname_from=cost_center_shortname_from, cost_center_code=cost_center_code,
-        cost_center_shortname=cost_center_shortname, material_class=material_class
+        cost_center_shortname_from=cost_center_shortname_from,
+        cost_center_code=cost_center_code,
+        cost_center_shortname=cost_center_shortname,
+        material_class=material_class
     )
 
     sap_items_raw = []
@@ -119,11 +134,8 @@ async def get_assets_list_with_sap(
             asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
             parent_id=parent_id, employee_id=employee_id, only_my=only_my,
             cost_center_code_from=cost_center_code_from,
-            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             cost_center_code=cost_center_code, cost_center_shortname=cost_center_shortname,
             cost_center_shortname_from=cost_center_shortname_from,
-            cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-            cost_center_shortname_mode=cost_center_shortname_mode,
             next_service_start=next_service_start, next_service_end=next_service_end,
             material_class=material_class
         )
@@ -151,13 +163,17 @@ async def get_assets_list_with_sap(
     # 5. ПРИМЕНЯЕМ ЛОКАЛЬНЫЕ ФИЛЬТРЫ к объединенному списку
     filtered_items = _filter_items_by_local_params(
         items=merged_items,
-        asset_status=asset_status, asset_type_id=asset_type_id, model_id=model_id,
-        parent_id=parent_id, next_service_start=next_service_start, next_service_end=next_service_end,
+        asset_status=asset_status,
+        asset_type_id=asset_type_id,
+        model_id=model_id,
+        parent_id=parent_id,
+        next_service_start=next_service_start,
+        next_service_end=next_service_end,
         material_class=material_class,
-        cost_center_code=cost_center_code, cost_center_code_from=cost_center_code_from,
-        cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-        cost_center_shortname=cost_center_shortname, cost_center_shortname_from=cost_center_shortname_from,
-        cost_center_shortname_from_mode=cost_center_shortname_from_mode, cost_center_shortname_mode=cost_center_shortname_mode,
+        cost_center_code=cost_center_code,
+        cost_center_code_from=cost_center_code_from,
+        cost_center_shortname=cost_center_shortname,
+        cost_center_shortname_from=cost_center_shortname_from,
     )
 
     # 6. ДОБОР: Если после фильтрации элементов меньше, чем page_size, добираем из локальной БД
@@ -173,17 +189,23 @@ async def get_assets_list_with_sap(
         # Получаем недостающие элементы из локальной БД
         local_fillers = await _get_local_only_assets_slice(
             db=db, skip=0, limit=remaining_slots,
-            exclude_material_ids=exclude_material_ids, exclude_inventory_ids=exclude_inventory_ids, exclude_asset_ids=exclude_asset_ids,
-            name=name, inventory_id=inventory_id, serial_number=serial_number, asset_status=asset_status,
-            model_id=model_id, asset_type_id=asset_type_id, parent_id=parent_id,
-            employee_id=employee_id, only_my=only_my,
+            exclude_material_ids=exclude_material_ids,
+            exclude_inventory_ids=exclude_inventory_ids,
+            exclude_asset_ids=exclude_asset_ids,
+            name=name, inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status,
+            model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+            only_my=only_my,
             cost_center_code_from=cost_center_code_from,
-            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            cost_center_code=cost_center_code, cost_center_shortname=cost_center_shortname,
+            cost_center_code=cost_center_code,
+            cost_center_shortname=cost_center_shortname,
             cost_center_shortname_from=cost_center_shortname_from,
-            cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-            cost_center_shortname_mode=cost_center_shortname_mode,
-            next_service_start=next_service_start, next_service_end=next_service_end,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
             material_class=material_class
         )
 
@@ -193,16 +215,23 @@ async def get_assets_list_with_sap(
         # 7. КОРРЕКЦИЯ TOTAL: Чтобы пагинация работала верно, считаем сколько всего локальных элементов подходит под фильтр
         # и прибавляем это к sap_total.
         local_count = await _get_local_assets_count(
-            db, name=name, inventory_id=inventory_id, serial_number=serial_number,
-            asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id, only_my=only_my,
+            db, name=name,
+            inventory_id=inventory_id,
+            serial_number=serial_number,
+            asset_status=asset_status, model_id=model_id,
+            asset_type_id=asset_type_id,
+            parent_id=parent_id,
+            employee_id=employee_id,
+            only_my=only_my,
             cost_center_code_from=cost_center_code_from,
             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            cost_center_code=cost_center_code, cost_center_shortname=cost_center_shortname,
+            cost_center_code=cost_center_code,
+            cost_center_shortname=cost_center_shortname,
             cost_center_shortname_from=cost_center_shortname_from,
             cost_center_shortname_from_mode=cost_center_shortname_from_mode,
             cost_center_shortname_mode=cost_center_shortname_mode,
-            next_service_start=next_service_start, next_service_end=next_service_end,
+            next_service_start=next_service_start,
+            next_service_end=next_service_end,
             material_class=material_class
         )
         final_total = sap_total + local_count
@@ -224,11 +253,8 @@ def _filter_items_by_local_params(
         material_class: Optional[str] = None,
         cost_center_code: Optional[str] = None,
         cost_center_code_from: Optional[str] = None,
-        cost_center_code_from_search_mode: str = "ALL",
         cost_center_shortname: Optional[str] = None,
         cost_center_shortname_from: Optional[str] = None,
-        cost_center_shortname_from_mode: str = "ALL",
-        cost_center_shortname_mode: str = "ALL",
 ) -> List[Dict[str, Any]]:
     """Фильтрует список словарей по параметрам, которые SAP API не поддерживает."""
     filtered = []
@@ -267,13 +293,8 @@ def _filter_items_by_local_params(
             continue
 
         item_ccc_from = item.get('cost_center_code_from')
-        if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
-            if cost_center_code_from_search_mode == "NULLS" and item_ccc_from is not None:
-                continue
-            elif cost_center_code_from_search_mode == "NOT_NULLS":
-                if (ccc_from_list and item_ccc_from not in ccc_from_list) or (not ccc_from_list and item_ccc_from is None):
-                    continue
-            elif ccc_from_list and item_ccc_from not in ccc_from_list and item_ccc_from is not None:
+        if cost_center_code_from:
+            if ccc_from_list and item_ccc_from not in ccc_from_list and item_ccc_from is not None:
                 continue
 
         item_ccs = item.get('cost_center_shortname')
@@ -281,13 +302,8 @@ def _filter_items_by_local_params(
             continue
 
         item_ccs_from = item.get('cost_center_shortname_from')
-        if cost_center_shortname_from is not None or cost_center_shortname_from_mode != "ALL":
-            if cost_center_shortname_from_mode == "NULLS" and item_ccs_from is not None:
-                continue
-            elif cost_center_shortname_from_mode == "NOT_NULLS":
-                if (ccs_from_list and item_ccs_from not in ccs_from_list) or (not ccs_from_list and item_ccs_from is None):
-                    continue
-            elif ccs_from_list and item_ccs_from not in ccs_from_list and item_ccs_from is not None:
+        if cost_center_shortname_from:
+            if ccs_from_list and item_ccs_from not in ccs_from_list and item_ccs_from is not None:
                 continue
 
         filtered.append(item)
@@ -296,16 +312,27 @@ def _filter_items_by_local_params(
 
 async def _get_local_only_assets_slice(
         db: AsyncSession, skip: int, limit: int,
-        exclude_material_ids: List[str], exclude_inventory_ids: List[str], exclude_asset_ids: List[int],
-        asset_id: Optional[int] = None, material_id: Optional[str] = None, name: Optional[str] = None,
-        inventory_id: Optional[str] = None, serial_number: Optional[str] = None, asset_status: Optional[str] = None,
-        model_id: Optional[int] = None, asset_type_id: Optional[int] = None, parent_id: Optional[int] = None,
-        employee_id: Optional[str] = None, only_my: Optional[bool] = False,
-        cost_center_code_from: Optional[str] = None, cost_center_code_from_search_mode: str = "ALL",
-        cost_center_code: Optional[str] = None, cost_center_shortname: Optional[str] = None,
-        cost_center_shortname_from: Optional[str] = None, cost_center_shortname_from_mode: str = "ALL",
-        cost_center_shortname_mode: str = "ALL", next_service_start: Optional[date] = None,
-        next_service_end: Optional[date] = None, material_class: Optional[str] = None,
+        exclude_material_ids: List[str],
+        exclude_inventory_ids: List[str],
+        exclude_asset_ids: List[int],
+        asset_id: Optional[int] = None,
+        material_id: Optional[str] = None,
+        name: Optional[str] = None,
+        inventory_id: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        asset_status: Optional[str] = None,
+        model_id: Optional[int] = None,
+        asset_type_id: Optional[int] = None,
+        parent_id: Optional[int] = None,
+        employee_id: Optional[str] = None,
+        only_my: Optional[bool] = False,
+        cost_center_code_from: Optional[str] = None,
+        cost_center_code: Optional[str] = None,
+        cost_center_shortname: Optional[str] = None,
+        cost_center_shortname_from: Optional[str] = None,
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None,
 ) -> Sequence[Asset]:
     """Получает срез локальных активов, исключая переданные ID и применяя все фильтры."""
     query = select(Asset).options(
@@ -347,27 +374,17 @@ async def _get_local_only_assets_slice(
         ccc_list = [c.strip() for c in cost_center_code.split(";") if c.strip()]
         if ccc_list: query = query.where(Asset.cost_center_code.in_(ccc_list))
 
-    if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+    if cost_center_code_from:
         ccc_from_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
-        if cost_center_code_from_search_mode == "NULLS":
-            query = query.where(Asset.cost_center_code_from.is_(None))
-        elif cost_center_code_from_search_mode == "NOT_NULLS":
-            query = query.where(Asset.cost_center_code_from.in_(ccc_from_list) if ccc_from_list else Asset.cost_center_code_from.isnot(None))
-        elif ccc_from_list:
-            query = query.where(or_(Asset.cost_center_code_from.in_(ccc_from_list), Asset.cost_center_code_from.is_(None)))
+        query = query.where(or_(Asset.cost_center_code_from.in_(ccc_from_list), Asset.cost_center_code_from.is_(None)))
 
     if cost_center_shortname:
         ccs_list = [c.strip() for c in cost_center_shortname.split(";") if c.strip()]
         if ccs_list: query = query.where(Asset.cost_center_shortname.in_(ccs_list))
 
-    if cost_center_shortname_from is not None or cost_center_shortname_from_mode != "ALL":
+    if cost_center_shortname_from:
         ccs_from_list = [c.strip() for c in cost_center_shortname_from.split(";") if c.strip()] if cost_center_shortname_from else []
-        if cost_center_shortname_from_mode == "NULLS":
-            query = query.where(Asset.cost_center_shortname_from.is_(None))
-        elif cost_center_shortname_from_mode == "NOT_NULLS":
-            query = query.where(Asset.cost_center_shortname_from.in_(ccs_from_list) if ccs_from_list else Asset.cost_center_shortname_from.isnot(None))
-        elif ccs_from_list:
-            query = query.where(or_(Asset.cost_center_shortname_from.in_(ccs_from_list), Asset.cost_center_shortname_from.is_(None)))
+        query = query.where(or_(Asset.cost_center_shortname_from.in_(ccs_from_list), Asset.cost_center_shortname_from.is_(None)))
 
     if next_service_start: query = query.where(Asset.next_service >= next_service_start)
     if next_service_end: query = query.where(Asset.next_service <= next_service_end)
@@ -382,7 +399,8 @@ async def _get_local_assets_count(
         employee_id: Optional[str] = None, only_my: Optional[bool] = False,
         cost_center_code_from: Optional[str] = None, cost_center_code_from_search_mode: str = "ALL",
         cost_center_code: Optional[str] = None, cost_center_shortname: Optional[str] = None,
-        cost_center_shortname_from: Optional[str] = None, cost_center_shortname_from_mode: str = "ALL",
+        cost_center_shortname_from: Optional[str] = None,
+        cost_center_shortname_from_mode: str = "ALL",
         cost_center_shortname_mode: str = "ALL", next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None, material_class: Optional[str] = None,
 ) -> int:

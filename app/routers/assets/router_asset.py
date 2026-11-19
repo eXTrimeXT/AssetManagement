@@ -8,8 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Literal
 from app.database.connection import get_db
 from app.database.assets.crud_asset import (
-    create_asset, get_asset_by_id, get_assets_list,
-    update_asset, delete_asset, get_asset_children, bulk_enrich_assets
+    create_asset,
+    get_asset_by_id,
+    update_asset,
+    delete_asset,
+    get_asset_children,
+    bulk_enrich_assets
 )
 from app.schemas.assets.AssetSchemas import AssetCreate, AssetUpdate, AssetResponse, AssetShortResponse, QRCodeRequest
 from app.services.auth.auth_service import (

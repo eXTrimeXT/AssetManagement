@@ -1045,6 +1045,10 @@ async def get_assets_list_with_sap(
             parent_id=parent_id, employee_id=employee_id, only_my=only_my,
             cost_center_code_from=cost_center_code_from,
             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+            cost_center_code=cost_center_code,
+            cost_center_shortname=cost_center_shortname,
+            cost_center_shortname_from=cost_center_shortname_from,
+            cost_center_shortname_from_mode=cost_center_shortname_from_mode,
             next_service_start=next_service_start, next_service_end=next_service_end,
             material_class=material_class
         )

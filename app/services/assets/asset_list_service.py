@@ -26,6 +26,237 @@ SearchMode = Literal["ALL", "NOT_NULLS", "NULLS"]
 # ==============================================================================
 # ОСНОВНАЯ ФУНКЦИЯ: Прозрачная логика SAP -> Фильтр -> Добор из БД
 # ==============================================================================
+# async def get_assets_list_with_sap(
+#         db: AsyncSession,
+#         page: int = 1,
+#         page_size: int = 50,
+#         asset_id: Optional[int] = None,
+#         material_id: Optional[str] = None,
+#         name: Optional[str] = None,
+#         inventory_id: Optional[str] = None,
+#         serial_number: Optional[str] = None,
+#         asset_status: Optional[str] = None,
+#         model_id: Optional[int] = None,
+#         asset_type_id: Optional[int] = None,
+#         parent_id: Optional[int] = None,
+#         employee_id: Optional[str] = None,
+#         only_my: Optional[bool] = False,
+#         search_mode: str = "ALL",
+#         cost_center_shortname_from: Optional[str] = None,
+#         cost_center_shortname_from_mode: SearchMode = "ALL",
+#         cost_center_code_from: Optional[str] = None,
+#         cost_center_code_from_search_mode: SearchMode = "ALL",
+#         cost_center_shortname: Optional[str] = None,
+#         cost_center_shortname_mode: SearchMode = "ALL",
+#         cost_center_code: Optional[str] = None,
+#         next_service_start: Optional[date] = None,
+#         next_service_end: Optional[date] = None,
+#         material_class: Optional[str] = None,
+# ) -> Dict[str, Any]:
+#
+#     # ОПТИМИЗАЦИЯ: Если ищем по конкретному локальному asset_id, SAP не нужен
+#     if asset_id is not None:
+#         local_items = await _get_local_only_assets_slice(
+#             db=db, skip=0, limit=1,
+#             exclude_material_ids=[],
+#             exclude_inventory_ids=[],
+#             exclude_asset_ids=[],
+#             asset_id=asset_id,
+#             material_id=material_id,
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#             only_my=only_my,
+#             cost_center_code_from=cost_center_code_from,
+#             cost_center_code=cost_center_code,
+#             cost_center_shortname=cost_center_shortname,
+#             cost_center_shortname_from=cost_center_shortname_from,
+#             next_service_start=next_service_start,
+#             next_service_end=next_service_end,
+#             material_class=material_class
+#         )
+#         if local_items:
+#             return _build_paginated_response(
+#                 [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_items],
+#                 total=1, page=1, page_size=1
+#             )
+#         return _build_paginated_response([], total=0, page=1, page_size=1)
+#
+#     # 2. ВСЕГДА делаем запрос к SAP
+#     skip = (page - 1) * page_size
+#     sap_response = await fetch_sap_materials(
+#         offset=skip,
+#         page_size=page_size,
+#         material_id=material_id,
+#         search_mode=search_mode,
+#         base_material_name_like=name,
+#         inventory_number=inventory_id,
+#         serial_number=serial_number,
+#         employee_id=employee_id,
+#         cost_center_code_from=cost_center_code_from,
+#         cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+#         cost_center_shortname_from=cost_center_shortname_from,
+#         cost_center_code=cost_center_code,
+#         cost_center_shortname=cost_center_shortname,
+#         material_class=material_class
+#     )
+#
+#     sap_items_raw = []
+#     sap_total = 0
+#     if sap_response.get("success") and "data" in sap_response.get("response", {}):
+#         sap_items_raw = sap_response["response"]["data"]
+#         sap_total = sap_response["response"].get("total", 0)
+#
+#     # 3. FALLBACK: Если SAP вернул пустоту, ищем только в локальной БД
+#     if not sap_items_raw:
+#         local_count = await _get_local_assets_count(
+#             db=db,
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#             only_my=only_my,
+#             cost_center_code_from=cost_center_code_from,
+#             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+#             cost_center_code=cost_center_code,
+#             cost_center_shortname=cost_center_shortname,
+#             cost_center_shortname_from=cost_center_shortname_from,
+#             cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+#             cost_center_shortname_mode=cost_center_shortname_mode,
+#             next_service_start=next_service_start,
+#             next_service_end=next_service_end,
+#             material_class=material_class
+#         )
+#         local_items = await _get_local_only_assets_slice(
+#             db=db, skip=skip, limit=page_size,
+#             exclude_material_ids=[],
+#             exclude_inventory_ids=[],
+#             exclude_asset_ids=[],
+#             name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#             only_my=only_my,
+#             cost_center_code_from=cost_center_code_from,
+#             cost_center_code=cost_center_code,
+#             cost_center_shortname=cost_center_shortname,
+#             cost_center_shortname_from=cost_center_shortname_from,
+#             next_service_start=next_service_start,
+#             next_service_end=next_service_end,
+#             material_class=material_class
+#         )
+#         return _build_paginated_response(
+#             [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_items],
+#             total=local_count, page=page, page_size=page_size
+#         )
+#
+#     # 4. Обогащаем данные SAP локальными переопределениями
+#     merged_items = []
+#     merged_local_asset_ids = set()
+#     local_overrides = await _get_local_overrides_for_list(db, sap_items_raw)
+#     employees_map, departments_map = await _load_maps_for_sap_items(db, sap_items_raw)
+#
+#     for sap_item in sap_items_raw:
+#         local_asset = local_overrides.get(sap_item.get("material_id")) or local_overrides.get(sap_item.get("inventory_number"))
+#         if local_asset:
+#             if local_asset.asset_id in merged_local_asset_ids:
+#                 continue  # Защита от дублей
+#             merged_items.append(_merge_sap_with_local(sap_item, local_asset, db))
+#             merged_local_asset_ids.add(local_asset.asset_id)
+#         else:
+#             merged_items.append(_build_virtual_asset(sap_item, employees_map, departments_map))
+#
+#     # 5. ПРИМЕНЯЕМ ЛОКАЛЬНЫЕ ФИЛЬТРЫ к объединенному списку
+#     filtered_items = _filter_items_by_local_params(
+#         items=merged_items,
+#         asset_status=asset_status,
+#         asset_type_id=asset_type_id,
+#         model_id=model_id,
+#         parent_id=parent_id,
+#         next_service_start=next_service_start,
+#         next_service_end=next_service_end,
+#         material_class=material_class,
+#         cost_center_code=cost_center_code,
+#         cost_center_code_from=cost_center_code_from,
+#         cost_center_shortname=cost_center_shortname,
+#         cost_center_shortname_from=cost_center_shortname_from,
+#     )
+#
+#     # 6. ДОБОР: Если после фильтрации элементов меньше, чем page_size, добираем из локальной БД
+#     final_total = sap_total
+#     if len(filtered_items) < page_size:
+#         remaining_slots = page_size - len(filtered_items)
+#
+#         # Исключаем те, что уже есть в текущем списке, чтобы не было дублей
+#         exclude_material_ids = [item.get("material_id") for item in filtered_items if item.get("material_id")]
+#         exclude_inventory_ids = [item.get("inventory_id") for item in filtered_items if item.get("inventory_id")]
+#         exclude_asset_ids = [item.get("asset_id") for item in filtered_items if item.get("asset_id")]
+#
+#         # Получаем недостающие элементы из локальной БД
+#         local_fillers = await _get_local_only_assets_slice(
+#             db=db, skip=0, limit=remaining_slots,
+#             exclude_material_ids=exclude_material_ids,
+#             exclude_inventory_ids=exclude_inventory_ids,
+#             exclude_asset_ids=exclude_asset_ids,
+#             name=name, inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status,
+#             model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#             only_my=only_my,
+#             cost_center_code_from=cost_center_code_from,
+#             cost_center_code=cost_center_code,
+#             cost_center_shortname=cost_center_shortname,
+#             cost_center_shortname_from=cost_center_shortname_from,
+#             next_service_start=next_service_start,
+#             next_service_end=next_service_end,
+#             material_class=material_class
+#         )
+#
+#         # Добавляем их в общий список
+#         filtered_items.extend([AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_fillers])
+#
+#         # 7. КОРРЕКЦИЯ TOTAL: Чтобы пагинация работала верно, считаем сколько всего локальных элементов подходит под фильтр
+#         # и прибавляем это к sap_total.
+#         local_count = await _get_local_assets_count(
+#             db, name=name,
+#             inventory_id=inventory_id,
+#             serial_number=serial_number,
+#             asset_status=asset_status, model_id=model_id,
+#             asset_type_id=asset_type_id,
+#             parent_id=parent_id,
+#             employee_id=employee_id,
+#             only_my=only_my,
+#             cost_center_code_from=cost_center_code_from,
+#             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+#             cost_center_code=cost_center_code,
+#             cost_center_shortname=cost_center_shortname,
+#             cost_center_shortname_from=cost_center_shortname_from,
+#             cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+#             cost_center_shortname_mode=cost_center_shortname_mode,
+#             next_service_start=next_service_start,
+#             next_service_end=next_service_end,
+#             material_class=material_class
+#         )
+#         final_total = sap_total + local_count
+#
+#     return _build_paginated_response(filtered_items, total=final_total, page=page, page_size=page_size)
+
 async def get_assets_list_with_sap(
         db: AsyncSession,
         page: int = 1,
@@ -53,190 +284,235 @@ async def get_assets_list_with_sap(
         next_service_end: Optional[date] = None,
         material_class: Optional[str] = None,
 ) -> Dict[str, Any]:
-
-    # ОПТИМИЗАЦИЯ: Если ищем по конкретному локальному asset_id, SAP не нужен
+    # 1. Оптимизация: прямой поиск по локальному asset_id
     if asset_id is not None:
-        local_items = await _get_local_only_assets_slice(
-            db=db, skip=0, limit=1,
-            exclude_material_ids=[],
-            exclude_inventory_ids=[],
-            exclude_asset_ids=[],
-            asset_id=asset_id,
-            material_id=material_id,
-            name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            asset_status=asset_status,
-            model_id=model_id,
-            asset_type_id=asset_type_id,
-            parent_id=parent_id,
-            employee_id=employee_id,
-            only_my=only_my,
-            cost_center_code_from=cost_center_code_from,
-            cost_center_code=cost_center_code,
-            cost_center_shortname=cost_center_shortname,
-            cost_center_shortname_from=cost_center_shortname_from,
-            next_service_start=next_service_start,
-            next_service_end=next_service_end,
-            material_class=material_class
-        )
-        if local_items:
-            return _build_paginated_response(
-                [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_items],
-                total=1, page=1, page_size=1
-            )
-        return _build_paginated_response([], total=0, page=1, page_size=1)
-
-    # 2. ВСЕГДА делаем запрос к SAP
-    skip = (page - 1) * page_size
-    sap_response = await fetch_sap_materials(
-        offset=skip,
-        page_size=page_size,
-        material_id=material_id,
-        search_mode=search_mode,
-        base_material_name_like=name,
-        inventory_number=inventory_id,
-        serial_number=serial_number,
-        employee_id=employee_id,
-        cost_center_code_from=cost_center_code_from,
-        cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-        cost_center_shortname_from=cost_center_shortname_from,
-        cost_center_code=cost_center_code,
-        cost_center_shortname=cost_center_shortname,
-        material_class=material_class
-    )
-
-    sap_items_raw = []
-    sap_total = 0
-    if sap_response.get("success") and "data" in sap_response.get("response", {}):
-        sap_items_raw = sap_response["response"]["data"]
-        sap_total = sap_response["response"].get("total", 0)
-
-    # 3. FALLBACK: Если SAP вернул пустоту, ищем только в локальной БД
-    if not sap_items_raw:
-        local_count = await _get_local_assets_count(
-            db, name=name, inventory_id=inventory_id, serial_number=serial_number,
-            asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
-            parent_id=parent_id, employee_id=employee_id, only_my=only_my,
-            cost_center_code_from=cost_center_code_from,
-            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
-            cost_center_code=cost_center_code, cost_center_shortname=cost_center_shortname,
-            cost_center_shortname_from=cost_center_shortname_from,
-            cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-            cost_center_shortname_mode=cost_center_shortname_mode,
-            next_service_start=next_service_start, next_service_end=next_service_end,
-            material_class=material_class
-        )
-        local_items = await _get_local_only_assets_slice(
-            db=db, skip=skip, limit=page_size,
-            exclude_material_ids=[], exclude_inventory_ids=[], exclude_asset_ids=[],
+        local_orm_items = await get_local_assets_slice(
+            db=db, skip=0, limit=1, asset_id=asset_id, material_id=material_id,
             name=name, inventory_id=inventory_id, serial_number=serial_number,
             asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
             parent_id=parent_id, employee_id=employee_id, only_my=only_my,
             cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+            next_service_start=next_service_start, next_service_end=next_service_end,
+            material_class=material_class
+        )
+        if local_orm_items:
+            return _build_paginated_response(
+                [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_orm_items],
+                total=1, page=1, page_size=1
+            )
+        return _build_paginated_response([], total=0, page=1, page_size=1)
+
+    # 2. Считаем количество локальных активов, подходящих под фильтры (включая only_my)
+    local_total = await _get_local_assets_count(
+        db=db, name=name, inventory_id=inventory_id, serial_number=serial_number,
+        asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
+        parent_id=parent_id, employee_id=employee_id, only_my=only_my,
+        cost_center_code_from=cost_center_code_from,
+        cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+        cost_center_code=cost_center_code, cost_center_shortname=cost_center_shortname,
+        cost_center_shortname_from=cost_center_shortname_from,
+        cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+        cost_center_shortname_mode=cost_center_shortname_mode,
+        next_service_start=next_service_start, next_service_end=next_service_end,
+        material_class=material_class
+    )
+
+    result_items = []
+    sap_total = 0
+
+    # 3. Забираем локальные активы для текущей страницы (они имеют абсолютный приоритет)
+    skip_local = (page - 1) * page_size
+    if skip_local < local_total:
+        local_orm_items = await get_local_assets_slice(
+            db=db, skip=skip_local, limit=page_size,
+            name=name, inventory_id=inventory_id, serial_number=serial_number,
+            asset_status=asset_status, model_id=model_id, asset_type_id=asset_type_id,
+            parent_id=parent_id, employee_id=employee_id, only_my=only_my,
+            cost_center_code_from=cost_center_code_from,
+            cost_center_code_from_search_mode=cost_center_code_from_search_mode,
             cost_center_code=cost_center_code, cost_center_shortname=cost_center_shortname,
             cost_center_shortname_from=cost_center_shortname_from,
             next_service_start=next_service_start, next_service_end=next_service_end,
             material_class=material_class
         )
-        return _build_paginated_response(
-            [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_items],
-            total=local_count, page=page, page_size=page_size
-        )
+        result_items = [AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_orm_items]
 
-    # 4. Обогащаем данные SAP локальными переопределениями
-    merged_items = []
-    merged_local_asset_ids = set()
-    local_overrides = await _get_local_overrides_for_list(db, sap_items_raw)
-    employees_map, departments_map = await _load_maps_for_sap_items(db, sap_items_raw)
+    # 4. Если страница не заполнена локальными записями, добираем недостающее из SAP
+    remaining_slots = page_size - len(result_items)
 
-    for sap_item in sap_items_raw:
-        local_asset = local_overrides.get(sap_item.get("material_id")) or local_overrides.get(sap_item.get("inventory_number"))
-        if local_asset:
-            if local_asset.asset_id in merged_local_asset_ids:
-                continue  # Защита от дублей
-            merged_items.append(_merge_sap_with_local(sap_item, local_asset, db))
-            merged_local_asset_ids.add(local_asset.asset_id)
-        else:
-            merged_items.append(_build_virtual_asset(sap_item, employees_map, departments_map))
+    if remaining_slots > 0:
+        # Вычисляем смещение для SAP, чтобы пагинация работала бесшовно после исчерпания локальных записей
+        sap_offset = max(0, skip_local - local_total)
+        sap_limit = remaining_slots * 2  # Берем с запасом на случай фильтрации дубликатов
 
-    # 5. ПРИМЕНЯЕМ ЛОКАЛЬНЫЕ ФИЛЬТРЫ к объединенному списку
-    filtered_items = _filter_items_by_local_params(
-        items=merged_items,
-        asset_status=asset_status,
-        asset_type_id=asset_type_id,
-        model_id=model_id,
-        parent_id=parent_id,
-        next_service_start=next_service_start,
-        next_service_end=next_service_end,
-        material_class=material_class,
-        cost_center_code=cost_center_code,
-        cost_center_code_from=cost_center_code_from,
-        cost_center_shortname=cost_center_shortname,
-        cost_center_shortname_from=cost_center_shortname_from,
-    )
-
-    # 6. ДОБОР: Если после фильтрации элементов меньше, чем page_size, добираем из локальной БД
-    final_total = sap_total
-    if len(filtered_items) < page_size:
-        remaining_slots = page_size - len(filtered_items)
-
-        # Исключаем те, что уже есть в текущем списке, чтобы не было дублей
-        exclude_material_ids = [item.get("material_id") for item in filtered_items if item.get("material_id")]
-        exclude_inventory_ids = [item.get("inventory_id") for item in filtered_items if item.get("inventory_id")]
-        exclude_asset_ids = [item.get("asset_id") for item in filtered_items if item.get("asset_id")]
-
-        # Получаем недостающие элементы из локальной БД
-        local_fillers = await _get_local_only_assets_slice(
-            db=db, skip=0, limit=remaining_slots,
-            exclude_material_ids=exclude_material_ids,
-            exclude_inventory_ids=exclude_inventory_ids,
-            exclude_asset_ids=exclude_asset_ids,
-            name=name, inventory_id=inventory_id,
+        sap_response = await fetch_sap_materials(
+            offset=sap_offset,
+            page_size=sap_limit,
+            material_id=material_id,
+            search_mode=search_mode,
+            base_material_name_like=name,
+            inventory_number=inventory_id,
             serial_number=serial_number,
-            asset_status=asset_status,
-            model_id=model_id,
-            asset_type_id=asset_type_id,
-            parent_id=parent_id,
             employee_id=employee_id,
-            only_my=only_my,
-            cost_center_code_from=cost_center_code_from,
-            cost_center_code=cost_center_code,
-            cost_center_shortname=cost_center_shortname,
-            cost_center_shortname_from=cost_center_shortname_from,
-            next_service_start=next_service_start,
-            next_service_end=next_service_end,
-            material_class=material_class
-        )
-
-        # Добавляем их в общий список
-        filtered_items.extend([AssetResponse.model_validate(item, from_attributes=True).model_dump() for item in local_fillers])
-
-        # 7. КОРРЕКЦИЯ TOTAL: Чтобы пагинация работала верно, считаем сколько всего локальных элементов подходит под фильтр
-        # и прибавляем это к sap_total.
-        local_count = await _get_local_assets_count(
-            db, name=name,
-            inventory_id=inventory_id,
-            serial_number=serial_number,
-            asset_status=asset_status, model_id=model_id,
-            asset_type_id=asset_type_id,
-            parent_id=parent_id,
-            employee_id=employee_id,
-            only_my=only_my,
             cost_center_code_from=cost_center_code_from,
             cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+            cost_center_shortname_from=cost_center_shortname_from,
             cost_center_code=cost_center_code,
             cost_center_shortname=cost_center_shortname,
-            cost_center_shortname_from=cost_center_shortname_from,
-            cost_center_shortname_from_mode=cost_center_shortname_from_mode,
-            cost_center_shortname_mode=cost_center_shortname_mode,
-            next_service_start=next_service_start,
-            next_service_end=next_service_end,
             material_class=material_class
         )
-        final_total = sap_total + local_count
 
-    return _build_paginated_response(filtered_items, total=final_total, page=page, page_size=page_size)
+        if sap_response.get("success") and "data" in sap_response.get("response", {}):
+            sap_items_raw = sap_response["response"]["data"]
+            sap_total = sap_response["response"].get("total", 0)
+
+            # Собираем идентификаторы уже добавленных локальных активов для исключения дубликатов
+            existing_inv_ids = {item.get("inventory_id") for item in result_items if item.get("inventory_id")}
+            existing_mat_ids = {item.get("material_id") for item in result_items if item.get("material_id")}
+
+            filtered_sap = []
+            for item in sap_items_raw:
+                inv = item.get("inventory_number")
+                mat = item.get("material_id")
+
+                # Пропускаем, если такой актив уже есть в локальной выдаче
+                if (inv and inv in existing_inv_ids) or (mat and mat in existing_mat_ids):
+                    continue
+
+                filtered_sap.append(item)
+
+            # Обогащаем отфильтрованные SAP-активы данными сотрудников и департаментов
+            if filtered_sap:
+                employees_map, departments_map = await _load_maps_for_sap_items(db, filtered_sap)
+                for item in filtered_sap:
+                    if len(result_items) >= page_size:
+                        break  # Страница заполнена, прекращаем добавление
+                    result_items.append(_build_virtual_asset(item, employees_map, departments_map))
+
+    # 5. Итоговый total: сумма локальных и SAP (приближенно, но корректно для UI пагинации)
+    final_total = local_total + sap_total
+
+    return _build_paginated_response(result_items, total=final_total, page=page, page_size=page_size)
+
+
+async def get_local_assets_slice(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        asset_id: Optional[int] = None,
+        material_id: Optional[str] = None,
+        name: Optional[str] = None,
+        inventory_id: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        asset_status: Optional[str] = None,
+        model_id: Optional[int] = None,
+        asset_type_id: Optional[int] = None,
+        parent_id: Optional[int] = None,
+        employee_id: Optional[str] = None,
+        cost_center_code_from: Optional[str] = None,
+        cost_center_code_from_search_mode: SearchMode = "ALL",
+        only_my: Optional[bool] = False,
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None,
+        cost_center_code: Optional[str] = None,
+        cost_center_shortname: Optional[str] = None,
+        cost_center_shortname_from: Optional[str] = None,
+) -> Sequence[Asset]:
+    """Получение среза локальных активов с полной загрузкой связей."""
+    query = select(Asset).options(
+        selectinload(Asset.asset_type),
+        selectinload(Asset.asset_status),
+        selectinload(Asset.model),
+        selectinload(Asset.parent).options(
+            selectinload(Asset.asset_type),
+            selectinload(Asset.asset_status),
+            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+        ),
+        selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
+        selectinload(Asset.assignments).options(
+            selectinload(AssetAssignment.employee).options(
+                selectinload(Employee.position),
+                selectinload(Employee.group).options(
+                    selectinload(ZupDepartment.parent).options(
+                        selectinload(ZupDepartment.parent).options(
+                            selectinload(ZupDepartment.parent)
+                        )
+                    )
+                )
+            )
+        ),
+    )
+
+    if asset_id:
+        query = query.where(Asset.asset_id == asset_id)
+    if material_id:
+        query = query.where(Asset.material_id == material_id)
+    if name:
+        query = query.where(Asset.name.ilike(f"%{name}%"))
+    if inventory_id:
+        query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
+    if serial_number:
+        query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
+    if model_id is not None:
+        query = query.where(Asset.model_id == model_id)
+    if asset_type_id is not None:
+        query = query.where(Asset.asset_type_id == asset_type_id)
+    if parent_id is not None:
+        query = query.where(Asset.parent_id == parent_id)
+    if asset_status:
+        query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
+        query = query.where(AssetStatus.status == asset_status)
+    if employee_id:
+        emp_asset_subq = (
+            select(AssetAssignment.asset_id)
+            .where(AssetAssignment.employee_id == employee_id)
+            .scalar_subquery()
+        )
+        if only_my:
+            emp_asset_subq = emp_asset_subq.where(AssetAssignment.end_date.is_(None))
+        query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
+
+    # === ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from ===
+    if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
+        if cost_center_code_from_search_mode == "NULLS":
+            query = query.where(Asset.cost_center_code_from.is_(None))
+        elif cost_center_code_from_search_mode == "NOT_NULLS":
+            if ccc_list:
+                query = query.where(Asset.cost_center_code_from.in_(ccc_list))
+            else:
+                query = query.where(Asset.cost_center_code_from.isnot(None))
+        else:  # ALL
+            if ccc_list:
+                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
+
+    # Дополнительные фильтры MVZ (для совместимости с вызовами из get_assets_list_with_sap)
+    if cost_center_code:
+        ccc_list = [c.strip() for c in cost_center_code.split(";") if c.strip()]
+        if ccc_list:
+            query = query.where(Asset.cost_center_code.in_(ccc_list))
+    if cost_center_shortname:
+        ccs_list = [c.strip() for c in cost_center_shortname.split(";") if c.strip()]
+        if ccs_list:
+            query = query.where(Asset.cost_center_shortname.in_(ccs_list))
+    if cost_center_shortname_from:
+        ccs_from_list = [c.strip() for c in cost_center_shortname_from.split(";") if c.strip()]
+        if ccs_from_list:
+            query = query.where(or_(Asset.cost_center_shortname_from.in_(ccs_from_list), Asset.cost_center_shortname_from.is_(None)))
+
+    # Фильтрация по дате обслуживания
+    if next_service_start is not None:
+        query = query.where(Asset.next_service >= next_service_start)
+    if next_service_end is not None:
+        query = query.where(Asset.next_service <= next_service_end)
+    if material_class:
+        query = query.where(Asset.material_class == material_class)
+
+    query = query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
 
 # ==============================================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Четко разделены по задачам)
@@ -390,16 +666,26 @@ async def _get_local_only_assets_slice(
     return (await db.execute(query.order_by(Asset.asset_id.desc()).offset(skip).limit(limit))).scalars().all()
 
 async def _get_local_assets_count(
-        db: AsyncSession, name: Optional[str] = None, inventory_id: Optional[str] = None,
-        serial_number: Optional[str] = None, asset_status: Optional[str] = None,
-        model_id: Optional[int] = None, asset_type_id: Optional[int] = None, parent_id: Optional[int] = None,
-        employee_id: Optional[str] = None, only_my: Optional[bool] = False,
-        cost_center_code_from: Optional[str] = None, cost_center_code_from_search_mode: str = "ALL",
-        cost_center_code: Optional[str] = None, cost_center_shortname: Optional[str] = None,
+        db: AsyncSession,
+        name: Optional[str] = None,
+        inventory_id: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        asset_status: Optional[str] = None,
+        model_id: Optional[int] = None,
+        asset_type_id: Optional[int] = None,
+        parent_id: Optional[int] = None,
+        employee_id: Optional[str] = None,
+        only_my: Optional[bool] = False,
+        cost_center_code_from: Optional[str] = None,
+        cost_center_code_from_search_mode: str = "ALL",
+        cost_center_code: Optional[str] = None,
+        cost_center_shortname: Optional[str] = None,
         cost_center_shortname_from: Optional[str] = None,
         cost_center_shortname_from_mode: str = "ALL",
-        cost_center_shortname_mode: str = "ALL", next_service_start: Optional[date] = None,
-        next_service_end: Optional[date] = None, material_class: Optional[str] = None,
+        cost_center_shortname_mode: str = "ALL",
+        next_service_start: Optional[date] = None,
+        next_service_end: Optional[date] = None,
+        material_class: Optional[str] = None,
 ) -> int:
     """Считает количество локальных активов по тем же фильтрам, что и _get_local_only_assets_slice."""
     # Мы используем тот же набор условий, но заменяем select(Asset) на select(func.count(Asset.asset_id))

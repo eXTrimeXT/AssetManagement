@@ -151,9 +151,9 @@ def _apply_assets_filters(
     if serial_number:
         # query = query.where(Asset.serial_number == serial_number)
         query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
-    if asset_status:
+    # if asset_status:
         # query = query.where(Asset.asset_status == asset_status)
-        query = query.where(Asset.asset_status.ilike(f"%{asset_status}%"))
+        # query = query.where(Asset.asset_status.ilike(f"%{asset_status}%"))
     if asset_status:
         query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
         query = query.where(AssetStatus.status == asset_status)
@@ -164,11 +164,6 @@ def _apply_assets_filters(
     if parent_id is not None:
         query = query.where(Asset.parent_id == parent_id)
 
-    # if allowed_type_en_names is not None:
-    #     query = (
-    #         query.outerjoin(Asset.asset_type)
-    #         .where(AssetType.en_name.in_(allowed_type_en_names))
-    #     )
     if allowed_type_en_names is not None:
         query = (
             query.outerjoin(Asset.asset_type)

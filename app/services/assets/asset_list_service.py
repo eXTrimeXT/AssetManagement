@@ -1114,20 +1114,28 @@ async def get_assets_list_with_sap(
             merged_items.append(_build_virtual_asset(sap_item, employees_map, departments_map))
 
     # =========================================================================
-    # 5. ИСПРАВЛЕНИЕ: ПРИМЕНЯЕМ СТРОГИЕ ЛОКАЛЬНЫЕ ФИЛЬТРЫ СРАЗУ
+    # ПРИМЕНЯЕМ СТРОГИЕ ЛОКАЛЬНЫЕ ФИЛЬТРЫ СРАЗУ
     # Если мы отфильтруем asset_status ПОСЛЕ проверки remaining_slots,
     # то нерелевантные элементы из SAP займут места в page_size, и локальный
     # добар (filler) НИКОГДА не сработает!
     # =========================================================================
     filtered_items = _filter_items_by_local_params(
         items=merged_items,
-        asset_status=asset_status,          # <--- ДОБАВЛЕНО: теперь статус проверяется сразу
+        asset_status=asset_status,
         asset_type_id=asset_type_id,
         model_id=model_id,
         parent_id=parent_id,
         next_service_start=next_service_start,
         next_service_end=next_service_end,
         material_class=material_class,
+        # === Передаем MVZ фильтры ===
+        cost_center_code=cost_center_code,
+        cost_center_code_from=cost_center_code_from,
+        cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+        cost_center_shortname=cost_center_shortname,
+        cost_center_shortname_from=cost_center_shortname_from,
+        cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+        cost_center_shortname_mode=cost_center_shortname_mode,
     )
 
     # 6. Если после строгой фильтрации не хватает записей до page_size, добираем из локальной БД
@@ -1175,17 +1183,28 @@ def _filter_items_by_local_params(
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
         material_class: Optional[str] = None,
+        # === ДОБАВЛЕНО: Параметры MVZ ===
+        cost_center_code: Optional[str] = None,
+        cost_center_code_from: Optional[str] = None,
+        cost_center_code_from_search_mode: str = "ALL",
+        cost_center_shortname: Optional[str] = None,
+        cost_center_shortname_from: Optional[str] = None,
+        cost_center_shortname_from_mode: str = "ALL",
+        cost_center_shortname_mode: str = "ALL",
 ) -> List[Dict[str, Any]]:
-    """
-    Фильтрует список активов (словарей) по параметрам, которые SAP API не поддерживает.
-    Применяется к SAP-активам после обогащения локальными данными.
-    """
+    """Фильтрует список словарей по параметрам, которые SAP API не поддерживает."""
     filtered = []
+
+    # Предварительная обработка списков MVZ
+    ccc_list = [c.strip() for c in cost_center_code.split(";") if c.strip()] if cost_center_code else []
+    ccc_from_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
+    ccs_list = [c.strip() for c in cost_center_shortname.split(";") if c.strip()] if cost_center_shortname else []
+    ccs_from_list = [c.strip() for c in cost_center_shortname_from.split(";") if c.strip()] if cost_center_shortname_from else []
+
     for item in items:
         # Фильтр по статусу актива
         if asset_status is not None:
-            item_status = item.get('asset_status')
-            if item_status != asset_status:
+            if item.get('asset_status') != asset_status:
                 continue
 
         # Фильтр по типу актива
@@ -1216,7 +1235,6 @@ def _filter_items_by_local_params(
                 if ns_date and ns_date < next_service_start:
                     continue
             else:
-                # Если next_service отсутствует, а фильтр задан — пропускаем
                 continue
 
         # Фильтр по дате конца ТО
@@ -1228,6 +1246,48 @@ def _filter_items_by_local_params(
                     continue
             else:
                 continue
+
+        # =========================================================================
+        # === НОВАЯ ЛОГИКА: Фильтрация по MVZ (Cost Centers) ===
+        # =========================================================================
+
+        # 1. cost_center_code (строгое вхождение в список)
+        if ccc_list:
+            if item.get('cost_center_code') not in ccc_list:
+                continue
+
+        # 2. cost_center_code_from (с учетом search_mode)
+        if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+            item_ccc_from = item.get('cost_center_code_from')
+            if cost_center_code_from_search_mode == "NULLS":
+                if item_ccc_from is not None: continue
+            elif cost_center_code_from_search_mode == "NOT_NULLS":
+                if ccc_from_list:
+                    if item_ccc_from not in ccc_from_list: continue
+                else:
+                    if item_ccc_from is None: continue
+            else:  # ALL
+                if ccc_from_list:
+                    if item_ccc_from not in ccc_from_list and item_ccc_from is not None: continue
+
+        # 3. cost_center_shortname
+        if ccs_list:
+            if item.get('cost_center_shortname') not in ccs_list:
+                continue
+
+        # 4. cost_center_shortname_from
+        if cost_center_shortname_from is not None or cost_center_shortname_from_mode != "ALL":
+            item_ccs_from = item.get('cost_center_shortname_from')
+            if cost_center_shortname_from_mode == "NULLS":
+                if item_ccs_from is not None: continue
+            elif cost_center_shortname_from_mode == "NOT_NULLS":
+                if ccs_from_list:
+                    if item_ccs_from not in ccs_from_list: continue
+                else:
+                    if item_ccs_from is None: continue
+            else:  # ALL
+                if ccs_from_list:
+                    if item_ccs_from not in ccs_from_list and item_ccs_from is not None: continue
 
         filtered.append(item)
     return filtered

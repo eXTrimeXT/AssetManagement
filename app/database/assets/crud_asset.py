@@ -146,14 +146,13 @@ def _apply_assets_filters(
     if name:
         query = query.where(Asset.name.ilike(f"%{name}%"))
     if inventory_id:
-        # query = query.where(Asset.inventory_id == inventory_id)
-        query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
+        query = query.where(Asset.inventory_id == inventory_id)
+        # query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
     if serial_number:
-        # query = query.where(Asset.serial_number == serial_number)
-        query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
+        query = query.where(Asset.serial_number == serial_number)
+        # query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
     # if asset_status:
-        # query = query.where(Asset.asset_status == asset_status)
-        # query = query.where(Asset.asset_status.ilike(f"%{asset_status}%"))
+    #     query = query.where(Asset.asset_status == asset_status)
     if asset_status:
         query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
         query = query.where(AssetStatus.status == asset_status)
@@ -164,6 +163,11 @@ def _apply_assets_filters(
     if parent_id is not None:
         query = query.where(Asset.parent_id == parent_id)
 
+    # if allowed_type_en_names is not None:
+    #     query = (
+    #         query.outerjoin(Asset.asset_type)
+    #         .where(AssetType.en_name.in_(allowed_type_en_names))
+    #     )
     if allowed_type_en_names is not None:
         query = (
             query.outerjoin(Asset.asset_type)
@@ -860,10 +864,6 @@ async def get_local_assets_slice(
         employee_id: Optional[str],
         cost_center_code_from: Optional[str],
         cost_center_code_from_search_mode: SearchMode = "ALL",
-        cost_center_code: Optional[str] = None,
-        cost_center_shortname: Optional[str] = None,
-        cost_center_shortname_from: Optional[str] = None,
-        cost_center_shortname_from_mode: SearchMode = "ALL",
         only_my: Optional[bool] = False,
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
@@ -924,50 +924,20 @@ async def get_local_assets_slice(
 
         query = query.where(Asset.asset_id.in_(emp_asset_subq.scalar_subquery()))
 
-    # =========================================================================
-    # НОВАЯ ЛОГИКА ФИЛЬТРАЦИИ ПО MVZ (Центрам затрат)
-    # =========================================================================
-
-    # 1. Фильтрация по cost_center_code
-    if cost_center_code is not None:
-        ccc_list = [c.strip() for c in cost_center_code.split(";") if c.strip()]
-        if ccc_list:
-            query = query.where(Asset.cost_center_code.in_(ccc_list))
-
-    # 2. Фильтрация по cost_center_code_from
+    # ОБНОВЛЕННАЯ ЛОГИКА ФИЛЬТРАЦИИ cost_center_code_from
     if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
-        ccc_from_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
+        ccc_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
+
         if cost_center_code_from_search_mode == "NULLS":
             query = query.where(Asset.cost_center_code_from.is_(None))
         elif cost_center_code_from_search_mode == "NOT_NULLS":
-            if ccc_from_list:
-                query = query.where(Asset.cost_center_code_from.in_(ccc_from_list))
+            if ccc_list:
+                query = query.where(Asset.cost_center_code_from.in_(ccc_list))
             else:
                 query = query.where(Asset.cost_center_code_from.isnot(None))
         else:  # ALL
-            if ccc_from_list:
-                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_from_list), Asset.cost_center_code_from.is_(None)))
-
-    # 3. Фильтрация по cost_center_shortname
-    if cost_center_shortname is not None:
-        ccs_list = [c.strip() for c in cost_center_shortname.split(";") if c.strip()]
-        if ccs_list:
-            query = query.where(Asset.cost_center_shortname.in_(ccs_list))
-
-    # 4. Фильтрация по cost_center_shortname_from
-    if cost_center_shortname_from is not None or cost_center_shortname_from_mode != "ALL":
-        ccs_from_list = [c.strip() for c in cost_center_shortname_from.split(";") if c.strip()] if cost_center_shortname_from else []
-        if cost_center_shortname_from_mode == "NULLS":
-            query = query.where(Asset.cost_center_shortname_from.is_(None))
-        elif cost_center_shortname_from_mode == "NOT_NULLS":
-            if ccs_from_list:
-                query = query.where(Asset.cost_center_shortname_from.in_(ccs_from_list))
-            else:
-                query = query.where(Asset.cost_center_shortname_from.isnot(None))
-        else:  # ALL
-            if ccs_from_list:
-                query = query.where(or_(Asset.cost_center_shortname_from.in_(ccs_from_list), Asset.cost_center_shortname_from.is_(None)))
-
+            if ccc_list:
+                query = query.where(or_(Asset.cost_center_code_from.in_(ccc_list), Asset.cost_center_code_from.is_(None)))
 
     # Фильтрация по дате обслуживания
     if next_service_start is not None:

@@ -1583,7 +1583,7 @@ async def get_assets_list_with_sap(
             overrides_by_material[asset.material_id] = asset
         if asset.inventory_id:
             overrides_by_inventory[asset.inventory_id] = asset
-        used_local_asset_ids.add(asset.asset_id)
+        # used_local_asset_ids.add(asset.asset_id)
 
     # Обогащение SAP-элементов сотрудниками/департаментами
     employees_map, departments_map = await _load_maps_for_sap_items(db, sap_items)

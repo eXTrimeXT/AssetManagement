@@ -398,44 +398,80 @@ def _enrich_users_from_cache(
 
     return enriched
 
+# async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
+#     """
+#     Оптимизированное обогащение с кэшированием.
+#     Решает проблему N+1, вызывая тяжелые функции только для УНИКАЛЬНЫХ guid.
+#     """
+#     # Собираем уникальные GUID'ы со всех пользователей всех активов
+#     unique_dept_guids = set()
+#     unique_pos_guids = set()
+#
+#     for asset in assets:
+#         # for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
+#         for user in (asset.users or []) + (asset.serving_users or []):
+#             user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
+#             if user_dict.get("department_guid"):
+#                 unique_dept_guids.add(user_dict["department_guid"])
+#             if user_dict.get("position_guid"):
+#                 unique_pos_guids.add(user_dict["position_guid"])
+#
+#     # Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
+#     dept_hierarchy_cache = {}
+#     for guid in unique_dept_guids:
+#         hierarchy = await get_hierarchy_departments(db, guid)
+#         dept_hierarchy_cache[guid] = hierarchy
+#
+#     # Кэшируем должности
+#     pos_cache = {}
+#     for guid in unique_pos_guids:
+#         position = await get_position_by_guid(db, guid)
+#         pos_cache[guid] = position
+#
+#     # Обогащаем данные в памяти, используя готовые кэши
+#     for asset in assets:
+#         if asset.users:
+#             asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
+#         # if asset.responsible_users:
+#         #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
+#         if asset.serving_users:
+#             asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
+
 async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
     """
     Оптимизированное обогащение с кэшированием.
-    Решает проблему N+1, вызывая тяжелые функции только для УНИКАЛЬНЫХ guid.
+    НЕ мутирует asset.users (property без сеттера) — сохраняет результат
+    в asset.__dict__['_enriched_users'] и '_enriched_serving_users'.
+    Сериализатор должен читать эти атрибуты с fallback на users/serving_users.
     """
-    # Собираем уникальные GUID'ы со всех пользователей всех активов
     unique_dept_guids = set()
     unique_pos_guids = set()
 
     for asset in assets:
-        # for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
         for user in (asset.users or []) + (asset.serving_users or []):
-            user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
+            user_dict = user.model_dump() if hasattr(user, 'model_dump') else dict(user)
             if user_dict.get("department_guid"):
                 unique_dept_guids.add(user_dict["department_guid"])
             if user_dict.get("position_guid"):
                 unique_pos_guids.add(user_dict["position_guid"])
 
-    # Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
     dept_hierarchy_cache = {}
     for guid in unique_dept_guids:
-        hierarchy = await get_hierarchy_departments(db, guid)
-        dept_hierarchy_cache[guid] = hierarchy
+        dept_hierarchy_cache[guid] = await get_hierarchy_departments(db, guid)
 
-    # Кэшируем должности
     pos_cache = {}
     for guid in unique_pos_guids:
-        position = await get_position_by_guid(db, guid)
-        pos_cache[guid] = position
+        pos_cache[guid] = await get_position_by_guid(db, guid)
 
-    # Обогащаем данные в памяти, используя готовые кэши
     for asset in assets:
         if asset.users:
-            asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
-        # if asset.responsible_users:
-        #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
+            asset.__dict__['_enriched_users'] = _enrich_users_from_cache(
+                asset.users, dept_hierarchy_cache, pos_cache
+            )
         if asset.serving_users:
-            asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
+            asset.__dict__['_enriched_serving_users'] = _enrich_users_from_cache(
+                asset.serving_users, dept_hierarchy_cache, pos_cache
+            )
 
 async def _sync_asset_users(
         db: AsyncSession,

@@ -204,6 +204,12 @@ async def request_asset_transfer(
     asset_id = request.asset_id
     asset_source = "local"
 
+    if request.target_employee_id == initiator_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Вы не можете создать заявку на самого себя!"
+        )
+
     if request.material_id and asset_id is None:
         try:
             new_asset = await create_asset_from_sap_material(db, request.material_id, initiator_id)
@@ -217,6 +223,13 @@ async def request_asset_transfer(
     transfer_check = await check_pending_transfer_exists(db, asset_id, initiator_id)
     if transfer_check.is_exists:
         raise ValueError("На этот актив уже есть активная заявка на передачу")
+
+    is_initiator_owner = await check_is_asset_employee_as_user(db, asset_id, initiator_id)
+    if not is_initiator_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Вы не являетесь текущим владельцем этого актива и не можете инициировать его передачу."
+        )
 
     initiator_name = await get_employee_full_name(db, initiator_id)
     target_name = await get_employee_full_name(db, request.target_employee_id)

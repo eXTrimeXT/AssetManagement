@@ -387,6 +387,7 @@ async def get_assets_list_with_sap(
             skip=0,
             limit=remaining_slots_after_sap,
             exclude_material_ids=exclude_material_ids,
+            material_id=material_id,
             exclude_inventory_ids=exclude_inventory_ids,
             exclude_asset_ids=exclude_asset_ids,
             name=name,

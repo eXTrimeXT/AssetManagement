@@ -390,8 +390,67 @@ async def get_assets_list_with_sap(
                         break  # Страница заполнена, прекращаем добавление
                     result_items.append(_build_virtual_asset(item, employees_map, departments_map))
 
-    # 5. Итоговый total: сумма локальных и SAP (приближенно, но корректно для UI пагинации)
-    final_total = local_total + sap_total
+    # КОРРЕКЦИЯ TOTAL:
+    # Активы с material_id считаются переопределениями SAP-активов и уже учтены в sap_total.
+    # Поэтому к sap_total мы прибавляем только количество чисто локальных активов (у которых material_id IS NULL).
+
+    local_only_count_query = select(func.count(Asset.asset_id)).select_from(Asset)
+
+    # Применяем все те же фильтры, что и для обычного подсчета
+    if name: local_only_count_query = local_only_count_query.where(Asset.name.ilike(f"%{name}%"))
+    if inventory_id: local_only_count_query = local_only_count_query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
+    if serial_number: local_only_count_query = local_only_count_query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
+    if model_id is not None: local_only_count_query = local_only_count_query.where(Asset.model_id == model_id)
+    if asset_type_id is not None: local_only_count_query = local_only_count_query.where(Asset.asset_type_id == asset_type_id)
+    if parent_id is not None: local_only_count_query = local_only_count_query.where(Asset.parent_id == parent_id)
+    if material_class: local_only_count_query = local_only_count_query.where(Asset.material_class == material_class)
+
+    if asset_status:
+        local_only_count_query = local_only_count_query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id).where(AssetStatus.status == asset_status)
+
+    if employee_id:
+        emp_subq = select(AssetAssignment.asset_id).where(AssetAssignment.employee_id == employee_id)
+        if only_my: emp_subq = emp_subq.where(AssetAssignment.end_date.is_(None))
+        local_only_count_query = local_only_count_query.where(Asset.asset_id.in_(emp_subq.scalar_subquery()))
+
+    if cost_center_code:
+        ccc_list = [c.strip() for c in cost_center_code.split(";") if c.strip()]
+        if ccc_list: local_only_count_query = local_only_count_query.where(Asset.cost_center_code.in_(ccc_list))
+
+    if cost_center_code_from is not None or cost_center_code_from_search_mode != "ALL":
+        ccc_from_list = [c.strip() for c in cost_center_code_from.split(";") if c.strip()] if cost_center_code_from else []
+        if cost_center_code_from_search_mode == "NULLS":
+            local_only_count_query = local_only_count_query.where(Asset.cost_center_code_from.is_(None))
+        elif cost_center_code_from_search_mode == "NOT_NULLS":
+            local_only_count_query = local_only_count_query.where(Asset.cost_center_code_from.in_(ccc_from_list) if ccc_from_list else Asset.cost_center_code_from.isnot(None))
+        elif ccc_from_list:
+            local_only_count_query = local_only_count_query.where(or_(Asset.cost_center_code_from.in_(ccc_from_list), Asset.cost_center_code_from.is_(None)))
+
+    if cost_center_shortname:
+        ccs_list = [c.strip() for c in cost_center_shortname.split(";") if c.strip()]
+        if ccs_list: local_only_count_query = local_only_count_query.where(Asset.cost_center_shortname.in_(ccs_list))
+
+    if cost_center_shortname_from is not None or cost_center_shortname_from_mode != "ALL":
+        ccs_from_list = [c.strip() for c in cost_center_shortname_from.split(";") if c.strip()] if cost_center_shortname_from else []
+        if cost_center_shortname_from_mode == "NULLS":
+            local_only_count_query = local_only_count_query.where(Asset.cost_center_shortname_from.is_(None))
+        elif cost_center_shortname_from_mode == "NOT_NULLS":
+            local_only_count_query = local_only_count_query.where(Asset.cost_center_shortname_from.in_(ccs_from_list) if ccs_from_list else Asset.cost_center_shortname_from.isnot(None))
+        elif ccs_from_list:
+            local_only_count_query = local_only_count_query.where(or_(Asset.cost_center_shortname_from.in_(ccs_from_list), Asset.cost_center_shortname_from.is_(None)))
+
+    if next_service_start: local_only_count_query = local_only_count_query.where(Asset.next_service >= next_service_start)
+    if next_service_end: local_only_count_query = local_only_count_query.where(Asset.next_service <= next_service_end)
+
+    # === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ===
+    # Считаем только те локальные активы, у которых НЕТ material_id.
+    # Активы с material_id уже учтены в sap_total как переопределения SAP-активов.
+    local_only_count_query = local_only_count_query.where(Asset.material_id.is_(None))
+
+    local_only_count = (await db.execute(local_only_count_query)).scalar_one()
+
+    # Итоговый total = SAP активы + Чисто локальные активы (без material_id)
+    final_total = sap_total + local_only_count
 
     return _build_paginated_response(result_items, total=final_total, page=page, page_size=page_size)
 

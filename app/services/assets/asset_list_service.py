@@ -25,7 +25,7 @@ X_API_TOKEN = os.getenv("X_API_TOKEN")
 WITHOUT_TYPE_ASSET_ID = 0
 
 SearchMode = Literal["ALL", "NOT_NULLS", "NULLS"]
-IsSapMode = Literal["ALL", "LOCAL", "SAP"]
+IsSapMode = Literal["all", "local", "sap"]
 
 # Максимальное количество SAP-активов, которое мы готовы загрузить за один раз
 # (защита от OOM; при необходимости увеличьте или сделайте батчевую загрузку)
@@ -52,7 +52,7 @@ async def get_assets_list_with_sap(
         employee_id: Optional[str] = None,
         only_my: Optional[bool] = False,
         search_mode: str = "ALL",
-        is_sap: str = "ALL",
+        is_sap: str = "all",
         cost_center_shortname_from: Optional[str] = None,
         cost_center_shortname_from_mode: SearchMode = "ALL",
         cost_center_code_from: Optional[str] = None,
@@ -83,10 +83,9 @@ async def get_assets_list_with_sap(
     # ------------------------------------------------------------------
     # Загружаем ВСЕ локальные активы по локальным фильтрам (без пагинации)
     # ------------------------------------------------------------------
-    is_sap = is_sap.upper()
     local_assets: List[Asset] = []
 
-    if is_sap == "ALL" or is_sap == "LOCAL":
+    if is_sap == "all" or is_sap == "local":
         local_assets = await _load_all_local_assets(
             db=db,
             asset_id=asset_id,
@@ -139,7 +138,7 @@ async def get_assets_list_with_sap(
 
     logger.debug(f"{is_sap=}")
 
-    if is_sap == "ALL" or is_sap == "SAP":
+    if is_sap == "all" or is_sap == "sap":
         if should_fetch_sap:
             sap_items, sap_total_from_api = await _fetch_all_sap_materials(
                 material_id=material_id,

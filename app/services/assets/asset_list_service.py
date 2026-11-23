@@ -85,9 +85,10 @@ async def get_assets_list_with_sap(
     # ------------------------------------------------------------------
     local_assets: List[Asset] = []
 
-    if is_sap == "all" or is_sap == "local":
+    if is_sap == "all" or is_sap == "local" or is_sap == "merge":
         local_assets = await _load_all_local_assets(
             db=db,
+            is_sap=is_sap,
             asset_id=asset_id,
             material_id=material_id,
             name=name,
@@ -282,6 +283,7 @@ def _local_assets_base_query():
 
 def _apply_local_filters(
         query,
+        is_sap: Optional[str] = "all",
         asset_id: Optional[int] = None,
         material_id: Optional[str] = None,
         name: Optional[str] = None,
@@ -305,6 +307,10 @@ def _apply_local_filters(
         material_class: Optional[str] = None,
 ):
     """Применяет локальные SQL-фильтры к запросу Asset."""
+    if is_sap == "merge":
+        query = query.where(Asset.material_id.is_not(None))
+    elif is_sap == "local":
+        query = query.where(Asset.material_id.is_(None))
     if asset_id is not None:
         query = query.where(Asset.asset_id == asset_id)
     if material_id:

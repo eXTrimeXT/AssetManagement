@@ -111,6 +111,7 @@ async def get_assets(
         employee_id: Optional[str] = Query(None, description="Табельный номер сотрудника"),
         only_my: Optional[bool] = Query(False, description="Показать только мои активы? (employee_id игнорируется)"),
         search_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL", description="Режим поиска SAP: all, not_nulls, nulls"),
+        is_sap: Literal["ALL", "LOCAL", "SAP"] = Query("ALL", description="Режим отображения активов: all, local, sap"),
 
         # Фильтры по MVZ:
         cost_center_shortname_from: Optional[str] = Query(None, description="Ответственный департамент (short_name)"),
@@ -153,6 +154,7 @@ async def get_assets(
         search_mode=search_mode,
         employee_id=employee_id,
         only_my=only_my,
+        is_sap=is_sap,
 
         # Фильтры по MVZ
         cost_center_shortname_from=cost_center_shortname_from,

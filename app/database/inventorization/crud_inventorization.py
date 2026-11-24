@@ -346,13 +346,22 @@ async def _create_single_inventory_session(
             if all_sap_items:
                 local_inv_ids = {asset.inventory_id.strip().lower() for asset in assets if asset.inventory_id}
                 local_mat_ids = {asset.material_id.strip().lower() for asset in assets if asset.material_id}
+
                 for sap_item in all_sap_items:
                     inv_num = str(sap_item.get("inventory_number", "")).strip().lower()
                     mat_id = str(sap_item.get("material_id", "")).strip().lower()
+
                     if inv_num and inv_num in local_inv_ids:
                         continue
                     if mat_id and mat_id in local_mat_ids:
                         continue
+
+                    # === ИСПРАВЛЕНИЕ: Нормализация серийного номера и для инвентаризации ===
+                    raw_serial = sap_item.get("long_serial_number") or sap_item.get("serial_number")
+                    clean_serial = raw_serial.strip() if isinstance(raw_serial, str) else raw_serial
+                    final_serial = clean_serial if clean_serial else None
+                    # ========================================================================
+
                     items.append(
                         InventorizationItem(
                             session_id=session.session_id,
@@ -360,7 +369,7 @@ async def _create_single_inventory_session(
                             material_id=sap_item.get("material_id"),
                             asset_name=sap_item.get("base_material_name"),
                             is_checked=False,
-                            serial_number=sap_item.get("serial_number"),
+                            serial_number=final_serial, # Используем очищенное значение
                             inventory_id=sap_item.get("inventory_number"),
                             quantity=int(sap_item.get("quantity", 1)) if sap_item.get("quantity") else 1,
                             quantity_fact=None,

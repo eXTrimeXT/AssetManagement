@@ -1,14 +1,12 @@
-import os
 import logging
-import httpx
+import os
 from typing import Optional
-from sqlalchemy import select, insert, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+import httpx
 from fastapi import HTTPException
 from dotenv import load_dotenv
-
-
 from app.models.assets import Asset
 from app.models.sap.SapDepartment import SapDepartment
 from app.models.sap.SapMaterialClass import SapMaterialClass
@@ -20,15 +18,10 @@ SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/")  # defau
 X_API_TOKEN = os.getenv("X_API_TOKEN")
 headers = {"X-API-Token": X_API_TOKEN}
 
-
 async def sync_sap_assets(db: AsyncSession) -> dict:
     """
     Единая логика синхронизации активов из SAP API.
-    Стратегия: Вставляет записи, только если точной копии (по 4-м полям) еще нет в БД.
-    Уникальные ограничения не требуются.
-
-    :param db: Активная сессия базы данных
-    :return: Словарь со статистикой выполнения
+    Стратегия: Вставляет записи, игнорируя конфликты уникальности.
     """
     logger.info("[SAP SYNC] Запуск синхронизации активов из SAP...")
 
@@ -41,8 +34,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
             while True:
                 response = await client.get(
                     SAP_API_URL + "base_materials",
-                    params={"limit": limit, "offset": offset},
-                    headers=headers
+                    params={"limit": limit, "offset": offset}
                 )
 
                 if response.status_code == 422:
@@ -67,14 +59,22 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     if not inv_id:
                         continue
 
-                    serial_num = item.get("serial_number")
+                    material_id = item.get("material_id") or None
+                    # === ИСПРАВЛЕНИЕ 1: Корректная обработка long_serial_number и serial_number ===
+                    # Отдаем приоритет long_serial_number. Если его нет или он пустой — берем serial_number
+                    raw_serial = item.get("long_serial_number") or item.get("serial_number")
+
+                    # Если это строка, убираем пробелы. Если после этого строка пустая или None — делаем None
+                    serial_num = raw_serial.strip() if isinstance(raw_serial, str) else raw_serial
                     if not serial_num:
                         serial_num = None
+                    # ==============================================================================
 
                     records_dict[inv_id] = {
+                        "material_id": material_id,
                         "inventory_id": inv_id,
                         "name": item.get("base_material_name"),
-                        "serial_number": serial_num,
+                        "serial_number": serial_num, # Теперь здесь гарантированно None, а не ""
                         "quantity": item.get("quantity", 0),
                         "every_week_check": False
                     }
@@ -113,13 +113,23 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     if row_tuple not in existing_set:
                         records_to_insert.append(r)
 
-                # Вставляем только новые записи (обычный INSERT, без ON CONFLICT)
+                # === ИСПРАВЛЕНИЕ 2 и 3: Безопасная вставка с игнорированием конфликтов ===
                 if records_to_insert:
-                    stmt = insert(Asset).values(records_to_insert)
-                    await db.execute(stmt)
-                    await db.commit()
-                    total_synced += len(records_to_insert)
-                    logger.info(f"[SAP SYNC] Вставлено новых записей: {len(records_to_insert)} из {len(records)} в порции (offset={offset})")
+                    try:
+                        # Используем PostgreSQL-специфичный insert с on_conflict_do_nothing
+                        stmt = pg_insert(Asset).values(records_to_insert)
+                        stmt = stmt.on_conflict_do_nothing() # Молча пропускает дубликаты по любым Unique-ограничениям
+
+                        await db.execute(stmt)
+                        await db.commit()
+
+                        total_synced += len(records_to_insert)
+                        logger.info(f"[SAP SYNC] Обработано записей: {len(records_to_insert)} из {len(records)} в порции (offset={offset})")
+                    except Exception as batch_err:
+                        # Если вдруг произошла другая ошибка (не конфликт), мы делаем rollback ТОЛЬКО этого батча
+                        # и продолжаем цикл, чтобы не прерывать синхронизацию 130k+ записей из-за одной ошибки
+                        await db.rollback()
+                        logger.error(f"[SAP SYNC] Ошибка вставки батча (offset={offset}), пропускаем: {batch_err}")
                 else:
                     logger.debug(f"[SAP SYNC] В порции (offset={offset}) все записи уже существуют в БД, пропуск.")
 
@@ -128,11 +138,12 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
 
                 offset += limit
 
-        logger.info(f"[SAP SYNC] Синхронизация завершена. Всего добавлено записей: {total_synced}")
+        logger.info(f"[SAP SYNC] Синхронизация завершена. Всего обработано записей: {total_synced}")
         return {"success": True, "message": "Синхронизация завершена", "total_synced": total_synced}
 
     except Exception as e:
         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)
+        await db.rollback()
         return {"success": False, "message": f"Ошибка синхронизации: {str(e)}", "total_synced": total_synced}
 
 

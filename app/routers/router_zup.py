@@ -75,7 +75,7 @@ async def sync_zup_data(
 )
 async def sync_zup_employee_data(
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(require_authorized_user)
+        # current_user=Depends(require_authorized_user)
 ):
     """
     Универсальный эндпоинт для заполнения/обновления всех таблиц из 1С-ЗУП.

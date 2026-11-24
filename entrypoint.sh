@@ -1,6 +1,5 @@
 #!/bin/bash
 echo "entrypoint.sh: Запуск контейнера приложения..."
-
 # Ожидание готовности PostgreSQL
 echo "entrypoint.sh: Ожидание доступности базы данных..."
 until python -c "import asyncio; from app.database.connection import engine; asyncio.run(engine.connect())" 2> /dev/null

@@ -7,7 +7,10 @@ from app.database.assets.crud_asset_model import (
     update_asset_model, delete_asset_model
 )
 from app.database.assets.crud_asset import (
-    create_asset, get_asset_by_id, get_assets_list, update_asset, delete_asset,
+    create_asset, get_asset_by_id,
+    # get_assets_list,
+    update_asset,
+    delete_asset,
     get_asset_children
 )
 
@@ -16,7 +19,8 @@ __all__ = [
     "update_asset_type", "delete_asset_type",
     "create_asset_model", "get_asset_model_by_id", "get_asset_models_list",
     "update_asset_model", "delete_asset_model",
-    "create_asset", "get_asset_by_id", "get_assets_list",
+    "create_asset", "get_asset_by_id",
+    # "get_assets_list",
     "update_asset", "delete_asset",
     "get_asset_children",
 ]

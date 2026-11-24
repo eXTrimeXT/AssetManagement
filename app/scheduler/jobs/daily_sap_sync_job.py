@@ -24,3 +24,4 @@ async def daily_sap_sync_job():
 
     except Exception as e:
         logger.error(f"[SAP SYNC] Критическая ошибка обертки фоновой задачи SAP: {e}", exc_info=True)
+

@@ -8,10 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.UserJWTData import UserJWTData
 from app.models.zup.employee import Employee
 from app.database.connection import get_db
-from app.database.zup.crud_zup_employees import get_employee_by_login_or_email, update_employee_active_directory_login, \
-    get_employee_by_email
+from app.database.zup.crud_zup_employees import update_employee_active_directory_login, get_employee_by_email
 from app.database.zup.crud_zup_employees import get_employee_by_active_directory_login
-from app.services.zup.zup_integration import sync_all_data, sync_employee_data
 from app.services.auth.system_users import MockSystemEmployee, SYSTEM_USERS
 from app.schemas.auth.AuthSchemas import PermissionDepartments
 from dotenv import load_dotenv
@@ -29,8 +27,8 @@ security = HTTPBearer(auto_error=False)
 async def get_token_from_request(request: Request) -> str:
     """
     Получает токен из:
-    1. Заголовка Authorization: Bearer <token>
-    2. Куки session_token
+    Заголовка Authorization: Bearer <token>
+    Куки session_token
     """
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -163,23 +161,6 @@ async def require_authorized_user(
         # Ищем по почте
         if not employee:
             employee = await get_employee_by_email(db, email=str(user_data.email))
-
-        # Если всё ещё не нашли, выполняем синхронизацию
-        if not employee:
-            logger.info(f"Сотрудник {user_data.login} не найден. Попытка синхronизации из 1С...")
-            try:
-                await sync_all_data(db)
-            except Exception as e:
-                logger.error(f"Ошибка синхронизации из 1С: {e}")
-                # Не прерываем выполнение сразу, даем шанс найти сотрудника,
-                # если синхронизация частично прошла или сотрудник уже был в БД
-
-            # После обновления ищем еще раз по active_directory_login
-            employee = await get_employee_by_active_directory_login(db, login=user_data.login)
-
-            # Если всё ещё не нашли, ищем еще раз по почте
-            if not employee:
-                employee = await get_employee_by_email(db, email=str(user_data.email))
 
         # Финальная проверка, нашли ли мы сотрудника
         if not employee:

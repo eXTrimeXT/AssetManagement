@@ -28,8 +28,8 @@ async def get_employee_by_id(db: AsyncSession, employee_id: str) -> Optional[Emp
     result = await db.execute(
         select(Employee)
         .options(
-            selectinload(Employee.position),  # Загружаем должность
-            selectinload(Employee.group),  # Загружаем департамент
+            selectinload(Employee.position),    # Загружаем должность
+            selectinload(Employee.group),       # Загружаем департамент
         )
         .where(Employee.employee_id == employee_id)
     )
@@ -67,8 +67,8 @@ async def get_employee_by_login_or_email(
 ) -> Employee | None:
     """
     Ищет сотрудника:
-    1. Сначала по active_directory_login (быстрый путь)
-    2. Если не найден - по email
+    Сначала по active_directory_login (быстрый путь)
+    Если не найден - по email
     """
     # Сначала пытаемся найти по active_directory_login
     employee = await get_employee_by_active_directory_login(db, login)
@@ -137,7 +137,6 @@ async def get_employees_count(
 ) -> int:
     query = select(func.count(Employee.employee_id))
     if employee_id:
-        # query = query.where(Employee.employee_id == employee_id)
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if search_name:
         query = _apply_name_search(query, search_name)
@@ -279,7 +278,6 @@ async def get_employees_list(
     )
 
     if employee_id:
-        # query = query.where(Employee.employee_id == employee_id)
         query = query.where(Employee.employee_id.ilike(f"%{employee_id}%"))
     if search_name:
         query = _apply_name_search(query, search_name)

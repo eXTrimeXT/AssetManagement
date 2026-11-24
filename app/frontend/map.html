@@ -179,7 +179,7 @@
     const svg = document.getElementById('mapSvg');
     const zoomLevelEl = document.getElementById('zoomLevel');
 
-    // === 1. ЗАГРУЗКА ДАННЫХ ЧЕРЕЗ API ===
+    // ЗАГРУЗКА ДАННЫХ ЧЕРЕЗ API
     async function loadData() {
         try {
             // Запрос к GET /api/workshops/
@@ -209,7 +209,7 @@
         }
     }
 
-    // === 2. РЕНДЕРИНГ ===
+    // === РЕНДЕРИНГ ===
     function renderMap(workshops, positions) {
         renderWorkshops(workshops);
         renderAssets(positions);
@@ -335,7 +335,7 @@
         return { x: x / n, y: y / n };
     }
 
-    // === 3. ZOOM & PAN ЛОГИКА (без изменений) ===
+    // ZOOM & PAN ЛОГИКА
     function setupZoomPan() {
         svg.addEventListener('wheel', (e) => {
             e.preventDefault();

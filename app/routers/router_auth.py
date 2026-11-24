@@ -56,7 +56,19 @@ async def get_employee_or_mock(
     return employee
 
 
-@router_auth.post("/auth_token", response_model=UserInfoResponse)
+@router_auth.post(
+    "/auth_token",
+    response_model=UserInfoResponse,
+    summary="Аутентификация по JWT-токену / JWT Token Authentication",
+    description=(
+            "RU: Аутентифицирует пользователя по предоставленному JWT-токену. Проверяет валидность и срок действия токена, "
+            "ищет сотрудника в базе данных (или использует системного пользователя), проверяет дату увольнения и при необходимости "
+            "обновляет поле active_directory_login. Устанавливает HTTP-only cookie 'session_token' и возвращает информацию о пользователе.\n\n"
+            "EN: Authenticates the user using the provided JWT token. Validates the token and its expiration, "
+            "looks up the employee in the database (or uses a system user), checks the dismissal date, and updates "
+            "the active_directory_login field if necessary. Sets an HTTP-only 'session_token' cookie and returns user information."
+    )
+)
 async def auth_token(
         request: TokenRequest,
         response: Response,
@@ -108,14 +120,21 @@ async def auth_token(
         logger.error(f"Внутренняя ошибка: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка: {str(e)}")
 
-@router_auth.post("/logout")
+
+@router_auth.post(
+    "/logout",
+    summary="Завершение сеанса / Logout",
+    description=(
+            "RU: Завершает сеанс пользователя путем очистки cookie 'session_token'. Сессия является stateless, "
+            "данные не хранятся в Redis или других хранилищах на стороне сервера.\n\n"
+            "EN: Terminates the user session by clearing the 'session_token' cookie. The session is stateless, "
+            "no data is stored in Redis or other server-side storage."
+    )
+)
 async def logout(
         request: Request,
         response: Response,
 ):
-    """
-    Очищает куки (сессия stateless, в Redis ничего не храним).
-    """
     try:
         response.delete_cookie(key="session_token", path="/")
         return {"status": "logged out"}

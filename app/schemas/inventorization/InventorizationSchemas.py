@@ -6,8 +6,9 @@ class InventorizationSessionObj(BaseModel):
     obj: Optional[InventorizationSessionCreate]
 
 class InventorizationSessionCreate(BaseModel):
-    asset_type_id: Optional[int] = None
-    department_code: Optional[str] = None
+    asset_type_ids: Optional[List[int]] = None
+    department_codes: Optional[List[str]] = None
+    material_classes: Optional[List[str]] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
@@ -67,8 +68,8 @@ class InventorizationItemDiscrepancy(BaseModel):
     serial_number: Optional[str] = None
     quantity: Optional[int] = None
     quantity_fact: Optional[int] = None
-    difference: Optional[int] = None  # quantity_fact - quantity, на сколько расхождение?
-    discrepancy_type: str  # "missing" | "surplus" | "match" | "not_checked"
+    difference: Optional[int] = None    # quantity_fact - quantity, на сколько расхождение?
+    discrepancy_type: str               # "missing" | "surplus" | "match" | "not_checked"
 
 class InventorizationReportResponse(BaseModel):
     """Отчёт по сессии инвентаризации"""

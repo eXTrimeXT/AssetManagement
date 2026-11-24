@@ -61,7 +61,21 @@ def _write_off_to_response(write_off) -> WriteOffResponse:
     "/assets/{asset_id}",
     response_model=WriteOffResponse,
     status_code=201,
-    summary="Создать заявку на списание актива"
+    summary="Создать заявку на списание актива / Create Asset Write-Off Request",
+    description=(
+            "RU: Создает новую заявку на списание указанного актива. "
+            "Принимает причину и тип списания в теле запроса. "
+            "Проверяет наличие права на запись (`write`) для типа актива — "
+            "при отсутствии прав возвращается ошибка 403. "
+            "Если актив не найден — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Creates a new write-off request for the specified asset. "
+            "Accepts the reason and write-off type in the request body. "
+            "Checks for write permission (`write`) on the asset type — "
+            "a 403 error is returned if permissions are missing. "
+            "If the asset is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def create_write_off(
         asset_id: int,
@@ -93,7 +107,19 @@ async def create_write_off(
 @router_asset_write_off.get(
     "/",
     response_model=WriteOffListResponse,
-    summary="Получить список заявок на списание"
+    summary="Получить список заявок на списание / Get Write-Off Requests List",
+    description=(
+            "RU: Возвращает пагинированный список заявок на списание активов с поддержкой фильтрации "
+            "по статусу (`status`) и идентификатору актива (`asset_id`). "
+            "Поддерживает пагинацию через параметры `page` и `page_size`. "
+            "Каждая запись обогащена информацией об активе и ФИО заявителя. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a paginated list of asset write-off requests with filtering support "
+            "by status (`status`) and asset identifier (`asset_id`). "
+            "Supports pagination via `page` and `page_size` parameters. "
+            "Each record is enriched with asset information and the requester's full name. "
+            "User authorization is required."
+    )
 )
 async def list_write_offs(
         status: Optional[str] = Query(None, description="Фильтр по статусу"),
@@ -123,7 +149,19 @@ async def list_write_offs(
 @router_asset_write_off.get(
     "/{write_off_id}",
     response_model=WriteOffResponse,
-    summary="Получить заявку по ID"
+    summary="Получить заявку на списание по ID / Get Write-Off Request by ID",
+    description=(
+            "RU: Возвращает подробную информацию о заявке на списание актива по её уникальному "
+            "идентификатору `write_off_id`. "
+            "Ответ содержит данные актива, заявителя, статус и причину списания. "
+            "Если заявка не найдена — возвращается ошибка 404. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns detailed information about an asset write-off request by its unique "
+            "identifier `write_off_id`. "
+            "The response contains asset data, requester information, status, and write-off reason. "
+            "If the request is not found, a 404 error is returned. "
+            "User authorization is required."
+    )
 )
 async def get_write_off(
         write_off_id: int,
@@ -139,7 +177,21 @@ async def get_write_off(
 @router_asset_write_off.post(
     "/{write_off_id}/approve",
     response_model=WriteOffResponse,
-    summary="Утвердить заявку (только админ)"
+    summary="Утвердить заявку на списание / Approve Write-Off Request",
+    description=(
+            "RU: Утверждает заявку на списание актива по её `write_off_id`. "
+            "Предназначено для использования администратором активов "
+            "(проверка через `check_assets_is_admin`, в текущей версии закомментирована). "
+            "Инициатор утверждения фиксируется как текущий пользователь. "
+            "При попытке утверждения уже обработанной заявки возвращается ошибка 400. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Approves an asset write-off request by its `write_off_id`. "
+            "Intended for use by the asset administrator "
+            "(check via `check_assets_is_admin`, currently commented out). "
+            "The approval initiator is recorded as the current user. "
+            "If attempting to approve an already processed request, a 400 error is returned. "
+            "User authorization is required."
+    )
 )
 async def approve(
         write_off_id: int,
@@ -167,7 +219,23 @@ async def approve(
 @router_asset_write_off.post(
     "/{write_off_id}/reject",
     response_model=WriteOffResponse,
-    summary="Отклонить заявку (только админ)"
+    summary="Отклонить заявку на списание / Reject Write-Off Request",
+    description=(
+            "RU: Отклоняет заявку на списание актива по её `write_off_id`. "
+            "Требует обязательного указания причины отклонения в теле запроса (`reject_reason`). "
+            "Предназначено для использования администратором активов "
+            "(проверка через `check_assets_is_admin`, в текущей версии закомментирована). "
+            "Инициатор отклонения фиксируется как текущий пользователь. "
+            "При попытке отклонения уже обработанной заявки возвращается ошибка 400. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Rejects an asset write-off request by its `write_off_id`. "
+            "Requires a mandatory rejection reason in the request body (`reject_reason`). "
+            "Intended for use by the asset administrator "
+            "(check via `check_assets_is_admin`, currently commented out). "
+            "The rejection initiator is recorded as the current user. "
+            "If attempting to reject an already processed request, a 400 error is returned. "
+            "User authorization is required."
+    )
 )
 async def reject(
         write_off_id: int,

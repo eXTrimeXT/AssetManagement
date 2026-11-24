@@ -12,6 +12,7 @@ from app.models.notifications.Notification import Notification, NotificationStat
 from app.schemas.assets.AssetConfirmationSchemas import CreateConfirmationRequest, ConfirmAssetRequest
 from app.models.zup import Employee
 from app.database.zup.crud_zup_employees import get_employee_full_name
+from app.services.sap.sap_api_fixed_asset_change import sync_asset_changes_to_sap
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +40,13 @@ async def create_confirmation_request(
     created_count = 0
     target_asset = None
 
-    # 1. Ищем актив, если он указан
+    # Ищем актив, если он указан
     if request.asset_id:
         target_asset = await _get_asset_by_identifiers(db, asset_id=request.asset_id)
         if not target_asset:
             raise ValueError("Актив не найден в локальной базе данных по указанным данным")
 
-    # ==============================================================================
     # СЦЕНАРИЙ 1: Указаны И сотрудник, И конкретный актив
-    # ==============================================================================
     if request.employee_id and target_asset:
         assignment_stmt = select(AssetAssignment).where(
             AssetAssignment.asset_id == target_asset.asset_id,
@@ -85,9 +84,7 @@ async def create_confirmation_request(
         ))
         created_count += 1
 
-    # ==============================================================================
     # СЦЕНАРИЙ 2: Указан только employee_id (массовая заявка)
-    # ==============================================================================
     elif request.employee_id and not target_asset:
         assignments = (await db.execute(select(AssetAssignment).where(
             AssetAssignment.employee_id == request.employee_id,
@@ -125,9 +122,7 @@ async def create_confirmation_request(
             ))
             created_count += 1
 
-    # ==============================================================================
     # СЦЕНАРИЙ 3: Указан только актив (для всех ответственных)
-    # ==============================================================================
     elif target_asset and not request.employee_id:
         assignments = (await db.execute(select(AssetAssignment).where(
             AssetAssignment.asset_id == target_asset.asset_id,
@@ -247,6 +242,33 @@ async def process_confirmation(
     confirmation.status = request.status
     confirmation.comment = request.comment or confirmation.comment
     confirmation.confirmed_at = datetime.now()
+
+    # ИНТЕГРАЦИЯ С SAP: Синхронизация изменения владельца при подтверждении
+    sap_asset_number = str(getattr(asset, 'material_id', None) or asset.inventory_id)
+
+    # Получаем текущего (старого) владельца из активных привязок, чтобы сравнить с новым
+    assignment_result = await db.execute(
+        select(AssetAssignment.employee_id).where(
+            AssetAssignment.asset_id == asset.asset_id,
+            AssetAssignment.end_date.is_(None),
+            AssetAssignment.assignment_type == "user"
+        ).limit(1)
+    )
+    old_employee_id = assignment_result.scalar_one_or_none()
+
+    old_data = {'employee_id': old_employee_id}
+    new_data = {'employee_id': current_user_employee_id}
+
+    try:
+        await sync_asset_changes_to_sap(
+            asset_number=sap_asset_number,
+            old_data=old_data,
+            new_data=new_data
+        )
+    except Exception as sap_error:
+        # Ошибка логируется, но не прерывает процесс подтверждения, так как локально транзакция успешна
+        logger.error(f"[CRUD CONFIRMATION] Не удалось синхронизировать смену владельца актива {asset.asset_id} (SAP №{sap_asset_number}) с SAP: {sap_error}")
+
 
     await db.commit()
 

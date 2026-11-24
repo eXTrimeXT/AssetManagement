@@ -59,6 +59,10 @@ class Asset(Base):
     next_check = Column(Date, nullable=True)        # Дата следующей проверки
     check_period = Column(Integer, default=0)       # Период проверки
 
+    material_class = Column(String, nullable=True)  # Код класса SAP (тип)
+    material_class_name = Column(String, nullable=True)  # Название класса SAP (тип)
+    write_off_date = Column(String, nullable=True)  # Дата списания актива
+
     # Аудит
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))    # Создан кем
     updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))    # Изменён кем

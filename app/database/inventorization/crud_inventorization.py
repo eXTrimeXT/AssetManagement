@@ -1,6 +1,6 @@
 import io
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Sequence, Tuple
+from datetime import datetime
+from typing import Optional, Sequence, Tuple, List
 
 import logging
 
@@ -24,6 +24,8 @@ from app.models.assets.AssetAssignment import AssetAssignment
 from app.database.crud_notifications import notify_inventory_started, notify_inventory_completed
 from app.services.assets.asset_list_service import fetch_sap_materials, WITHOUT_TYPE_ASSET_ID
 from app.models.inventorization.Inventorization import InventorizationStatus
+from app.models.sap.SapDepartment import SapDepartment
+from app.models.sap.SapMaterialClass import SapMaterialClass
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +55,8 @@ async def get_inventory_session_by_id(db: AsyncSession, session_id: int) -> Opti
     )
     return result.scalar_one_or_none()
 
-async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[
-    InventorizationSession]:
-    query = select(InventorizationSession).options(
-        # selectinload(InventorizationSession.items)
-        # .selectinload(InventorizationSession.creator)
-    ).offset(skip).limit(limit).order_by(InventorizationSession.session_id.desc())
+async def get_inventory_sessions_list(db: AsyncSession, skip: int = 0, limit: int = 50) -> Sequence[InventorizationSession]:
+    query = select(InventorizationSession).offset(skip).limit(limit).order_by(InventorizationSession.session_id.desc())
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -66,13 +64,34 @@ async def get_inventory_items_by_session_id(
         db: AsyncSession,
         session_id: int,
         page: int = 1,
-        page_size: int = 50
+        page_size: int = 50,
+        material_id: Optional[str] = None,
+        name: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        inventory_id: Optional[str] = None,
+        is_checked: Optional[str] = None,
 ) -> Tuple[Sequence[InventorizationItem], int]:
     """Получить элементы сессии инвентаризации с пагинацией. Возвращает (items, total_count)"""
 
+    conditions = [InventorizationItem.session_id == session_id]
+
+    if material_id:
+        conditions.append(InventorizationItem.material_id == material_id)
+    if name:
+        conditions.append(InventorizationItem.asset_name.ilike(f"%{name}%"))
+    if serial_number:
+        conditions.append(InventorizationItem.serial_number == serial_number)
+    if inventory_id:
+        conditions.append(InventorizationItem.inventory_id == inventory_id)
+
+    if is_checked == "checked":
+        conditions.append(InventorizationItem.is_checked == True)
+    elif is_checked == "not_checked":
+        conditions.append(InventorizationItem.is_checked == False)
+
     # Получаем общее количество записей для этой сессии
     count_query = select(func.count(InventorizationItem.inventorization_id)).where(
-        InventorizationItem.session_id == session_id
+        *conditions
     )
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
@@ -81,7 +100,7 @@ async def get_inventory_items_by_session_id(
     offset = (page - 1) * page_size
     items_query = (
         select(InventorizationItem)
-        .where(InventorizationItem.session_id == session_id)
+        .where(*conditions)
         .options(
             # === ДОБАВЛЕНО: Явная загрузка данных сотрудника ===
             selectinload(InventorizationItem.checked_employee)
@@ -95,49 +114,139 @@ async def get_inventory_items_by_session_id(
 
     return items, total
 
-async def create_inventory_session(
+# Создание нескольких сессий (декартово произведение)
+async def create_inventory_sessions(
         db: AsyncSession,
-        asset_type_id: Optional[int] = None,
-        department_code: Optional[str] = None,
+        asset_type_ids: Optional[List[int]] = None,
+        department_codes: Optional[List[str]] = None,
+        material_classes: Optional[List[str]] = None,
         creator_employee_id: Optional[str] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
-) -> InventorizationSession:
+        end_date: Optional[datetime] = None,
+) -> List[dict]:
 
-    # ==============================================================================
-    # ЗАЩИТНАЯ ПРОВЕРКА: Нормализуем часовые пояса перед любыми сравнениями
-    # Если фронтенд прислал дату без 'Z' (naive), принудительно делаем её UTC (aware)
-    # ==============================================================================
-    # if start_date and start_date.tzinfo is None:
-    #     start_date = start_date.replace(tzinfo=timezone.utc)
-    # if end_date and end_date.tzinfo is None:
-    #     end_date = end_date.replace(tzinfo=timezone.utc)
+    if not asset_type_ids and not department_codes and not material_classes:
+        raise ValueError("Необходимо указать хотя бы один из параметров: asset_type_ids, department_codes или material_classes!")
 
-    logger.warning(f"{asset_type_id=} {department_code=}")
-    if asset_type_id is None and department_code is None:
-        raise ValueError("Необходимо указать либо asset_type_id, либо department_codes")
+    created_sessions_data = []
 
-    if department_code is not None:
-        asset_type_name = f"По департаментам: {department_code.replace('; ', ', ').replace(';', ',')}"
-        asset_type_en_name = "by_departments"
+    depts = department_codes if department_codes else [None]
+    classes = material_classes if material_classes else []
+    types = asset_type_ids if asset_type_ids else []
+
+    for dept in depts:
+        if classes and types:
+            logger.debug("Создаем сессии для каждого класса и типа")
+            for mc in classes:
+                for at_id in types:
+                    session_data = await _create_single_inventory_session(
+                        db=db,
+                        asset_type_id=at_id,
+                        department_code=dept,
+                        material_class=mc,
+                        creator_employee_id=creator_employee_id,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    if session_data is not None:
+                        created_sessions_data.append(session_data)
+        else:
+            logger.debug("Создаем сессии для каждого класса или типа по отдельности")
+            for mc in classes:
+                session_data = await _create_single_inventory_session(
+                    db=db,
+                    asset_type_id=None,
+                    department_code=dept,
+                    material_class=mc,
+                    creator_employee_id=creator_employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if session_data is not None:
+                    created_sessions_data.append(session_data)
+
+            for at_id in types:
+                session_data = await _create_single_inventory_session(
+                    db=db,
+                    asset_type_id=at_id,
+                    department_code=dept,
+                    material_class=None,
+                    creator_employee_id=creator_employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if session_data is not None:
+                    created_sessions_data.append(session_data)
+
+            if not classes and not types:
+                logger.debug("Создаем одну сессию только по департаменту")
+                session_data = await _create_single_inventory_session(
+                    db=db,
+                    asset_type_id=None,
+                    department_code=dept,
+                    material_class=None,
+                    creator_employee_id=creator_employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if session_data is not None:
+                    created_sessions_data.append(session_data)
+
+    return created_sessions_data
+
+
+# Создание одной конкретной сессии
+async def _create_single_inventory_session(
+        db: AsyncSession,
+        asset_type_id: Optional[int],
+        department_code: Optional[str],
+        material_class: Optional[str],
+        creator_employee_id: Optional[str],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+) -> Optional[dict]:
+    # ПРОВЕРКА ДАТ
+    if start_date is None or end_date is None:
+        raise ValueError("Необходимо указать как дату начала, так и дату окончания сессии.")
+
+    if start_date > end_date:
+        raise ValueError(f"Дата начала ({start_date}) не может быть позже даты окончания ({end_date}).")
+
+    # Формирование имени сессии
+    name_parts = []
+    if department_code:
+        sap_department_result = await db.execute(select(SapDepartment).where(SapDepartment.department_code == department_code))
+        sap_department = sap_department_result.scalar_one_or_none()
+        if sap_department:
+            name_parts.append(f"Департамент: {sap_department.department_name}")
+        name_parts.append(f"Код департамента: {department_code}")
+
+    if material_class:
+        sap_material_class_result = await db.execute(select(SapMaterialClass).where(SapMaterialClass.material_class == material_class))
+        sap_material_class = sap_material_class_result.scalar_one_or_none()
+        if sap_material_class:
+            name_parts.append(f"Класс: {sap_material_class.material_class_name}")
+        name_parts.append(f"Код класса: {material_class}")
 
     if asset_type_id is not None:
-        asset_type_result = await db.execute(
-            select(AssetType).where(AssetType.asset_type_id == asset_type_id)
-        )
+        asset_type_result = await db.execute(select(AssetType).where(AssetType.asset_type_id == asset_type_id))
         asset_type = asset_type_result.scalar_one_or_none()
-        if not asset_type:
-            raise ValueError(f"Тип актива с id {asset_type_id} не найден")
-        asset_type_name = asset_type.name
-        asset_type_en_name = asset_type.en_name
+        if asset_type:
+            name_parts.append(f"Тип: {asset_type.name}")
+            asset_type_en_name = asset_type.en_name
+        else:
+            name_parts.append(f"Тип ID: {asset_type_id}")
+            asset_type_en_name = "unknown_type"
+    else:
+        asset_type_en_name = "combined_or_none"
 
-    # === ГЛАВНОЕ ИЗМЕНЕНИЕ: Вычисляем статус ПЕРЕД созданием объекта ===
+    session_asset_type_name = " | ".join(name_parts) if name_parts else "Общая инвентаризация"
     initial_status = determine_inventory_status(start_date, end_date)
 
     session = InventorizationSession(
         asset_type_id=asset_type_id,
         department_codes=department_code,
-        asset_type_name=asset_type_name,
+        asset_type_name=session_asset_type_name,
         asset_type_en_name=asset_type_en_name,
         status=initial_status,
         created_by=creator_employee_id,
@@ -147,19 +256,20 @@ async def create_inventory_session(
     db.add(session)
     await db.flush()
 
-    # ==============================================================================
-    # 1. Локальные активы
-    # ==============================================================================
+    items = []
+
+    # Локальные активы
     query = select(Asset)
     conditions = []
 
     if asset_type_id is not None:
         conditions.append(Asset.asset_type_id == asset_type_id)
-
     if department_code:
         codes_list = [code.strip().upper() for code in department_code.split(',') if code.strip()]
         if codes_list:
             conditions.append(Asset.cost_center_code_from.in_(codes_list))
+    if material_class:
+        conditions.append(Asset.material_class == material_class)
 
     if conditions:
         query = query.where(*conditions)
@@ -169,7 +279,7 @@ async def create_inventory_session(
     result = await db.execute(query)
     assets = result.scalars().all()
 
-    items = [
+    items.extend([
         InventorizationItem(
             session_id=session.session_id,
             asset_id=asset.asset_id,
@@ -182,33 +292,26 @@ async def create_inventory_session(
             quantity_fact=None,
         )
         for asset in assets
-    ]
+    ])
 
-    if items:
-        db.add_all(items)
-        await db.flush()
-
-    # ==============================================================================
-    # 2. ЗАПРОС SAP-АКТИВОВ (С ПАГИНАЦИЕЙ)
-    # ==============================================================================
+    # ЗАПРОС SAP-АКТИВОВ (только для типа "Без типа")
     should_fetch_sap = False
     sap_cost_center_code_from = None
 
-    if department_code:
-        should_fetch_sap = True
-        sap_cost_center_code_from = department_code.replace(',', ';')
-
-    if asset_type_id == WITHOUT_TYPE_ASSET_ID:
-        should_fetch_sap = True
+    if asset_type_id is None or asset_type_id == WITHOUT_TYPE_ASSET_ID:
+        if department_code:
+            should_fetch_sap = True
+            sap_cost_center_code_from = department_code.replace(',', ';')
+        elif material_class:
+            should_fetch_sap = True
 
     if should_fetch_sap:
         try:
             all_sap_items = []
             offset = 0
             limit = 1000
-            total_sap_items = float('inf')  # Инициализируем бесконечностью для входа в цикл
-
-            logger.info(f"[SAP INVENTORY] Начинаем пагинацию запроса SAP активов. department_code={department_code}")
+            total_sap_items = float('inf')
+            logger.info(f"[SAP INVENTORY] Пагинация SAP для сессии. dept={department_code}, class={material_class}")
 
             while offset < total_sap_items:
                 sap_response = await fetch_sap_materials(
@@ -224,9 +327,9 @@ async def create_inventory_session(
                     cost_center_code_from_search_mode="ALL",
                     cost_center_shortname_from=None,
                     cost_center_code=None,
-                    cost_center_shortname=None
+                    cost_center_shortname=None,
+                    material_class=material_class
                 )
-
                 if not sap_response.get("success") or "response" not in sap_response:
                     logger.warning("[SAP INVENTORY] SAP API вернул неуспешный ответ. Останавливаем пагинацию.")
                     break
@@ -234,36 +337,26 @@ async def create_inventory_session(
                 response_data = sap_response["response"]
                 current_batch = response_data.get("data", [])
                 total_sap_items = response_data.get("total", 0)
-
                 all_sap_items.extend(current_batch)
                 offset += limit
 
-                logger.info(f"[SAP INVENTORY] Загружено {len(current_batch)} элементов. Всего получено: {len(all_sap_items)} / {total_sap_items}")
-
-                # Если текущая пачка меньше лимита, значит мы дошли до конца данных
                 if len(current_batch) < limit:
                     break
 
-            # Фильтрация дубликатов и создание элементов инвентаризации
             if all_sap_items:
                 local_inv_ids = {asset.inventory_id.strip().lower() for asset in assets if asset.inventory_id}
                 local_mat_ids = {asset.material_id.strip().lower() for asset in assets if asset.material_id}
-
-                sap_items_to_add = []
                 for sap_item in all_sap_items:
                     inv_num = str(sap_item.get("inventory_number", "")).strip().lower()
                     mat_id = str(sap_item.get("material_id", "")).strip().lower()
-
-                    # Пропускаем, если уже есть в локальных
                     if inv_num and inv_num in local_inv_ids:
                         continue
                     if mat_id and mat_id in local_mat_ids:
                         continue
-
-                    sap_items_to_add.append(
+                    items.append(
                         InventorizationItem(
                             session_id=session.session_id,
-                            asset_id=None,  # Виртуальный актив
+                            asset_id=None,
                             material_id=sap_item.get("material_id"),
                             asset_name=sap_item.get("base_material_name"),
                             is_checked=False,
@@ -273,30 +366,30 @@ async def create_inventory_session(
                             quantity_fact=None,
                         )
                     )
-
-                if sap_items_to_add:
-                    db.add_all(sap_items_to_add)
-                    items.extend(sap_items_to_add)
-                    await db.flush()
-                    logger.info(f"[SAP INVENTORY] Добавлено {len(sap_items_to_add)} уникальных виртуальных SAP-активов в сессию (из {len(all_sap_items)} полученных).")
-            else:
-                logger.info("[SAP INVENTORY] SAP не вернул данных для добавления в инвентаризацию.")
-
         except Exception as e:
-            logger.error(f"[SAP INVENTORY] Ошибка при запросе SAP-активов для инвентаризации: {e}", exc_info=True)
+            logger.error(f"[SAP INVENTORY] Ошибка при запросе SAP-активов: {e}", exc_info=True)
 
-    # ==============================================================================
-    # 3. ЛОГИКА УВЕДОМЛЕНИЙ
-    # ==============================================================================
-    asset_ids = [item.asset_id for item in items if item.asset_id is not None]  # Только локальные ID
+    # ЗАЩИТА ОТ ПУСТЫХ СЕССИЙ
+    if not items:
+        logger.warning(
+            f"[INVENTORY] Сессия по комбинации (dept={department_code}, class={material_class}, type={asset_type_id}) "
+            f"оказалась пустой — отменяем создание."
+        )
+        await db.delete(session)
+        await db.rollback()
+        return None
 
-    # ОТПРАВЛЯЕМ УВЕДОМЛЕНИЯ ТОЛЬКО ЕСЛИ СЕССИЯ СРАЗУ НАЧИНАЕТСЯ (IN_PROGRESS)
-    # Если она создана как PENDING, уведомления отправит планировщик в момент старта
+    db.add_all(items)
+    await db.flush()
+
+    # ЛОГИКА УВЕДОМЛЕНИЙ И ПЛАНИРОВЩИКА
+    asset_ids = [item.asset_id for item in items if item.asset_id is not None]
+
     if asset_ids and initial_status == InventorizationStatus.IN_PROGRESS:
         employees_result = await db.execute(
             select(distinct(AssetAssignment.employee_id)).where(
                 AssetAssignment.asset_id.in_(asset_ids),
-                AssetAssignment.end_date.is_(None)  # Только активные назначения
+                AssetAssignment.end_date.is_(None)
             )
         )
         responsible_employees = [row[0] for row in employees_result.all()]
@@ -308,12 +401,7 @@ async def create_inventory_session(
                 initiator_id=creator_employee_id,
             )
 
-    # ==============================================================================
-    # 3. ПЛАНИРОВАНИЕ ЗАДАЧ В APSCHEDULER
-    # ==============================================================================
     now = datetime.now()
-
-    # Планируем задачу запуска, если start_date в будущем и сессия еще не запущена
     if start_date and start_date > now and initial_status == InventorizationStatus.PENDING:
         job_id_start = f"inventory_start_{session.session_id}"
         scheduler.add_job(
@@ -324,9 +412,7 @@ async def create_inventory_session(
             replace_existing=True,
             name=f"Start inventory session {session.session_id}"
         )
-        logger.info(f"[INVENTORY SCHEDULER] Запланирована задача запуска сессии {session.session_id} на {start_date}")
 
-    # Планируем задачу завершения, если end_date в будущем
     if end_date and end_date > now:
         job_id_end = f"inventory_end_{session.session_id}"
         scheduler.add_job(
@@ -337,11 +423,32 @@ async def create_inventory_session(
             replace_existing=True,
             name=f"Complete inventory session {session.session_id}"
         )
-        logger.info(f"[INVENTORY SCHEDULER] Запланирована задача завершения сессии {session.session_id} на {end_date}")
 
     await db.commit()
     await db.refresh(session)
-    return session
+
+    # БЕЗОПАСНОЕ ФОРМИРОВАНИЕ ОТВЕТА (СЛОВАРЬ)
+    status_map = {
+        "pending": "Ожидает начала",
+        "in_progress": "В работе",
+        "completed": "Завершена"
+    }
+    status_ru = status_map.get(session.status, "Неизвестно")
+
+    return {
+        "session_id": session.session_id,
+        "asset_type_id": session.asset_type_id,
+        "department_codes": session.department_codes,
+        "asset_type_name": session.asset_type_name,
+        "asset_type_en_name": session.asset_type_en_name,
+        "status": session.status,
+        "status_ru": status_ru,
+        "created_at": session.created_at,
+        "start_date": session.start_date,
+        "end_date": session.end_date,
+        "created_by": session.created_by,
+        "created_by_full_name": None
+    }
 
 async def check_inventory_item(
         db: AsyncSession,
@@ -351,21 +458,20 @@ async def check_inventory_item(
         checked_by: str = None, # Сделал без дефолта, так как он обязателен из роутера
         quantity_fact: Optional[int] = None,
 ) -> bool:
-    # === ПРОВЕРКА: quantity_fact не может быть меньше 0 ===
+    # quantity_fact не может быть меньше 0
     if quantity_fact is not None and quantity_fact < 0:
         raise ValueError("quantity_fact не может быть меньше 0")
 
-    # === ПРОВЕРКА: должен быть указан хотя бы один идентификатор ===
+    # должен быть указан хотя бы один идентификатор
     if asset_id is None and material_id is None:
         raise ValueError("Необходимо указать либо asset_id, либо material_id")
 
-    # === ПРОВЕРКА: сессия не должна быть completed ===
+    # сессия не должна быть completed
     session = await get_inventory_session_by_id(db, session_id)
     if not session:
         return False
     if session.status == InventorizationStatus.COMPLETED:
         raise ValueError("Сессия уже завершена. Изменять items нельзя.")
-    # ===================================================
 
     # Динамически формируем условия поиска
     conditions = [InventorizationItem.session_id == session_id]
@@ -444,7 +550,7 @@ async def complete_inventory_session(db: AsyncSession, session_id: int, updated_
 
     if not responsible_employees:
         logger.debug(f"Ответственные не найдены для сессии {session.session_id}. Уведомляем создателя.")
-        await notify_inventory_started(
+        await notify_inventory_completed(
             db=db,
             employee_id=updated_by,
             session_id=session.session_id,
@@ -558,12 +664,6 @@ async def get_inventorization_discrepancies(
         else:
             continue
 
-        # Получаем serial_number из актива
-        # asset_result = await db.execute(
-        #     select(Asset.serial_number).where(Asset.asset_id == item.asset_id)
-        # )
-        # serial_number = asset_result.scalar_one_or_none()
-
         discrepancies.append({
             "inventorization_id": item.inventorization_id,
             "asset_id": item.asset_id,
@@ -626,14 +726,12 @@ async def export_inventory_session_to_excel(
     )
     items = result.scalars().all()
 
-    # === НОВАЯ ЛОГИКА: Расчет сводной статистики ===
+    # Расчет сводной статистики
     total_assets = len(items)
     checked_assets = sum(1 for item in items if item.is_checked)
     dept_codes_str = session.department_codes if session.department_codes else "Не указаны"
-    # ================================================
 
     # Ru label for status
-    # ru_status = "В работе" if session.status == "in_progress" else "Завершено"
     ru_status = InventorizationStatus.get_ru_label(session.status)
 
     # Создаем Excel файл
@@ -658,14 +756,13 @@ async def export_inventory_session_to_excel(
     ws['A8'] = "Дата окончания:"
     ws['B8'] = session.end_date.strftime("%Y-%m-%d %H:%M:%S") if session.end_date else ""
 
-    # === НОВАЯ ЛОГИКА: Добавляем строки со статистикой ===
+    # Добавляем строки со статистикой
     ws['A9'] = "Коды департаментов:"
     ws['B9'] = dept_codes_str
     ws['A10'] = "Всего активов в сессии:"
     ws['B10'] = total_assets
     ws['A11'] = "Проверено активов:"
     ws['B11'] = checked_assets
-    # =====================================================
 
     # Заголовки таблицы (сдвинуты вниз на 3 строки, было 10, стало 13)
     headers = [
@@ -681,7 +778,7 @@ async def export_inventory_session_to_excel(
         "Разница"
     ]
 
-    start_row = 13  # <-- ИЗМЕНЕНО: начало таблицы
+    start_row = 13  # начало таблицы
     for col, header in enumerate(headers, start=1):
         cell = ws.cell(row=start_row, column=col, value=header)
         cell.font = cell.font.copy(bold=True)

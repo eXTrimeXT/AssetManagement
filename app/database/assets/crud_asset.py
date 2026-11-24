@@ -1,5 +1,6 @@
+import logging
 from datetime import date
-from typing import Optional, Sequence, List, Any, Tuple, Dict
+from typing import Optional, Sequence, List, Any, Tuple, Dict, Literal
 
 from fastapi import HTTPException
 from sqlalchemy import select, func, update, or_
@@ -26,7 +27,10 @@ from app.database.crud_notifications import notify_unassigned_serving
 from app.database.crud_notifications import notify_assigned_serving
 from app.models.assets.AssetAssignment import AssignmentTypeEnum
 from app.models.zup import Employee, ZupDepartment
+from app.services.sap.sap_api_fixed_asset_change import sync_asset_changes_to_sap
 
+logger = logging.getLogger(__name__)
+SearchMode = Literal["ALL", "NOT_NULLS", "NULLS"]
 
 async def create_asset(db: AsyncSession, data: AssetCreate, employee_id: str) -> Asset | None:
     # === ПРОВЕРКА: Наличие актива по инвентарному и серийному номеру ===
@@ -134,123 +138,6 @@ async def get_asset_by_id(db: AsyncSession, asset_id: int) -> Optional[Asset]:
     )
     return result.scalar_one_or_none()
 
-def _apply_assets_filters(
-        query, name, inventory_id, serial_number, asset_status,
-        model_id, asset_type_id, parent_id,
-        allowed_type_en_names
-):
-    if name:
-        query = query.where(Asset.name.ilike(f"%{name}%"))
-    if inventory_id:
-        query = query.where(Asset.inventory_id == inventory_id)
-        # query = query.where(Asset.inventory_id.ilike(f"%{inventory_id}%"))
-    if serial_number:
-        query = query.where(Asset.serial_number == serial_number)
-        # query = query.where(Asset.serial_number.ilike(f"%{serial_number}%"))
-    # if asset_status:
-    #     query = query.where(Asset.asset_status == asset_status)
-    if asset_status:
-        query = query.join(AssetStatus, Asset.asset_status_id == AssetStatus.id)
-        query = query.where(AssetStatus.status == asset_status)
-    if model_id is not None:
-        query = query.where(Asset.model_id == model_id)
-    if asset_type_id is not None:
-        query = query.where(Asset.asset_type_id == asset_type_id)
-    if parent_id is not None:
-        query = query.where(Asset.parent_id == parent_id)
-
-    # if allowed_type_en_names is not None:
-    #     query = (
-    #         query.outerjoin(Asset.asset_type)
-    #         .where(AssetType.en_name.in_(allowed_type_en_names))
-    #     )
-    if allowed_type_en_names is not None:
-        query = (
-            query.outerjoin(Asset.asset_type)
-            .where(
-                or_(
-                    AssetType.en_name.in_(allowed_type_en_names),
-                    Asset.asset_type_id.is_(None)  # <-- Явно разрешаем активы без типа
-                )
-            )
-        )
-
-    return query
-
-
-async def get_assets_count(
-        db: AsyncSession,
-        name: Optional[str] = None,
-        inventory_id: Optional[str] = None,
-        serial_number: Optional[str] = None,
-        asset_status: Optional[str] = None,
-        model_id: Optional[int] = None,
-        asset_type_id: Optional[int] = None,
-        parent_id: Optional[int] = None,
-        allowed_type_en_names: Optional[List[str]] = None,
-) -> int:
-    if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
-        return 0
-
-    query = select(func.count(Asset.asset_id)).select_from(Asset)
-    query = _apply_assets_filters(
-        query, name, inventory_id, serial_number, asset_status,
-        model_id, asset_type_id, parent_id,
-        allowed_type_en_names
-    )
-    result = await db.execute(query)
-    return result.scalar_one()
-
-async def get_assets_list(
-        db: AsyncSession,
-        page: int = 1,
-        page_size: int = 50,
-        name: Optional[str] = None,
-        inventory_id: Optional[str] = None,
-        serial_number: Optional[str] = None,
-        asset_status: Optional[str] = None,
-        model_id: Optional[int] = None,
-        asset_type_id: Optional[int] = None,
-        parent_id: Optional[int] = None,
-        allowed_type_en_names: Optional[List[str]] = None,
-) -> Tuple[Sequence[Asset], int]:
-    if allowed_type_en_names is not None and len(allowed_type_en_names) == 0:
-        return [], 0
-
-    total = await get_assets_count(
-        db, name, inventory_id, serial_number, asset_status,
-        model_id, asset_type_id, parent_id, allowed_type_en_names
-    )
-
-    skip = (page - 1) * page_size
-
-    query = select(Asset).options(
-        selectinload(Asset.asset_type),
-        selectinload(Asset.asset_status),
-        selectinload(Asset.model),
-        selectinload(Asset.parent).options(
-            selectinload(Asset.asset_type),
-            selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-        ),
-        selectinload(Asset.asset_positions).selectinload(AssetPosition.workshop),
-        selectinload(Asset.assignments).options(
-            selectinload(AssetAssignment.employee)
-        ),
-    )
-
-    query = _apply_assets_filters(
-        query, name, inventory_id, serial_number, asset_status,
-        model_id, asset_type_id, parent_id, allowed_type_en_names
-    )
-
-    query = query.order_by(Asset.asset_id)
-    query = query.offset(skip).limit(page_size)
-
-    result = await db.execute(query)
-    assets = result.scalars().all()
-
-    return assets, total
-
 async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, employee_id: str) -> Optional[Asset]:
     # Пытаемся найти актив в локальной БД
     obj = await get_asset_by_id(db, asset_id)
@@ -265,7 +152,6 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             exclude_unset=True,
             exclude={
                 "users",
-                # "responsible_users",
                 "serving_users",
                 "location"
             }
@@ -293,13 +179,11 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             await _sync_asset_location(db, obj.asset_id, data.location, employee_id)
 
         # Обработка пользователей
-        # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
         if data.users is not None or data.serving_users is not None:
             await _sync_asset_users(
                 db=db,
                 asset_id=obj.asset_id,
                 users=data.users or [],
-                # responsible_users=data.responsible_users or [],
                 serving_users=data.serving_users or [],
                 assigned_by=employee_id
             )
@@ -322,6 +206,10 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             }
             break
 
+    # Извлекаем старый табельный номер из первого пользователя в массиве users (если он есть)
+    old_users_list = getattr(obj, 'users', []) or []
+    old_employee_id = old_users_list[0].employee_id if len(old_users_list) > 0 else None
+
     old_data = {
         'name': obj.name,
         'inventory_id': obj.inventory_id,
@@ -339,6 +227,13 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
         'os_name': obj.os_name,
+        # Поля для синхронизации с SAP
+        'cost_center_code': getattr(obj, 'cost_center_code', None),
+        'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
+        'material_class': getattr(obj, 'material_class', None),
+        'material_id': getattr(obj, 'material_id', None),
+        # Табельный номер владельца (берем из users[0])
+        'employee_id': old_employee_id,
     }
 
     # Применяем изменения из запроса
@@ -346,9 +241,18 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         exclude_unset=True,
         exclude={
             "users",
-            # "responsible_users",
             "serving_users",
-            "location"
+            "location",
+            "current_user",               # обрабатывается отдельно
+            "current_user_full_name",     # вычисляемое поле
+            "parent",                     # отношение/вложенный объект
+            "material_class_name",        # вычисляемое поле
+            "selected",                   # поле только для UI
+            "asset_type_name",            # вычисляемое поле
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by"
         }
     )
 
@@ -369,16 +273,24 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
 
     # Проверяем изменения пользователей
     users_changed = False
-    # if data.users is not None or data.responsible_users is not None or data.serving_users is not None:
     if data.users is not None or data.serving_users is not None:
-        # Проверяем, есть ли изменения в пользователях
-        # (упрощенная проверка - всегда считаем что есть изменения если переданы)
         users_changed = True
         has_changes = True
 
     if not has_changes:
         # Нет изменений, возвращаем текущий объект без сохранения
         return obj
+
+    # Определяем новый табельный номер на основе переданного запроса
+    new_employee_id = old_employee_id
+    if "users" in data.model_fields_set and data.users is not None:
+        if len(data.users) > 0:
+            # Берем employee_id из первого пользователя в запросе
+            first_user = data.users[0]
+            new_employee_id = first_user.employee_id if hasattr(first_user, 'employee_id') else first_user.get('employee_id')
+        else:
+            # Если передан пустой список, значит пользователей снимают
+            new_employee_id = None
 
     # Есть изменения - сохраняем
     obj.updated_by = employee_id
@@ -402,7 +314,14 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
         'parent_name': obj.parent_name,
         'manufacturer_name': obj.manufacturer_name,
         'vendor_name': obj.vendor_name,
-        'os_name': obj.os_name
+        'os_name': obj.os_name,
+        # Поля для синхронизации с SAP
+        'cost_center_code': getattr(obj, 'cost_center_code', None),
+        'cost_center_code_from': getattr(obj, 'cost_center_code_from', None),
+        'material_class': getattr(obj, 'material_class', None),
+        'material_id': getattr(obj, 'material_id', None),
+        # Табельный номер владельца (берем из users[0] запроса или оставляем старый)
+        'employee_id': new_employee_id,
     }
 
     await compare_and_save_changes(
@@ -423,12 +342,29 @@ async def update_asset(db: AsyncSession, asset_id: int, data: AssetUpdate, emplo
             db=db,
             asset_id=asset_id,
             users=data.users or [],
-            # responsible_users=data.responsible_users or [],
             serving_users=data.serving_users or [],
             assigned_by=employee_id
         )
 
+    # Сначала коммитим локальные изменения в БД
     await db.commit()
+
+    # ИНТЕГРАЦИЯ С SAP: Синхронизация изменений
+    # Определяем номер актива в SAP (приоритет: material_id -> inventory_id)
+    sap_asset_number = str(getattr(obj, 'material_id', None) or obj.inventory_id)
+
+    try:
+        await sync_asset_changes_to_sap(
+            asset_number=sap_asset_number,
+            old_data=old_data,
+            new_data=new_data
+        )
+    except Exception as sap_error:
+        # Ошибка логируется, но не прерывает локальный коммит (стандартная практика для асинхронных внешних вызовов).
+        # Если требуется строгая согласованность (откат БД при ошибке SAP), этот блок нужно перенести ДО await db.commit()
+        # и добавить: raise HTTPException(status_code=502, detail=f"Ошибка синхронизации с SAP: {str(sap_error)}")
+        logger.error(f"[CRUD ASSET] Не удалось синхронизировать актив {asset_id} (SAP №{sap_asset_number}) с SAP: {sap_error}")
+
     return await get_asset_by_id(db, asset_id)
 
 def _enrich_users_from_cache(
@@ -441,7 +377,7 @@ def _enrich_users_from_cache(
     for user in users_data:
         user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
 
-        # 1. Обогащаем иерархией подразделения из кэша
+        # Обогащаем иерархией подразделения из кэша
         dept_guid = user_dict.get("department_guid")
         if dept_guid and dept_guid in dept_hierarchy_cache:
             hierarchy = dept_hierarchy_cache[dept_guid]
@@ -451,7 +387,7 @@ def _enrich_users_from_cache(
                 user_dict["division"] = hierarchy.division
                 user_dict["group"] = hierarchy.group
 
-        # 2. Обогащаем должностью из кэша
+        # Обогащаем должностью из кэша
         pos_guid = user_dict.get("position_guid")
         if pos_guid and pos_guid in pos_cache:
             pos = pos_cache[pos_guid]
@@ -462,45 +398,80 @@ def _enrich_users_from_cache(
 
     return enriched
 
+# async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
+#     """
+#     Оптимизированное обогащение с кэшированием.
+#     Решает проблему N+1, вызывая тяжелые функции только для УНИКАЛЬНЫХ guid.
+#     """
+#     # Собираем уникальные GUID'ы со всех пользователей всех активов
+#     unique_dept_guids = set()
+#     unique_pos_guids = set()
+#
+#     for asset in assets:
+#         # for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
+#         for user in (asset.users or []) + (asset.serving_users or []):
+#             user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
+#             if user_dict.get("department_guid"):
+#                 unique_dept_guids.add(user_dict["department_guid"])
+#             if user_dict.get("position_guid"):
+#                 unique_pos_guids.add(user_dict["position_guid"])
+#
+#     # Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
+#     dept_hierarchy_cache = {}
+#     for guid in unique_dept_guids:
+#         hierarchy = await get_hierarchy_departments(db, guid)
+#         dept_hierarchy_cache[guid] = hierarchy
+#
+#     # Кэшируем должности
+#     pos_cache = {}
+#     for guid in unique_pos_guids:
+#         position = await get_position_by_guid(db, guid)
+#         pos_cache[guid] = position
+#
+#     # Обогащаем данные в памяти, используя готовые кэши
+#     for asset in assets:
+#         if asset.users:
+#             asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
+#         # if asset.responsible_users:
+#         #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
+#         if asset.serving_users:
+#             asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
 
 async def bulk_enrich_assets(db: AsyncSession, assets: list) -> None:
     """
     Оптимизированное обогащение с кэшированием.
-    Решает проблему N+1, вызывая тяжелые функции только для УНИКАЛЬНЫХ guid.
+    НЕ мутирует asset.users (property без сеттера) — сохраняет результат
+    в asset.__dict__['_enriched_users'] и '_enriched_serving_users'.
+    Сериализатор должен читать эти атрибуты с fallback на users/serving_users.
     """
-    # Собираем уникальные GUID'ы со всех пользователей всех активов
     unique_dept_guids = set()
     unique_pos_guids = set()
 
     for asset in assets:
-        # for user in (asset.users or []) + (asset.responsible_users or []) + (asset.serving_users or []):
         for user in (asset.users or []) + (asset.serving_users or []):
-            user_dict = user.model_dump() if hasattr(user, 'model_dump') else user
+            user_dict = user.model_dump() if hasattr(user, 'model_dump') else dict(user)
             if user_dict.get("department_guid"):
                 unique_dept_guids.add(user_dict["department_guid"])
             if user_dict.get("position_guid"):
                 unique_pos_guids.add(user_dict["position_guid"])
 
-    # Кэшируем иерархии подразделений (вызов тяжелой функции только для уникальных GUID)
     dept_hierarchy_cache = {}
     for guid in unique_dept_guids:
-        hierarchy = await get_hierarchy_departments(db, guid)
-        dept_hierarchy_cache[guid] = hierarchy
+        dept_hierarchy_cache[guid] = await get_hierarchy_departments(db, guid)
 
-    # Кэшируем должности
     pos_cache = {}
     for guid in unique_pos_guids:
-        position = await get_position_by_guid(db, guid)
-        pos_cache[guid] = position
+        pos_cache[guid] = await get_position_by_guid(db, guid)
 
-    # Обогащаем данные в памяти, используя готовые кэши
     for asset in assets:
         if asset.users:
-            asset.users = _enrich_users_from_cache(asset.users, dept_hierarchy_cache, pos_cache)
-        # if asset.responsible_users:
-        #     asset.responsible_users = _enrich_users_from_cache(asset.responsible_users, dept_hierarchy_cache, pos_cache)
+            asset.__dict__['_enriched_users'] = _enrich_users_from_cache(
+                asset.users, dept_hierarchy_cache, pos_cache
+            )
         if asset.serving_users:
-            asset.serving_users = _enrich_users_from_cache(asset.serving_users, dept_hierarchy_cache, pos_cache)
+            asset.__dict__['_enriched_serving_users'] = _enrich_users_from_cache(
+                asset.serving_users, dept_hierarchy_cache, pos_cache
+            )
 
 async def _sync_asset_users(
         db: AsyncSession,
@@ -514,9 +485,9 @@ async def _sync_asset_users(
     Синхронизация привязок пользователей к активу.
 
     Логика:
-    - Новые пользователи (которых нет в активных привязках) → уведомление
-    - Существующие пользователи (уже привязанные) → БЕЗ уведомления
-    - Отвязанные пользователи (есть в БД, но нет в запросе) → уведомление об отвязке
+    - Новые пользователи (которых нет в активных привязках) -> уведомление
+    - Существующие пользователи (уже привязанные) -> БЕЗ уведомления
+    - Отвязанные пользователи (есть в БД, но нет в запросе) -> уведомление об отвязке
     """
     requested_user_ids = {user.employee_id for user in (users or [])}
     # requested_responsible_ids = {user.employee_id for user in (responsible_users or [])}
@@ -654,46 +625,6 @@ async def _sync_asset_users(
                     initiator_id=assigned_by,
                 )
 
-
-# async def _update_primary_assignment(
-#         db: AsyncSession,
-#         asset_id: int,
-#         # assignment_type: str,
-#         target_employee_id: Optional[str]
-# ) -> None:
-#     """
-#     Устанавливает is_current=True для указанной связки и сбрасывает для остальных.
-#     Если target_employee_id is None, просто сбрасывает is_current у всех активных связок этого типа.
-#     """
-#     # Сбрасываем флаг is_current у всех текущих активных привязок этого типа для данного актива
-#     await db.execute(
-#         update(AssetAssignment)
-#         .where(
-#             AssetAssignment.asset_id == asset_id,
-#             # AssetAssignment.assignment_type == assignment_type,
-#             AssetAssignment.end_date.is_(None),
-#             AssetAssignment.is_current == True
-#         )
-#         .values(is_current=False)
-#     )
-#
-#     # Если передан конкретный сотрудник, ищем его активную связку и ставим флаг
-#     if target_employee_id:
-#         result = await db.execute(
-#             select(AssetAssignment).where(
-#                 AssetAssignment.asset_id == asset_id,
-#                 AssetAssignment.employee_id == target_employee_id,
-#                 # AssetAssignment.assignment_type == assignment_type,
-#                 AssetAssignment.end_date.is_(None)
-#             )
-#         )
-#         assignment = result.scalar_one_or_none()
-#
-#         # Если есть связка изменяем флаг у записи
-#         if assignment:
-#             assignment.is_current = True
-
-
 async def _update_primary_assignment(
         db: AsyncSession,
         asset_id: int,
@@ -704,7 +635,7 @@ async def _update_primary_assignment(
     Использует прямой UPDATE для безопасной обработки случаев,
     когда у сотрудника несколько активных привязок (например, 'user' и 'serving' одновременно).
     """
-    # 1. Сбрасываем флаг is_current у ВСЕХ текущих активных привязок для данного актива
+    # Сбрасываем флаг is_current у ВСЕХ текущих активных привязок для данного актива
     await db.execute(
         update(AssetAssignment)
         .where(
@@ -715,7 +646,7 @@ async def _update_primary_assignment(
         .values(is_current=False)
     )
 
-    # 2. Если передан конкретный сотрудник, устанавливаем is_current=True для ВСЕХ его активных привязок к этому активу
+    # Если передан конкретный сотрудник, устанавливаем is_current=True для ВСЕХ его активных привязок к этому активу
     if target_employee_id:
         await db.execute(
             update(AssetAssignment)
@@ -726,7 +657,6 @@ async def _update_primary_assignment(
             )
             .values(is_current=True)
         )
-
 
 async def _sync_asset_location(
         db: AsyncSession,
@@ -773,7 +703,6 @@ async def _sync_asset_location(
         "y": new_position.y,
     }
 
-
 async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     obj = await get_asset_by_id(db, asset_id)
     if not obj:
@@ -783,21 +712,16 @@ async def delete_asset(db: AsyncSession, asset_id: int) -> bool:
     await db.commit()
     return True
 
-
 async def get_asset_children(db: AsyncSession, asset_id: int) -> Sequence[Any]:
     result = await db.execute(
         select(Asset)
         .options(
             selectinload(Asset.asset_type),
-            # selectinload(Asset.model).options(
-            #     selectinload(AssetModel.asset_type)
-            # ),
             selectinload(Asset.parent)
         )
         .where(Asset.parent_id == asset_id)
     )
     return result.scalars().all()
-
 
 async def get_active_assets_by_employee(db: AsyncSession, employee_id: str) -> Sequence[Asset]:
     """Получить все текущие (активные) активы сотрудника."""

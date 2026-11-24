@@ -35,7 +35,6 @@ async def get_or_create_written_off_status(db: AsyncSession) -> AssetStatus:
     await db.flush()
     return new_status
 
-
 async def create_write_off_request(
         db: AsyncSession,
         asset_id: int,
@@ -116,7 +115,6 @@ async def create_write_off_request(
     await db.refresh(write_off)
     return write_off
 
-
 async def get_write_off_by_id(
         db: AsyncSession,
         write_off_id: int,
@@ -126,7 +124,6 @@ async def get_write_off_by_id(
         .where(AssetWriteOff.write_off_id == write_off_id)
     )
     return result.scalar_one_or_none()
-
 
 async def get_write_offs_list(
         db: AsyncSession,
@@ -165,7 +162,6 @@ async def get_write_offs_list(
     result = await db.execute(query)
     return result.scalars().all(), total
 
-
 async def approve_write_off(
         db: AsyncSession,
         write_off_id: int,
@@ -173,10 +169,10 @@ async def approve_write_off(
 ) -> AssetWriteOff:
     """
     Утвердить заявку на списание.
-    1. Меняем статус заявки
-    2. Меняем статус актива на 'Списан'
-    3. Закрываем все активные привязки
-    4. Уведомляем инициатора
+    Меняем статус заявки
+    Меняем статус актива на 'Списан'
+    Закрываем все активные привязки
+    Уведомляем инициатора
     """
     write_off = await get_write_off_by_id(db, write_off_id)
     if not write_off:
@@ -249,7 +245,6 @@ async def approve_write_off(
     await db.commit()
     await db.refresh(write_off)
     return write_off
-
 
 async def reject_write_off(
         db: AsyncSession,

@@ -18,9 +18,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
-    # =========================================================
-    # 1. Изменения в таблице notifications
-    # =========================================================
+    # Изменения в таблице notifications
     # Делаем asset_id необязательным (уведомление может быть о всей сессии, а не об одном активе)
     op.alter_column('notifications', 'asset_id',
                     existing_type=sa.INTEGER(),
@@ -30,9 +28,7 @@ def upgrade():
     op.add_column('notifications', sa.Column('session_id', sa.Integer(), nullable=True))
     op.create_index(op.f('ix_notifications_session_id'), 'notifications', ['session_id'], unique=False)
 
-    # =========================================================
-    # 2. Изменения в таблице inventorization_sessions
-    # =========================================================
+    # Изменения в таблице inventorization_sessions
     # Добавляем created_by (создатель сессии)
     op.add_column('inventorization_sessions', sa.Column('created_by', sa.String(20), nullable=True))
 

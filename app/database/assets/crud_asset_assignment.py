@@ -25,7 +25,7 @@ async def create_assignment(
     НЕ закрывает привязки других типов — сотрудник может быть одновременно user и responsible.
     Создаёт уведомление сотруднику о назначении.
     """
-    # 1. Проверяем, существует ли уже активная привязка того же типа
+    # Проверяем, существует ли уже активная привязка того же типа
     result = await db.execute(
         select(AssetAssignment).where(
             and_(
@@ -102,8 +102,8 @@ async def create_assignment(
 
 async def close_active_assignments(
         db: AsyncSession,
-        asset_id: int,
-        employee_id: str,
+        asset_id: Optional[int] = None,
+        employee_id: Optional[str] = None,
         closed_by: Optional[str] = None,
         exclude_type: Optional[str] = None,
 ) -> int:
@@ -114,6 +114,11 @@ async def close_active_assignments(
     Args:
         exclude_type: если указан, назначения этого типа не закрываются
                       (чтобы не закрыть только что созданную привязку того же типа)
+                      :param exclude_type:
+                      :param closed_by:
+                      :param db:
+                      :param asset_id:
+                      :param employee_id:
     """
     query = select(AssetAssignment).where(
         and_(

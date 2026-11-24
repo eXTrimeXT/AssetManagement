@@ -22,7 +22,17 @@ router_asset_confirmation = APIRouter(prefix="/asset-confirmations", tags=["Asse
 @router_asset_confirmation.post(
     "/request",
     status_code=status.HTTP_201_CREATED,
-    summary="Создать заявку на подтверждение наличия актива"
+    summary="Создать заявку на подтверждение наличия актива / Create Asset Confirmation Request",
+    description=(
+            "RU: Создает заявку на подтверждение наличия активов. "
+            "Если указан `employee_id` — создаются запросы на все активы, числящиеся за этим сотрудником. "
+            "Если указан `asset_id` или `material_id` — создается запрос для всех текущих ответственных за этот актив. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Creates a request for asset presence confirmation. "
+            "If `employee_id` is specified, requests are created for all assets assigned to that employee. "
+            "If `asset_id` or `material_id` is specified, a request is created for all current responsible persons for that asset. "
+            "User authorization is required."
+    )
 )
 async def endpoint_create_confirmation_request(
         request: CreateConfirmationRequest,
@@ -51,7 +61,19 @@ async def endpoint_create_confirmation_request(
 @router_asset_confirmation.post(
     "/confirm",
     status_code=status.HTTP_200_OK,
-    summary="Подтвердить наличие актива (по ID, серийному или инвентарному номеру)"
+    summary="Подтвердить наличие актива / Confirm Asset Presence",
+    description=(
+            "RU: Подтверждает наличие актива. Актив идентифицируется по одному из вариантов: "
+            "`asset_id` (прямой ID актива из локальной БД), `serial_number` (серийный номер), "
+            "`inventory_id` (инвентарный номер) или их комбинации (поиск через OR). "
+            "При статусе `not_found` или `damaged` обязательно указание комментария. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Confirms the presence of an asset. The asset is identified by one of the following: "
+            "`asset_id` (direct asset ID from the local DB), `serial_number`, `inventory_id`, "
+            "or a combination of them (search via OR). "
+            "A comment is required when the status is `not_found` or `damaged`. "
+            "User authorization is required."
+    )
 )
 async def endpoint_confirm_asset(
         request: ConfirmAssetRequest,
@@ -90,7 +112,19 @@ async def endpoint_confirm_asset(
 @router_asset_confirmation.get(
     "/",
     response_model=PaginatedResponse,
-    summary="Получить список запросов на подтверждение"
+    summary="Получить список запросов на подтверждение / Get Asset Confirmation Requests List",
+    description=(
+            "RU: Возвращает пагинированный список запросов на подтверждение наличия активов "
+            "с поддержкой фильтрации по `asset_id`, статусу подтверждения (`pending`, `confirmed`, "
+            "`not_found`, `damaged`), табельному номеру сотрудника и параметром `only_my` "
+            "для отображения только подтверждений текущего пользователя. "
+            "Данные обогащены названиями активов и ФИО сотрудников. Требуется авторизация.\n\n"
+            "EN: Returns a paginated list of asset presence confirmation requests "
+            "with filtering support by `asset_id`, confirmation status (`pending`, `confirmed`, "
+            "`not_found`, `damaged`), employee ID, and the `only_my` parameter "
+            "to display only the current user's confirmations. "
+            "Data is enriched with asset names and employee full names. Authorization is required."
+    )
 )
 async def endpoint_get_confirmations_list(
         asset_id: Optional[int] = Query(None, description="Фильтр по ID актива"),
@@ -123,13 +157,21 @@ async def endpoint_get_confirmations_list(
         logger.error(f"Ошибка при получении списка подтверждений: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Внутренняя ошибка сервера")
 
-# ==============================================================================
-# НОВЫЙ ЭНДПОИНТ: Получение последней записи о подтверждении актива
-# ==============================================================================
+
 @router_asset_confirmation.get(
     "/last",
     response_model=Optional[AssetConfirmationResponse],
-    summary="Получить последнюю запись о подтверждении наличия актива для текущего пользователя"
+    summary="Получить последнюю запись о подтверждении / Get Last Asset Confirmation Record",
+    description=(
+            "RU: Возвращает последнюю запись о подтверждении наличия актива для текущего авторизованного пользователя. "
+            "Полезные сценарии: отображение статуса последнего подтверждения на карточке актива (когда и кем), "
+            "проверка, когда конкретный сотрудник последний раз подтверждал наличие актива. "
+            "Если записей нет — возвращается `null`. Требуется авторизация.\n\n"
+            "EN: Returns the latest asset presence confirmation record for the current authenticated user. "
+            "Useful scenarios: displaying the latest confirmation status on the asset card (when and by whom), "
+            "checking when a specific employee last confirmed the asset's presence. "
+            "If no records exist, `null` is returned. Authorization is required."
+    )
 )
 async def endpoint_get_last_confirmation(
         asset_id: int = Query(..., description="ID актива"),

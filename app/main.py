@@ -14,7 +14,7 @@ from app.models.Base import Base
 from contextlib import asynccontextmanager
 
 # Middleware's
-# Импорт класса логирования в middleware
+# Импорт класса логирования в Middleware
 from app.middleware.LoggingMiddleware import LoggingMiddleware
 # Middleware для проверки авторизации
 from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
@@ -23,27 +23,24 @@ from app.middleware.AuthTokenMiddleware import AuthTokenMiddleware
 from app.services.notifications import notification_manager
 
 # Импорт роутеров
-# Роутеры для данных о ПК и андроид устройств
-from app.routers.router_pc_data import router_pc_data
-from app.routers.router_android_data import router_android_data
-
+from app.routers.router_pc_data import router_pc_data                   # Роутер данных о ПК (ос, приложения, пути)
+from app.routers.router_android_data import router_android_data         # Роутер данных Android-устройств (PDA, ТСД)
 from app.routers.router_zup import router_zup                           # Интеграция с 1С
 from app.routers.router_auth import router_auth                         # Роутер авторизации пользователей
-
 from app.routers.router_locations import router_locations               # не зависим
 from app.routers.router_companies import router_companies               # зависим от локации
 from app.routers.router_vendor_classes import router_vendor_classes     # не зависим
 from app.routers.router_vendors import router_vendors                   # зависим от vendor_classes, компании
 
 from app.routers.assets import (
-    router_asset_status,        # Статусы не зависимы
-    router_asset_types,         # Тип не зависим
-    router_asset_models,        # Модель зависим от класса
-    router_assets,              # Зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
-    router_asset_assignments,   # Каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
-    router_asset_history,       # История актива
-    router_asset_write_off,     # Списание актива
-    router_asset_confirmation   # Подтверждение наличия актива
+    router_asset_status,            # Статусы не зависимы
+    router_asset_types,             # Тип не зависим
+    router_asset_models,            # Модель зависим от класса
+    router_assets,                  # Зависим от: модели, warehouse, vendor, software, +(опционально) содержит ссылку на самого себя
+    router_asset_assignments,       # Каталог зависим от модели, актива, пользователя (смысл = связать много активов с пользователями)
+    router_asset_history,           # История актива
+    router_asset_write_off,         # Списание актива
+    router_asset_confirmation       # Подтверждение наличия актива
 )
 
 # Роутер инвентаризации
@@ -68,11 +65,11 @@ from app.routers.router_notifications import router_notifications
 from app.services.zup.zup_integration import close_http_client
 
 # Импорт роутера для импорта из SAP
-from app.routers.router_from_sap import router_from_sap
+from app.routers.router_sap_read_only import router_from_sap
 from app.routers.assets.router_asset_transfer import router_asset_transfer
 
 # Роутер для excel импорта
-from app.services.excel.import_from_excel import router_excel_import
+from app.routers.router_excel_import import router_excel_import
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +80,8 @@ async def lifespan(app: FastAPI):
     Функция, выполняемая при запуске и завершении работы приложения.
 
     STARTUP:
-    1. engine.begin() открывает транзакцию с БД.
-    2. conn.run_sync(Base.metadata.create_all) синхронно создает все таблицы,
+    engine.begin() открывает транзакцию с БД.
+    conn.run_sync(Base.metadata.create_all) синхронно создает все таблицы,
        описанные в моделях (классы, наследующие Base), если они еще не существуют в БД.
     """
 
@@ -110,16 +107,16 @@ async def lifespan(app: FastAPI):
 
 async def db_notification_listener():
     try:
-        # 1. Берем URL из переменных окружения
+        # Берем URL из переменных окружения
         db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/it_assets_db")
 
-        # 2. Убираем префикс "+asyncpg", так как чистый asyncpg его не понимает
+        # Убираем префикс "+asyncpg", так как чистый asyncpg его не понимает
         clean_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
 
-        # 3. Создаем ПРЯМОЕ соединение asyncpg
+        # Создаем ПРЯМОЕ соединение asyncpg
         conn = await asyncpg.connect(clean_url)
 
-        # 4. Функция обратного вызова, которая сработает при получении уведомления
+        # Функция обратного вызова, которая сработает при получении уведомления
         async def notification_callback(connection, pid, channel, payload):
             logger.debug(f"ПОЛУЧЕНО ИЗ БД: канал={channel}, payload={payload}")
             try:
@@ -128,11 +125,11 @@ async def db_notification_listener():
             except json.JSONDecodeError as e:
                 logger.error(f"Ошибка парсинга JSON из БД: {e}")
 
-        # 5. Подписываемся на канал через add_listener, как вы и просили
+        # Подписываемся на канал через add_listener, как вы и просили
         await conn.add_listener("notification_channel", notification_callback)
         logger.info("Слушатель уведомлений БД успешно запущен через add_listener.")
 
-        # 6. Держим задачу живой, пока работает приложение
+        # Держим задачу живой, пока работает приложение
         stop_event = asyncio.Event()
         try:
             await stop_event.wait()
@@ -148,7 +145,7 @@ async def db_notification_listener():
         import traceback
         traceback.print_exc()
 
-# --- Создание экземпляра приложения ---
+# Создание экземпляра приложения
 app = FastAPI(
     lifespan=lifespan,
     title="IT Assets API",
@@ -156,7 +153,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# --- Подключение MiddleWare ---
+# Подключение MiddleWare
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # В продакшене укажи конкретные домены
@@ -168,43 +165,42 @@ app.add_middleware(
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(AuthTokenMiddleware)
 
-# --- Подключение API Маршрутов ---
-app.include_router(router_auth, prefix="/api")              # Роутер авторизации
-app.include_router(router_pc_data, prefix="/api")           # PC DATA
-app.include_router(router_android_data, prefix="/api")      # Android DATA
-app.include_router(router_zup, prefix="/api")               # 1С ЗУП
+# Подключение API Маршрутов
+app.include_router(router_auth, prefix="/api")                  # Роутер авторизации
+app.include_router(router_pc_data, prefix="/api")               # PC DATA
+app.include_router(router_android_data, prefix="/api")          # Android DATA
+app.include_router(router_zup, prefix="/api")                   # 1С ЗУП
 
-app.include_router(router_audit, prefix="/api")
+app.include_router(router_audit, prefix="/api")                 # Просмотр аудита
 
-app.include_router(router_locations, prefix="/api")         # Location
-app.include_router(router_companies, prefix="/api")         # Companies
-app.include_router(router_vendor_classes, prefix="/api")    # Vendor Classes
-app.include_router(router_vendors, prefix="/api")           # Vendors
+app.include_router(router_locations, prefix="/api")             # Location
+app.include_router(router_companies, prefix="/api")             # Companies
+app.include_router(router_vendor_classes, prefix="/api")        # Vendor Classes
+app.include_router(router_vendors, prefix="/api")               # Vendors
 
-app.include_router(router_asset_status, prefix="/api")      # Asset Types
-app.include_router(router_asset_types, prefix="/api")       # Asset Types
-app.include_router(router_asset_models, prefix="/api")      # Asset Models
-app.include_router(router_asset_assignments, prefix="/api") # Asset Assignment
-app.include_router(router_assets, prefix="/api")            # Assets
-app.include_router(router_asset_transfer, prefix="/api")    # Роутер передачи актива
-app.include_router(router_asset_positions, prefix="/api")   # Роутер позиций активов
-app.include_router(router_asset_history, prefix="/api")     # История активов
-app.include_router(router_asset_write_off, prefix="/api")   # Списание активов
-from app.routers.assets.router_asset_confirmation import router_asset_confirmation
-app.include_router(router_asset_confirmation, prefix="/api")
+app.include_router(router_asset_status, prefix="/api")          # Asset Types
+app.include_router(router_asset_types, prefix="/api")           # Asset Types
+app.include_router(router_asset_models, prefix="/api")          # Asset Models
+app.include_router(router_asset_assignments, prefix="/api")     # Asset Assignment
+app.include_router(router_assets, prefix="/api")                # Assets
+app.include_router(router_asset_transfer, prefix="/api")        # Роутер передачи актива
+app.include_router(router_asset_positions, prefix="/api")       # Роутер позиций активов
+app.include_router(router_asset_history, prefix="/api")         # История активов
+app.include_router(router_asset_write_off, prefix="/api")       # Списание активов
+app.include_router(router_asset_confirmation, prefix="/api")    # Роутер подтверждения наличия
 
-app.include_router(router_inventorization, prefix="/api")   # Инвентаризация активов
-app.include_router(router_from_sap, prefix="/api")          # Импорт активов из SAP
-app.include_router(router_excel_import, prefix="/api")      # Импорт активов из Excel
+app.include_router(router_inventorization, prefix="/api")       # Инвентаризация активов
+app.include_router(router_from_sap, prefix="/api")              # Импорт активов из SAP
+app.include_router(router_excel_import, prefix="/api")          # Импорт активов из Excel
 
-app.include_router(router_analytics, prefix="/api")         # Аналитика
+app.include_router(router_analytics, prefix="/api")             # Аналитика
 
 # Карта активов
-app.include_router(router_workshop, prefix="/api")          # Схема цехов для карты
-app.include_router(router_map, prefix="/api")               # Роутер html-карты
+app.include_router(router_workshop, prefix="/api")              # Схема цехов для карты
+app.include_router(router_map, prefix="/api")                   # Роутер html-карты
 
 # Уведомления
-app.include_router(router_notifications, prefix="/api")     # Роутер уведомлений
+app.include_router(router_notifications, prefix="/api")         # Роутер уведомлений
 
 
 router_root = APIRouter(tags=["/"])
@@ -217,4 +213,4 @@ async def root():
         "api": f"http://{host}:{port}/api"
     }
 
-app.include_router(router_root)                             # корень веб-приложения
+app.include_router(router_root)                                 # корень веб-приложения

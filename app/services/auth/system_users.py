@@ -62,10 +62,10 @@ class MockSystemEmployee:
     Системные пользователи — "призраки", их нет в таблице zup_employees.
     """
     def __init__(self, login: str):
-        self.employee_id = login  # "root", "read_only", и т.д.
+        self.employee_id = login        # "root", "read_only", и т.д.
         self.login = login
         self.email = f"{login}@system.local"
-        self.dismissal_date = None  # Системные пользователи не увольняются
+        self.dismissal_date = None      # Системные пользователи не увольняются
         self.guid = f"system-{login}"
         self.last_name = "System"
         self.first_name = login

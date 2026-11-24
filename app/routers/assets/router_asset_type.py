@@ -15,7 +15,22 @@ from app.services.auth.auth_service import check_assets_is_admin
 logger = logging.getLogger(__name__)
 router_asset_types = APIRouter(prefix="/assets-types", tags=["Asset Types"])
 
-@router_asset_types.post("/", response_model=AssetTypeResponse, status_code=status.HTTP_201_CREATED)
+@router_asset_types.post(
+    "/",
+    response_model=AssetTypeResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать тип актива / Create Asset Type",
+    description=(
+            "RU: Создает новый тип актива в системе. Проверяет наличие права на запись (`write`) "
+            "для создаваемого типа актива (ключом права является `en_name`). "
+            "При отсутствии прав возвращается ошибка 403. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Creates a new asset type in the system. Checks for write permission (`write`) "
+            "for the asset type being created (the permission key is `en_name`). "
+            "If permissions are missing, a 403 error is returned. "
+            "User authorization is required."
+    )
+)
 async def create_asset_type_endpoint(
         data: AssetTypeCreate,
         request: Request,
@@ -37,7 +52,23 @@ async def create_asset_type_endpoint(
     return await create_asset_type(db, data, current_user.employee_id)
 
 
-@router_asset_types.get("/", response_model=List[AssetTypeResponse])
+@router_asset_types.get(
+    "/",
+    response_model=List[AssetTypeResponse],
+    summary="Получить список типов активов / Get Asset Types List",
+    description=(
+            "RU: Возвращает список типов активов с поддержкой пагинации (`skip`, `limit`) "
+            "и фильтрации по `name` и `en_name`. Для администраторов активов "
+            "(`check_assets_is_admin`) возвращаются все типы. Для остальных пользователей "
+            "список фильтруется на основе права `read` для каждого типа (по `en_name`). "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns a list of asset types with pagination support (`skip`, `limit`) "
+            "and filtering by `name` and `en_name`. For asset administrators "
+            "(`check_assets_is_admin`), all types are returned. For other users, "
+            "the list is filtered based on the `read` permission for each type (by `en_name`). "
+            "User authorization is required."
+    )
+)
 async def get_asset_types(
         request: Request,
         skip: int = Query(0, ge=0),
@@ -71,7 +102,21 @@ async def get_asset_types(
     return accessible_types
 
 
-@router_asset_types.get("/{asset_type_id}", response_model=AssetTypeResponse)
+@router_asset_types.get(
+    "/{asset_type_id}",
+    response_model=AssetTypeResponse,
+    summary="Получить тип актива по ID / Get Asset Type by ID",
+    description=(
+            "RU: Возвращает информацию о типе актива по его уникальному идентификатору `asset_type_id`. "
+            "Проверяет наличие права на чтение (`read`) для данного типа (по `en_name`). "
+            "Если тип не найден — возвращается ошибка 404, при отсутствии прав — 403. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Returns information about an asset type by its unique identifier `asset_type_id`. "
+            "Checks for read permission (`read`) for the given type (by `en_name`). "
+            "If the type is not found, a 404 error is returned; if permissions are missing, a 403 error is returned. "
+            "User authorization is required."
+    )
+)
 async def get_asset_type(
         asset_type_id: int,
         request: Request,
@@ -92,7 +137,23 @@ async def get_asset_type(
     return obj
 
 
-@router_asset_types.patch("/{asset_type_id}", response_model=AssetTypeResponse)
+@router_asset_types.patch(
+    "/{asset_type_id}",
+    response_model=AssetTypeResponse,
+    summary="Обновить тип актива / Update Asset Type",
+    description=(
+            "RU: Обновляет данные существующего типа актива по его `asset_type_id`. "
+            "Проверяет наличие права на запись (`write`) для типа актива — "
+            "используется новый `en_name` из запроса, если он указан, иначе — текущий. "
+            "Если тип не найден — возвращается ошибка 404, при отсутствии прав — 403. "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Updates the data of an existing asset type by its `asset_type_id`. "
+            "Checks for write permission (`write`) for the asset type — "
+            "uses the new `en_name` from the request if provided, otherwise the current one. "
+            "If the type is not found, a 404 error is returned; if permissions are missing, a 403 error is returned. "
+            "User authorization is required."
+    )
+)
 async def update_asset_type_endpoint(
         asset_type_id: int,
         data: AssetTypeUpdate,
@@ -122,7 +183,23 @@ async def update_asset_type_endpoint(
     updated = await update_asset_type(db, asset_type_id, data)
     return updated
 
-@router_asset_types.delete("/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router_asset_types.delete(
+    "/{asset_type_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить тип актива / Delete Asset Type",
+    description=(
+            "RU: Удаляет тип актива по его `asset_type_id`. "
+            "Перед удалением проверяется наличие права на запись (`write`) для данного типа (по `en_name`). "
+            "Если тип не найден — возвращается ошибка 404, при отсутствии прав — 403. "
+            "При успешном удалении возвращается статус 204 (No Content). "
+            "Требуется авторизация пользователя.\n\n"
+            "EN: Deletes an asset type by its `asset_type_id`. "
+            "Before deletion, write permission (`write`) is checked for the given type (by `en_name`). "
+            "If the type is not found, a 404 error is returned; if permissions are missing, a 403 error is returned. "
+            "On successful deletion, a 204 (No Content) status is returned. "
+            "User authorization is required."
+    )
+)
 async def delete_asset_type_endpoint(
         asset_type_id: int,
         request: Request,

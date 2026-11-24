@@ -24,7 +24,19 @@ router_asset_history = APIRouter(prefix="/asset-history", tags=["Asset History"]
 @router_asset_history.get(
     "/filter",
     response_model=List[AssetHistoryResponse],
-    summary="Получить историю с фильтрами"
+    summary="Получить историю с фильтрами / Get History with Filters",
+    description=(
+            "RU: Возвращает историю изменений активов с поддержкой расширенной фильтрации: "
+            "по `asset_id`, пользователю `changed_by`, типу действия (`create`, `update`, `delete`, "
+            "`assign`, `unassign`, `move`, `status_change`), диапазону дат (`date_from`, `date_to`) "
+            "и идентификатору сессии `session_id`. Поддерживает пагинацию через параметры `skip` и `limit`. "
+            "Если записей не найдено — возвращается ошибка 404. Требуется авторизация.\n\n"
+            "EN: Returns the asset change history with advanced filtering support: "
+            "by `asset_id`, user `changed_by`, action type (`create`, `update`, `delete`, "
+            "`assign`, `unassign`, `move`, `status_change`), date range (`date_from`, `date_to`), "
+            "and session identifier `session_id`. Supports pagination via `skip` and `limit` parameters. "
+            "If no records are found, a 404 error is returned. Authorization is required."
+    )
 )
 async def read_history_with_filters(
         asset_id: Optional[int] = Query(None),
@@ -60,7 +72,15 @@ async def read_history_with_filters(
 @router_asset_history.get(
     "/stats",
     response_model=AssetHistoryStatsResponse,
-    summary="Получить статистику по истории изменений"
+    summary="Получить статистику по истории изменений / Get History Change Statistics",
+    description=(
+            "RU: Возвращает агрегированную статистику по истории изменений активов. "
+            "Поддерживает фильтрацию по диапазону дат (`date_from`, `date_to`). "
+            "Полезно для аналитики и дашбордов. Требуется авторизация.\n\n"
+            "EN: Returns aggregated statistics on asset change history. "
+            "Supports filtering by date range (`date_from`, `date_to`). "
+            "Useful for analytics and dashboards. Authorization is required."
+    )
 )
 async def read_history_stats(
         date_from: Optional[datetime] = Query(None),
@@ -75,7 +95,15 @@ async def read_history_stats(
 @router_asset_history.get(
     "/{asset_id}",
     response_model=List[AssetHistoryResponse],
-    summary="Получить историю изменений актива"
+    summary="Получить историю изменений актива / Get Asset Change History",
+    description=(
+            "RU: Возвращает историю изменений конкретного актива по его `asset_id`. "
+            "Поддерживает пагинацию через параметры `skip` и `limit`. "
+            "Записи отсортированы по дате изменения. Требуется авторизация.\n\n"
+            "EN: Returns the change history of a specific asset by its `asset_id`. "
+            "Supports pagination via `skip` and `limit` parameters. "
+            "Records are sorted by change date. Authorization is required."
+    )
 )
 async def read_asset_history(
         asset_id: int,
@@ -92,7 +120,15 @@ async def read_asset_history(
 @router_asset_history.get(
     "/{asset_id}/grouped",
     response_model=List[AssetHistoryGroupedResponse],
-    summary="Получить историю, сгруппированную по операциям"
+    summary="Получить историю, сгруппированную по операциям / Get History Grouped by Operations",
+    description=(
+            "RU: Возвращает историю изменений конкретного актива, сгруппированную по `session_id`. "
+            "Позволяет отобразить связанные изменения (например, несколько полей, изменённых в рамках одной операции) "
+            "в виде единой записи. Поддерживает пагинацию через параметры `skip` и `limit`. Требуется авторизация.\n\n"
+            "EN: Returns the change history of a specific asset, grouped by `session_id`. "
+            "Allows displaying related changes (e.g., multiple fields modified within a single operation) "
+            "as a single record. Supports pagination via `skip` and `limit` parameters. Authorization is required."
+    )
 )
 async def read_asset_history_grouped(
         asset_id: int,
@@ -107,8 +143,17 @@ async def read_asset_history_grouped(
 
 @router_asset_history.post(
     "/migrate-old-records",
-    summary="Одноразовая миграция старых записей истории",
-    description="Преобразует ID в названия и переводит field_name на русский язык для старых записей. Запускайте только один раз!"
+    summary="Одноразовая миграция старых записей истории / One-time Migration of Old History Records",
+    description=(
+            "RU: Запускает одноразовый процесс миграции старых записей истории. "
+            "Преобразует ID в названия и переводит `field_name` на русский язык для устаревших записей. "
+            "Процесс разбит на пакеты (параметр `batch_size`), чтобы не блокировать БД надолго. "
+            "**Внимание:** запускайте только один раз! Требуется авторизация (в идеале — роль администратора).\n\n"
+            "EN: Triggers a one-time migration process for old history records. "
+            "Converts IDs to names and translates `field_name` to Russian for legacy records. "
+            "The process is split into batches (via the `batch_size` parameter) to avoid long DB locks. "
+            "**Warning:** run only once! Authorization is required (ideally, an admin role)."
+    )
 )
 async def trigger_history_migration(
         batch_size: int = Query(500, ge=100, le=2000, description="Размер пакета для обработки"),

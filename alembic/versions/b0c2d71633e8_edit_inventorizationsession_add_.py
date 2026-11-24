@@ -19,15 +19,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. Добавляем новое поле department_codes
+    # Добавляем новое поле department_codes
     op.add_column('inventorization_sessions', sa.Column('department_codes', sa.String(length=500), nullable=True))
 
-    # 2. Делаем asset_type_id необязательным (nullable=True), так как сессия может быть создана только по департаментам
+    # Делаем asset_type_id необязательным (nullable=True), так как сессия может быть создана только по департаментам
     op.alter_column('inventorization_sessions', 'asset_type_id',
                     existing_type=sa.Integer(),
                     nullable=True)
 
-    # 3. Делаем текстовые поля типа актива необязательными
+    # Делаем текстовые поля типа актива необязательными
     op.alter_column('inventorization_sessions', 'asset_type_name',
                     existing_type=sa.String(length=100),
                     nullable=True)
@@ -39,7 +39,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Откат изменений в обратном порядке
-    # 1. Возвращаем обязательность полей типа актива
+    # Возвращаем обязательность полей типа актива
     op.alter_column('inventorization_sessions', 'asset_type_en_name',
                     existing_type=sa.String(length=100),
                     nullable=False)
@@ -52,5 +52,5 @@ def downgrade() -> None:
                     existing_type=sa.Integer(),
                     nullable=False)
 
-    # 2. Удаляем новое поле
+    # Удаляем новое поле
     op.drop_column('inventorization_sessions', 'department_codes')

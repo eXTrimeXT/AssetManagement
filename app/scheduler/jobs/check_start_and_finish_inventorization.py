@@ -19,7 +19,7 @@ async def check_inventorization_dates():
             updated_start = 0
             updated_end = 0
 
-            # 1. Переводим сессии в IN_PROGRESS, если наступила дата начала
+            # Переводим сессии в IN_PROGRESS, если наступила дата начала
             stmt_start = (
                 update(InventorizationSession)
                 .where(
@@ -32,7 +32,7 @@ async def check_inventorization_dates():
             result_start = await db.execute(stmt_start)
             updated_start = result_start.rowcount
 
-            # 2. Переводим сессии в COMPLETED, если наступила дата окончания
+            # Переводим сессии в COMPLETED, если наступила дата окончания
             stmt_end = (
                 update(InventorizationSession)
                 .where(
@@ -65,7 +65,7 @@ async def start_inventory_session_job(session_id: int):
     logger.info(f"[INVENTORY SCHEDULER] Запуск задачи start_inventory_session_job для session_id={session_id}")
     try:
         async with async_session() as db:
-            # 1. Проверяем, что сессия существует и все еще в статусе PENDING
+            # Проверяем, что сессия существует и все еще в статусе PENDING
             stmt = select(InventorizationSession).where(
                 InventorizationSession.session_id == session_id,
                 InventorizationSession.status == InventorizationStatus.PENDING
@@ -77,10 +77,10 @@ async def start_inventory_session_job(session_id: int):
                 logger.warning(f"[INVENTORY SCHEDULER] Сессия {session_id} не найдена или уже не в статусе PENDING")
                 return
 
-            # 2. Меняем статус на IN_PROGRESS
+            # Меняем статус на IN_PROGRESS
             session.status = InventorizationStatus.IN_PROGRESS
 
-            # 3. === НОВАЯ ЛОГИКА: ОТПРАВКА УВЕДОМЛЕНИЙ О НАЧАЛЕ ===
+            # ОТПРАВКА УВЕДОМЛЕНИЙ О НАЧАЛЕ
             # Находим все asset_id для этой сессии (игнорируем виртуальные SAP, у которых asset_id is None)
             items_stmt = select(InventorizationItem.asset_id).where(
                 InventorizationItem.session_id == session_id,
@@ -108,7 +108,7 @@ async def start_inventory_session_job(session_id: int):
                     )
                 logger.info(f"[INVENTORY SCHEDULER] Отправлено {len(responsible_employees)} уведомлений о начале инвентаризации {session_id}")
 
-            # 4. Сохраняем изменения
+            # Сохраняем изменения
             await db.commit()
             logger.info(f"[INVENTORY SCHEDULER] Сессия {session_id} автоматически переведена в статус IN_PROGRESS")
 

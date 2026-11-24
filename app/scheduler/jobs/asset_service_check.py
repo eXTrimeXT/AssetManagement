@@ -120,8 +120,8 @@ async def check_service_assets():
 
             logger.info(
                 f"Актив {asset.asset_id} ({asset.name}): "
-                f"статус '{old_status}' → '{SERVICE_REQUIRED_STATUS}', "
-                f"next_service → {asset.next_service}, "
+                f"статус '{old_status}' -> '{SERVICE_REQUIRED_STATUS}', "
+                f"next_service -> {asset.next_service}, "
                 f"уведомлений: {len(serving_users)}"
             )
 
@@ -190,7 +190,7 @@ async def check_have_assets():
                 continue
 
             for assignment in users:
-                # 1. ЗАЩИТА ОТ ДУБЛИКАТОВ: Проверяем, нет ли уже активной заявки
+                # ЗАЩИТА ОТ ДУБЛИКАТОВ: Проверяем, нет ли уже активной заявки
                 existing_confirmation = await session.execute(
                     select(AssetConfirmation).where(
                         AssetConfirmation.asset_id == asset.asset_id,
@@ -202,7 +202,7 @@ async def check_have_assets():
                     logger.debug(f"Заявка на подтверждение для актива {asset.asset_id} и сотрудника {assignment.employee_id} уже существует.")
                     continue
 
-                # 2. Создаём уведомление
+                # Создаём уведомление
                 notification = Notification(
                     employee_id=assignment.employee_id,
                     asset_id=asset.asset_id,
@@ -213,7 +213,7 @@ async def check_have_assets():
                 session.add(notification)
                 notifications_created += 1
 
-                # 3. Создаём заявку на подтверждение наличия (AssetConfirmation)
+                # Создаём заявку на подтверждение наличия (AssetConfirmation)
                 confirmation = AssetConfirmation(
                     asset_id=asset.asset_id,
                     employee_id=assignment.employee_id,
@@ -234,8 +234,8 @@ async def check_have_assets():
 
             logger.info(
                 f"Актив {asset.asset_id} ({asset.name}): "
-                f"статус '{old_status}' → '{CHECK_REQUIRED_STATUS}', "
-                f"next_check → {asset.next_check}"
+                f"статус '{old_status}' -> '{CHECK_REQUIRED_STATUS}', "
+                f"next_check -> {asset.next_check}"
             )
 
         # Сохраняем изменения

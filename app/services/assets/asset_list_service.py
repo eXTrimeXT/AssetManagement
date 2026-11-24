@@ -180,7 +180,7 @@ async def get_assets_list_with_sap(
 
     # Обогащение SAP-элементов сотрудниками/департаментами
     employees_map, departments_map = await _load_maps_for_sap_items(db, sap_items)
-
+    only_local_asset_size = 0
     for sap_item in sap_items:
         mat = sap_item.get("material_id")
         inv = sap_item.get("inventory_number")
@@ -193,7 +193,6 @@ async def get_assets_list_with_sap(
             used_local_asset_ids.add(override.asset_id)
         else:
             merged = _build_virtual_asset(sap_item, employees_map, departments_map)
-
         combined.append(merged)
 
     # 3b. Чисто локальные активы (без material_id и не использованные как переопределения)
@@ -202,6 +201,7 @@ async def get_assets_list_with_sap(
             continue
         combined.append(_asset_to_response_dict(asset))
         used_local_asset_ids.add(asset.asset_id)
+        only_local_asset_size += 1
 
     # 3c. Локальные активы с material_id, которые НЕ совпали ни с одним SAP-элементом
     # (SAP мог отфильтровать их по своим фильтрам) — добавляем как локальные,
@@ -209,12 +209,14 @@ async def get_assets_list_with_sap(
     # иначе это может быть просто актив, отсутствующий в SAP.
     # Согласно требованию "SAP-активы + локальные активы = смешанные активы + фильтры",
     # такие активы должны попасть в выдачу, если проходят локальные фильтры.
+    only_merged_asset_size = 0
     for asset in local_assets:
         if asset.asset_id in used_local_asset_ids:
             continue
         # Актив с material_id, но SAP его не вернул (или SAP не запрашивался)
         combined.append(_asset_to_response_dict(asset))
         used_local_asset_ids.add(asset.asset_id)
+        only_merged_asset_size += 1
 
     # ------------------------------------------------------------------
     # Применяем ЛОКАЛЬНЫЕ фильтры к объединённому списку
@@ -244,7 +246,18 @@ async def get_assets_list_with_sap(
     # ------------------------------------------------------------------
     combined.sort(key=_sort_key, reverse=True)
 
-    total = len(combined)
+    # total = len(combined) # 2000
+    # total = sap_total_from_api + len(used_local_asset_ids) # total_sap + all_local
+    # total = len(used_local_asset_ids) # 2
+    # total = len(override_asset_ids) # 2
+    # total = len(local_assets) # 2
+    # total = only_local_asset_size # 1
+    # total = only_merged_asset_size # 1
+
+    # Собираем нормальное общее количество активов
+    # SAP-активы - объединенные активы + только локальные активы
+    # SAP-активы + локальные активы. В целом объединенные можно не учитывать т.к. они и есть sap_total_from_api
+    total = sap_total_from_api + only_local_asset_size
     start = (page - 1) * page_size
     end = start + page_size
     page_items = combined[start:end]

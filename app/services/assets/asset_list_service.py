@@ -536,6 +536,8 @@ async def fetch_sap_materials(
     if base_material_name_like:
         params["base_material_name_like"] = base_material_name_like
     if inventory_number:
+        # 10000003328
+        if len(inventory_number) == 11: inventory_number = f"0{inventory_number}"
         params["inventory_number"] = inventory_number
     if serial_number:
         if is_long_serial_number:

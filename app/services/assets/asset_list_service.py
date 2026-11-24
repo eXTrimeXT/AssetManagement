@@ -930,7 +930,7 @@ def _build_virtual_asset(
         "asset_id": None,
         "name": sap_item.get("base_material_name"),
         "inventory_id": sap_item.get("inventory_number"),
-        "serial_number": sap_item.get("long_serial_number") or sap_item.get("serial_number"),
+        "serial_number": (sap_item.get("long_serial_number") or sap_item.get("serial_number") or "").strip() or None,
         "quantity": int(sap_item.get("quantity", 0)) if sap_item.get("quantity") is not None else 0,
         "asset_status": "В работе",
         "asset_status_id": 10,

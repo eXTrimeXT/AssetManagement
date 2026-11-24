@@ -10,7 +10,7 @@ from app.services.sap.sync_sap_assets import (
     get_sap_departments,
     get_sap_asset_classes,
     sync_sap_departments,
-    sync_sap_material_classes
+    sync_sap_material_classes,
 )
 
 router_from_sap = APIRouter(prefix="/sap", tags=["SAP API [READ ONLY]"])

@@ -1,7 +1,8 @@
 import logging
 import os
+from datetime import datetime
 from typing import Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 import httpx
@@ -10,7 +11,6 @@ from dotenv import load_dotenv
 from app.models.assets import Asset
 from app.models.sap.SapDepartment import SapDepartment
 from app.models.sap.SapMaterialClass import SapMaterialClass
-
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -18,10 +18,144 @@ SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/")  # defau
 X_API_TOKEN = os.getenv("X_API_TOKEN")
 headers = {"X-API-Token": X_API_TOKEN}
 
-async def sync_sap_assets(db: AsyncSession) -> dict:
+# async def sync_sap_assets(db: AsyncSession) -> dict:
+#     """
+#     Единая логика синхронизации активов из SAP API.
+#     Стратегия: Вставляет записи, игнорируя конфликты уникальности.
+#     """
+#     logger.info("[SAP SYNC] Запуск синхронизации активов из SAP...")
+#
+#     limit = 1000
+#     offset = 0
+#     total_synced = 0
+#
+#     try:
+#         async with httpx.AsyncClient() as client:
+#             while True:
+#                 response = await client.get(
+#                     SAP_API_URL + "base_materials",
+#                     params={"limit": limit, "offset": offset},
+#                     headers=headers
+#                 )
+#
+#                 if response.status_code == 422:
+#                     logger.error(f"[SAP SYNC] Ошибка валидации SAP API: {response.text}")
+#                     break
+#
+#                 response.raise_for_status()
+#                 result = response.json()
+#
+#                 if not result.get("success") or "response" not in result or "data" not in result["response"]:
+#                     logger.error("[SAP SYNC] Неверная структура ответа SAP API")
+#                     break
+#
+#                 data = result["response"]["data"]
+#                 if not data:
+#                     break
+#
+#                 # Устраняем дубликаты inventory_id ВНУТРИ текущей порции от SAP
+#                 records_dict = {}
+#                 for item in data:
+#                     inv_id = item.get("inventory_number")
+#                     if not inv_id:
+#                         continue
+#
+#                     material_id = item.get("material_id") or None
+#                     # === ИСПРАВЛЕНИЕ 1: Корректная обработка long_serial_number и serial_number ===
+#                     # Отдаем приоритет long_serial_number. Если его нет или он пустой — берем serial_number
+#                     raw_serial = item.get("long_serial_number") or item.get("serial_number")
+#
+#                     # Если это строка, убираем пробелы. Если после этого строка пустая или None — делаем None
+#                     serial_num = raw_serial.strip() if isinstance(raw_serial, str) else raw_serial
+#                     if not serial_num:
+#                         serial_num = None
+#                     # ==============================================================================
+#
+#                     records_dict[inv_id] = {
+#                         "material_id": material_id,
+#                         "inventory_id": inv_id,
+#                         "name": item.get("base_material_name"),
+#                         "serial_number": serial_num, # Теперь здесь гарантированно None, а не ""
+#                         "quantity": item.get("quantity", 0),
+#                         "every_week_check": False
+#                     }
+#
+#                 records = list(records_dict.values())
+#                 if not records:
+#                     offset += limit
+#                     continue
+#
+#                 # Собираем все inventory_id из текущей порции для проверки в БД
+#                 batch_inv_ids = [r["inventory_id"] for r in records]
+#
+#                 # Запрашиваем из БД существующие записи с такими inventory_id
+#                 existing_query = select(
+#                     Asset.inventory_id,
+#                     Asset.name,
+#                     Asset.serial_number,
+#                     Asset.quantity
+#                 ).where(Asset.inventory_id.in_(batch_inv_ids))
+#
+#                 result_db = await db.execute(existing_query)
+#                 existing_rows = result_db.all()
+#
+#                 # Создаем множество (set) кортежей для мгновенного поиска O(1)
+#                 existing_set = {
+#                     (row.inventory_id, row.name, (row.serial_number if row.serial_number else None), row.quantity)
+#                     for row in existing_rows
+#                 }
+#
+#                 # Фильтруем записи: оставляем только те, которых НЕТ в БД в таком же виде
+#                 records_to_insert = []
+#                 for r in records:
+#                     serial_num = r["serial_number"] if r["serial_number"] else None
+#                     row_tuple = (r["inventory_id"], r["name"], serial_num, r["quantity"])
+#
+#                     if row_tuple not in existing_set:
+#                         records_to_insert.append(r)
+#
+#                 # === ИСПРАВЛЕНИЕ 2 и 3: Безопасная вставка с игнорированием конфликтов ===
+#                 if records_to_insert:
+#                     try:
+#                         # Используем PostgreSQL-специфичный insert с on_conflict_do_nothing
+#                         stmt = pg_insert(Asset).values(records_to_insert)
+#                         stmt = stmt.on_conflict_do_nothing() # Молча пропускает дубликаты по любым Unique-ограничениям
+#
+#                         await db.execute(stmt)
+#                         await db.commit()
+#
+#                         total_synced += len(records_to_insert)
+#                         logger.info(f"[SAP SYNC] Обработано записей: {len(records_to_insert)} из {len(records)} в порции (offset={offset})")
+#                     except Exception as batch_err:
+#                         # Если вдруг произошла другая ошибка (не конфликт), мы делаем rollback ТОЛЬКО этого батча
+#                         # и продолжаем цикл, чтобы не прерывать синхронизацию 130k+ записей из-за одной ошибки
+#                         await db.rollback()
+#                         logger.error(f"[SAP SYNC] Ошибка вставки батча (offset={offset}), пропускаем: {batch_err}")
+#                 else:
+#                     logger.debug(f"[SAP SYNC] В порции (offset={offset}) все записи уже существуют в БД, пропуск.")
+#
+#                 if len(data) < limit:
+#                     break
+#
+#                 offset += limit
+#
+#         logger.info(f"[SAP SYNC] Синхронизация завершена. Всего обработано записей: {total_synced}")
+#         return {"success": True, "message": "Синхронизация завершена", "total_synced": total_synced}
+#
+#     except Exception as e:
+#         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)
+#         await db.rollback()
+#         return {"success": False, "message": f"Ошибка синхронизации: {str(e)}", "total_synced": total_synced}
+
+
+async def sync_sap_assets(db: AsyncSession, created_by: str = "SAP_SYNC") -> dict:
     """
     Единая логика синхронизации активов из SAP API.
-    Стратегия: Вставляет записи, игнорируя конфликты уникальности.
+    Стратегия: Вставляет записи, сохраняя ВСЕ поля из SAP ответа, игнорируя конфликты уникальности.
+
+    :param db: Активная сессия базы данных
+    :param created_by: ID пользователя-инициатора синхронизации (по умолчанию "SAP_SYNC")
+    :return: Словарь со статистикой выполнения
     """
     logger.info("[SAP SYNC] Запуск синхронизации активов из SAP...")
 
@@ -61,23 +195,100 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                         continue
 
                     material_id = item.get("material_id") or None
-                    # === ИСПРАВЛЕНИЕ 1: Корректная обработка long_serial_number и serial_number ===
-                    # Отдаем приоритет long_serial_number. Если его нет или он пустой — берем serial_number
-                    raw_serial = item.get("long_serial_number") or item.get("serial_number")
 
-                    # Если это строка, убираем пробелы. Если после этого строка пустая или None — делаем None
+                    # === Обработка серийного номера ===
+                    raw_serial = item.get("long_serial_number") or item.get("serial_number")
                     serial_num = raw_serial.strip() if isinstance(raw_serial, str) else raw_serial
                     if not serial_num:
                         serial_num = None
-                    # ==============================================================================
+
+                    # === Обработка даты списания (формат YYYYMMDD или "00000000") ===
+                    write_off_date_raw = item.get("write_off_date")
+                    write_off_date = None
+                    if write_off_date_raw and write_off_date_raw != "00000000" and len(str(write_off_date_raw)) == 8:
+                        try:
+                            write_off_date = datetime.strptime(str(write_off_date_raw), "%Y%m%d").date()
+                        except ValueError:
+                            write_off_date = None
+
+                    # === Обработка даты изменения (changed_date) ===
+                    changed_date_raw = item.get("changed_date")
+                    date_purchasing = None
+                    if changed_date_raw and len(str(changed_date_raw)) == 8:
+                        try:
+                            date_purchasing = datetime.strptime(str(changed_date_raw), "%Y%m%d").date()
+                        except ValueError:
+                            date_purchasing = None
+
+                # Устраняем дубликаты inventory_id ВНУТРИ текущей порции от SAP
+                records_dict = {}
+                for item in data:
+                    inv_id = item.get("inventory_number")
+                    if not inv_id:
+                        continue
+
+                    material_id = item.get("material_id") or None
+
+                    # === Обработка серийного номера ===
+                    raw_serial = item.get("long_serial_number") or item.get("serial_number")
+                    serial_num = raw_serial.strip() if isinstance(raw_serial, str) else raw_serial
+                    if not serial_num:
+                        serial_num = None
+
+                    # === Обработка даты списания (write_off_date) ===
+                    # В модели Asset это Column(String), поэтому мы НЕ делаем .date(), а оставляем строкой!
+                    write_off_date_raw = item.get("write_off_date")
+                    write_off_date = None
+                    if write_off_date_raw and str(write_off_date_raw).strip() != "00000000":
+                        s = str(write_off_date_raw).strip()
+                        if len(s) == 8 and s.isdigit():
+                            # Форматируем в красивый вид YYYY-MM-DD, но оставляем тип str
+                            write_off_date = f"{s[:4]}-{s[4:6]}-{s[6:8]}"
+                        else:
+                            write_off_date = s if s else None
+
+                    # === Обработка даты изменения (changed_date) для date_purchasing ===
+                    # В модели Asset это Column(Date), поэтому здесь .date() нужен и корректен
+                    changed_date_raw = item.get("changed_date")
+                    date_purchasing = None
+                    if changed_date_raw and len(str(changed_date_raw)) == 8:
+                        try:
+                            date_purchasing = datetime.strptime(str(changed_date_raw), "%Y%m%d").date()
+                        except ValueError:
+                            date_purchasing = None
 
                     records_dict[inv_id] = {
+                        # Основные идентификаторы
                         "material_id": material_id,
                         "inventory_id": inv_id,
                         "name": item.get("base_material_name"),
-                        "serial_number": serial_num, # Теперь здесь гарантированно None, а не ""
-                        "quantity": item.get("quantity", 0),
-                        "every_week_check": False
+                        "serial_number": serial_num,
+                        "quantity": int(item.get("quantity", 0) or 0), # Явный cast в int для безопасности
+
+                        # Департаменты (ответственный)
+                        "cost_center_code_from": item.get("cost_center_code_from") or None,
+                        "cost_center_name_from": item.get("cost_center_name_from") or None,
+                        "cost_center_shortname_from": item.get("cost_center_shortname_from") or None,
+
+                        # Департаменты (владелец)
+                        "cost_center_code": item.get("cost_center_code") or None,
+                        "cost_center_name": item.get("cost_center_name") or None,
+                        "cost_center_shortname": item.get("cost_center_shortname") or None,
+
+                        # Класс материала
+                        "material_class": item.get("material_class") or None,
+                        "material_class_name": item.get("material_class_name") or None,
+
+                        # Даты
+                        "date_purchasing": date_purchasing,      # datetime.date (для Column(Date))
+                        "write_off_date": write_off_date,        # str (для Column(String))
+
+                        # Флаги
+                        "every_week_check": False,
+
+                        # Аудит
+                        "created_by": "0000015370",
+                        "updated_by": "0000015370",
                     }
 
                 records = list(records_dict.values())
@@ -89,50 +300,43 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                 batch_inv_ids = [r["inventory_id"] for r in records]
 
                 # Запрашиваем из БД существующие записи с такими inventory_id
-                existing_query = select(
-                    Asset.inventory_id,
-                    Asset.name,
-                    Asset.serial_number,
-                    Asset.quantity
-                ).where(Asset.inventory_id.in_(batch_inv_ids))
-
+                existing_query = select(Asset.asset_id, Asset.inventory_id).where(
+                    Asset.inventory_id.in_(batch_inv_ids)
+                )
                 result_db = await db.execute(existing_query)
                 existing_rows = result_db.all()
 
-                # Создаем множество (set) кортежей для мгновенного поиска O(1)
-                existing_set = {
-                    (row.inventory_id, row.name, (row.serial_number if row.serial_number else None), row.quantity)
-                    for row in existing_rows
-                }
+                existing_inv_ids = {row.inventory_id for row in existing_rows}
 
-                # Фильтруем записи: оставляем только те, которых НЕТ в БД в таком же виде
-                records_to_insert = []
-                for r in records:
-                    serial_num = r["serial_number"] if r["serial_number"] else None
-                    row_tuple = (r["inventory_id"], r["name"], serial_num, r["quantity"])
+                # Фильтруем записи: оставляем только те, которых НЕТ в БД
+                records_to_insert = [
+                    r for r in records
+                    if r["inventory_id"] not in existing_inv_ids
+                ]
 
-                    if row_tuple not in existing_set:
-                        records_to_insert.append(r)
-
-                # === ИСПРАВЛЕНИЕ 2 и 3: Безопасная вставка с игнорированием конфликтов ===
+                # Безопасная вставка с игнорированием конфликтов
                 if records_to_insert:
                     try:
-                        # Используем PostgreSQL-специфичный insert с on_conflict_do_nothing
                         stmt = pg_insert(Asset).values(records_to_insert)
-                        stmt = stmt.on_conflict_do_nothing() # Молча пропускает дубликаты по любым Unique-ограничениям
+                        stmt = stmt.on_conflict_do_nothing()
 
                         await db.execute(stmt)
                         await db.commit()
 
                         total_synced += len(records_to_insert)
-                        logger.info(f"[SAP SYNC] Обработано записей: {len(records_to_insert)} из {len(records)} в порции (offset={offset})")
+                        logger.info(
+                            f"[SAP SYNC] Обработано записей: {len(records_to_insert)} "
+                            f"из {len(records)} в порции (offset={offset})"
+                        )
                     except Exception as batch_err:
-                        # Если вдруг произошла другая ошибка (не конфликт), мы делаем rollback ТОЛЬКО этого батча
-                        # и продолжаем цикл, чтобы не прерывать синхронизацию 130k+ записей из-за одной ошибки
                         await db.rollback()
-                        logger.error(f"[SAP SYNC] Ошибка вставки батча (offset={offset}), пропускаем: {batch_err}")
+                        logger.error(
+                            f"[SAP SYNC] Ошибка вставки батча (offset={offset}), пропускаем: {batch_err}"
+                        )
                 else:
-                    logger.debug(f"[SAP SYNC] В порции (offset={offset}) все записи уже существуют в БД, пропуск.")
+                    logger.debug(
+                        f"[SAP SYNC] В порции (offset={offset}) все записи уже существуют в БД, пропуск."
+                    )
 
                 if len(data) < limit:
                     break
@@ -140,13 +344,20 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                 offset += limit
 
         logger.info(f"[SAP SYNC] Синхронизация завершена. Всего обработано записей: {total_synced}")
-        return {"success": True, "message": "Синхронизация завершена", "total_synced": total_synced}
+        return {
+            "success": True,
+            "message": "Синхронизация завершена",
+            "total_synced": total_synced
+        }
 
     except Exception as e:
         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)
         await db.rollback()
-        return {"success": False, "message": f"Ошибка синхронизации: {str(e)}", "total_synced": total_synced}
-
+        return {
+            "success": False,
+            "message": f"Ошибка синхронизации: {str(e)}",
+            "total_synced": total_synced
+        }
 
 async def get_sap_departments(
         limit: int = 1000,

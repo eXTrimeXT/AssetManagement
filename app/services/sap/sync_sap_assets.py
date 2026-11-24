@@ -18,8 +18,11 @@ SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/")  # defau
 X_API_TOKEN = os.getenv("X_API_TOKEN")
 headers = {"X-API-Token": X_API_TOKEN}
 
-
 async def sync_sap_assets(db: AsyncSession) -> dict:
+    """
+    Единая логика синхронизации активов из SAP API.
+    Стратегия: Вставляет записи, игнорируя конфликты уникальности.
+    """
     logger.info("[SAP SYNC] Запуск синхронизации активов из SAP...")
 
     limit = 1000
@@ -31,8 +34,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
             while True:
                 response = await client.get(
                     SAP_API_URL + "base_materials",
-                    params={"limit": limit, "offset": offset},
-                    headers=headers
+                    params={"limit": limit, "offset": offset}
                 )
 
                 if response.status_code == 422:
@@ -57,17 +59,19 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     if not inv_id:
                         continue
 
-                    # === ИСПРАВЛЕНИЕ: Нормализация серийного номера ===
-                    # Отдаем приоритет long_serial_number, если его нет или он пустой — берем serial_number
+                    material_id = item.get("material_id") or None
+                    # === ИСПРАВЛЕНИЕ 1: Корректная обработка long_serial_number и serial_number ===
+                    # Отдаем приоритет long_serial_number. Если его нет или он пустой — берем serial_number
                     raw_serial = item.get("long_serial_number") or item.get("serial_number")
 
                     # Если это строка, убираем пробелы. Если после этого строка пустая или None — делаем None
                     serial_num = raw_serial.strip() if isinstance(raw_serial, str) else raw_serial
                     if not serial_num:
                         serial_num = None
-                    # ==================================================
+                    # ==============================================================================
 
                     records_dict[inv_id] = {
+                        "material_id": material_id,
                         "inventory_id": inv_id,
                         "name": item.get("base_material_name"),
                         "serial_number": serial_num, # Теперь здесь гарантированно None, а не ""
@@ -80,8 +84,10 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     offset += limit
                     continue
 
+                # Собираем все inventory_id из текущей порции для проверки в БД
                 batch_inv_ids = [r["inventory_id"] for r in records]
 
+                # Запрашиваем из БД существующие записи с такими inventory_id
                 existing_query = select(
                     Asset.inventory_id,
                     Asset.name,
@@ -92,11 +98,13 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                 result_db = await db.execute(existing_query)
                 existing_rows = result_db.all()
 
+                # Создаем множество (set) кортежей для мгновенного поиска O(1)
                 existing_set = {
                     (row.inventory_id, row.name, (row.serial_number if row.serial_number else None), row.quantity)
                     for row in existing_rows
                 }
 
+                # Фильтруем записи: оставляем только те, которых НЕТ в БД в таком же виде
                 records_to_insert = []
                 for r in records:
                     serial_num = r["serial_number"] if r["serial_number"] else None
@@ -105,18 +113,23 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
                     if row_tuple not in existing_set:
                         records_to_insert.append(r)
 
+                # === ИСПРАВЛЕНИЕ 2 и 3: Безопасная вставка с игнорированием конфликтов ===
                 if records_to_insert:
-                    # === ИЗМЕНЕНИЕ: Используем pg_insert с on_conflict_do_nothing ===
-                    stmt = pg_insert(Asset).values(records_to_insert)
-                    stmt = stmt.on_conflict_do_nothing() # Игнорирует дубликаты по PK или Unique-ограничениям
+                    try:
+                        # Используем PostgreSQL-специфичный insert с on_conflict_do_nothing
+                        stmt = pg_insert(Asset).values(records_to_insert)
+                        stmt = stmt.on_conflict_do_nothing() # Молча пропускает дубликаты по любым Unique-ограничениям
 
-                    await db.execute(stmt)
-                    await db.commit()
+                        await db.execute(stmt)
+                        await db.commit()
 
-                    # Примечание: из-за on_conflict_do_nothing реальное количество вставленных
-                    # записей может быть чуть меньше len(records_to_insert), но для логов это допустимо.
-                    total_synced += len(records_to_insert)
-                    logger.info(f"[SAP SYNC] Попытка вставки: {len(records_to_insert)} из {len(records)} в порции (offset={offset})")
+                        total_synced += len(records_to_insert)
+                        logger.info(f"[SAP SYNC] Обработано записей: {len(records_to_insert)} из {len(records)} в порции (offset={offset})")
+                    except Exception as batch_err:
+                        # Если вдруг произошла другая ошибка (не конфликт), мы делаем rollback ТОЛЬКО этого батча
+                        # и продолжаем цикл, чтобы не прерывать синхронизацию 130k+ записей из-за одной ошибки
+                        await db.rollback()
+                        logger.error(f"[SAP SYNC] Ошибка вставки батча (offset={offset}), пропускаем: {batch_err}")
                 else:
                     logger.debug(f"[SAP SYNC] В порции (offset={offset}) все записи уже существуют в БД, пропуск.")
 
@@ -130,7 +143,7 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
 
     except Exception as e:
         logger.error(f"[SAP SYNC] Критическая ошибка при синхронизации данных из SAP: {e}", exc_info=True)
-        await db.rollback() # <-- ВАЖНО: всегда делаем rollback при ошибке в транзакции
+        await db.rollback()
         return {"success": False, "message": f"Ошибка синхронизации: {str(e)}", "total_synced": total_synced}
 
 

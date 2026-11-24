@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum, Boolean, Index
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint, func, Enum, Boolean, \
+    Index, null
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.models.Base import Base
@@ -31,6 +32,7 @@ class AssetAssignment(Base):
     assigned_by = Column(String(20), ForeignKey("zup_employees.employee_id"))
     comment = Column(String(500))
     created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, nullable=True)
 
     # === Частичный уникальный индекс вместо UniqueConstraint ===
     __table_args__ = (

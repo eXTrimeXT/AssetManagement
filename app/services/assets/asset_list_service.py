@@ -156,34 +156,87 @@ async def get_assets_list_with_sap(
                 material_class=material_class,
             )
 
+    # # ------------------------------------------------------------------
+    # # Собираем объединённый список
+    # # ------------------------------------------------------------------
+    # combined: List[Dict[str, Any]] = []
+    # used_local_asset_ids: set = set()  # чтобы не добавить чисто локальный дважды
+    #
+    # # 3a. SAP-активы (с подмешиванием локальных переопределений)
+    # # Загружаем связанные сущности для переопределений и SAP-employee одним заходом
+    # override_asset_ids = [a.asset_id for a in overrides_by_material.values()]
+    # override_asset_ids += [a.asset_id for a in overrides_by_inventory.values() if a.asset_id not in override_asset_ids]
+    # overrides_full = await _load_local_assets_by_ids(db, override_asset_ids)
+    #
+    # # Перезаполняем карты полноценными объектами (с eager-loaded связями)
+    # overrides_by_material.clear()
+    # overrides_by_inventory.clear()
+    # for asset in overrides_full:
+    #     if asset.material_id:
+    #         overrides_by_material[asset.material_id] = asset
+    #     if asset.inventory_id:
+    #         overrides_by_inventory[asset.inventory_id] = asset
+    #     # used_local_asset_ids.add(asset.asset_id)
+    #
+    # # Обогащение SAP-элементов сотрудниками/департаментами
+    # employees_map, departments_map = await _load_maps_for_sap_items(db, sap_items)
+    # only_local_asset_size = 0
+    # for sap_item in sap_items:
+    #     mat = sap_item.get("material_id")
+    #     inv = sap_item.get("inventory_number")
+    #     override = overrides_by_material.get(mat) if mat else None
+    #     if override is None and inv:
+    #         override = overrides_by_inventory.get(inv)
+    #
+    #     if override is not None:
+    #         merged = _merge_sap_with_local(sap_item, override, employees_map, departments_map)
+    #         used_local_asset_ids.add(override.asset_id)
+    #     else:
+    #         merged = _build_virtual_asset(sap_item, employees_map, departments_map)
+    #     combined.append(merged)
+    #
+    # # 3b. Чисто локальные активы (без material_id и не использованные как переопределения)
+    # for asset in local_only_assets:
+    #     if asset.asset_id in used_local_asset_ids:
+    #         continue
+    #     combined.append(_asset_to_response_dict(asset))
+    #     used_local_asset_ids.add(asset.asset_id)
+    #     only_local_asset_size += 1
+    #
+    # # 3c. Локальные активы с material_id, которые НЕ совпали ни с одним SAP-элементом
+    # # (SAP мог отфильтровать их по своим фильтрам) — добавляем как локальные,
+    # # чтобы они не потерялись. Но ТОЛЬКО если SAP вернул непустой результат,
+    # # иначе это может быть просто актив, отсутствующий в SAP.
+    # # Согласно требованию "SAP-активы + локальные активы = смешанные активы + фильтры",
+    # # такие активы должны попасть в выдачу, если проходят локальные фильтры.
+    # only_merged_asset_size = 0
+    # for asset in local_assets:
+    #     if asset.asset_id in used_local_asset_ids:
+    #         continue
+    #     # Актив с material_id, но SAP его не вернул (или SAP не запрашивался)
+    #     combined.append(_asset_to_response_dict(asset))
+    #     used_local_asset_ids.add(asset.asset_id)
+    #     only_merged_asset_size += 1
+
     # ------------------------------------------------------------------
     # Собираем объединённый список
     # ------------------------------------------------------------------
     combined: List[Dict[str, Any]] = []
     used_local_asset_ids: set = set()  # чтобы не добавить чисто локальный дважды
 
-    # 3a. SAP-активы (с подмешиванием локальных переопределений)
-    # Загружаем связанные сущности для переопределений и SAP-employee одним заходом
-    override_asset_ids = [a.asset_id for a in overrides_by_material.values()]
-    override_asset_ids += [a.asset_id for a in overrides_by_inventory.values() if a.asset_id not in override_asset_ids]
-    overrides_full = await _load_local_assets_by_ids(db, override_asset_ids)
-
-    # Перезаполняем карты полноценными объектами (с eager-loaded связями)
-    overrides_by_material.clear()
-    overrides_by_inventory.clear()
-    for asset in overrides_full:
-        if asset.material_id:
-            overrides_by_material[asset.material_id] = asset
-        if asset.inventory_id:
-            overrides_by_inventory[asset.inventory_id] = asset
-        # used_local_asset_ids.add(asset.asset_id)
+    # ВАЖНО: Мы НЕ вызываем _load_local_assets_by_ids, потому что local_assets
+    # УЖЕ содержит все необходимые связи (eager-loaded через _local_assets_base_query).
+    # Повторный запрос с огромным списком ID вызывает ошибку asyncpg (превышение 32767 параметров).
 
     # Обогащение SAP-элементов сотрудниками/департаментами
     employees_map, departments_map = await _load_maps_for_sap_items(db, sap_items)
     only_local_asset_size = 0
+
     for sap_item in sap_items:
         mat = sap_item.get("material_id")
         inv = sap_item.get("inventory_number")
+
+        # Используем уже загруженные объекты из local_assets напрямую
         override = overrides_by_material.get(mat) if mat else None
         if override is None and inv:
             override = overrides_by_inventory.get(inv)
@@ -204,16 +257,10 @@ async def get_assets_list_with_sap(
         only_local_asset_size += 1
 
     # 3c. Локальные активы с material_id, которые НЕ совпали ни с одним SAP-элементом
-    # (SAP мог отфильтровать их по своим фильтрам) — добавляем как локальные,
-    # чтобы они не потерялись. Но ТОЛЬКО если SAP вернул непустой результат,
-    # иначе это может быть просто актив, отсутствующий в SAP.
-    # Согласно требованию "SAP-активы + локальные активы = смешанные активы + фильтры",
-    # такие активы должны попасть в выдачу, если проходят локальные фильтры.
     only_merged_asset_size = 0
     for asset in local_assets:
         if asset.asset_id in used_local_asset_ids:
             continue
-        # Актив с material_id, но SAP его не вернул (или SAP не запрашивался)
         combined.append(_asset_to_response_dict(asset))
         used_local_asset_ids.add(asset.asset_id)
         only_merged_asset_size += 1

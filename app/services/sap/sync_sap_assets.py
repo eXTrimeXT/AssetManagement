@@ -34,7 +34,8 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
             while True:
                 response = await client.get(
                     SAP_API_URL + "base_materials",
-                    params={"limit": limit, "offset": offset}
+                    params={"limit": limit, "offset": offset},
+                    headers=headers
                 )
 
                 if response.status_code == 422:

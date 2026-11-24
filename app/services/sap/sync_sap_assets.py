@@ -17,6 +17,8 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 SAP_API_URL = os.getenv("SAP_API_URL", "http://10.168.143.7:8123/sap/")  # default - test
+X_API_TOKEN = os.getenv("X_API_TOKEN")
+headers = {"X-API-Token": X_API_TOKEN}
 
 
 async def sync_sap_assets(db: AsyncSession) -> dict:
@@ -39,7 +41,8 @@ async def sync_sap_assets(db: AsyncSession) -> dict:
             while True:
                 response = await client.get(
                     SAP_API_URL + "base_materials",
-                    params={"limit": limit, "offset": offset}
+                    params={"limit": limit, "offset": offset},
+                    headers=headers
                 )
 
                 if response.status_code == 422:
@@ -150,7 +153,7 @@ async def get_sap_departments(
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(sap_url, params=params)
+            response = await client.get(sap_url, params=params, headers=headers)
             response.raise_for_status()
             return response.json()
     except httpx.RequestError as exc:
@@ -175,7 +178,7 @@ async def get_sap_asset_classes(
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(sap_url, params=params)
+            response = await client.get(sap_url, params=params, headers=headers)
             response.raise_for_status()
             return response.json()
     except httpx.RequestError as exc:
@@ -205,7 +208,8 @@ async def sync_sap_departments(db: AsyncSession) -> dict:
             while True:
                 response = await client.get(
                     SAP_API_URL + "mvz",
-                    params={"limit": limit, "offset": offset}
+                    params={"limit": limit, "offset": offset},
+                    headers=headers
                 )
 
                 if response.status_code == 422:
@@ -282,7 +286,8 @@ async def sync_sap_material_classes(db: AsyncSession, language: str = "R") -> di
             while True:
                 response = await client.get(
                     SAP_API_URL + "search_material_classes",
-                    params={"limit": limit, "offset": offset, "language": language}
+                    params={"limit": limit, "offset": offset, "language": language},
+                    headers=headers
                 )
 
                 if response.status_code == 422:

@@ -258,6 +258,7 @@ async def get_assets_list_with_sap(
     # SAP-активы - объединенные активы + только локальные активы
     # SAP-активы + локальные активы. В целом объединенные можно не учитывать т.к. они и есть sap_total_from_api
     total = sap_total_from_api + only_local_asset_size
+    if total == 0: total = only_merged_asset_size
     start = (page - 1) * page_size
     end = start + page_size
     page_items = combined[start:end]

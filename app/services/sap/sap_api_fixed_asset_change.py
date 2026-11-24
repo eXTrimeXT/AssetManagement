@@ -18,7 +18,7 @@ LOCAL_TO_SAP_FIELD_MAPPING = {
     "inventory_id": "INVENT_NO",
     "serial_number": "SERIAL_NUM_LONG",
     "quantity": "QUANTITY",
-    "comment": "MAIN_DESCRIPT",
+    # "comment": "MAIN_DESCRIPT",
     "date_purchasing": "ORIG_ACQ_DATE",  # Пример: дата покупки -> дата поступления
     # "date_issue": "DATE",              # Пример: дата выдачи -> дата инвентаризации
     "manufacturer_name": "MANUFACTURER",
@@ -67,7 +67,7 @@ def build_sap_item_set_from_changes(old_data: Dict[str, Any], new_data: Dict[str
     for key, new_val in new_data.items():
         old_val = old_data.get(key)
 
-        # Если значение не изменилось, пропускаем (п.1 ТЗ)
+        # Если значение не изменилось, пропускаем
         if old_val == new_val:
             continue
 

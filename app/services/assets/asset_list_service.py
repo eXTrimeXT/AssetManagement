@@ -164,7 +164,7 @@ async def get_assets_list_with_sap(
 
     logger.debug(f"{is_sap=}")
 
-    if (is_sap == "all" or is_sap == "sap") and (asset_type_id == 0 and asset_type_id is None):
+    if (is_sap == "all" or is_sap == "sap") and (asset_type_id == 0 or asset_type_id is None):
         if should_fetch_sap:
             sap_items, sap_total_from_api = await _fetch_all_sap_materials(
                 material_id=material_id,

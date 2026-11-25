@@ -557,7 +557,7 @@ def _apply_local_filters(
     if is_write_off_date:
         query = query.where(and_(
             Asset.write_off_date.isnot(None),
-            Asset.write_off_date.isnot("00000000")
+            Asset.write_off_date != "00000000"
         ))
     return query
 

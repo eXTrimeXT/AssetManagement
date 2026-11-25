@@ -761,7 +761,7 @@ async def sync_sap_assets(db: AsyncSession, created_by: str = None) -> dict:
             while True:
                 response = await client.get(
                     SAP_API_URL + "base_materials",
-                    params={"limit": limit, "offset": offset},
+                    params={"limit": limit, "offset": offset, "inventory_number": 100000004749},
                     headers=headers,
                     )
 

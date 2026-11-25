@@ -230,7 +230,7 @@ async def script_sync_all_data_endpoint(
         res = await sync_all_data(db=db)
         return {
             "success": True,
-            "message": "Синхронизация завершена успешно",
+            "message": "Синхронизация завершена",
             "stats": res
         }
     except Exception as e:

@@ -324,8 +324,20 @@ async def get_assets_list_with_sap(
     # Собираем нормальное общее количество активов
     # SAP-активы - объединенные активы + только локальные активы
     # SAP-активы + локальные активы. В целом объединенные можно не учитывать т.к. они и есть sap_total_from_api
-    total = sap_total_from_api + only_local_asset_size
-    if total == 0: total = only_merged_asset_size
+    # total = sap_total_from_api + only_local_asset_size
+    # if total == 0: total = only_merged_asset_size
+    # start = (page - 1) * page_size
+    # end = start + page_size
+    # page_items = combined[start:end]
+
+    # ------------------------------------------------------------------
+    # Сортировка и пагинация
+    # ------------------------------------------------------------------
+    combined.sort(key=_sort_key, reverse=True)
+
+    # ИСТИННЫЙ TOTAL: длина уже отфильтрованного объединённого списка
+    total = len(combined)
+
     start = (page - 1) * page_size
     end = start + page_size
     page_items = combined[start:end]

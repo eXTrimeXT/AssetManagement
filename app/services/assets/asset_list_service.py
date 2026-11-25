@@ -1001,10 +1001,11 @@ def _build_virtual_asset(
         departments_map: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Строит виртуальный актив из данных SAP."""
-    raw_employee_id = None
-    if sap_item.get("employee_id"):
-        raw = str(sap_item["employee_id"]).strip()
-        raw_employee_id = raw if raw.startswith("00") else "00" + raw
+    # raw_employee_id = None
+    # if sap_item.get("employee_id"):
+    #     raw = str(sap_item["employee_id"]).strip()
+    #     raw_employee_id = raw if raw.startswith("00") else "00" + raw
+    raw_employee_id = _normalize_employee_id(sap_item.get("employee_id"))
 
     employee = employees_map.get(raw_employee_id) if raw_employee_id else None
     start_date = sap_item.get("changed_date") or None

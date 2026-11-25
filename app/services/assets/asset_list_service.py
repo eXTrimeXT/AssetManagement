@@ -344,9 +344,6 @@ async def get_assets_list_with_sap(
     # ------------------------------------------------------------------
     # Применяем ЛОКАЛЬНЫЕ фильтры к объединённому списку
     # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
-    # Применяем ЛОКАЛЬНЫЕ фильтры к объединённому списку
-    # ------------------------------------------------------------------
     combined = _filter_combined(
         combined,
         asset_status=asset_status,
@@ -366,32 +363,30 @@ async def get_assets_list_with_sap(
     )
 
     # ------------------------------------------------------------------
-    # РАСЧЕТ ИСТИННОГО TOTAL (УМНАЯ ЛОГИКА)
+    # РАСЧЕТ ИСТИННОГО TOTAL (ИСПРАВЛЕНИЕ)
     # ------------------------------------------------------------------
-    # Определяем, есть ли фильтры, которые применяются только локально
-    # и не поддерживаются SAP API (чистые SAP-активы не имеют этих полей).
-    local_only_filters_active = any([
-        asset_type_id is not None,
-        model_id is not None,
-        parent_id is not None,
-        next_service_start is not None,
-        next_service_end is not None
-    ])
-
-    if local_only_filters_active:
-        # Если локальные фильтры активны, чистые SAP-активы будут отброшены
-        # фильтром _filter_combined (так как у них asset_type_id=0 и т.д.).
-        # Следовательно, истинное количество совпадений — это длина уже отфильтрованного списка.
-        # (Он состоит из локальных активов, прошедших SQL-фильтр + локальных переопределений SAP).
-        true_total = len(combined)
-    else:
-        # Если локальных фильтров нет, мы можем доверять total из SAP API,
-        # добавив к нему только те чисто локальные активы, которых нет в SAP.
+    if sap_total_from_api > 0:
+        # 1. Считаем чисто локальные активы (без material_id), прошедшие фильтр
         pure_local_in_combined = sum(
             1 for item in combined
             if item.get("asset_id") is not None and not item.get("material_id")
         )
-        true_total = sap_total_from_api + pure_local_in_combined
+
+        # 2. Считаем локальные активы с material_id, которые НЕ вернул SAP API
+        # (например, SAP отфильтровал их по своим внутренним правилам, но локально они подходят)
+        sap_material_ids = {item.get("material_id") for item in sap_items if item.get("material_id")}
+        extra_local_in_combined = sum(
+            1 for item in combined
+            if item.get("asset_id") is not None
+            and item.get("material_id")
+            and item.get("material_id") not in sap_material_ids
+        )
+
+        # Истинный тотал = (Всего в SAP по фильтру) + (Чисто локальные) + (Локальные, не найденные в SAP)
+        true_total = sap_total_from_api + pure_local_in_combined + extra_local_in_combined
+    else:
+        # Если SAP ничего не вернул (или is_sap="local"), берем длину отфильтрованного списка
+        true_total = len(combined)
 
     # ------------------------------------------------------------------
     # Сортировка и пагинация

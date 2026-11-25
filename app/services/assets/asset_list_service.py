@@ -102,8 +102,8 @@ async def get_assets_list_with_sap(
 
     # Выполняем проверку по типу, если asset_type_id==0 тогда выполняем обычный запрос
     # Если asset_type_id != 0, тогда смотрим только в локальную БД
-    if asset_type_id != 0:
-        is_sap = "merge"
+    # if asset_type_id != 0:
+    #     is_sap = "local"
 
     # ------------------------------------------------------------------
     # Загружаем ВСЕ локальные активы по локальным фильтрам (без пагинации)
@@ -164,7 +164,7 @@ async def get_assets_list_with_sap(
 
     logger.debug(f"{is_sap=}")
 
-    if is_sap == "all" or is_sap == "sap":
+    if (is_sap == "all" or is_sap == "sap") and (asset_type_id == 0 and asset_type_id is None):
         if should_fetch_sap:
             sap_items, sap_total_from_api = await _fetch_all_sap_materials(
                 material_id=material_id,

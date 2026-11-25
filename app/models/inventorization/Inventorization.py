@@ -24,15 +24,15 @@ class InventorizationStatus:
 class InventorizationSession(Base):
     __tablename__ = "inventorization_sessions"
     session_id = Column(Integer, primary_key=True, index=True)
-    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), nullable=False)
+    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), nullable=True)
     department_codes = Column(String(500), nullable=True)
-    asset_type_name = Column(String(500), nullable=False)
-    asset_type_en_name = Column(String(500), nullable=False)
-    status = Column(String(50), default=InventorizationStatus.PENDING)  # по умолчанию в ожидании
+    asset_type_name = Column(String(500), nullable=True)
+    asset_type_en_name = Column(String(500), nullable=True)
+    status = Column(String(50), default=InventorizationStatus.PENDING)          # по умолчанию в ожидании
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now()) # Дата и время создания заявки*
-    start_date = Column(DateTime(timezone=True), nullable=True) # Дата и время начала ивентаризации
-    end_date = Column(DateTime(timezone=True), nullable=True)   # Дата и время завершения инвентаризации
+    created_at = Column(DateTime(timezone=True), server_default=func.now())     # Дата и время создания заявки*
+    start_date = Column(DateTime(timezone=True), nullable=True)                 # Дата и время начала ивентаризации
+    end_date = Column(DateTime(timezone=True), nullable=True)                   # Дата и время завершения инвентаризации
 
     created_by = Column(String(20), ForeignKey("zup_employees.employee_id"), nullable=True) # Кто создал
 

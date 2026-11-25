@@ -553,12 +553,12 @@ def _apply_local_filters(
     if next_service_end is not None:
         query = query.where(Asset.next_service <= next_service_end)
 
-    # Фильтр на списанные активы, показываем только списанные
+    # Фильтр на списанные активы: показываем только те, у которых есть реальная дата списания
     if is_write_off_date:
-        query = query.where(or_(
-            Asset.write_off_date != "00000000",
+        query = query.where(
             Asset.write_off_date.is_not(None),
-        ))
+            Asset.write_off_date != "00000000"
+        )
     return query
 
 

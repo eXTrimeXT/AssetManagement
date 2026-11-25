@@ -285,10 +285,59 @@ async def get_assets_list_with_sap(
         used_local_asset_ids.add(asset.asset_id)
         only_merged_asset_size += 1
 
+    # # ------------------------------------------------------------------
+    # # Применяем ЛОКАЛЬНЫЕ фильтры к объединённому списку
+    # #    (asset_type_id, model_id, asset_status, parent_id, next_service, material_class,
+    # #     cost_center_* — т.к. после слияния у SAP-активов появились локальные поля)
+    # # ------------------------------------------------------------------
+    # combined = _filter_combined(
+    #     combined,
+    #     asset_status=asset_status,
+    #     model_id=model_id,
+    #     asset_type_id=asset_type_id,
+    #     parent_id=parent_id,
+    #     next_service_start=next_service_start,
+    #     next_service_end=next_service_end,
+    #     material_class=material_class,
+    #     cost_center_code=cost_center_code,
+    #     cost_center_code_from=cost_center_code_from,
+    #     cost_center_shortname=cost_center_shortname,
+    #     cost_center_shortname_from=cost_center_shortname_from,
+    #     cost_center_code_from_search_mode=cost_center_code_from_search_mode,
+    #     cost_center_shortname_from_mode=cost_center_shortname_from_mode,
+    #     cost_center_shortname_mode=cost_center_shortname_mode,
+    # )
+    #
+    # # ------------------------------------------------------------------
+    # # Сортировка и пагинация
+    # # ------------------------------------------------------------------
+    # combined.sort(key=_sort_key, reverse=True)
+    #
+    # # Собираем нормальное общее количество активов
+    # # SAP-активы - объединенные активы + только локальные активы
+    # # SAP-активы + локальные активы. В целом объединенные можно не учитывать т.к. они и есть sap_total_from_api
+    # # total = sap_total_from_api + only_local_asset_size
+    # # if total == 0: total = only_merged_asset_size
+    # # start = (page - 1) * page_size
+    # # end = start + page_size
+    # # page_items = combined[start:end]
+    #
+    # # ------------------------------------------------------------------
+    # # Сортировка и пагинация
+    # # ------------------------------------------------------------------
+    # combined.sort(key=_sort_key, reverse=True)
+    #
+    # # ИСТИННЫЙ TOTAL: длина уже отфильтрованного объединённого списка
+    # total = len(combined)
+    #
+    # start = (page - 1) * page_size
+    # end = start + page_size
+    # page_items = combined[start:end]
+    #
+    # return _build_paginated_response(page_items, total=total, page=page, page_size=page_size)
+
     # ------------------------------------------------------------------
     # Применяем ЛОКАЛЬНЫЕ фильтры к объединённому списку
-    #    (asset_type_id, model_id, asset_status, parent_id, next_service, material_class,
-    #     cost_center_* — т.к. после слияния у SAP-активов появились локальные поля)
     # ------------------------------------------------------------------
     combined = _filter_combined(
         combined,
@@ -309,40 +358,41 @@ async def get_assets_list_with_sap(
     )
 
     # ------------------------------------------------------------------
+    # РАСЧЕТ ИСТИННОГО TOTAL (ИСПРАВЛЕНИЕ)
+    # ------------------------------------------------------------------
+    if sap_total_from_api > 0:
+        # 1. Считаем чисто локальные активы (без material_id), прошедшие фильтр
+        pure_local_in_combined = sum(
+            1 for item in combined
+            if item.get("asset_id") is not None and not item.get("material_id")
+        )
+
+        # 2. Считаем локальные активы с material_id, которые НЕ вернул SAP API
+        # (например, SAP отфильтровал их по своим внутренним правилам, но локально они подходят)
+        sap_material_ids = {item.get("material_id") for item in sap_items if item.get("material_id")}
+        extra_local_in_combined = sum(
+            1 for item in combined
+            if item.get("asset_id") is not None
+            and item.get("material_id")
+            and item.get("material_id") not in sap_material_ids
+        )
+
+        # Истинный тотал = (Всего в SAP по фильтру) + (Чисто локальные) + (Локальные, не найденные в SAP)
+        true_total = sap_total_from_api + pure_local_in_combined + extra_local_in_combined
+    else:
+        # Если SAP ничего не вернул (или is_sap="local"), берем длину отфильтрованного списка
+        true_total = len(combined)
+
+    # ------------------------------------------------------------------
     # Сортировка и пагинация
     # ------------------------------------------------------------------
     combined.sort(key=_sort_key, reverse=True)
-
-    # total = len(combined) # 2000
-    # total = sap_total_from_api + len(used_local_asset_ids) # total_sap + all_local
-    # total = len(used_local_asset_ids) # 2
-    # total = len(override_asset_ids) # 2
-    # total = len(local_assets) # 2
-    # total = only_local_asset_size # 1
-    # total = only_merged_asset_size # 1
-
-    # Собираем нормальное общее количество активов
-    # SAP-активы - объединенные активы + только локальные активы
-    # SAP-активы + локальные активы. В целом объединенные можно не учитывать т.к. они и есть sap_total_from_api
-    # total = sap_total_from_api + only_local_asset_size
-    # if total == 0: total = only_merged_asset_size
-    # start = (page - 1) * page_size
-    # end = start + page_size
-    # page_items = combined[start:end]
-
-    # ------------------------------------------------------------------
-    # Сортировка и пагинация
-    # ------------------------------------------------------------------
-    combined.sort(key=_sort_key, reverse=True)
-
-    # ИСТИННЫЙ TOTAL: длина уже отфильтрованного объединённого списка
-    total = len(combined)
 
     start = (page - 1) * page_size
     end = start + page_size
     page_items = combined[start:end]
 
-    return _build_paginated_response(page_items, total=total, page=page, page_size=page_size)
+    return _build_paginated_response(page_items, total=true_total, page=page, page_size=page_size)
 
 
 # ==============================================================================

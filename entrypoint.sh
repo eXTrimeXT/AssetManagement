@@ -16,4 +16,4 @@ echo "entrypoint.sh: База данных подключена!"
 # Запуск основного сервера FastAPI
 echo "entrypoint.sh: Запуск FastAPI сервера..."
 # Уровни логирования: critical, error, warning, info, debug, trace.
-exec uvicorn app.main:app --host 0.0.0.0 --port 8800 --reload --log-level info 
+exec uvicorn app.main:app --host 0.0.0.0 --port 8800 --reload --log-level info

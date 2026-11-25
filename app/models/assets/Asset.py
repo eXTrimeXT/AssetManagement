@@ -12,11 +12,11 @@ class Asset(Base):
     asset_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # Уникальный идентификатор из SAP API для сопоставления (__table_args__)
-    material_id = Column(String(50), unique=True, index=True, nullable=True)
+    material_id = Column(String(50), index=True, nullable=True)
 
     # Основные поля
     name = Column(String(150), nullable=False, index=True)                          # Название актива
-    inventory_id = Column(String(100), unique=True, index=True, nullable=True)                               # Инвентарный номер (__table_args__)
+    inventory_id = Column(String(100), index=True, nullable=True)                               # Инвентарный номер (__table_args__)
     serial_number = Column(String(100), index=True, nullable=True)                              # Серийный номер (__table_args__)
     asset_status_id = Column(Integer, ForeignKey("asset_status.id"), nullable=True) # id статуса актива
     quantity = Column(Integer, default=1, nullable=True)                            # Количество

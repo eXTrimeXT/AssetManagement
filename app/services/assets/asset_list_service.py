@@ -3,7 +3,7 @@ import os
 from datetime import date, datetime
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
-from sqlalchemy import select, inspect, Integer, or_, cast
+from sqlalchemy import select, inspect, Integer, or_, cast, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -83,6 +83,7 @@ async def get_assets_list_with_sap(
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
         material_class: Optional[str] = None,
+        is_write_off_date: Optional[bool] = False,
 ) -> Dict[str, Any]:
     """
     Возвращает объединённый список активов из локальной БД и SAP с корректной
@@ -135,6 +136,7 @@ async def get_assets_list_with_sap(
             next_service_start=next_service_start,
             next_service_end=next_service_end,
             material_class=material_class,
+            is_write_off_date=is_write_off_date,
         )
 
     # Строим карты переопределений: material_id -> Asset, inventory_id -> Asset
@@ -453,6 +455,7 @@ def _apply_local_filters(
         next_service_start: Optional[date] = None,
         next_service_end: Optional[date] = None,
         material_class: Optional[str] = None,
+        is_write_off_date: Optional[bool] = False,
 ):
     """Применяет локальные SQL-фильтры к запросу Asset."""
     if is_sap == "merge":
@@ -550,6 +553,12 @@ def _apply_local_filters(
     if next_service_end is not None:
         query = query.where(Asset.next_service <= next_service_end)
 
+    # Фильтр на списанные активы, показываем только списанные
+    if is_write_off_date:
+        query = query.where(or_(
+            Asset.write_off_date.is_not(None),
+            Asset.write_off_date != "00000000"
+        ))
     return query
 
 

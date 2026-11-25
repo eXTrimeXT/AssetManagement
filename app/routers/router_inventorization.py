@@ -46,7 +46,7 @@ router_inventorization = APIRouter(prefix="/inventorization", tags=["Assets Inve
 )
 async def get_sessions(
         skip: int = 0,
-        limit: int = 50,
+        limit: int = 1000,
         db: AsyncSession = Depends(get_db),
         current_user=Depends(require_authorized_user)
 ):

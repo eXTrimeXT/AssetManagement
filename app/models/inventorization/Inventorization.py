@@ -24,10 +24,10 @@ class InventorizationStatus:
 class InventorizationSession(Base):
     __tablename__ = "inventorization_sessions"
     session_id = Column(Integer, primary_key=True, index=True)
-    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), nullable=False)
+    asset_type_id = Column(Integer, ForeignKey("asset_types.asset_type_id"), nullable=True)
     department_codes = Column(String(500), nullable=True)
-    asset_type_name = Column(String(500), nullable=False)
-    asset_type_en_name = Column(String(500), nullable=False)
+    asset_type_name = Column(String(500), nullable=True)
+    asset_type_en_name = Column(String(500), nullable=True)
     status = Column(String(50), default=InventorizationStatus.PENDING)  # по умолчанию в ожидании
 
     created_at = Column(DateTime(timezone=True), server_default=func.now()) # Дата и время создания заявки*

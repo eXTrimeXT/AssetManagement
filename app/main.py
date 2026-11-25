@@ -4,7 +4,8 @@ import logging
 import os
 
 import asyncpg
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio.session import AsyncSession
 from starlette.middleware.cors import CORSMiddleware
 
 from app.database.connection import engine
@@ -70,6 +71,8 @@ from app.routers.assets.router_asset_transfer import router_asset_transfer
 
 # Роутер для excel импорта
 from app.routers.router_excel_import import router_excel_import
+from app.database.connection import get_db
+from app.services.sync.script_sync_all_data import sync_all_data
 
 logger = logging.getLogger(__name__)
 
@@ -214,3 +217,24 @@ async def root():
     }
 
 app.include_router(router_root)                                 # корень веб-приложения
+
+
+# Эндпоинт начальной инициализации всех начальных данных для базы данных
+# После первого запуска закрыть эндпоинт в целях безопасности !
+router_for_script_sync_all_data = APIRouter(tags=["script-sync"])
+@router_for_script_sync_all_data.post("/all-sync")
+async def script_sync_all_data_endpoint(
+        db: AsyncSession = Depends(get_db),
+):
+    try:
+        res = await sync_all_data(db=db)
+        return {
+            "success": True,
+            "message": "Синхронизация завершена",
+            "stats": res
+        }
+    except Exception as e:
+        logger.error(f"Ошибка синхронизации: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка полной синхронизации: {str(e)}")
+
+app.include_router(router_for_script_sync_all_data)

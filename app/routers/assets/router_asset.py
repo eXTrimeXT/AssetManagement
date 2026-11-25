@@ -112,6 +112,7 @@ async def get_assets(
         only_my: Optional[bool] = Query(False, description="Показать только мои активы? (employee_id игнорируется)"),
         search_mode: Literal["ALL", "NULLS", "NOT_NULLS"] = Query("ALL", description="Режим поиска SAP: all, not_nulls, nulls"),
         is_sap: Literal["all", "local", "merge", "sap"] = Query("all", description="Режим отображения активов: all, local, merge, sap"),
+        is_write_off_date: Optional[bool] = Query(False, description="Показать только списанные активы? По умолчанию: False"),
 
         # Фильтры по MVZ:
         cost_center_shortname_from: Optional[str] = Query(None, description="Ответственный департамент (short_name)"),
@@ -171,7 +172,8 @@ async def get_assets(
         next_service_end=next_service_end,
 
         # Фильтр по классу актива
-        material_class=material_class
+        material_class=material_class,
+        is_write_off_date=is_write_off_date
     )
 
     return PaginatedResponse(**result)

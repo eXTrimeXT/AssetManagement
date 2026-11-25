@@ -1,6 +1,5 @@
 from typing import Optional, List
-
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func, inspect
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, false, Boolean, func, inspect, Index
 from sqlalchemy.orm import relationship, backref, Mapped
 from app.models.Base import Base
 from app.schemas.assets.AssetAssignmentSchemas import AssetUserFullResponse
@@ -12,31 +11,29 @@ class Asset(Base):
 
     asset_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
-    # Уникальный идентификатор из SAP API для сопоставления
-    material_id = Column(String(50), unique=True, index=True, nullable=True)
+    # Уникальный идентификатор из SAP API для сопоставления (__table_args__)
+    material_id = Column(String(50), index=True, nullable=True)
 
     # Основные поля
     name = Column(String(150), nullable=False, index=True)                          # Название актива
-    # inventory_id = Column(String(100), unique=True, index=True, nullable=True)      # Инвентарный номер
-    inventory_id = Column(String(100), index=True, nullable=True)      # Инвентарный номер
-    # serial_number = Column(String(100), unique=True, index=True, nullable=True)     # Серийный номер
-    serial_number = Column(String(100), index=True, nullable=True)     # Серийный номер
+    inventory_id = Column(String(100), index=True, nullable=True)                               # Инвентарный номер (__table_args__)
+    serial_number = Column(String(100), index=True, nullable=True)                              # Серийный номер (__table_args__)
     asset_status_id = Column(Integer, ForeignKey("asset_status.id"), nullable=True) # id статуса актива
-    quantity = Column(Integer, default=1, nullable=True) # Количество
-    comment = Column(Text)  # Комментарий
+    quantity = Column(Integer, default=1, nullable=True)                            # Количество
+    comment = Column(Text)                                                          # Комментарий
 
     # Коды департаментов
-    cost_center_code_from = Column(String(10), nullable=True)       # Код ответственного департамента
-    cost_center_name_from = Column(String(50), nullable=True)       # Название ответственного департамента
-    cost_center_shortname_from = Column(String(12), nullable=True)  # Аббревиатура ответственного департамента
+    cost_center_code_from = Column(String(10), nullable=True)                       # Код ответственного департамента
+    cost_center_name_from = Column(String(50), nullable=True)                       # Название ответственного департамента
+    cost_center_shortname_from = Column(String(12), nullable=True)                  # Аббревиатура ответственного департамента
 
-    cost_center_code = Column(String(10), nullable=True)        # Код департамента владельца
-    cost_center_name = Column(String(50), nullable=True)        # Название департамента владельца
-    cost_center_shortname = Column(String(12), nullable=True)   # Аббревиатура департамента владельца
+    cost_center_code = Column(String(10), nullable=True)                            # Код департамента владельца
+    cost_center_name = Column(String(50), nullable=True)                            # Название департамента владельца
+    cost_center_shortname = Column(String(12), nullable=True)                       # Аббревиатура департамента владельца
 
     # Даты
-    date_issue = Column(Date, nullable=True)           # Дата выпуска
-    date_purchasing = Column(Date, nullable=True)      # Дата покупки
+    date_issue = Column(Date, nullable=True)                                        # Дата выпуска
+    date_purchasing = Column(Date, nullable=True)                                   # Дата покупки
 
     # Связи
     model_id = Column(Integer, ForeignKey("asset_models.model_id"), index=True)
@@ -55,21 +52,21 @@ class Asset(Base):
     # Еженедельная проверка оборудования
     every_week_check = Column(Boolean, default=false) # TODO: удалить
 
-    next_service = Column(Date, nullable=True)      # Дата следующего обслуживания
-    service_period = Column(Integer, default=0)     # Период обслуживания
+    next_service = Column(Date, nullable=True)                                      # Дата следующего обслуживания
+    service_period = Column(Integer, default=0)                                     # Период обслуживания
 
-    next_check = Column(Date, nullable=True)        # Дата следующей проверки
-    check_period = Column(Integer, default=0)       # Период проверки
+    next_check = Column(Date, nullable=True)                                        # Дата следующей проверки
+    check_period = Column(Integer, default=0)                                       # Период проверки
 
-    material_class = Column(String, nullable=True)  # Код класса SAP (тип)
-    material_class_name = Column(String, nullable=True)  # Название класса SAP (тип)
-    write_off_date = Column(String, nullable=True)  # Дата списания актива
+    material_class = Column(String, nullable=True)                                  # Код класса SAP (тип)
+    material_class_name = Column(String, nullable=True)                             # Название класса SAP (тип)
+    write_off_date = Column(String, nullable=True)                                  # Дата списания актива
 
     # Аудит
-    created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))    # Создан кем
-    updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))    # Изменён кем
-    created_at = Column(DateTime, default=func.now(), nullable=False)           # Создан когда
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())      # Изменён когда
+    created_by = Column(String(20), ForeignKey("zup_employees.employee_id"))        # Создан кем
+    updated_by = Column(String(20), ForeignKey("zup_employees.employee_id"))        # Изменён кем
+    created_at = Column(DateTime, default=func.now(), nullable=False)               # Создан когда
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())          # Изменён когда
 
     # Relationships
     model = relationship("AssetModel", back_populates="assets")
@@ -387,3 +384,28 @@ class Asset(Base):
 
     def __repr__(self):
         return f"<Asset(id={self.asset_id}, name={self.name})>"
+
+    __table_args__ = (
+        # Уникальный индекс на inventory_id — нужен для ON CONFLICT (inventory_id).
+        # NULL-значения допускаются (PostgreSQL не считает NULL = NULL).
+        Index(
+            "uq_assets_inventory_id",
+            "inventory_id",
+            unique=True,
+            postgresql_where=(inventory_id.isnot(None)),
+        ),
+        # Уникальный индекс на serial_number — аналогично
+        # Index(
+        #     "uq_assets_serial_number",
+        #     "serial_number",
+        #     unique=True,
+        #     postgresql_where=(serial_number.isnot(None)),
+        # ),
+        # Уникальный индекс на material_id — аналогично
+        Index(
+            "uq_assets_material_id",
+            "material_id",
+            unique=True,
+            postgresql_where=(material_id.isnot(None)),
+        ),
+    )

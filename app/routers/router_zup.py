@@ -15,7 +15,7 @@ from app.database.zup.crud_zup_employees import get_employees_list, get_employee
 from app.database.zup.crud_zup_positions import get_positions_list, get_position_by_guid
 from app.database.zup.crud_zup_departments import get_departments_list, get_hierarchy_departments
 from app.database.zup.crud_zup_managers import get_managers_list
-from app.services.zup.zup_integration import sync_all_data, sync_employee_data
+from app.services.zup.zup_integration import sync_all_data_for_zup, sync_employee_data
 from app.services.auth.auth_service import require_authorized_user
 from app.schemas.PaginationResponse import PaginatedResponse
 
@@ -46,7 +46,7 @@ async def sync_zup_data(
     Синхронизирует: подразделения, должности, сотрудников, руководителей, назначения, отчёты.
     """
     try:
-        stats = await sync_all_data(db)
+        stats = await sync_all_data_for_zup(db)
         return {
             "success": True,
             "message": "Синхронизация завершена успешно",

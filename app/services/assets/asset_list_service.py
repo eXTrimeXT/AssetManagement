@@ -3,7 +3,7 @@ import os
 from datetime import date, datetime
 from typing import List, Dict, Optional, Any, Sequence, Tuple, Literal
 
-from sqlalchemy import select, inspect, Integer, or_, cast, true
+from sqlalchemy import select, inspect, Integer, or_, cast, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import httpx
@@ -555,9 +555,9 @@ def _apply_local_filters(
 
     # Фильтр на списанные активы, показываем только списанные
     if is_write_off_date:
-        query = query.where(or_(
+        query = query.where(and_(
             Asset.write_off_date.is_not(None),
-            Asset.write_off_date != "00000000"
+            Asset.write_off_date != "00000000" # 00000000
         ))
     return query
 

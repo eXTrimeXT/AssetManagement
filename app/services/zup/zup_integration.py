@@ -100,7 +100,7 @@ async def sync_employee_data(db: AsyncSession) -> Dict[str, int]:
     logger.info(f"Синхронизация сотрудников завершена. Обработано: {stats['employees']}")
     return stats
 
-async def sync_all_data(db: AsyncSession) -> Dict[str, int]:
+async def sync_all_data_for_zup(db: AsyncSession) -> Dict[str, int]:
     """Универсальный метод для синхронизации всех данных из 1С"""
     stats = {
         "departments": 0,

@@ -33,6 +33,26 @@ SAP_MAX_FETCH = 2000
 SAP_FETCH_BATCH = 1000
 
 
+def _normalize_employee_id(raw: Any) -> Optional[str]:
+    """
+    Приводит табельный номер к формату БД: 10 цифр с ведущими нулями.
+    SAP отдаёт 8-значный ("00015370"), в БД хранится 10-значный ("0000015370").
+    """
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    # если строго цифры — приводим к int и zfill(10)
+    if s.isdigit():
+        try:
+            return str(int(s)).zfill(10)
+        except (ValueError, OverflowError):
+            return s
+    # если есть нецифровые символы — оставляем как есть
+    return s
+
+
 # ==============================================================================
 # ГЛАВНАЯ ФУНКЦИЯ
 # ==============================================================================
@@ -925,6 +945,31 @@ def _filter_combined(
 # ==============================================================================
 # ОБОГАЩЕНИЕ SAP-ЭЛЕМЕНТОВ
 # ==============================================================================
+# async def _load_maps_for_sap_items(
+#         db: AsyncSession, sap_items: List[Dict[str, Any]]
+# ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+#     employee_ids = set()
+#     department_codes = set()
+#     for item in sap_items:
+#         if item.get("employee_id"):
+#             raw = str(item["employee_id"]).strip()
+#             # SAP может возвращать 8-значный табельный; приводим к "00..."
+#             emp_id = raw if raw.startswith("00") else "00" + raw
+#             employee_ids.add(emp_id)
+#         if item.get("department_code"):
+#             department_codes.add(item["department_code"])
+#
+#     employees_map: Dict[str, Any] = {}
+#     if employee_ids:
+#         employees = await _get_employees_by_ids(db, list(employee_ids))
+#         employees_map = {emp.employee_id: emp for emp in employees}
+#
+#     departments_map: Dict[str, Any] = {}
+#     if department_codes:
+#         departments = await _get_departments_by_codes(db, list(department_codes))
+#         departments_map = {dept.short_name: dept for dept in departments}
+#
+#     return employees_map, departments_map
 async def _load_maps_for_sap_items(
         db: AsyncSession, sap_items: List[Dict[str, Any]]
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -932,10 +977,9 @@ async def _load_maps_for_sap_items(
     department_codes = set()
     for item in sap_items:
         if item.get("employee_id"):
-            raw = str(item["employee_id"]).strip()
-            # SAP может возвращать 8-значный табельный; приводим к "00..."
-            emp_id = raw if raw.startswith("00") else "00" + raw
-            employee_ids.add(emp_id)
+            emp_id = _normalize_employee_id(item["employee_id"])
+            if emp_id:
+                employee_ids.add(emp_id)
         if item.get("department_code"):
             department_codes.add(item["department_code"])
 
@@ -950,7 +994,6 @@ async def _load_maps_for_sap_items(
         departments_map = {dept.short_name: dept for dept in departments}
 
     return employees_map, departments_map
-
 
 def _build_virtual_asset(
         sap_item: Dict[str, Any],

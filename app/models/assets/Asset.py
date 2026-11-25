@@ -17,7 +17,7 @@ class Asset(Base):
     # Основные поля
     name = Column(String(150), nullable=False, index=True)                          # Название актива
     inventory_id = Column(String(100), unique=True, index=True, nullable=True)                               # Инвентарный номер (__table_args__)
-    serial_number = Column(String(100), unique=True, index=True, nullable=True)                              # Серийный номер (__table_args__)
+    serial_number = Column(String(100), index=True, nullable=True)                              # Серийный номер (__table_args__)
     asset_status_id = Column(Integer, ForeignKey("asset_status.id"), nullable=True) # id статуса актива
     quantity = Column(Integer, default=1, nullable=True)                            # Количество
     comment = Column(Text)                                                          # Комментарий
@@ -395,12 +395,12 @@ class Asset(Base):
             postgresql_where=(inventory_id.isnot(None)),
         ),
         # Уникальный индекс на serial_number — аналогично
-        Index(
-            "uq_assets_serial_number",
-            "serial_number",
-            unique=True,
-            postgresql_where=(serial_number.isnot(None)),
-        ),
+        # Index(
+        #     "uq_assets_serial_number",
+        #     "serial_number",
+        #     unique=True,
+        #     postgresql_where=(serial_number.isnot(None)),
+        # ),
         # Уникальный индекс на material_id — аналогично
         Index(
             "uq_assets_material_id",
